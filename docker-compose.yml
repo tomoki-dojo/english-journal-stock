@@ -1,0 +1,33 @@
+# english-journal-stock を VPS 上で動かすための構成。
+#
+# math-journal-stockと同じVPS・同じ既存Caddy（n8n-docker-caddy-1）を共有する。
+# 新しいCaddyは立てず、既存Caddyが使っているDockerネットワーク（n8n-docker_default）に
+# このappコンテナも参加させて、既存Caddy側からリバースプロキシしてもらう構成。
+#
+# 使い方はmath-journal-stockのセットアップ手順書（docs/vps-migration.md）を参照。
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # ビルド時にNext.jsへ埋め込む公開用の環境変数。
+        # .env.production の値をそのまま使う（下のenv_fileと同じファイル）。
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    container_name: english-journal-stock
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    # ホストには直接ポートを公開しない。既存のn8n用Caddyがコンテナ間通信でこのポートに到達する。
+    expose:
+      - "3000"
+    networks:
+      - n8n-docker_default
+
+networks:
+  # n8n-docker/docker-compose.yml側で作られている既存のネットワークにそのまま参加する。
+  # ここでは新規作成せず、既存のものを使う（external: true）。
+  n8n-docker_default:
+    external: true

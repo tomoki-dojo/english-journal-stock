@@ -1,0 +1,27 @@
+# このファイルはこのままでは使わない（VPS上では2つ目のCaddyを立てていないため）。
+#
+# 既存のn8n用Caddy（/root/n8n-docker/Caddyfile）に、以下の内容をそのまま
+# 追記してください。追記後は既存Caddyコンテナのリロードが必要です。
+#
+# 注意：math-journal-stockのCaddyfileでは reverse_proxy app:3000 という
+# サービス名ベースの宛先になっているが、同じDockerネットワークに複数の
+# 「app」という名前のサービスが乗ると名前解決が曖昧になる恐れがあるため、
+# こちらは container_name（english-journal-stock）を宛先に指定している。
+# 余裕があればmath-journal-stock側も同様にcontainer_name指定に揃えることを検討。
+#
+# ドメインは仮。実際に使うサブドメインが決まったらDNS設定とあわせて書き換える。
+#
+# ---- ここから下を n8n-docker/Caddyfile に追記する ----
+
+app.english-journal.bear-fruit.online {
+	reverse_proxy english-journal-stock:3000
+
+	encode gzip
+
+	log {
+		output file /data/access-english-journal-stock.log {
+			roll_size 10mb
+			roll_keep 5
+		}
+	}
+}

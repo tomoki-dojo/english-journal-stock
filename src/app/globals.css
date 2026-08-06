@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* ライトテーマ。真っ白だと眩しいので気持ち程度グレーに寄せている */
+  --background: 250 250 250;
+  --foreground: 24 24 27;
+  --accent: 2 105 161;
+  --surface: 244 244 245;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  color: rgb(var(--foreground));
+  background: rgb(var(--background));
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+@layer base {
+  input,
+  select,
+  textarea {
+    @apply bg-zinc-300/60 text-zinc-900;
+  }
+
+  option {
+    @apply bg-zinc-100 text-zinc-900;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
