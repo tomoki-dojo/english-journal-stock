@@ -25,9 +25,25 @@ export const VerificationStatusValues = [
 ] as const;
 export type VerificationStatus = (typeof VerificationStatusValues)[number];
 
+// 機能・意図タグ。フレーズが「何をするための表現か」を表す軸で、シーンとは独立。
+// 全表現に必ず付くわけではない（該当なしはundefined/null）。
+// Pro限定の「シーン×機能」絞り込みに使う。
+export const IntentTagValues = [
+  "依頼",
+  "断り・保留",
+  "提案",
+  "同意・肯定",
+  "反論・懸念",
+  "謝罪",
+  "確認",
+  "相槌・共感",
+] as const;
+export type IntentTag = (typeof IntentTagValues)[number];
+
 export type SceneTagFilter = SceneTag | "すべて";
 export type FormalityFilter = Formality | "すべて";
 export type LevelFilter = Level | "すべて";
+export type IntentTagFilter = IntentTag | "すべて";
 
 export type Expression = {
   id: string;
@@ -36,6 +52,7 @@ export type Expression = {
   sceneTags: SceneTag[];
   formality: Formality[];
   level: Level;
+  intentTags?: IntentTag[];
   expressionEn: string;
   // DB上の生の値。現在はUIでの意味・例文マスクには使っていない（未使用）。
   isPremium: boolean;

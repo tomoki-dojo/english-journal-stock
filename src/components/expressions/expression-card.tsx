@@ -99,6 +99,14 @@ export function ExpressionCard({ expression, plan, initialSaved = false }: Expre
             {tag}
           </span>
         ))}
+        {expression.intentTags?.map((tag) => (
+          <span
+            key={tag}
+            className="rounded-md bg-accent/10 px-2 py-1 text-[11px] font-medium text-accent"
+          >
+            {tag}
+          </span>
+        ))}
         <span
           className={cn(
             "rounded-md px-2 py-1 text-[11px] font-medium",

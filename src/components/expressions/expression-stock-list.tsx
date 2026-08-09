@@ -3,7 +3,13 @@
 import { useMemo, useState } from "react";
 import { ExpressionCard } from "./expression-card";
 import { ExpressionFilters } from "./expression-filters";
-import type { Expression, SceneTagFilter, FormalityFilter, LevelFilter } from "./types";
+import type {
+  Expression,
+  SceneTagFilter,
+  FormalityFilter,
+  LevelFilter,
+  IntentTagFilter,
+} from "./types";
 import type { Plan } from "@/lib/plan";
 
 type ExpressionStockListProps = {
@@ -17,6 +23,8 @@ type ExpressionStockListProps = {
   // ホームの棚から「すべて見る」で遷移してきた際に、あらかじめ選択しておくシーン。
   // Freeプランの場合は絞り込みを適用せず、代わりにアップセルを表示する。
   initialSceneTag?: SceneTagFilter;
+  // 同様に、外部リンクからあらかじめ選択しておく機能タグ。
+  initialIntentTag?: IntentTagFilter;
 };
 
 function matchesKeyword(expression: Expression, keyword: string) {
@@ -45,20 +53,26 @@ export function ExpressionStockList({
   plan,
   savedExpressionIds = [],
   title = "表現ストック",
-  description = "キーワード・シーン・フォーマル度・レベルで絞り込み、ビジネス英語表現を探せます。",
+  description = "キーワード・シーン・機能・フォーマル度・レベルで絞り込み、ビジネス英語表現を探せます。",
   emptyMessage = "まだ公開中の表現がありません。準備が整い次第、順次公開されます。",
   initialSceneTag = "すべて",
+  initialIntentTag = "すべて",
 }: ExpressionStockListProps) {
   const savedIdSet = useMemo(() => new Set(savedExpressionIds), [savedExpressionIds]);
-  // シーン絞り込みはPro限定。Freeプランで指定された場合は適用せず、アップセル表示に回す。
+  // シーン・機能タグの絞り込みはPro限定。Freeプランで指定された場合は適用せず、アップセル表示に回す。
   const sceneTagGated = plan === "free";
+  const intentTagGated = plan === "free";
   const initialSceneTagBlocked = sceneTagGated && initialSceneTag !== "すべて";
+  const initialIntentTagBlocked = intentTagGated && initialIntentTag !== "すべて";
   const [keyword, setKeyword] = useState("");
   const [sceneTag, setSceneTag] = useState<SceneTagFilter>(
     initialSceneTagBlocked ? "すべて" : initialSceneTag
   );
   const [formality, setFormality] = useState<FormalityFilter>("すべて");
   const [level, setLevel] = useState<LevelFilter>("すべて");
+  const [intentTag, setIntentTag] = useState<IntentTagFilter>(
+    initialIntentTagBlocked ? "すべて" : initialIntentTag
+  );
 
   const filteredExpressions = useMemo(() => {
     return expressions.filter((expression) => {
@@ -66,10 +80,12 @@ export function ExpressionStockList({
       const sceneTagMatch = sceneTag === "すべて" || expression.sceneTags.includes(sceneTag);
       const formalityMatch = formality === "すべて" || expression.formality.includes(formality);
       const levelMatch = level === "すべて" || expression.level === level;
+      const intentTagMatch =
+        intentTag === "すべて" || (expression.intentTags?.includes(intentTag) ?? false);
 
-      return keywordMatch && sceneTagMatch && formalityMatch && levelMatch;
+      return keywordMatch && sceneTagMatch && formalityMatch && levelMatch && intentTagMatch;
     });
-  }, [expressions, keyword, sceneTag, formality, level]);
+  }, [expressions, keyword, sceneTag, formality, level, intentTag]);
 
   return (
     <div className="space-y-8">
@@ -83,12 +99,15 @@ export function ExpressionStockList({
         sceneTag={sceneTag}
         formality={formality}
         level={level}
+        intentTag={intentTag}
         plan={plan}
         onKeywordChange={setKeyword}
         onSceneTagChange={setSceneTag}
         onFormalityChange={setFormality}
         onLevelChange={setLevel}
+        onIntentTagChange={setIntentTag}
         initialSceneTagBlocked={initialSceneTagBlocked}
+        initialIntentTagBlocked={initialIntentTagBlocked}
       />
 
       {loadError && (

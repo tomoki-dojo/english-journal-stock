@@ -9,6 +9,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import type {
   Expression,
   Formality,
+  IntentTag,
   Level,
   SceneTag,
   VerificationStatus,
@@ -23,6 +24,7 @@ type DbExpressionRow = {
   scene_tags: string[];
   formality: string[];
   level: string;
+  intent_tags: string[] | null;
   expression_en: string;
   meaning_ja: string;
   example_1_en: string | null;
@@ -49,6 +51,7 @@ function fromDbRow(row: DbExpressionRow): Expression {
     sceneTags: row.scene_tags as SceneTag[],
     formality: row.formality as Formality[],
     level: row.level as Level,
+    intentTags: (row.intent_tags as IntentTag[] | null) ?? undefined,
     expressionEn: row.expression_en,
     isPremium: row.is_premium,
     locked: false, // 後段のapplyPlanGatingで確定させる

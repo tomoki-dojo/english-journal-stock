@@ -7,9 +7,11 @@ import {
   SceneTagValues,
   FormalityValues,
   LevelValues,
+  IntentTagValues,
   type SceneTagFilter,
   type FormalityFilter,
   type LevelFilter,
+  type IntentTagFilter,
 } from "./types";
 import type { Plan } from "@/lib/plan";
 import { cn } from "@/lib/utils";
@@ -17,20 +19,24 @@ import { cn } from "@/lib/utils";
 const sceneTagOptions: SceneTagFilter[] = ["すべて", ...SceneTagValues];
 const formalityOptions: FormalityFilter[] = ["すべて", ...FormalityValues];
 const levelOptions: LevelFilter[] = ["すべて", ...LevelValues];
+const intentTagOptions: IntentTagFilter[] = ["すべて", ...IntentTagValues];
 
 type ExpressionFiltersProps = {
   keyword: string;
   sceneTag: SceneTagFilter;
   formality: FormalityFilter;
   level: LevelFilter;
+  intentTag: IntentTagFilter;
   plan: Plan;
   onKeywordChange: (value: string) => void;
   onSceneTagChange: (value: SceneTagFilter) => void;
   onFormalityChange: (value: FormalityFilter) => void;
   onLevelChange: (value: LevelFilter) => void;
-  // ホームの棚から「すべて見る」で遷移してきた際、Freeプランでシーンが
+  onIntentTagChange: (value: IntentTagFilter) => void;
+  // ホームの棚や外部リンクから遷移してきた際、Freeプランでシーン・機能タグが
   // 指定されていた場合にアップセルを最初から表示しておくためのフラグ。
   initialSceneTagBlocked?: boolean;
+  initialIntentTagBlocked?: boolean;
 };
 
 export function ExpressionFilters({
@@ -38,16 +44,22 @@ export function ExpressionFilters({
   sceneTag,
   formality,
   level,
+  intentTag,
   plan,
   onKeywordChange,
   onSceneTagChange,
   onFormalityChange,
   onLevelChange,
+  onIntentTagChange,
   initialSceneTagBlocked = false,
+  initialIntentTagBlocked = false,
 }: ExpressionFiltersProps) {
   const [showSceneTagUpsell, setShowSceneTagUpsell] = useState(initialSceneTagBlocked);
-  // シーンタグの絞り込みはPro/Premium限定。「すべて」は常に押せる。
+  const [showIntentTagUpsell, setShowIntentTagUpsell] = useState(initialIntentTagBlocked);
+  // シーン・機能タグの絞り込みはPro/Premium限定（「シーン×機能」の掛け合わせがPro価値の核）。
+  // 「すべて」は常に押せる。
   const sceneTagGated = plan === "free";
+  const intentTagGated = plan === "free";
 
   function handleSceneTagClick(option: SceneTagFilter) {
     if (sceneTagGated && option !== "すべて") {
@@ -56,6 +68,15 @@ export function ExpressionFilters({
     }
     setShowSceneTagUpsell(false);
     onSceneTagChange(option);
+  }
+
+  function handleIntentTagClick(option: IntentTagFilter) {
+    if (intentTagGated && option !== "すべて") {
+      setShowIntentTagUpsell(true);
+      return;
+    }
+    setShowIntentTagUpsell(false);
+    onIntentTagChange(option);
   }
 
   return (
@@ -113,6 +134,49 @@ export function ExpressionFilters({
         {showSceneTagUpsell && (
           <div className="flex flex-wrap items-center gap-2 rounded-lg bg-accent/10 px-3 py-2 text-xs text-accent ring-1 ring-accent/20">
             <span>シーン別の絞り込みはPro会員限定機能です。</span>
+            <Link href="/settings" className="font-medium underline underline-offset-2">
+              プランを見る
+            </Link>
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-2.5">
+        <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+          機能
+          {intentTagGated && (
+            <span className="ml-1.5 normal-case tracking-normal text-accent">
+              （絞り込みはPro限定）
+            </span>
+          )}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {intentTagOptions.map((option) => {
+            const locked = intentTagGated && option !== "すべて";
+            return (
+              <button
+                key={option}
+                type="button"
+                onClick={() => handleIntentTagClick(option)}
+                className={cn(
+                  "flex items-center gap-1 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-all",
+                  locked
+                    ? "cursor-pointer border-zinc-200 bg-zinc-200/40 text-zinc-400"
+                    : intentTag === option
+                      ? "border-accent/50 bg-accent/10 text-accent"
+                      : "border-zinc-400 bg-zinc-300/40 text-zinc-600 hover:border-zinc-500 hover:text-zinc-900"
+                )}
+              >
+                {locked && <Lock className="h-3 w-3" />}
+                {option}
+              </button>
+            );
+          })}
+        </div>
+
+        {showIntentTagUpsell && (
+          <div className="flex flex-wrap items-center gap-2 rounded-lg bg-accent/10 px-3 py-2 text-xs text-accent ring-1 ring-accent/20">
+            <span>機能タグの絞り込み（シーンとの掛け合わせ）はPro会員限定機能です。</span>
             <Link href="/settings" className="font-medium underline underline-offset-2">
               プランを見る
             </Link>
