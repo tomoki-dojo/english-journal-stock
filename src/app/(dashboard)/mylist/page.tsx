@@ -24,7 +24,7 @@ export default async function MyListPage() {
     loadError = true;
   }
 
-  const gatedExpressions = applyPlanGating(expressions, plan);
+  const gatedExpressions = applyPlanGating(expressions);
 
   return (
     <ExpressionStockList

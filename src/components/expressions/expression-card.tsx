@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { Bookmark, ChevronDown, Lock } from "lucide-react";
+import { Bookmark, ChevronDown } from "lucide-react";
 import { AudioPlayButton } from "./audio-play-button";
 import type { Expression, Level, VerificationStatus } from "./types";
 import type { Plan } from "@/lib/plan";
@@ -108,12 +107,6 @@ export function ExpressionCard({ expression, plan, initialSaved = false }: Expre
         >
           {expression.level}
         </span>
-        {expression.locked && (
-          <span className="ml-auto flex items-center gap-1 rounded-md bg-accent/10 px-2 py-1 text-[11px] font-medium text-accent ring-1 ring-accent/20">
-            <Lock className="h-3 w-3" />
-            Pro限定
-          </span>
-        )}
       </div>
 
       <div className="mb-1 flex items-start justify-between gap-2">
@@ -130,25 +123,7 @@ export function ExpressionCard({ expression, plan, initialSaved = false }: Expre
         </div>
       </div>
 
-      {expression.locked ? (
-        <>
-          <p className="mb-4 text-sm text-zinc-400 blur-[3px] select-none">
-            この意味、あなたは分かりますか？意外なニュアンスが隠れています。
-          </p>
-          <div className="mt-auto flex items-center gap-2">
-            <Link
-              href="/settings"
-              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-accent/10 px-3 py-2.5 text-sm font-medium text-accent ring-1 ring-accent/20 transition-colors hover:bg-accent/20"
-            >
-              <Lock className="h-3.5 w-3.5" />
-              Pro会員限定：意味・例文を見る
-            </Link>
-            {saveButton}
-          </div>
-          {saveError && <p className="mt-2 text-xs text-red-600">{saveError}</p>}
-        </>
-      ) : (
-        <>
+      <>
           <p className="mb-4 text-sm text-zinc-600">{expression.meaningJa}</p>
 
           {expression.example1En && (
@@ -241,7 +216,6 @@ export function ExpressionCard({ expression, plan, initialSaved = false }: Expre
           </div>
           {saveError && <p className="mt-2 text-xs text-red-600">{saveError}</p>}
         </>
-      )}
     </article>
   );
 }

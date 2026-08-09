@@ -21,7 +21,7 @@ export default async function DashboardHomePage() {
   const user = await getCurrentUser();
   const plan: Plan = user ? await getPlan(user.id) : "free";
 
-  const gatedExpressions = applyPlanGating(expressions, plan);
+  const gatedExpressions = applyPlanGating(expressions);
 
   let savedExpressionIds: string[] = [];
   if (user) {

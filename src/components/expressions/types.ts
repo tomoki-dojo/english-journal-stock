@@ -37,11 +37,9 @@ export type Expression = {
   formality: Formality[];
   level: Level;
   expressionEn: string;
-  // Pro/Premium限定表現かどうか（DB上の生の値）。
+  // DB上の生の値。現在はUIでの意味・例文マスクには使っていない（未使用）。
   isPremium: boolean;
-  // このビューア（閲覧者）に対して意味・例文等をロックすべきかどうか。
-  // ページ側（サーバーコンポーネント）でisPremiumと閲覧者のplanから計算する。
-  // locked=trueのとき、meaningJa以下のフィールドはサーバー側で既にマスク（undefined）済み。
+  // 旧・内容マスク機構の名残。Pro限定は機能面のみになったため常にfalse。
   locked: boolean;
   meaningJa?: string;
   example1En?: string;

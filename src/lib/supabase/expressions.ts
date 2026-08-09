@@ -3,11 +3,9 @@
 // service_role（supabaseAdmin）で publish_status = '公開' の表現のみ取得する
 // （RLS側でもanon/authenticatedは公開分しか見えない設計と合わせている）。
 //
-// is_premium=trueの表現は、フレーズ本体(expression_en)はFreeユーザーにも見せつつ、
-// 意味・例文・類似表現・使用上の注意はこの層でマスクしてからページに渡す
-// （クライアントに生データを送らない、サーバーサイドでの防御的なゲーティング）。
+// 意味・例文はプランに関わらず全員に見せる（is_premiumによるマスクは廃止済み）。
+// Pro限定は機能面（シーン別絞り込み・マイリスト無制限・音声再生）のみで差別化する。
 import { supabaseAdmin } from "@/lib/supabase/server";
-import type { Plan } from "@/lib/plan";
 import type {
   Expression,
   Formality,
@@ -17,9 +15,6 @@ import type {
 } from "@/components/expressions/types";
 
 const LIST_LIMIT = 500;
-
-// Pro/Premiumなら全表現がロック解除。Free（または未ログイン）はis_premium表現がロックされる。
-const UNLOCKED_PLANS: Plan[] = ["pro", "premium"];
 
 type DbExpressionRow = {
   id: string;
@@ -75,29 +70,11 @@ function fromDbRow(row: DbExpressionRow): Expression {
   };
 }
 
-// 閲覧者のplanに応じて、is_premium表現の中身をマスクする。
-// フレーズ本体(expressionEn)・シーンタグ・レベルなどは残し、
-// 「答え」にあたる意味・例文・類似表現・使用上の注意だけ隠す。
-export function applyPlanGating(expressions: Expression[], plan: Plan): Expression[] {
-  const isUnlocked = UNLOCKED_PLANS.includes(plan);
-
-  return expressions.map((expression) => {
-    if (!expression.isPremium || isUnlocked) {
-      return { ...expression, locked: false };
-    }
-
-    return {
-      ...expression,
-      locked: true,
-      meaningJa: undefined,
-      example1En: undefined,
-      example1Ja: undefined,
-      example2En: undefined,
-      example2Ja: undefined,
-      similarExpressions: undefined,
-      usageNotes: undefined,
-    };
-  });
+// Pro限定は機能面（シーン別絞り込み・マイリスト無制限・音声再生）のみとし、
+// 表現の意味・例文はプランに関わらず常に閲覧可能にする（旧is_premiumマスクは廃止）。
+// 呼び出し側（page.tsx等）のシグネチャを変更せずに済むよう関数自体は残してある。
+export function applyPlanGating(expressions: Expression[]): Expression[] {
+  return expressions.map((expression) => ({ ...expression, locked: false }));
 }
 
 // 公開済み表現の一覧取得（新しい順）

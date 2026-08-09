@@ -38,7 +38,7 @@ const SUBSCRIPTION_STATUS_LABELS: Record<string, string> = {
 
 const PLAN_FEATURES: Record<Plan, string[]> = {
   free: [
-    "「気になる」表現は意味・例文が一部ロック",
+    "全表現の意味・例文を閲覧可能",
     "シーン別絞り込みは一部ロック",
     "マイリスト保存 15件まで",
     "例文の音声再生なし",
