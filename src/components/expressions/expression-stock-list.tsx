@@ -14,6 +14,9 @@ type ExpressionStockListProps = {
   title?: string;
   description?: string;
   emptyMessage?: string;
+  // ホームの棚から「すべて見る」で遷移してきた際に、あらかじめ選択しておくシーン。
+  // Freeプランの場合は絞り込みを適用せず、代わりにアップセルを表示する。
+  initialSceneTag?: SceneTagFilter;
 };
 
 function matchesKeyword(expression: Expression, keyword: string) {
@@ -44,10 +47,16 @@ export function ExpressionStockList({
   title = "表現ストック",
   description = "キーワード・シーン・フォーマル度・レベルで絞り込み、ビジネス英語表現を探せます。",
   emptyMessage = "まだ公開中の表現がありません。準備が整い次第、順次公開されます。",
+  initialSceneTag = "すべて",
 }: ExpressionStockListProps) {
   const savedIdSet = useMemo(() => new Set(savedExpressionIds), [savedExpressionIds]);
+  // シーン絞り込みはPro限定。Freeプランで指定された場合は適用せず、アップセル表示に回す。
+  const sceneTagGated = plan === "free";
+  const initialSceneTagBlocked = sceneTagGated && initialSceneTag !== "すべて";
   const [keyword, setKeyword] = useState("");
-  const [sceneTag, setSceneTag] = useState<SceneTagFilter>("すべて");
+  const [sceneTag, setSceneTag] = useState<SceneTagFilter>(
+    initialSceneTagBlocked ? "すべて" : initialSceneTag
+  );
   const [formality, setFormality] = useState<FormalityFilter>("すべて");
   const [level, setLevel] = useState<LevelFilter>("すべて");
 
@@ -79,6 +88,7 @@ export function ExpressionStockList({
         onSceneTagChange={setSceneTag}
         onFormalityChange={setFormality}
         onLevelChange={setLevel}
+        initialSceneTagBlocked={initialSceneTagBlocked}
       />
 
       {loadError && (

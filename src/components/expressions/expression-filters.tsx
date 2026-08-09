@@ -28,6 +28,9 @@ type ExpressionFiltersProps = {
   onSceneTagChange: (value: SceneTagFilter) => void;
   onFormalityChange: (value: FormalityFilter) => void;
   onLevelChange: (value: LevelFilter) => void;
+  // ホームの棚から「すべて見る」で遷移してきた際、Freeプランでシーンが
+  // 指定されていた場合にアップセルを最初から表示しておくためのフラグ。
+  initialSceneTagBlocked?: boolean;
 };
 
 export function ExpressionFilters({
@@ -40,8 +43,9 @@ export function ExpressionFilters({
   onSceneTagChange,
   onFormalityChange,
   onLevelChange,
+  initialSceneTagBlocked = false,
 }: ExpressionFiltersProps) {
-  const [showSceneTagUpsell, setShowSceneTagUpsell] = useState(false);
+  const [showSceneTagUpsell, setShowSceneTagUpsell] = useState(initialSceneTagBlocked);
   // シーンタグの絞り込みはPro/Premium限定。「すべて」は常に押せる。
   const sceneTagGated = plan === "free";
 

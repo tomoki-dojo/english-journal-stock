@@ -1,12 +1,22 @@
-import { DashboardHome } from "@/components/expressions";
+import { ExpressionStockList, SceneTagValues } from "@/components/expressions";
+import type { SceneTagFilter } from "@/components/expressions";
 import { applyPlanGating, listPublishedExpressions } from "@/lib/supabase/expressions";
 import { listSavedExpressionIds } from "@/lib/supabase/saved-expressions";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
 import { getPlan } from "@/lib/supabase/profile";
-import { getTodayDateKey } from "@/lib/daily-rotation";
 import type { Plan } from "@/lib/plan";
 
-export default async function DashboardHomePage() {
+// 検索＋シーン・フォーマル度・レベルの絞り込みで全件を探せる画面。
+// ホーム画面の棚から「すべて見る」で遷移してくる際は、?scene=会議 のようにシーンを指定できる。
+export default async function LibraryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ scene?: string }>;
+}) {
+  const { scene } = await searchParams;
+  const initialSceneTag: SceneTagFilter =
+    scene && (SceneTagValues as readonly string[]).includes(scene) ? (scene as SceneTagFilter) : "すべて";
+
   let expressions: Awaited<ReturnType<typeof listPublishedExpressions>> = [];
   let loadError = false;
 
@@ -35,12 +45,12 @@ export default async function DashboardHomePage() {
   }
 
   return (
-    <DashboardHome
+    <ExpressionStockList
       expressions={gatedExpressions}
       loadError={loadError}
       plan={plan}
       savedExpressionIds={savedExpressionIds}
-      dateKey={getTodayDateKey()}
+      initialSceneTag={initialSceneTag}
     />
   );
 }
