@@ -13,11 +13,10 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
-// TODO: 仮の名称・ドメイン・説明文。アプリの正式名称とドメインが決まったら差し替える。
 const siteUrl = "https://app.english-journal.bear-fruit.online";
-const siteTitle = "English Journal Stock（仮）";
+const siteTitle = "English Journal Stock";
 const siteDescription =
-  "ネイティブ表現・ビジネス英語をシーン別にストックして学べる学習アプリ（開発中）。";
+  "ネイティブ表現・ビジネス英語をシーン別にストックして学べる学習アプリ。";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
