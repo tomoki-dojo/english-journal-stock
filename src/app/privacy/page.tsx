@@ -80,8 +80,8 @@ export default function PrivacyPage() {
               （例文音声データの生成。個人情報を含まない、コンテンツ本文のみを処理します）
             </li>
             <li>
-              <span className="text-zinc-800">Google LLC（Google AdSense）</span>
-              （無料プラン・未ログイン時の広告配信）
+              <span className="text-zinc-800">Google LLC</span>
+              （Google Analytics：利用状況の分析。Google AdSense：無料プラン・未ログイン時の広告配信）
             </li>
           </ul>
           <p>
@@ -95,11 +95,14 @@ export default function PrivacyPage() {
           <ul className="list-disc space-y-1 pl-5">
             <li>ログイン状態を維持するための、本サービスの提供に必要なCookie</li>
             <li>
+              Google Analyticsによる、本サービスの利用状況分析のためのCookie（ページ閲覧・機能利用状況等を把握し、サービス改善に利用します）
+            </li>
+            <li>
               Google AdSenseによる広告配信のためのCookie（無料プラン・未ログイン時のみ。利用者の興味関心に応じた広告表示のため、Googleおよび提携先が使用する場合があります）
             </li>
           </ul>
           <p>
-            Google AdSenseで取得される情報の取り扱いについては、
+            Google Analytics・Google AdSenseで取得される情報の取り扱いについては、
             <a
               href="https://policies.google.com/technologies/partner-sites"
               target="_blank"

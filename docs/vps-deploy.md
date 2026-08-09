@@ -53,7 +53,7 @@ cp .env.production.example .env.production
 nano .env.production
 ```
 
-必要なキーは以下の7個です。
+必要なキーは以下の8個です。
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
@@ -64,6 +64,9 @@ nano .env.production
 - `NEXT_PUBLIC_ADSENSE_CLIENT_ID`（AdSenseのパブリッシャーID。AdSenseダッシュボードで
   `app.english-journal.bear-fruit.online` を新しいサイトとして追加・承認してもらった後に設定する。
   未設定のままでも動作する（広告枠がプレースホルダー表示になるだけ）ため、審査待ちの間は空でよい）
+- `NEXT_PUBLIC_GA_MEASUREMENT_ID`（GA4の測定ID、`G-...`の形式。Google Analyticsで
+  `app.english-journal.bear-fruit.online` 用のプロパティを作成して発行する。
+  未設定のままでも動作する（計測タグ自体が出力されないだけ）
 
 `GOOGLE_TTS_API_KEY`はアプリ本体では使わない（音声生成バッチスクリプト専用）ため、
 本番環境には設定不要です。
@@ -181,6 +184,8 @@ Stripeダッシュボードの該当Webhookから「テストイベントを送�
 - [ ] Free/未ログインでサイドバー・ライブラリ一覧に広告枠が表示され、Proでは表示されない
       （`NEXT_PUBLIC_ADSENSE_CLIENT_ID`未設定の間は「広告スペース」のプレースホルダーでよい）
 - [ ] `https://app.english-journal.bear-fruit.online/ads.txt` が正しく表示される
+- [ ] ブラウザの開発者ツール（Network）で`gtag/js`が読み込まれている
+      （`NEXT_PUBLIC_GA_MEASUREMENT_ID`設定後。GAのリアルタイムレポートにアクセスが反映されるか確認）
 
 ---
 
