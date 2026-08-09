@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { ChevronRight } from "lucide-react";
+import { Check, ChevronRight, Sparkles } from "lucide-react";
 import { ExpressionCard } from "./expression-card";
 import { ShelfItemCard } from "./shelf-item-card";
 import { pickShelfItems, pickTodaysHighlight, pickTodaysScenes } from "@/lib/daily-rotation";
+import { PRO_FEATURE_HIGHLIGHTS } from "@/lib/pro-features";
 import type { Expression } from "./types";
 import type { Plan } from "@/lib/plan";
 
@@ -94,6 +95,30 @@ export function DashboardHome({
           </div>
         </section>
       ))}
+
+      {plan === "free" && (
+        <section className="rounded-xl border border-accent/20 bg-accent/5 px-6 py-6">
+          <div className="mb-3 flex items-center gap-1.5">
+            <Sparkles className="h-4 w-4 text-accent" />
+            <h2 className="text-sm font-semibold text-zinc-900">Proでできること</h2>
+          </div>
+          <ul className="mb-4 grid gap-2 sm:grid-cols-2">
+            {PRO_FEATURE_HIGHLIGHTS.map((feature) => (
+              <li key={feature} className="flex items-center gap-2 text-sm text-zinc-600">
+                <Check className="h-3.5 w-3.5 shrink-0 text-accent" />
+                {feature}
+              </li>
+            ))}
+          </ul>
+          <Link
+            href="/settings"
+            className="inline-flex items-center gap-0.5 text-sm font-medium text-accent hover:underline"
+          >
+            プランを見る
+            <ChevronRight className="h-4 w-4" />
+          </Link>
+        </section>
+      )}
 
       <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-100/30 px-6 py-8 text-center">
         <p className="mb-3 text-sm text-zinc-500">

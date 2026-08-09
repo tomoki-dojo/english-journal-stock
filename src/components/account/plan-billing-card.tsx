@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Check, Loader2, Sparkles } from "lucide-react";
 import { PLAN_LABELS, type Plan } from "@/lib/plan";
 import type { BillingInterval } from "@/lib/stripe";
+import { PLAN_COMPARISON_ROWS, PRO_FEATURE_HIGHLIGHTS } from "@/lib/pro-features";
 import { Toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 
@@ -43,13 +44,7 @@ const PLAN_FEATURES: Record<Plan, string[]> = {
     "マイリスト保存 15件まで",
     "例文の音声再生なし",
   ],
-  pro: [
-    "全表現の意味・例文を閲覧可能",
-    "シーン×機能タグの掛け合わせ絞り込みが自由に使える",
-    "マイリスト保存 無制限",
-    "例文の音声再生が可能",
-    "広告非表示",
-  ],
+  pro: ["全表現の意味・例文を閲覧可能", ...PRO_FEATURE_HIGHLIGHTS],
   premium: ["Proの全機能"],
 };
 
@@ -142,6 +137,33 @@ export function PlanBillingCard({ plan, subscriptionStatus }: PlanBillingCardPro
           </li>
         ))}
       </ul>
+
+      {plan === "free" && (
+        <div className="border-t border-zinc-200 pt-4">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-zinc-600">
+            <Sparkles className="h-3.5 w-3.5 text-accent" />
+            FreeとProのちがい
+          </div>
+          <table className="mt-2.5 w-full text-xs">
+            <thead>
+              <tr className="text-zinc-400">
+                <th className="py-1 text-left font-medium"></th>
+                <th className="py-1 text-left font-medium">Free</th>
+                <th className="py-1 text-left font-medium text-accent">Pro</th>
+              </tr>
+            </thead>
+            <tbody>
+              {PLAN_COMPARISON_ROWS.map((row) => (
+                <tr key={row.label} className="border-t border-zinc-200/70">
+                  <td className="py-1.5 pr-2 text-zinc-500">{row.label}</td>
+                  <td className="py-1.5 pr-2 text-zinc-500">{row.free}</td>
+                  <td className="py-1.5 font-medium text-zinc-800">{row.pro}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {plan === "free" && (
         <div className="space-y-3 border-t border-zinc-200 pt-4">

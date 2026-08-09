@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Lock, Search } from "lucide-react";
+import { Lock, Search, Sparkles } from "lucide-react";
 import {
   SceneTagValues,
   FormalityValues,
@@ -14,6 +14,7 @@ import {
   type IntentTagFilter,
 } from "./types";
 import type { Plan } from "@/lib/plan";
+import { PRO_FEATURE_HIGHLIGHTS } from "@/lib/pro-features";
 import { cn } from "@/lib/utils";
 
 const sceneTagOptions: SceneTagFilter[] = ["すべて", ...SceneTagValues];
@@ -97,6 +98,20 @@ export function ExpressionFilters({
           />
         </div>
       </div>
+
+      {plan === "free" && (
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-accent/5 px-3.5 py-2.5 text-xs text-zinc-600 ring-1 ring-accent/10">
+          <Sparkles className="h-3.5 w-3.5 shrink-0 text-accent" />
+          <span className="text-zinc-500">Proでできること:</span>
+          <span>{PRO_FEATURE_HIGHLIGHTS.join(" ・ ")}</span>
+          <Link
+            href="/settings"
+            className="ml-auto shrink-0 font-medium text-accent hover:underline"
+          >
+            詳しく見る
+          </Link>
+        </div>
+      )}
 
       <div className="space-y-2.5">
         <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
