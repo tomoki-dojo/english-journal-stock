@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { ExpressionCard } from "./expression-card";
 import { ExpressionFilters } from "./expression-filters";
+import { AdUnit } from "@/components/ads/ad-unit";
 import type {
   Expression,
   SceneTagFilter,
@@ -11,6 +12,9 @@ import type {
   IntentTagFilter,
 } from "./types";
 import type { Plan } from "@/lib/plan";
+
+// 何件のカードごとに広告を1枚挟むか（Freeプランのみ）
+const AD_INTERVAL = 6;
 
 type ExpressionStockListProps = {
   expressions: Expression[];
@@ -59,6 +63,7 @@ export function ExpressionStockList({
   initialIntentTag = "すべて",
 }: ExpressionStockListProps) {
   const savedIdSet = useMemo(() => new Set(savedExpressionIds), [savedExpressionIds]);
+  const showAds = plan === "free";
   // シーン・機能タグの絞り込みはPro限定。Freeプランで指定された場合は適用せず、アップセル表示に回す。
   const sceneTagGated = plan === "free";
   const intentTagGated = plan === "free";
@@ -121,13 +126,19 @@ export function ExpressionStockList({
 
         {filteredExpressions.length > 0 ? (
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {filteredExpressions.map((expression) => (
-              <ExpressionCard
-                key={expression.id}
-                expression={expression}
-                plan={plan}
-                initialSaved={savedIdSet.has(expression.id)}
-              />
+            {filteredExpressions.map((expression, index) => (
+              <Fragment key={expression.id}>
+                <ExpressionCard
+                  expression={expression}
+                  plan={plan}
+                  initialSaved={savedIdSet.has(expression.id)}
+                />
+                {showAds && index > 0 && (index + 1) % AD_INTERVAL === 0 && (
+                  <div className="flex items-center justify-center rounded-xl border border-zinc-200 bg-zinc-100/30 p-3">
+                    <AdUnit slot="3294476196" layoutKey="-fb+5w+4e-db+86" className="w-full" />
+                  </div>
+                )}
+              </Fragment>
             ))}
           </div>
         ) : (

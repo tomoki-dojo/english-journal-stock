@@ -16,6 +16,7 @@ services:
         # .env.production の値をそのまま使う（下のenv_fileと同じファイル）。
         NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_ADSENSE_CLIENT_ID: ${NEXT_PUBLIC_ADSENSE_CLIENT_ID}
     container_name: english-journal-stock
     restart: unless-stopped
     env_file:

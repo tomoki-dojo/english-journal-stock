@@ -79,6 +79,10 @@ export default function PrivacyPage() {
               <span className="text-zinc-800">Google Cloud（Text-to-Speech API）</span>
               （例文音声データの生成。個人情報を含まない、コンテンツ本文のみを処理します）
             </li>
+            <li>
+              <span className="text-zinc-800">Google LLC（Google AdSense）</span>
+              （無料プラン・未ログイン時の広告配信）
+            </li>
           </ul>
           <p>
             これらの外部サービスは、それぞれ独自のプライバシーポリシーに基づきデータを取り扱います。サービスの海外事業者に情報が保管・処理される場合があります。
@@ -87,8 +91,33 @@ export default function PrivacyPage() {
 
         <section className="space-y-2">
           <h2 className="text-base font-semibold text-zinc-900">5. Cookieの利用</h2>
+          <p>本サービスでは、以下の目的でCookie等を使用します。</p>
+          <ul className="list-disc space-y-1 pl-5">
+            <li>ログイン状態を維持するための、本サービスの提供に必要なCookie</li>
+            <li>
+              Google AdSenseによる広告配信のためのCookie（無料プラン・未ログイン時のみ。利用者の興味関心に応じた広告表示のため、Googleおよび提携先が使用する場合があります）
+            </li>
+          </ul>
           <p>
-            本サービスでは、ログイン状態を維持するなど、本サービスの提供に必要な範囲でCookie等を使用します。広告配信を目的としたCookieは使用していません。
+            Google AdSenseで取得される情報の取り扱いについては、
+            <a
+              href="https://policies.google.com/technologies/partner-sites"
+              target="_blank"
+              rel="noreferrer"
+              className="text-accent hover:underline"
+            >
+              Googleのプライバシーとポリシー
+            </a>
+            をご確認ください。パーソナライズ広告は、
+            <a
+              href="https://adssettings.google.com/"
+              target="_blank"
+              rel="noreferrer"
+              className="text-accent hover:underline"
+            >
+              Google広告設定
+            </a>
+            から無効化できます。
           </p>
         </section>
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { X } from "lucide-react";
 import { navItems } from "./nav-items";
 import { PLAN_LABELS, type Plan } from "@/lib/plan";
+import { AdUnit } from "@/components/ads/ad-unit";
 import { cn } from "@/lib/utils";
 
 export type SidebarAccount = {
@@ -29,6 +30,8 @@ function resolveInitials(name: string): string {
 
 export function Sidebar({ isOpen, onClose, account }: SidebarProps) {
   const name = account ? resolveDisplayName(account) : null;
+  // 未ログイン、またはFreeプランのときだけ広告を表示する（Pro/Premiumは広告なし）
+  const showAd = !account || account.plan === "free";
   return (
     <>
       <div
@@ -87,6 +90,12 @@ export function Sidebar({ isOpen, onClose, account }: SidebarProps) {
             );
           })}
         </nav>
+
+        {showAd && (
+          <div className="shrink-0 px-3 pb-3">
+            <AdUnit slot="7523817086" />
+          </div>
+        )}
 
         <div className="shrink-0 border-t border-zinc-200/60 p-4">
           {account && name ? (

@@ -53,7 +53,7 @@ cp .env.production.example .env.production
 nano .env.production
 ```
 
-必要なキーは以下の6個です。
+必要なキーは以下の7個です。
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
@@ -61,6 +61,9 @@ nano .env.production
 - `STRIPE_SECRET_KEY`（**本番モード**の秘密鍵。テストモードのものではない）
 - `STRIPE_WEBHOOK_SECRET`（このあとの手順6で発行される値。ここでは一旦空でもよい）
 - `STRIPE_PRICE_ID_PRO_MONTHLY` / `STRIPE_PRICE_ID_PRO_ANNUAL`（本番モードで作成したPrice ID）
+- `NEXT_PUBLIC_ADSENSE_CLIENT_ID`（AdSenseのパブリッシャーID。AdSenseダッシュボードで
+  `app.english-journal.bear-fruit.online` を新しいサイトとして追加・承認してもらった後に設定する。
+  未設定のままでも動作する（広告枠がプレースホルダー表示になるだけ）ため、審査待ちの間は空でよい）
 
 `GOOGLE_TTS_API_KEY`はアプリ本体では使わない（音声生成バッチスクリプト専用）ため、
 本番環境には設定不要です。
@@ -175,6 +178,9 @@ Stripeダッシュボードの該当Webhookから「テストイベントを送�
 - [ ] Checkout完了後、Webhook経由でプランが`pro`に反映される
 - [ ] 「お支払い管理」からBilling Portalが開ける
 - [ ] `/tokushoho` `/terms` `/privacy` が正しく表示される
+- [ ] Free/未ログインでサイドバー・ライブラリ一覧に広告枠が表示され、Proでは表示されない
+      （`NEXT_PUBLIC_ADSENSE_CLIENT_ID`未設定の間は「広告スペース」のプレースホルダーでよい）
+- [ ] `https://app.english-journal.bear-fruit.online/ads.txt` が正しく表示される
 
 ---
 
