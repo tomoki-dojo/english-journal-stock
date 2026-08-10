@@ -186,6 +186,10 @@ Stripeダッシュボードの該当Webhookから「テストイベントを送�
 - [ ] `https://app.english-journal.bear-fruit.online/ads.txt` が正しく表示される
 - [ ] ブラウザの開発者ツール（Network）で`gtag/js`が読み込まれている
       （`NEXT_PUBLIC_GA_MEASUREMENT_ID`設定後。GAのリアルタイムレポートにアクセスが反映されるか確認）
+- [ ] `/vocabulary` で単語の検索・レベル絞り込みができる（Free/未ログインでも可）
+- [ ] `/vocabulary` の「学習リストに追加」がFreeではロック表示、Proでは追加できる
+- [ ] `/vocabulary/learn` の進捗ダッシュボードが表示され、「今日の復習」からクイズに進める（Pro）
+- [ ] クイズで回答すると次回復習日が更新される（同じ単語が翌日以降まで出てこないか確認）
 
 ---
 

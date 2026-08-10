@@ -1,4 +1,4 @@
-import { Bookmark, Search, Settings, type LucideIcon } from "lucide-react";
+import { Bookmark, BookOpen, BrainCircuit, Search, Settings, type LucideIcon } from "lucide-react";
 
 export type NavItem = {
   label: string;
@@ -12,6 +12,17 @@ export const navItems: NavItem[] = [
     label: "すべての表現",
     href: "/library",
     icon: Search,
+  },
+  {
+    label: "単語帳",
+    href: "/vocabulary",
+    icon: BookOpen,
+  },
+  {
+    label: "単語学習",
+    href: "/vocabulary/learn",
+    icon: BrainCircuit,
+    badge: "Pro",
   },
   {
     label: "マイリスト",
