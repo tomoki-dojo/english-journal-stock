@@ -6,7 +6,7 @@ import { Check, ChevronRight, Sparkles } from "lucide-react";
 import { ExpressionCard } from "./expression-card";
 import { ShelfItemCard } from "./shelf-item-card";
 import { pickShelfItems, pickTodaysHighlight, pickTodaysScenes } from "@/lib/daily-rotation";
-import { PRO_FEATURE_HIGHLIGHTS } from "@/lib/pro-features";
+import { PRO_FEATURE_HIGHLIGHTS, ProFeatureLabelText } from "@/lib/pro-features";
 import type { Expression } from "./types";
 import type { Plan } from "@/lib/plan";
 
@@ -100,13 +100,13 @@ export function DashboardHome({
         <section className="rounded-xl border border-accent/20 bg-accent/5 px-6 py-6">
           <div className="mb-3 flex items-center gap-1.5">
             <Sparkles className="h-4 w-4 text-accent" />
-            <h2 className="text-sm font-semibold text-zinc-900">Proでできること</h2>
+            <h2 className="text-sm font-semibold text-zinc-900">Proの便利機能</h2>
           </div>
           <ul className="mb-4 grid gap-2 sm:grid-cols-2">
             {PRO_FEATURE_HIGHLIGHTS.map((feature) => (
-              <li key={feature} className="flex items-center gap-2 text-sm text-zinc-600">
+              <li key={feature.label} className="flex items-center gap-2 text-sm text-zinc-600">
                 <Check className="h-3.5 w-3.5 shrink-0 text-accent" />
-                {feature}
+                <ProFeatureLabelText highlight={feature} />
               </li>
             ))}
           </ul>

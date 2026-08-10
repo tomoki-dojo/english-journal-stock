@@ -14,7 +14,7 @@ import {
   type IntentTagFilter,
 } from "./types";
 import type { Plan } from "@/lib/plan";
-import { PRO_FEATURE_HIGHLIGHTS } from "@/lib/pro-features";
+import { PRO_FEATURE_HIGHLIGHTS, ProFeatureLabelText } from "@/lib/pro-features";
 import { cn } from "@/lib/utils";
 
 const sceneTagOptions: SceneTagFilter[] = ["すべて", ...SceneTagValues];
@@ -102,8 +102,15 @@ export function ExpressionFilters({
       {plan === "free" && (
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-accent/5 px-3.5 py-2.5 text-xs text-zinc-600 ring-1 ring-accent/10">
           <Sparkles className="h-3.5 w-3.5 shrink-0 text-accent" />
-          <span className="text-zinc-500">Proでできること:</span>
-          <span>{PRO_FEATURE_HIGHLIGHTS.join(" ・ ")}</span>
+          <span className="text-zinc-500">Proの便利機能:</span>
+          <span>
+            {PRO_FEATURE_HIGHLIGHTS.map((highlight, index) => (
+              <span key={highlight.label}>
+                {index > 0 && <span className="text-zinc-400"> ・ </span>}
+                <ProFeatureLabelText highlight={highlight} />
+              </span>
+            ))}
+          </span>
           <Link
             href="/settings"
             className="ml-auto shrink-0 font-medium text-accent hover:underline"

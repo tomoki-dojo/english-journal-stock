@@ -5,7 +5,12 @@ import { useSearchParams } from "next/navigation";
 import { Check, Loader2, Sparkles } from "lucide-react";
 import { PLAN_LABELS, type Plan } from "@/lib/plan";
 import type { BillingInterval } from "@/lib/stripe";
-import { PLAN_COMPARISON_ROWS, PRO_FEATURE_HIGHLIGHTS } from "@/lib/pro-features";
+import {
+  PLAN_COMPARISON_ROWS,
+  PRO_FEATURE_HIGHLIGHTS,
+  ProFeatureLabelText,
+  type ProFeatureHighlight,
+} from "@/lib/pro-features";
 import { Toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 
@@ -37,15 +42,15 @@ const SUBSCRIPTION_STATUS_LABELS: Record<string, string> = {
   paused: "一時停止中",
 };
 
-const PLAN_FEATURES: Record<Plan, string[]> = {
+const PLAN_FEATURES: Record<Plan, ProFeatureHighlight[]> = {
   free: [
-    "全表現の意味・例文を閲覧可能",
-    "シーン・機能タグでの絞り込みは一部ロック",
-    "マイリスト保存 15件まで",
-    "例文の音声再生なし",
+    { label: "全表現の意味・例文を閲覧可能" },
+    { label: "シーン・機能タグでの絞り込みは一部ロック" },
+    { label: "マイリスト保存 15件まで" },
+    { label: "例文の音声再生なし" },
   ],
-  pro: ["全表現の意味・例文を閲覧可能", ...PRO_FEATURE_HIGHLIGHTS],
-  premium: ["Proの全機能"],
+  pro: [{ label: "全表現の意味・例文を閲覧可能" }, ...PRO_FEATURE_HIGHLIGHTS],
+  premium: [{ label: "Proの全機能" }],
 };
 
 export function PlanBillingCard({ plan, subscriptionStatus }: PlanBillingCardProps) {
@@ -131,9 +136,9 @@ export function PlanBillingCard({ plan, subscriptionStatus }: PlanBillingCardPro
 
       <ul className="space-y-1 text-xs text-zinc-500">
         {PLAN_FEATURES[plan].map((feature) => (
-          <li key={feature} className="flex items-center gap-1.5">
+          <li key={feature.label} className="flex items-center gap-1.5">
             <Check className="h-3.5 w-3.5 shrink-0 text-accent" />
-            {feature}
+            <ProFeatureLabelText highlight={feature} />
           </li>
         ))}
       </ul>
