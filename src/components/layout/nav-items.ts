@@ -22,7 +22,6 @@ export const navItems: NavItem[] = [
     label: "単語学習",
     href: "/vocabulary/learn",
     icon: BrainCircuit,
-    badge: "Pro",
   },
   {
     label: "マイリスト",

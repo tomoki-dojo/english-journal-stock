@@ -4,6 +4,7 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getTodayDateKey } from "@/lib/daily-rotation";
 import { listPublishedVocabulary, listVocabularyByIds } from "@/lib/supabase/vocabulary";
+import { ensureSavedVocabulary, listSavedVocabularyIds } from "@/lib/supabase/saved-vocabulary";
 import type {
   BoxLevel,
   LearningVocabulary,
@@ -25,6 +26,13 @@ const BOX_INTERVAL_DAYS: Record<BoxLevel, number> = {
 const MAX_BOX_LEVEL: BoxLevel = 5;
 const QUIZ_QUESTION_COUNT = 10;
 const DISTRACTOR_COUNT = 3;
+
+// ランダム学習（誰でも利用可・SRS状態は変更しない練習モード）の設定
+const RANDOM_PRACTICE_QUESTION_COUNT = 10;
+// マイリストの単語のうち、学習を始めていない（進捗データがない）単語の重み
+const NO_PROGRESS_WEIGHT = 3;
+// 直近の回答が不正解だった単語に加算する重み
+const INCORRECT_BONUS_WEIGHT = 2;
 
 // YYYY-MM-DD形式の日付文字列にN日足す（UTC基準の暦日演算なのでDST等の影響を受けない）。
 function addDaysToDateKey(dateKey: string, days: number): string {
@@ -76,6 +84,7 @@ export async function listLearningVocabularyIds(userId: string): Promise<string[
 type AddToLearningListResult = { ok: true } | { ok: false; message: string };
 
 // 単語を学習リストに追加する（箱1・今日から復習開始）。既に追加済みなら何もしない。
+// 「学習を始める」は「保存」の上位概念なので、まだ保存（マイリスト）されていなければ自動的に保存もする。
 export async function addToLearningList(
   userId: string,
   vocabularyId: string
@@ -98,6 +107,8 @@ export async function addToLearningList(
   if (error) {
     return { ok: false, message: error.message };
   }
+
+  await ensureSavedVocabulary(userId, vocabularyId);
 
   return { ok: true };
 }
@@ -202,9 +213,54 @@ function shuffleWithCorrectIndex(choices: string[], correctValue: string): { cho
   return { choices: shuffled, correctIndex: shuffled.indexOf(correctValue) };
 }
 
-// 今日の復習対象から4択クイズを組み立てる。
-// 出題方向（英語→意味 / 意味→英語）はランダムに混ぜる。誤答は同レベル帯の他の公開単語から選ぶ
-// （同レベルの候補が足りない場合は全体からフォールバックする）。
+// 単語1つぶんの4択クイズを組み立てる共通ロジック（今日の復習／ランダム学習の両方で使う）。
+// 出題方向（英語→意味 / 意味→英語）はランダム。誤答は同レベル帯の他の公開単語から選ぶ
+// （同レベルの候補が足りない場合は全体からフォールバックする。それでも足りなければnullを返す）。
+function buildQuestionForVocabulary(
+  vocab: Vocabulary,
+  allVocab: Vocabulary[],
+  excludeIds: Set<string>
+): QuizQuestion | null {
+  const direction: QuizDirection = Math.random() < 0.5 ? "en-to-ja" : "ja-to-en";
+
+  const sameLevelPool = allVocab.filter((v) => v.level === vocab.level);
+  const exclude = new Set([vocab.id, ...excludeIds]);
+  let distractorPool = pickRandom(sameLevelPool, DISTRACTOR_COUNT, exclude, (v) => v.id);
+
+  if (distractorPool.length < DISTRACTOR_COUNT) {
+    const fallbackExclude = new Set([...exclude, ...distractorPool.map((v) => v.id)]);
+    const fallback = pickRandom(
+      allVocab,
+      DISTRACTOR_COUNT - distractorPool.length,
+      fallbackExclude,
+      (v) => v.id
+    );
+    distractorPool = [...distractorPool, ...fallback];
+  }
+
+  // 誤答すら十分に集まらない場合（コンテンツがごく少ない場合）はこの単語をスキップ
+  if (distractorPool.length < DISTRACTOR_COUNT) return null;
+
+  const correctValue = direction === "en-to-ja" ? vocab.meaningJa : vocab.wordEn;
+  const distractorValues = distractorPool.map((v) =>
+    direction === "en-to-ja" ? v.meaningJa : v.wordEn
+  );
+
+  const { choices, correctIndex } = shuffleWithCorrectIndex(
+    [correctValue, ...distractorValues],
+    correctValue
+  );
+
+  return {
+    vocabularyId: vocab.id,
+    direction,
+    prompt: direction === "en-to-ja" ? vocab.wordEn : vocab.meaningJa,
+    choices,
+    correctIndex,
+  };
+}
+
+// 今日の復習対象から4択クイズを組み立てる。回答結果はsubmitReviewResultでSRS状態に反映される。
 export async function buildQuizQuestions(userId: string): Promise<QuizQuestion[]> {
   const dueVocab = await getDueLearningVocabulary(userId, QUIZ_QUESTION_COUNT);
   if (dueVocab.length === 0) return [];
@@ -213,46 +269,87 @@ export async function buildQuizQuestions(userId: string): Promise<QuizQuestion[]
   const dueIds = new Set(dueVocab.map((v) => v.id));
 
   const questions: QuizQuestion[] = [];
-
   for (const vocab of dueVocab) {
-    const direction: QuizDirection = Math.random() < 0.5 ? "en-to-ja" : "ja-to-en";
+    const question = buildQuestionForVocabulary(vocab, allVocab, dueIds);
+    if (question) questions.push(question);
+  }
 
-    const sameLevelPool = allVocab.filter((v) => v.level === vocab.level);
-    const exclude = new Set([vocab.id, ...dueIds]);
-    let distractorPool = pickRandom(sameLevelPool, DISTRACTOR_COUNT, exclude, (v) => v.id);
+  return questions;
+}
 
-    // 同レベルの候補が足りなければ全体からフォールバック
-    if (distractorPool.length < DISTRACTOR_COUNT) {
-      const fallbackExclude = new Set([...exclude, ...distractorPool.map((v) => v.id)]);
-      const fallback = pickRandom(
-        allVocab,
-        DISTRACTOR_COUNT - distractorPool.length,
-        fallbackExclude,
-        (v) => v.id
-      );
-      distractorPool = [...distractorPool, ...fallback];
+// 重み付き非復元抽出（Efraimidis-Spirakisのアルゴリズム）。
+// 重みが大きいアイテムほど選ばれやすくなるが、重み0のアイテムも選ばれる可能性は残る。
+function weightedSampleWithoutReplacement<T>(
+  entries: { item: T; weight: number }[],
+  count: number
+): T[] {
+  const keyed = entries.map(({ item, weight }) => ({
+    item,
+    key: Math.random() ** (1 / Math.max(weight, 0.0001)),
+  }));
+  keyed.sort((a, b) => b.key - a.key);
+  return keyed.slice(0, count).map((k) => k.item);
+}
+
+// ランダム学習：マイリスト（保存済み）の単語からランダムに出題する練習モード。誰でも利用可能。
+// SRS状態（word_review_progress）は一切変更しない。
+// 進捗データ（学習を始めている単語）があれば、苦手な単語（箱レベルが低い／直近の回答が不正解）を
+// 優先的に出題する。マイリストが空の場合は公開単語全体から均等ランダムにフォールバックする。
+export async function buildRandomPracticeQuestions(userId: string): Promise<QuizQuestion[]> {
+  const allVocab = await listPublishedVocabulary();
+  if (allVocab.length === 0) return [];
+
+  const savedIds = await listSavedVocabularyIds(userId);
+
+  let pool: Vocabulary[];
+  let weightOf: (vocabularyId: string) => number;
+
+  if (savedIds.length > 0) {
+    pool = await listVocabularyByIds(savedIds);
+
+    const { data: progressRows, error } = await supabaseAdmin
+      .from("word_review_progress")
+      .select("vocabulary_id, box_level, last_result")
+      .eq("user_id", userId);
+
+    if (error) {
+      throw new Error(`学習進捗の取得に失敗しました: ${error.message}`);
     }
 
-    // 誤答すら十分に集まらない場合（コンテンツがごく少ない場合）はこの単語をスキップ
-    if (distractorPool.length < DISTRACTOR_COUNT) continue;
-
-    const correctValue = direction === "en-to-ja" ? vocab.meaningJa : vocab.wordEn;
-    const distractorValues = distractorPool.map((v) =>
-      direction === "en-to-ja" ? v.meaningJa : v.wordEn
+    const progressByVocabId = new Map(
+      (progressRows ?? []).map((row) => [
+        row.vocabulary_id as string,
+        {
+          boxLevel: row.box_level as BoxLevel,
+          lastResult: row.last_result as "correct" | "incorrect" | null,
+        },
+      ])
     );
 
-    const { choices, correctIndex } = shuffleWithCorrectIndex(
-      [correctValue, ...distractorValues],
-      correctValue
-    );
+    weightOf = (vocabularyId) => {
+      const progress = progressByVocabId.get(vocabularyId);
+      if (!progress) return NO_PROGRESS_WEIGHT;
+      const base = MAX_BOX_LEVEL + 1 - progress.boxLevel; // 箱1→重み5、箱5→重み1
+      return base + (progress.lastResult === "incorrect" ? INCORRECT_BONUS_WEIGHT : 0);
+    };
+  } else {
+    // マイリストが空：公開単語全体から均等ランダムにフォールバック
+    pool = allVocab;
+    weightOf = () => 1;
+  }
 
-    questions.push({
-      vocabularyId: vocab.id,
-      direction,
-      prompt: direction === "en-to-ja" ? vocab.wordEn : vocab.meaningJa,
-      choices,
-      correctIndex,
-    });
+  if (pool.length === 0) return [];
+
+  const picked = weightedSampleWithoutReplacement(
+    pool.map((vocab) => ({ item: vocab, weight: weightOf(vocab.id) })),
+    Math.min(RANDOM_PRACTICE_QUESTION_COUNT, pool.length)
+  );
+
+  const pickedIds = new Set(picked.map((v) => v.id));
+  const questions: QuizQuestion[] = [];
+  for (const vocab of picked) {
+    const question = buildQuestionForVocabulary(vocab, allVocab, pickedIds);
+    if (question) questions.push(question);
   }
 
   return questions;

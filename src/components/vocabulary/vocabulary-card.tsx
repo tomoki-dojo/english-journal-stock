@@ -1,6 +1,7 @@
 "use client";
 
 import { LearningListButton } from "./learning-list-button";
+import { BookmarkButton } from "./bookmark-button";
 import type { Vocabulary, VocabLevel } from "./types";
 import type { Plan } from "@/lib/plan";
 import { cn } from "@/lib/utils";
@@ -14,24 +15,35 @@ const levelBadgeClasses: Record<VocabLevel, string> = {
 type VocabularyCardProps = {
   vocabulary: Vocabulary;
   plan: Plan;
+  initialSaved?: boolean;
   initialAdded?: boolean;
 };
 
-export function VocabularyCard({ vocabulary, plan, initialAdded = false }: VocabularyCardProps) {
+export function VocabularyCard({
+  vocabulary,
+  plan,
+  initialSaved = false,
+  initialAdded = false,
+}: VocabularyCardProps) {
   return (
     <article className="group flex flex-col rounded-xl border border-zinc-200 bg-zinc-100/50 p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-lg hover:shadow-accent/20">
-      <div className="mb-3 flex flex-wrap items-center gap-1.5">
-        <span className="rounded-md bg-zinc-300/60 px-2 py-1 text-[11px] font-medium text-zinc-700">
-          {vocabulary.partOfSpeech}
-        </span>
-        <span
-          className={cn(
-            "rounded-md px-2 py-1 text-[11px] font-medium",
-            levelBadgeClasses[vocabulary.level]
-          )}
-        >
-          {vocabulary.level}
-        </span>
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="rounded-md bg-zinc-300/60 px-2 py-1 text-[11px] font-medium text-zinc-700">
+            {vocabulary.partOfSpeech}
+          </span>
+          <span
+            className={cn(
+              "rounded-md px-2 py-1 text-[11px] font-medium",
+              levelBadgeClasses[vocabulary.level]
+            )}
+          >
+            {vocabulary.level}
+          </span>
+        </div>
+        <div className="-mr-1.5 -mt-1 shrink-0">
+          <BookmarkButton vocabularyId={vocabulary.id} initialSaved={initialSaved} />
+        </div>
       </div>
 
       <p className="mb-1 text-lg font-semibold tracking-tight text-zinc-900">

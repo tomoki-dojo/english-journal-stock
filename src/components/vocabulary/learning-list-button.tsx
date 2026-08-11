@@ -12,8 +12,9 @@ type LearningListButtonProps = {
   initialAdded?: boolean;
 };
 
-// 単語を学習リスト（間隔反復の対象）に追加/削除するボタン。
+// 単語の学習（間隔反復での復習対象にする）を開始/停止するボタン。
 // Pro/Premium限定機能。audio-play-button.tsxと同じ「Freeはロック表示のみ」パターン。
+// 「保存」（マイリスト、Free/Pro共通）とは別のアクション。学習を始めると自動的に保存もされる。
 export function LearningListButton({
   vocabularyId,
   plan,
@@ -27,12 +28,12 @@ export function LearningListButton({
     return (
       <Link
         href="/settings"
-        aria-label="単語学習リストへの追加はPro会員限定です"
-        title="単語学習リストへの追加はPro会員限定です"
+        aria-label="間隔反復での学習開始はPro会員限定です"
+        title="間隔反復での学習開始はPro会員限定です"
         className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 bg-zinc-200/40 px-3 py-2 text-xs font-medium text-zinc-400"
       >
         <Lock className="h-3.5 w-3.5" />
-        学習リストに追加
+        学習を始める
       </Link>
     );
   }
@@ -82,7 +83,7 @@ export function LearningListButton({
         )}
       >
         {added ? <Check className="h-3.5 w-3.5" /> : <BrainCircuit className="h-3.5 w-3.5" />}
-        {added ? "学習リストに追加済み" : "学習リストに追加"}
+        {added ? "学習中" : "学習を始める"}
       </button>
       {error && <p className="text-[11px] text-red-600">{error}</p>}
     </div>

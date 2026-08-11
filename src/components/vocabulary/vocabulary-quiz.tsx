@@ -8,11 +8,22 @@ import { cn } from "@/lib/utils";
 
 type VocabularyQuizProps = {
   questions: QuizQuestion[];
+  // trueの場合のみ回答結果をAPIに送信し、間隔反復の状態（箱レベル・次回復習日）を更新する。
+  // ランダム学習ではfalseにして、正誤判定だけ行いSRS状態には一切影響させない。
+  persistResults?: boolean;
+  // 完了画面の「戻る」リンク先。省略時は/vocabulary/learn。
+  backHref?: string;
+  backLabel?: string;
 };
 
 type AnswerState = "unanswered" | "correct" | "incorrect";
 
-export function VocabularyQuiz({ questions }: VocabularyQuizProps) {
+export function VocabularyQuiz({
+  questions,
+  persistResults = true,
+  backHref = "/vocabulary/learn",
+  backLabel = "学習ダッシュボードに戻る",
+}: VocabularyQuizProps) {
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [answerState, setAnswerState] = useState<AnswerState>("unanswered");
@@ -29,8 +40,13 @@ export function VocabularyQuiz({ questions }: VocabularyQuizProps) {
     const isCorrect = choiceIndex === question.correctIndex;
     setSelected(choiceIndex);
     setAnswerState(isCorrect ? "correct" : "incorrect");
-    setSubmitting(true);
 
+    if (!persistResults) {
+      if (isCorrect) setCorrectCount((c) => c + 1);
+      return;
+    }
+
+    setSubmitting(true);
     try {
       await fetch("/api/vocabulary/review", {
         method: "POST",
@@ -66,10 +82,10 @@ export function VocabularyQuiz({ questions }: VocabularyQuizProps) {
           </p>
         </div>
         <Link
-          href="/vocabulary/learn"
+          href={backHref}
           className="inline-flex items-center gap-1 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90"
         >
-          学習ダッシュボードに戻る
+          {backLabel}
           <ChevronRight className="h-4 w-4" />
         </Link>
       </div>

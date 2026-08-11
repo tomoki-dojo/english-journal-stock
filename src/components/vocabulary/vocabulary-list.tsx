@@ -10,7 +10,11 @@ type VocabularyListProps = {
   vocabulary: Vocabulary[];
   loadError?: boolean;
   plan: Plan;
+  savedVocabularyIds?: string[];
   learningVocabularyIds?: string[];
+  title?: string;
+  description?: string;
+  emptyMessage?: string;
 };
 
 function matchesKeyword(vocab: Vocabulary, keyword: string) {
@@ -35,8 +39,13 @@ export function VocabularyList({
   vocabulary,
   loadError = false,
   plan,
+  savedVocabularyIds = [],
   learningVocabularyIds = [],
+  title = "単語帳",
+  description = "ビジネスでよく使う英単語をキーワード・レベルで絞り込んで探せます。保存するとマイリストから復習でき、「学習を始める」で間隔反復の対象にできます（Pro限定）。",
+  emptyMessage,
 }: VocabularyListProps) {
+  const savedIdSet = useMemo(() => new Set(savedVocabularyIds), [savedVocabularyIds]);
   const learningIdSet = useMemo(() => new Set(learningVocabularyIds), [learningVocabularyIds]);
   const [keyword, setKeyword] = useState("");
   const [level, setLevel] = useState<VocabLevelFilter>("すべて");
@@ -52,10 +61,8 @@ export function VocabularyList({
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">単語帳</h1>
-        <p className="mt-2 text-sm text-zinc-500">
-          ビジネスでよく使う英単語をキーワード・レベルで絞り込んで探せます。学習リストに追加すると、間隔反復で復習できます（Pro限定）。
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">{title}</h1>
+        <p className="mt-2 text-sm text-zinc-500">{description}</p>
       </div>
 
       <VocabularyFilters
@@ -81,6 +88,7 @@ export function VocabularyList({
                 key={vocab.id}
                 vocabulary={vocab}
                 plan={plan}
+                initialSaved={savedIdSet.has(vocab.id)}
                 initialAdded={learningIdSet.has(vocab.id)}
               />
             ))}
@@ -89,7 +97,7 @@ export function VocabularyList({
           <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-100/30 px-6 py-16 text-center">
             <p className="text-sm text-zinc-500">
               {vocabulary.length === 0
-                ? "まだ公開中の単語がありません。準備が整い次第、順次公開されます。"
+                ? (emptyMessage ?? "まだ公開中の単語がありません。準備が整い次第、順次公開されます。")
                 : "条件に一致する単語が見つかりませんでした。"}
             </p>
           </div>

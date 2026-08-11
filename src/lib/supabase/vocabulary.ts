@@ -1,7 +1,7 @@
 // src/lib/supabase/vocabulary.ts
 // 単語学習機能のコンテンツ取得。expressions.tsと同じ考え方で、
-// 閲覧自体（検索・レベル絞り込み含む）は未ログインでも/Freeでも全員可能。
-// Pro限定は「学習リストに追加して間隔反復・小テストを行う」機能面のみ。
+// 閲覧・保存（マイリスト）・ランダム学習は未ログインでも/Freeでも全員可能（保存はログイン必須）。
+// Pro限定は「学習を始めて間隔反復（今日の復習）を行う」機能面のみ。
 import { supabaseAdmin } from "@/lib/supabase/server";
 import type {
   PartOfSpeech,
