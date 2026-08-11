@@ -10,7 +10,7 @@ import { VocabularyQuiz } from "@/components/vocabulary";
 export default async function VocabularyQuizPage() {
   const user = await getCurrentUser();
   if (!user) {
-    redirect("/login");
+    redirect("/login?reason=vocabulary-learn-quiz");
   }
 
   const plan = await getPlan(user.id);

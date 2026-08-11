@@ -10,7 +10,7 @@ import { VocabularyQuiz } from "@/components/vocabulary";
 export default async function VocabularyRandomPracticePage() {
   const user = await getCurrentUser();
   if (!user) {
-    redirect("/login");
+    redirect("/login?reason=vocabulary-learn-random");
   }
 
   const questions = await buildRandomPracticeQuestions(user.id);

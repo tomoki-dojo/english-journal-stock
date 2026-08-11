@@ -18,7 +18,7 @@ type MyListPageProps = {
 export default async function MyListPage({ searchParams }: MyListPageProps) {
   const user = await getCurrentUser();
   if (!user) {
-    redirect("/login");
+    redirect("/login?reason=mylist");
   }
 
   const { tab } = await searchParams;

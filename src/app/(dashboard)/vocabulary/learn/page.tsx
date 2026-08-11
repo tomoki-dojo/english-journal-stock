@@ -10,7 +10,7 @@ import { getProgressSummary } from "@/lib/supabase/word-review";
 export default async function VocabularyLearnPage() {
   const user = await getCurrentUser();
   if (!user) {
-    redirect("/login");
+    redirect("/login?reason=vocabulary-learn");
   }
 
   const plan = await getPlan(user.id);

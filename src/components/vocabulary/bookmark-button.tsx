@@ -35,7 +35,7 @@ export function BookmarkButton({ vocabularyId, initialSaved = false }: BookmarkB
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         setError(
-          res.status === 401 ? "ログインすると保存できます" : (data.error ?? "保存に失敗しました")
+          res.status === 401 ? "無料ログインで保存できます" : (data.error ?? "保存に失敗しました")
         );
         return;
       }

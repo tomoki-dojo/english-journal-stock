@@ -14,7 +14,7 @@ export default async function SettingsPage() {
   const user = await getCurrentUser();
 
   if (!user) {
-    redirect("/login");
+    redirect("/login?reason=settings");
   }
 
   const { data: profile } = await supabaseAdmin
