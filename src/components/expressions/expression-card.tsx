@@ -22,10 +22,16 @@ const verificationBadgeClasses: Record<VerificationStatus, string> = {
 type ExpressionCardProps = {
   expression: Expression;
   plan: Plan;
+  loggedIn?: boolean;
   initialSaved?: boolean;
 };
 
-export function ExpressionCard({ expression, plan, initialSaved = false }: ExpressionCardProps) {
+export function ExpressionCard({
+  expression,
+  plan,
+  loggedIn = true,
+  initialSaved = false,
+}: ExpressionCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [saved, setSaved] = useState(initialSaved);
   const [savePending, setSavePending] = useState(false);
@@ -126,6 +132,7 @@ export function ExpressionCard({ expression, plan, initialSaved = false }: Expre
             expressionId={expression.id}
             field="expression"
             plan={plan}
+            loggedIn={loggedIn}
             hasAudio={expression.hasAudioExpression}
           />
         </div>
@@ -147,6 +154,7 @@ export function ExpressionCard({ expression, plan, initialSaved = false }: Expre
                   expressionId={expression.id}
                   field="example1"
                   plan={plan}
+                  loggedIn={loggedIn}
                   hasAudio={expression.hasAudioExample1}
                 />
               </div>
@@ -168,6 +176,7 @@ export function ExpressionCard({ expression, plan, initialSaved = false }: Expre
                       expressionId={expression.id}
                       field="example2"
                       plan={plan}
+                      loggedIn={loggedIn}
                       hasAudio={expression.hasAudioExample2}
                     />
                   </div>

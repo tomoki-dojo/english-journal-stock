@@ -13,6 +13,8 @@ const REASON_MESSAGES: Record<string, string> = {
   "vocabulary-learn": "単語学習は無料ログインでご利用いただけます（間隔反復はPro限定です）。",
   "vocabulary-learn-quiz": "「今日の復習」は無料ログイン後、Pro会員限定でご利用いただけます。",
   "vocabulary-learn-random": "ランダム学習は無料ログインでご利用いただけます。",
+  "vocabulary-learn-start": "単語の学習を始めるには無料ログインが必要です（間隔反復はPro限定です）。",
+  audio: "例文の音声再生には無料ログインが必要です（Pro会員限定の機能です）。",
   settings: "アカウント設定は無料ログインが必要です。",
 };
 

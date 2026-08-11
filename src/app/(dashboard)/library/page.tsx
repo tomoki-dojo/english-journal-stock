@@ -54,6 +54,7 @@ export default async function LibraryPage({
       expressions={gatedExpressions}
       loadError={loadError}
       plan={plan}
+      loggedIn={Boolean(user)}
       savedExpressionIds={savedExpressionIds}
       initialSceneTag={initialSceneTag}
       initialIntentTag={initialIntentTag}

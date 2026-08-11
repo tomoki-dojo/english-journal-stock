@@ -12,11 +12,12 @@ const levelBadgeClasses: Record<Level, string> = {
 type ShelfItemCardProps = {
   expression: Expression;
   plan: Plan;
+  loggedIn?: boolean;
 };
 
 // ホーム画面の棚（横スクロール）で使う、簡易版の表現カード。
 // 一覧画面のExpressionCardと違い、展開・保存は行わず「気になったら覗ける」程度に留める。
-export function ShelfItemCard({ expression, plan }: ShelfItemCardProps) {
+export function ShelfItemCard({ expression, plan, loggedIn = true }: ShelfItemCardProps) {
   return (
     <div className="flex w-[220px] shrink-0 flex-col justify-between rounded-xl border border-zinc-200 bg-zinc-100/50 p-4 transition-colors hover:border-accent/40">
       <div>
@@ -40,6 +41,7 @@ export function ShelfItemCard({ expression, plan }: ShelfItemCardProps) {
           expressionId={expression.id}
           field="expression"
           plan={plan}
+          loggedIn={loggedIn}
           hasAudio={expression.hasAudioExpression}
         />
       </div>

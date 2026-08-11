@@ -10,6 +10,7 @@ type VocabularyListProps = {
   vocabulary: Vocabulary[];
   loadError?: boolean;
   plan: Plan;
+  loggedIn?: boolean;
   savedVocabularyIds?: string[];
   learningVocabularyIds?: string[];
   title?: string;
@@ -39,6 +40,7 @@ export function VocabularyList({
   vocabulary,
   loadError = false,
   plan,
+  loggedIn = true,
   savedVocabularyIds = [],
   learningVocabularyIds = [],
   title = "単語帳",
@@ -88,6 +90,7 @@ export function VocabularyList({
                 key={vocab.id}
                 vocabulary={vocab}
                 plan={plan}
+                loggedIn={loggedIn}
                 initialSaved={savedIdSet.has(vocab.id)}
                 initialAdded={learningIdSet.has(vocab.id)}
               />

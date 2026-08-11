@@ -11,14 +11,36 @@ type AudioPlayButtonProps = {
   expressionId: string;
   field: AudioField;
   plan: Plan;
+  // 未ログイン（visitor）かどうか。未ログインの場合はPro導線（/settings）ではなく
+  // ログイン導線（/login）に飛ばす。省略時はtrue（ログイン済み）扱い。
+  loggedIn?: boolean;
   hasAudio: boolean;
 };
 
 // 例文音声の再生ボタン（Pro/Premium限定機能）。
 // 生のStorageパスはクライアントに渡さず、クリック時にAPI経由でsigned URLを取得して再生する。
-export function AudioPlayButton({ expressionId, field, plan, hasAudio }: AudioPlayButtonProps) {
+export function AudioPlayButton({
+  expressionId,
+  field,
+  plan,
+  loggedIn = true,
+  hasAudio,
+}: AudioPlayButtonProps) {
   const [status, setStatus] = useState<"idle" | "loading" | "playing" | "error">("idle");
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  if (!loggedIn) {
+    return (
+      <Link
+        href="/login?reason=audio"
+        aria-label="音声再生にはログインが必要です"
+        title="音声再生にはログインが必要です"
+        className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-400 transition-colors hover:text-accent"
+      >
+        <Lock className="h-3.5 w-3.5" />
+      </Link>
+    );
+  }
 
   if (plan === "free") {
     return (

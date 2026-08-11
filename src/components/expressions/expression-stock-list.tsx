@@ -20,6 +20,7 @@ type ExpressionStockListProps = {
   expressions: Expression[];
   loadError?: boolean;
   plan: Plan;
+  loggedIn?: boolean;
   savedExpressionIds?: string[];
   title?: string;
   description?: string;
@@ -55,6 +56,7 @@ export function ExpressionStockList({
   expressions,
   loadError = false,
   plan,
+  loggedIn = true,
   savedExpressionIds = [],
   title = "表現ストック",
   description = "キーワード・シーン・機能・フォーマル度・レベルで絞り込み、ビジネス英語表現を探せます。",
@@ -131,6 +133,7 @@ export function ExpressionStockList({
                 <ExpressionCard
                   expression={expression}
                   plan={plan}
+                  loggedIn={loggedIn}
                   initialSaved={savedIdSet.has(expression.id)}
                 />
                 {showAds && index > 0 && (index + 1) % AD_INTERVAL === 0 && (

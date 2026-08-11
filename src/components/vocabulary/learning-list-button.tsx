@@ -9,6 +9,9 @@ import { cn } from "@/lib/utils";
 type LearningListButtonProps = {
   vocabularyId: string;
   plan: Plan;
+  // 未ログイン（visitor）かどうか。未ログインの場合はPro導線（/settings）ではなく
+  // ログイン導線（/login）に飛ばす。省略時はtrue（ログイン済み）扱い。
+  loggedIn?: boolean;
   initialAdded?: boolean;
 };
 
@@ -18,11 +21,26 @@ type LearningListButtonProps = {
 export function LearningListButton({
   vocabularyId,
   plan,
+  loggedIn = true,
   initialAdded = false,
 }: LearningListButtonProps) {
   const [added, setAdded] = useState(initialAdded);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+
+  if (!loggedIn) {
+    return (
+      <Link
+        href="/login?reason=vocabulary-learn-start"
+        aria-label="学習を始めるにはログインが必要です"
+        title="学習を始めるにはログインが必要です"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 bg-zinc-200/40 px-3 py-2 text-xs font-medium text-zinc-400"
+      >
+        <Lock className="h-3.5 w-3.5" />
+        学習を始める
+      </Link>
+    );
+  }
 
   if (plan === "free") {
     return (

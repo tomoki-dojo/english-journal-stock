@@ -40,6 +40,7 @@ export default async function VocabularyPage() {
       vocabulary={vocabulary}
       loadError={loadError}
       plan={plan}
+      loggedIn={Boolean(user)}
       savedVocabularyIds={savedVocabularyIds}
       learningVocabularyIds={learningVocabularyIds}
     />

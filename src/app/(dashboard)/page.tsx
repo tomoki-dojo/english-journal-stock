@@ -39,6 +39,7 @@ export default async function DashboardHomePage() {
       expressions={gatedExpressions}
       loadError={loadError}
       plan={plan}
+      loggedIn={Boolean(user)}
       savedExpressionIds={savedExpressionIds}
       dateKey={getTodayDateKey()}
     />

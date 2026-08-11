@@ -15,6 +15,7 @@ const levelBadgeClasses: Record<VocabLevel, string> = {
 type VocabularyCardProps = {
   vocabulary: Vocabulary;
   plan: Plan;
+  loggedIn?: boolean;
   initialSaved?: boolean;
   initialAdded?: boolean;
 };
@@ -22,6 +23,7 @@ type VocabularyCardProps = {
 export function VocabularyCard({
   vocabulary,
   plan,
+  loggedIn = true,
   initialSaved = false,
   initialAdded = false,
 }: VocabularyCardProps) {
@@ -66,7 +68,12 @@ export function VocabularyCard({
       )}
 
       <div className="mt-auto pt-1">
-        <LearningListButton vocabularyId={vocabulary.id} plan={plan} initialAdded={initialAdded} />
+        <LearningListButton
+          vocabularyId={vocabulary.id}
+          plan={plan}
+          loggedIn={loggedIn}
+          initialAdded={initialAdded}
+        />
       </div>
     </article>
   );

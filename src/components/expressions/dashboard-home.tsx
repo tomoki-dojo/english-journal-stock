@@ -14,6 +14,7 @@ type DashboardHomeProps = {
   expressions: Expression[];
   loadError?: boolean;
   plan: Plan;
+  loggedIn?: boolean;
   savedExpressionIds?: string[];
   // JST基準の「今日」の日付キー（YYYY-MM-DD）。サーバー側で計算して渡すことで、
   // サーバー/クライアント間のハイドレーション不一致を避ける。
@@ -27,6 +28,7 @@ export function DashboardHome({
   expressions,
   loadError = false,
   plan,
+  loggedIn = true,
   savedExpressionIds = [],
   dateKey,
 }: DashboardHomeProps) {
@@ -70,6 +72,7 @@ export function DashboardHome({
             <ExpressionCard
               expression={highlight}
               plan={plan}
+              loggedIn={loggedIn}
               initialSaved={savedIdSet.has(highlight.id)}
             />
           </div>
@@ -90,7 +93,12 @@ export function DashboardHome({
           </div>
           <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-2">
             {items.map((expression) => (
-              <ShelfItemCard key={expression.id} expression={expression} plan={plan} />
+              <ShelfItemCard
+                key={expression.id}
+                expression={expression}
+                plan={plan}
+                loggedIn={loggedIn}
+              />
             ))}
           </div>
         </section>
