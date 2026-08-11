@@ -79,7 +79,7 @@ export default async function MyListPage({ searchParams }: MyListPageProps) {
           savedVocabularyIds={vocabulary.map((v) => v.id)}
           learningVocabularyIds={learningVocabularyIds}
           title="マイリスト（単語）"
-          description="保存した単語をキーワード・レベルで絞り込んで復習できます。「学習を始める」で間隔反復の対象にできます（Pro限定）。"
+          description="保存した単語をキーワード・レベルで絞り込んで復習できます。「学習を始める」で効率よく復習できるようになります（Pro限定）。"
           emptyMessage="まだ保存した単語がありません。単語帳のブックマークアイコンから追加できます。"
         />
       </div>

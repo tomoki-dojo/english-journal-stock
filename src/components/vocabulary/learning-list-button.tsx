@@ -46,8 +46,8 @@ export function LearningListButton({
     return (
       <Link
         href="/settings"
-        aria-label="間隔反復での学習開始はPro会員限定です"
-        title="間隔反復での学習開始はPro会員限定です"
+        aria-label="効率よく復習できる学習開始はPro会員限定です"
+        title="効率よく復習できる学習開始はPro会員限定です"
         className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 bg-zinc-200/40 px-3 py-2 text-xs font-medium text-zinc-400"
       >
         <Lock className="h-3.5 w-3.5" />

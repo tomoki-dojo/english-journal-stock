@@ -16,7 +16,7 @@ export const PRO_FEATURE_HIGHLIGHTS: ProFeatureHighlight[] = [
   },
   { label: "マイリスト保存 無制限", emphasis: "無制限" },
   { label: "例文の音声再生", emphasis: "音声再生" },
-  { label: "単語の間隔反復学習（今日の復習）", emphasis: "間隔反復学習" },
+  { label: "単語を効率よく復習（今日の復習）", emphasis: "効率よく復習" },
   { label: "広告非表示" },
 ];
 
@@ -53,6 +53,6 @@ export const PLAN_COMPARISON_ROWS: PlanComparisonRow[] = [
   { label: "例文の音声再生", free: "不可", pro: "可能" },
   { label: "単語の閲覧・検索・保存", free: "全単語OK", pro: "全単語OK" },
   { label: "ランダム学習（単語の練習）", free: "可能", pro: "可能・苦手優先" },
-  { label: "今日の復習（間隔反復）", free: "不可", pro: "可能" },
+  { label: "今日の復習（効率よく復習）", free: "不可", pro: "可能" },
   { label: "広告", free: "表示あり", pro: "非表示" },
 ];

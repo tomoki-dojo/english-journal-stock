@@ -36,7 +36,7 @@ export default async function VocabularyLearnPage() {
           <h2 className="text-sm font-semibold text-zinc-900">ランダム学習</h2>
         </div>
         <p className="mb-4 text-sm text-zinc-500">
-          マイリストの単語から何度でもランダムに出題する練習モードです。間隔反復の進捗（次回復習日）には影響しません。
+          マイリストの単語から何度でもランダムに出題する練習モードです。効率よく復習の進捗（次回復習日）には影響しません。
         </p>
         <Link
           href="/vocabulary/learn/random"
@@ -47,7 +47,7 @@ export default async function VocabularyLearnPage() {
         </Link>
         {plan === "free" && (
           <p className="mt-3 text-xs text-zinc-400">
-            Proにアップグレードすると、間隔反復のデータをもとに苦手な単語を優先的に出題します。
+            Proにアップグレードすると、効率よく復習のデータをもとに苦手な単語を優先的に出題します。
           </p>
         )}
       </section>
@@ -63,7 +63,7 @@ export default async function VocabularyLearnPage() {
             </span>
           </div>
           <p className="mb-4 text-sm text-zinc-500">
-            間隔反復（Leitner箱方式）はPro限定です。忘れかけた頃に自動で復習が来る学習エンジンです。
+            効率よく復習はPro限定です。忘れかけた頃に自動で復習が来る学習エンジンです。
           </p>
           <Link
             href="/settings"

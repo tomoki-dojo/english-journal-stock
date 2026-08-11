@@ -44,7 +44,7 @@ export function VocabularyList({
   savedVocabularyIds = [],
   learningVocabularyIds = [],
   title = "単語帳",
-  description = "ビジネスでよく使う英単語をキーワード・レベルで絞り込んで探せます。保存するとマイリストから復習でき、「学習を始める」で間隔反復の対象にできます（Pro限定）。",
+  description = "ビジネスでよく使う英単語をキーワード・レベルで絞り込んで探せます。保存するとマイリストから復習でき、「学習を始める」で効率よく復習できるようになります（Pro限定）。",
   emptyMessage,
 }: VocabularyListProps) {
   const savedIdSet = useMemo(() => new Set(savedVocabularyIds), [savedVocabularyIds]);
