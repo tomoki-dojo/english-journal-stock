@@ -14,8 +14,8 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
-const siteUrl = "https://app.english-journal.bear-fruit.online";
-const siteTitle = "English Journal Stock";
+const siteUrl = "https://app.upskillenglish.bear-fruit.online";
+const siteTitle = "UpskillEnglish";
 const siteDescription =
   "ネイティブ表現・ビジネス英語をシーン別にストックして学べる学習アプリ。";
 

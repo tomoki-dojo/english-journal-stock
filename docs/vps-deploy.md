@@ -1,6 +1,6 @@
 # english-journal-stock を ConoHa VPS にデプロイする手順書
 
-`app.english-journal.bear-fruit.online` を、math-journal-stockと同じConoHa VPS上の
+`app.upskillenglish.bear-fruit.online` を、math-journal-stockと同じConoHa VPS上の
 Dockerコンテナとしてデプロイする手順です。
 
 このVPSにはすでにn8n用のCaddy（コンテナ名 `n8n-docker-caddy-1`、`/root/n8n-docker/` 配下）と
@@ -24,7 +24,7 @@ math-journal-stockのVPS移行時に作った `docs/vps-migration.md` の「8. �
   docker --version
   docker compose version
   ```
-- ドメイン `app.english-journal.bear-fruit.online` のDNS Aレコードを
+- ドメイン `app.upskillenglish.bear-fruit.online` のDNS Aレコードを
   `163.44.110.196`（このVPSのIP）に向けて設定済みであること（ConoHa WINGのDNS管理画面）
 - Stripeダッシュボードで、本番モード（サンドボックスではない）の「Pro（英語アプリ）」商品と
   月額・年額のPrice IDを作成済みであること
@@ -62,10 +62,10 @@ nano .env.production
 - `STRIPE_WEBHOOK_SECRET`（このあとの手順6で発行される値。ここでは一旦空でもよい）
 - `STRIPE_PRICE_ID_PRO_MONTHLY` / `STRIPE_PRICE_ID_PRO_ANNUAL`（本番モードで作成したPrice ID）
 - `NEXT_PUBLIC_ADSENSE_CLIENT_ID`（AdSenseのパブリッシャーID。AdSenseダッシュボードで
-  `app.english-journal.bear-fruit.online` を新しいサイトとして追加・承認してもらった後に設定する。
+  `app.upskillenglish.bear-fruit.online` を新しいサイトとして追加・承認してもらった後に設定する。
   未設定のままでも動作する（広告枠がプレースホルダー表示になるだけ）ため、審査待ちの間は空でよい）
 - `NEXT_PUBLIC_GA_MEASUREMENT_ID`（GA4の測定ID、`G-...`の形式。Google Analyticsで
-  `app.english-journal.bear-fruit.online` 用のプロパティを作成して発行する。
+  `app.upskillenglish.bear-fruit.online` 用のプロパティを作成して発行する。
   未設定のままでも動作する（計測タグ自体が出力されないだけ）
 
 `GOOGLE_TTS_API_KEY`はアプリ本体では使わない（音声生成バッチスクリプト専用）ため、
@@ -95,10 +95,10 @@ nano /root/n8n-docker/Caddyfile
 ```
 
 ファイルの末尾に、このリポジトリの`Caddyfile`に書いてある内容をそのまま貼り付けます
-（ドメインは`app.english-journal.bear-fruit.online`のまま、書き換え不要）。
+（ドメインは`app.upskillenglish.bear-fruit.online`に変更済み。そのままコピーすればOK）。
 
 ```
-app.english-journal.bear-fruit.online {
+app.upskillenglish.bear-fruit.online {
 	reverse_proxy english-journal-stock:3000
 
 	encode gzip
@@ -136,7 +136,7 @@ Supabaseダッシュボード（english-journal-stockプロジェクト）→ Au
 以下をRedirect URLsに追加してください（マジックリンク・パスワード再設定等で必要）。
 
 ```
-https://app.english-journal.bear-fruit.online/**
+https://app.upskillenglish.bear-fruit.online/**
 ```
 
 Site URLも本番ドメインに更新しておくこと（math-journal-stockで一度踏んだ「マジックリンクが
@@ -148,7 +148,7 @@ localhost:3000に飛ぶ」不具合の再発防止）。
 
 Stripeダッシュボード（**本番モード**）→ Developers → Webhooks → 「エンドポイントを追加」
 
-- エンドポイントURL: `https://app.english-journal.bear-fruit.online/api/billing/webhook`
+- エンドポイントURL: `https://app.upskillenglish.bear-fruit.online/api/billing/webhook`
 - リッスンするイベント:
   - `checkout.session.completed`
   - `customer.subscription.created`
@@ -169,7 +169,7 @@ Stripeダッシュボードの該当Webhookから「テストイベントを送�
 
 ## 7. 動作確認チェックリスト
 
-`https://app.english-journal.bear-fruit.online` にアクセスして、以下を確認します。
+`https://app.upskillenglish.bear-fruit.online` にアクセスして、以下を確認します。
 
 - [ ] トップページ（今日のピックアップ・シーン別の棚）が表示される
 - [ ] ログイン（パスワード / マジックリンク）ができる
@@ -183,7 +183,7 @@ Stripeダッシュボードの該当Webhookから「テストイベントを送�
 - [ ] `/tokushoho` `/terms` `/privacy` が正しく表示される
 - [ ] Free/未ログインでサイドバー・ライブラリ一覧に広告枠が表示され、Proでは表示されない
       （`NEXT_PUBLIC_ADSENSE_CLIENT_ID`未設定の間は「広告スペース」のプレースホルダーでよい）
-- [ ] `https://app.english-journal.bear-fruit.online/ads.txt` が正しく表示される
+- [ ] `https://app.upskillenglish.bear-fruit.online/ads.txt` が正しく表示される
 - [ ] ブラウザの開発者ツール（Network）で`gtag/js`が読み込まれている
       （`NEXT_PUBLIC_GA_MEASUREMENT_ID`設定後。GAのリアルタイムレポートにアクセスが反映されるか確認）
 - [ ] `/vocabulary` で単語の検索・レベル絞り込みができる（Free/未ログインでも可）

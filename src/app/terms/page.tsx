@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "利用規約 | English Journal Stock",
+  title: "利用規約 | UpskillEnglish",
 };
 
 // 利用規約のたたき台。正式公開・商用利用前に弁護士等の専門家によるレビューを推奨する。
@@ -23,7 +23,7 @@ export default function TermsPage() {
         <section className="space-y-2">
           <h2 className="text-base font-semibold text-zinc-900">第1条（適用）</h2>
           <p>
-            本規約は、English Journal Stock（以下「本サービス」）の利用条件を定めるものです。利用者は本規約に同意のうえ、本サービスを利用するものとします。
+            本規約は、UpskillEnglish（以下「本サービス」）の利用条件を定めるものです。利用者は本規約に同意のうえ、本サービスを利用するものとします。
           </p>
         </section>
 

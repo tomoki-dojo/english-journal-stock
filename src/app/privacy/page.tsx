@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "プライバシーポリシー | English Journal Stock",
+  title: "プライバシーポリシー | UpskillEnglish",
 };
 
 // プライバシーポリシーのたたき台。正式公開・商用利用前に弁護士等の専門家によるレビューを推奨する。
@@ -25,7 +25,7 @@ export default function PrivacyPage() {
         <section className="space-y-2">
           <h2 className="text-base font-semibold text-zinc-900">1. 事業者情報</h2>
           <p>
-            本サービス「English Journal Stock」（以下「本サービス」）は、個人事業主
+            本サービス「UpskillEnglish」（以下「本サービス」）は、個人事業主
             銅城智樹（以下「運営者」）が運営しています。本ポリシーに関するお問い合わせは、本ページ末尾の連絡先までご連絡ください。
           </p>
         </section>

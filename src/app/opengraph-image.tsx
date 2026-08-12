@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "English Journal Stock";
+export const alt = "UpskillEnglish";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -32,7 +32,7 @@ export default function OpengraphImage() {
             marginBottom: 24,
           }}
         >
-          ENGLISH JOURNAL STOCK
+          UPSKILL ENGLISH
         </div>
         <div
           style={{

@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "特定商取引法に基づく表記 | English Journal Stock",
+  title: "特定商取引法に基づく表記 | UpskillEnglish",
 };
 
 // 特定商取引法に基づく表記のたたき台。

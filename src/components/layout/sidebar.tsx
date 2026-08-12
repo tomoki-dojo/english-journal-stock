@@ -52,11 +52,10 @@ export function Sidebar({ isOpen, onClose, account }: SidebarProps) {
         <div className="flex h-16 shrink-0 items-center justify-between border-b border-zinc-200/60 px-5">
           <Link href="/" className="flex items-center gap-2.5" onClick={onClose}>
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10 ring-1 ring-accent/20">
-              <span className="font-mono text-sm font-semibold text-accent">Ex</span>
+              <span className="font-mono text-sm font-semibold text-accent">Up</span>
             </div>
-            {/* TODO: 仮の名称。アプリの正式名称が決まったら差し替える */}
             <span className="text-sm font-semibold tracking-tight text-zinc-900">
-              English Journal
+              UpskillEnglish
             </span>
           </Link>
           <button

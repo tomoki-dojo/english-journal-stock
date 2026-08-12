@@ -9,11 +9,9 @@
 # こちらは container_name（english-journal-stock）を宛先に指定している。
 # 余裕があればmath-journal-stock側も同様にcontainer_name指定に揃えることを検討。
 #
-# ドメインは仮。実際に使うサブドメインが決まったらDNS設定とあわせて書き換える。
-#
 # ---- ここから下を n8n-docker/Caddyfile に追記する ----
 
-app.english-journal.bear-fruit.online {
+app.upskillenglish.bear-fruit.online {
 	reverse_proxy english-journal-stock:3000
 
 	encode gzip
