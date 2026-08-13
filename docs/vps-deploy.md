@@ -53,7 +53,7 @@ cp .env.production.example .env.production
 nano .env.production
 ```
 
-必要なキーは以下の8個です。
+必要なキーは以下の11個です。
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
@@ -67,9 +67,17 @@ nano .env.production
 - `NEXT_PUBLIC_GA_MEASUREMENT_ID`（GA4の測定ID、`G-...`の形式。Google Analyticsで
   `app.upskillenglish.bear-fruit.online` 用のプロパティを作成して発行する。
   未設定のままでも動作する（計測タグ自体が出力されないだけ）
+- `ANTHROPIC_API_KEY` / `GEMINI_API_KEY`（AI添削機能`/api/writing/feedback`用。ローカルの
+  `.env.local`に設定済みの値と同じものを使う）
+- `AI_WRITING_PROVIDER`（`gemini`を設定。Haiku 4.5とGemini 3.5 Flash-Liteの実測比較の結果、
+  速度・コスト・学習語彙の活用精度すべてでFlash-Liteが上回ったため。未設定でも`gemini`に
+  フォールバックするが、明示しておくと安全）
 
 `GOOGLE_TTS_API_KEY`はアプリ本体では使わない（音声生成バッチスクリプト専用）ため、
 本番環境には設定不要です。
+
+なお、TOEIC対策用の新規テーブル`ai_writing_usage`はSupabase側にすでにマイグレーション適用済み
+（`create_ai_writing_usage`）。VPS側での追加のDB作業は不要です。
 
 **重要：`docker compose`コマンドは必ず`--env-file .env.production`を付けて実行してください。**
 docker-composeの`${変数}`展開は`.env`という名前のファイルしか自動で読まないため、
