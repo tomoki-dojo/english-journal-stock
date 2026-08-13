@@ -58,7 +58,6 @@ export default async function ToeicPage() {
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">TOEIC対策</h1>
         <p className="max-w-2xl text-sm text-zinc-500">
           TOEICのスコアだけでなく、そのまま実務のメール・会議・商談で使える形で単語と表現を身につけられます。
-          昇進・海外赴任の要件でTOEICを受ける方を想定し、600〜730点帯を中心とした頻出語彙をそろえています。
         </p>
 
         {loadError && (
@@ -81,7 +80,7 @@ export default async function ToeicPage() {
         savedVocabularyIds={savedVocabularyIds}
         learningVocabularyIds={learningVocabularyIds}
         title="TOEIC頻出単語"
-        description="600〜730点帯を中心に、実務メールや会議でそのまま使える例文つきで掲載しています。"
+        description="実務メールや会議でそのまま使える例文つきで掲載しています。"
         emptyMessage="準備中です。近日公開予定です。"
       />
 
