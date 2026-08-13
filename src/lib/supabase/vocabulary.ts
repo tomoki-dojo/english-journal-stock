@@ -66,6 +66,23 @@ export async function listPublishedVocabulary(): Promise<Vocabulary[]> {
   return (data as DbVocabularyRow[]).map(fromDbRow);
 }
 
+// カテゴリ絞り込みの公開済み単語一覧（新しい順）。TOEIC単語などの拡張カテゴリ表示用。
+export async function listPublishedVocabularyByCategory(category: string): Promise<Vocabulary[]> {
+  const { data, error } = await supabaseAdmin
+    .from("vocabulary")
+    .select()
+    .eq("publish_status", "公開")
+    .eq("category", category)
+    .order("created_at", { ascending: false })
+    .limit(LIST_LIMIT);
+
+  if (error) {
+    throw new Error(`単語一覧の取得に失敗しました: ${error.message}`);
+  }
+
+  return (data as DbVocabularyRow[]).map(fromDbRow);
+}
+
 // 学習リスト・出題の誤答生成用：指定したid群の単語を取得
 export async function listVocabularyByIds(ids: string[]): Promise<Vocabulary[]> {
   if (ids.length === 0) return [];

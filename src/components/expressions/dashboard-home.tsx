@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { Check, ChevronRight, Sparkles } from "lucide-react";
+import { Check, ChevronRight, GraduationCap, Sparkles } from "lucide-react";
 import { ExpressionCard } from "./expression-card";
 import { ShelfItemCard } from "./shelf-item-card";
 import { pickShelfItems, pickTodaysHighlight, pickTodaysScenes } from "@/lib/daily-rotation";
@@ -103,6 +103,23 @@ export function DashboardHome({
           </div>
         </section>
       ))}
+
+      <section className="rounded-xl border border-zinc-200 bg-white px-6 py-6">
+        <div className="mb-2 flex items-center gap-1.5">
+          <GraduationCap className="h-4 w-4 text-accent" />
+          <h2 className="text-sm font-semibold text-zinc-900">TOEIC対策も始めました</h2>
+        </div>
+        <p className="mb-4 text-sm text-zinc-500">
+          TOEICのスコアだけでなく、そのまま実務でも使える単語・表現を、昇進・海外赴任要件を意識した600〜730点帯中心にまとめています。
+        </p>
+        <Link
+          href="/toeic"
+          className="inline-flex items-center gap-0.5 text-sm font-medium text-accent hover:underline"
+        >
+          TOEIC対策を見る
+          <ChevronRight className="h-4 w-4" />
+        </Link>
+      </section>
 
       {plan === "free" && (
         <section className="rounded-xl border border-accent/20 bg-accent/5 px-6 py-6">

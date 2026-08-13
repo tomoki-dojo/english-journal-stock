@@ -96,6 +96,23 @@ export async function listPublishedExpressions(): Promise<Expression[]> {
   return (data as DbExpressionRow[]).map(fromDbRow);
 }
 
+// カテゴリ絞り込みの公開済み表現一覧（新しい順）。TOEIC表現などの拡張カテゴリ表示用。
+export async function listPublishedExpressionsByCategory(category: string): Promise<Expression[]> {
+  const { data, error } = await supabaseAdmin
+    .from("expressions")
+    .select()
+    .eq("publish_status", "公開")
+    .eq("category", category)
+    .order("created_at", { ascending: false })
+    .limit(LIST_LIMIT);
+
+  if (error) {
+    throw new Error(`表現一覧の取得に失敗しました: ${error.message}`);
+  }
+
+  return (data as DbExpressionRow[]).map(fromDbRow);
+}
+
 // マイリスト用：指定したid群の表現を取得（保存した順は呼び出し側で並び替える）
 export async function listExpressionsByIds(ids: string[]): Promise<Expression[]> {
   if (ids.length === 0) return [];
