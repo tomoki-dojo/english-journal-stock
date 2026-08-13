@@ -157,7 +157,8 @@ async function callGemini(systemPrompt: string, userText: string, model: string)
   const response = await client.models.generateContent({
     model,
     contents: userText,
-    config: { systemInstruction: systemPrompt },
+    // Claude側のmax_tokens: 1024と揃えて、1回あたりのコスト上限を必ず設ける。
+    config: { systemInstruction: systemPrompt, maxOutputTokens: 1024 },
   });
 
   return response.text ?? "";
