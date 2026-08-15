@@ -1,24 +1,30 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { VocabLevelValues, type VocabLevelFilter } from "./types";
+import { VocabLevelValues, ExamTagValues, type VocabLevelFilter, type ExamTagFilter } from "./types";
+import { cn } from "@/lib/utils";
 
 const levelOptions: VocabLevelFilter[] = ["すべて", ...VocabLevelValues];
+const examTagOptions: ExamTagFilter[] = ["すべて", ...ExamTagValues];
 
 type VocabularyFiltersProps = {
   keyword: string;
   level: VocabLevelFilter;
+  examTag: ExamTagFilter;
   onKeywordChange: (value: string) => void;
   onLevelChange: (value: VocabLevelFilter) => void;
+  onExamTagChange: (value: ExamTagFilter) => void;
 };
 
-// 単語帳の絞り込みパネル。検索・レベル絞り込みはどちらもFreeで使える
+// 単語帳の絞り込みパネル。検索・レベル・資格試験タグの絞り込みはすべてFreeで使える
 // （表現一覧と同じ方針: Pro限定は「機能」であって「閲覧・検索」ではない）。
 export function VocabularyFilters({
   keyword,
   level,
+  examTag,
   onKeywordChange,
   onLevelChange,
+  onExamTagChange,
 }: VocabularyFiltersProps) {
   return (
     <section className="space-y-5 rounded-xl border border-zinc-200 bg-zinc-100/50 p-5 md:p-6">
@@ -52,6 +58,27 @@ export function VocabularyFilters({
             </option>
           ))}
         </select>
+      </div>
+
+      <div className="space-y-2.5">
+        <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">資格試験</p>
+        <div className="flex flex-wrap gap-2">
+          {examTagOptions.map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => onExamTagChange(option)}
+              className={cn(
+                "rounded-full border px-3.5 py-1.5 text-xs font-medium transition-all",
+                examTag === option
+                  ? "border-accent/50 bg-accent/10 text-accent"
+                  : "border-zinc-400 bg-zinc-300/40 text-zinc-600 hover:border-zinc-500 hover:text-zinc-900"
+              )}
+            >
+              {option === "すべて" ? "すべて" : `${option}頻出`}
+            </button>
+          ))}
+        </div>
       </div>
     </section>
   );

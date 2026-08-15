@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { VocabularyCard } from "./vocabulary-card";
 import { VocabularyFilters } from "./vocabulary-filters";
-import type { Vocabulary, VocabLevelFilter } from "./types";
+import type { Vocabulary, VocabLevelFilter, ExamTagFilter } from "./types";
 import type { Plan } from "@/lib/plan";
 
 type VocabularyListProps = {
@@ -16,6 +16,8 @@ type VocabularyListProps = {
   title?: string;
   description?: string;
   emptyMessage?: string;
+  // 外部リンク（例: ホームのTOEIC導線）からあらかじめ選択しておく資格試験タグ。
+  initialExamTag?: ExamTagFilter;
 };
 
 function matchesKeyword(vocab: Vocabulary, keyword: string) {
@@ -44,21 +46,24 @@ export function VocabularyList({
   savedVocabularyIds = [],
   learningVocabularyIds = [],
   title = "単語帳",
-  description = "ビジネスでよく使う英単語をキーワード・レベルで絞り込んで探せます。保存するとマイリストから復習でき、「学習を始める」で効率よく復習できるようになります（Pro限定）。",
+  description = "ビジネスでよく使う英単語をキーワード・レベル・資格試験タグで絞り込んで探せます。保存するとマイリストから復習でき、「学習を始める」で効率よく復習できるようになります（Pro限定）。",
   emptyMessage,
+  initialExamTag = "すべて",
 }: VocabularyListProps) {
   const savedIdSet = useMemo(() => new Set(savedVocabularyIds), [savedVocabularyIds]);
   const learningIdSet = useMemo(() => new Set(learningVocabularyIds), [learningVocabularyIds]);
   const [keyword, setKeyword] = useState("");
   const [level, setLevel] = useState<VocabLevelFilter>("すべて");
+  const [examTag, setExamTag] = useState<ExamTagFilter>(initialExamTag);
 
   const filtered = useMemo(() => {
     return vocabulary.filter((vocab) => {
       const keywordMatch = matchesKeyword(vocab, keyword);
       const levelMatch = level === "すべて" || vocab.level === level;
-      return keywordMatch && levelMatch;
+      const examTagMatch = examTag === "すべて" || (vocab.examTags?.includes(examTag) ?? false);
+      return keywordMatch && levelMatch && examTagMatch;
     });
-  }, [vocabulary, keyword, level]);
+  }, [vocabulary, keyword, level, examTag]);
 
   return (
     <div className="space-y-8">
@@ -70,8 +75,10 @@ export function VocabularyList({
       <VocabularyFilters
         keyword={keyword}
         level={level}
+        examTag={examTag}
         onKeywordChange={setKeyword}
         onLevelChange={setLevel}
+        onExamTagChange={setExamTag}
       />
 
       {loadError && (

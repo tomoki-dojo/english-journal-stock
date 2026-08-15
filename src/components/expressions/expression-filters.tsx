@@ -8,10 +8,12 @@ import {
   FormalityValues,
   LevelValues,
   IntentTagValues,
+  ExamTagValues,
   type SceneTagFilter,
   type FormalityFilter,
   type LevelFilter,
   type IntentTagFilter,
+  type ExamTagFilter,
 } from "./types";
 import type { Plan } from "@/lib/plan";
 import { PRO_FEATURE_HIGHLIGHTS, ProFeatureLabelText } from "@/lib/pro-features";
@@ -21,6 +23,7 @@ const sceneTagOptions: SceneTagFilter[] = ["すべて", ...SceneTagValues];
 const formalityOptions: FormalityFilter[] = ["すべて", ...FormalityValues];
 const levelOptions: LevelFilter[] = ["すべて", ...LevelValues];
 const intentTagOptions: IntentTagFilter[] = ["すべて", ...IntentTagValues];
+const examTagOptions: ExamTagFilter[] = ["すべて", ...ExamTagValues];
 
 type ExpressionFiltersProps = {
   keyword: string;
@@ -28,12 +31,14 @@ type ExpressionFiltersProps = {
   formality: FormalityFilter;
   level: LevelFilter;
   intentTag: IntentTagFilter;
+  examTag: ExamTagFilter;
   plan: Plan;
   onKeywordChange: (value: string) => void;
   onSceneTagChange: (value: SceneTagFilter) => void;
   onFormalityChange: (value: FormalityFilter) => void;
   onLevelChange: (value: LevelFilter) => void;
   onIntentTagChange: (value: IntentTagFilter) => void;
+  onExamTagChange: (value: ExamTagFilter) => void;
   // ホームの棚や外部リンクから遷移してきた際、Freeプランでシーン・機能タグが
   // 指定されていた場合にアップセルを最初から表示しておくためのフラグ。
   initialSceneTagBlocked?: boolean;
@@ -46,12 +51,14 @@ export function ExpressionFilters({
   formality,
   level,
   intentTag,
+  examTag,
   plan,
   onKeywordChange,
   onSceneTagChange,
   onFormalityChange,
   onLevelChange,
   onIntentTagChange,
+  onExamTagChange,
   initialSceneTagBlocked = false,
   initialIntentTagBlocked = false,
 }: ExpressionFiltersProps) {
@@ -244,6 +251,27 @@ export function ExpressionFilters({
             </option>
           ))}
         </select>
+      </div>
+
+      <div className="space-y-2.5">
+        <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">資格試験</p>
+        <div className="flex flex-wrap gap-2">
+          {examTagOptions.map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => onExamTagChange(option)}
+              className={cn(
+                "rounded-full border px-3.5 py-1.5 text-xs font-medium transition-all",
+                examTag === option
+                  ? "border-accent/50 bg-accent/10 text-accent"
+                  : "border-zinc-400 bg-zinc-300/40 text-zinc-600 hover:border-zinc-500 hover:text-zinc-900"
+              )}
+            >
+              {option === "すべて" ? "すべて" : `${option}頻出`}
+            </button>
+          ))}
+        </div>
       </div>
     </section>
   );

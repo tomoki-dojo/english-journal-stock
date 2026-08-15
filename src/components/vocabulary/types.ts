@@ -22,6 +22,11 @@ export type VocabVerificationStatus = (typeof VocabVerificationStatusValues)[num
 
 export type VocabLevelFilter = VocabLevel | "すべて";
 
+// 資格試験の頻出タグ。単語帳の絞り込みUIで使う（他は`examTags`型と同じくexpressions側にも定義あり）。
+export const ExamTagValues = ["TOEIC"] as const;
+export type ExamTag = (typeof ExamTagValues)[number];
+export type ExamTagFilter = ExamTag | "すべて";
+
 export type Vocabulary = {
   id: string;
   code: string;
@@ -35,6 +40,8 @@ export type Vocabulary = {
   // 専門分野タグ。現時点では未使用（一般語彙のみのため常にundefined）。
   // 将来「財務」「法務」などを追加する際の拡張軸として型だけ先に用意している。
   businessField?: string[];
+  // 資格試験の頻出タグ（例: ["TOEIC"]）。category（単語/表現）とは独立した横断タグ。
+  examTags?: string[];
   level: VocabLevel;
   usageNotes?: string;
   verificationStatus: VocabVerificationStatus;

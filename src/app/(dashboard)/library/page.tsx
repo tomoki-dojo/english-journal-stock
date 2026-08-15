@@ -1,26 +1,28 @@
-import { ExpressionStockList, SceneTagValues, IntentTagValues } from "@/components/expressions";
-import type { SceneTagFilter, IntentTagFilter } from "@/components/expressions";
+import { ExpressionStockList, SceneTagValues, IntentTagValues, ExamTagValues } from "@/components/expressions";
+import type { SceneTagFilter, IntentTagFilter, ExamTagFilter } from "@/components/expressions";
 import { applyPlanGating, listPublishedExpressions } from "@/lib/supabase/expressions";
 import { listSavedExpressionIds } from "@/lib/supabase/saved-expressions";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
 import { getPlan } from "@/lib/supabase/profile";
 import type { Plan } from "@/lib/plan";
 
-// 検索＋シーン・機能・フォーマル度・レベルの絞り込みで全件を探せる画面。
+// 検索＋シーン・機能・フォーマル度・レベル・資格試験タグの絞り込みで全件を探せる画面。
 // ホーム画面の棚から「すべて見る」で遷移してくる際は、?scene=会議 のようにシーンを指定できる
-// （?intent=依頼 のように機能タグの指定にも対応）。
+// （?intent=依頼 のように機能タグ、?exam=TOEIC のように資格試験タグの指定にも対応）。
 export default async function LibraryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ scene?: string; intent?: string }>;
+  searchParams: Promise<{ scene?: string; intent?: string; exam?: string }>;
 }) {
-  const { scene, intent } = await searchParams;
+  const { scene, intent, exam } = await searchParams;
   const initialSceneTag: SceneTagFilter =
     scene && (SceneTagValues as readonly string[]).includes(scene) ? (scene as SceneTagFilter) : "すべて";
   const initialIntentTag: IntentTagFilter =
     intent && (IntentTagValues as readonly string[]).includes(intent)
       ? (intent as IntentTagFilter)
       : "すべて";
+  const initialExamTag: ExamTagFilter =
+    exam && (ExamTagValues as readonly string[]).includes(exam) ? (exam as ExamTagFilter) : "すべて";
 
   let expressions: Awaited<ReturnType<typeof listPublishedExpressions>> = [];
   let loadError = false;
@@ -58,6 +60,7 @@ export default async function LibraryPage({
       savedExpressionIds={savedExpressionIds}
       initialSceneTag={initialSceneTag}
       initialIntentTag={initialIntentTag}
+      initialExamTag={initialExamTag}
     />
   );
 }

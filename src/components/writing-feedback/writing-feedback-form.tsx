@@ -16,7 +16,7 @@ type UsageInfo = { remaining: number; limit: number };
 
 type WritingFeedbackFormProps = {
   loggedIn?: boolean;
-  // 呼び出し元（/toeicなど）ごとに見出し・プレースホルダーを変えられるようにしている。
+  // 呼び出し元（/practiceなど）ごとに見出し・プレースホルダーを変えられるようにしている。
   title?: string;
   description?: string;
   placeholder?: string;

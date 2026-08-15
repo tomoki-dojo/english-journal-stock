@@ -10,6 +10,7 @@ import type {
   FormalityFilter,
   LevelFilter,
   IntentTagFilter,
+  ExamTagFilter,
 } from "./types";
 import type { Plan } from "@/lib/plan";
 
@@ -30,6 +31,8 @@ type ExpressionStockListProps = {
   initialSceneTag?: SceneTagFilter;
   // 同様に、外部リンクからあらかじめ選択しておく機能タグ。
   initialIntentTag?: IntentTagFilter;
+  // 同様に、外部リンク（例: ホームのTOEIC導線）からあらかじめ選択しておく資格試験タグ。
+  initialExamTag?: ExamTagFilter;
 };
 
 function matchesKeyword(expression: Expression, keyword: string) {
@@ -63,6 +66,7 @@ export function ExpressionStockList({
   emptyMessage = "まだ公開中の表現がありません。準備が整い次第、順次公開されます。",
   initialSceneTag = "すべて",
   initialIntentTag = "すべて",
+  initialExamTag = "すべて",
 }: ExpressionStockListProps) {
   const savedIdSet = useMemo(() => new Set(savedExpressionIds), [savedExpressionIds]);
   const showAds = plan === "free";
@@ -80,6 +84,7 @@ export function ExpressionStockList({
   const [intentTag, setIntentTag] = useState<IntentTagFilter>(
     initialIntentTagBlocked ? "すべて" : initialIntentTag
   );
+  const [examTag, setExamTag] = useState<ExamTagFilter>(initialExamTag);
 
   const filteredExpressions = useMemo(() => {
     return expressions.filter((expression) => {
@@ -89,10 +94,14 @@ export function ExpressionStockList({
       const levelMatch = level === "すべて" || expression.level === level;
       const intentTagMatch =
         intentTag === "すべて" || (expression.intentTags?.includes(intentTag) ?? false);
+      const examTagMatch =
+        examTag === "すべて" || (expression.examTags?.includes(examTag) ?? false);
 
-      return keywordMatch && sceneTagMatch && formalityMatch && levelMatch && intentTagMatch;
+      return (
+        keywordMatch && sceneTagMatch && formalityMatch && levelMatch && intentTagMatch && examTagMatch
+      );
     });
-  }, [expressions, keyword, sceneTag, formality, level, intentTag]);
+  }, [expressions, keyword, sceneTag, formality, level, intentTag, examTag]);
 
   return (
     <div className="space-y-8">
@@ -107,12 +116,14 @@ export function ExpressionStockList({
         formality={formality}
         level={level}
         intentTag={intentTag}
+        examTag={examTag}
         plan={plan}
         onKeywordChange={setKeyword}
         onSceneTagChange={setSceneTag}
         onFormalityChange={setFormality}
         onLevelChange={setLevel}
         onIntentTagChange={setIntentTag}
+        onExamTagChange={setExamTag}
         initialSceneTagBlocked={initialSceneTagBlocked}
         initialIntentTagBlocked={initialIntentTagBlocked}
       />

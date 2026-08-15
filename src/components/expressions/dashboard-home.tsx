@@ -110,15 +110,24 @@ export function DashboardHome({
           <h2 className="text-sm font-semibold text-zinc-900">TOEIC対策も始めました</h2>
         </div>
         <p className="mb-4 text-sm text-zinc-500">
-          TOEICのスコアだけでなく、そのまま実務でも使える単語・表現を、昇進・海外赴任要件を意識した600〜730点帯中心にまとめています。
+          TOEICのスコアだけでなく、そのまま実務でも使える単語・表現を、昇進・海外赴任要件を意識した600〜730点帯中心にまとめています。単語帳・表現一覧では「資格試験」の絞り込みからTOEIC頻出のものだけを探せます。
         </p>
-        <Link
-          href="/toeic"
-          className="inline-flex items-center gap-0.5 text-sm font-medium text-accent hover:underline"
-        >
-          TOEIC対策を見る
-          <ChevronRight className="h-4 w-4" />
-        </Link>
+        <div className="flex flex-wrap gap-x-4 gap-y-2">
+          <Link
+            href="/practice?tab=toeic"
+            className="inline-flex items-center gap-0.5 text-sm font-medium text-accent hover:underline"
+          >
+            TOEIC演習を試す
+            <ChevronRight className="h-4 w-4" />
+          </Link>
+          <Link
+            href="/library?exam=TOEIC"
+            className="inline-flex items-center gap-0.5 text-sm font-medium text-accent hover:underline"
+          >
+            TOEIC頻出の表現を見る
+            <ChevronRight className="h-4 w-4" />
+          </Link>
+        </div>
       </section>
 
       {plan === "free" && (

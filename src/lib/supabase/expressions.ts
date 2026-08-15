@@ -32,6 +32,7 @@ type DbExpressionRow = {
   example_2_en: string | null;
   example_2_ja: string | null;
   similar_expressions: string[] | null;
+  exam_tags: string[] | null;
   usage_notes: string | null;
   verification_status: string;
   audio_memo: string | null;
@@ -61,6 +62,7 @@ function fromDbRow(row: DbExpressionRow): Expression {
     example2En: row.example_2_en ?? undefined,
     example2Ja: row.example_2_ja ?? undefined,
     similarExpressions: row.similar_expressions ?? undefined,
+    examTags: row.exam_tags ?? undefined,
     usageNotes: row.usage_notes ?? undefined,
     verificationStatus: row.verification_status as VerificationStatus,
     audioMemo: row.audio_memo ?? undefined,
@@ -80,29 +82,13 @@ export function applyPlanGating(expressions: Expression[]): Expression[] {
   return expressions.map((expression) => ({ ...expression, locked: false }));
 }
 
-// 公開済み表現の一覧取得（新しい順）
+// 公開済み表現の一覧取得（新しい順）。TOEIC頻出の表現もexam_tagsが付いた状態でここに含まれる
+// （単語帳・表現一覧に吸収する設計に伴い、category絞り込み専用の取得関数は廃止した）。
 export async function listPublishedExpressions(): Promise<Expression[]> {
   const { data, error } = await supabaseAdmin
     .from("expressions")
     .select()
     .eq("publish_status", "公開")
-    .order("created_at", { ascending: false })
-    .limit(LIST_LIMIT);
-
-  if (error) {
-    throw new Error(`表現一覧の取得に失敗しました: ${error.message}`);
-  }
-
-  return (data as DbExpressionRow[]).map(fromDbRow);
-}
-
-// カテゴリ絞り込みの公開済み表現一覧（新しい順）。TOEIC表現などの拡張カテゴリ表示用。
-export async function listPublishedExpressionsByCategory(category: string): Promise<Expression[]> {
-  const { data, error } = await supabaseAdmin
-    .from("expressions")
-    .select()
-    .eq("publish_status", "公開")
-    .eq("category", category)
     .order("created_at", { ascending: false })
     .limit(LIST_LIMIT);
 

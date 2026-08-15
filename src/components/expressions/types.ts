@@ -45,6 +45,11 @@ export type FormalityFilter = Formality | "すべて";
 export type LevelFilter = Level | "すべて";
 export type IntentTagFilter = IntentTag | "すべて";
 
+// 資格試験の頻出タグ。表現ストックの絞り込みUIで使う（vocabulary側にも同じ定義あり）。
+export const ExamTagValues = ["TOEIC"] as const;
+export type ExamTag = (typeof ExamTagValues)[number];
+export type ExamTagFilter = ExamTag | "すべて";
+
 export type Expression = {
   id: string;
   code: string;
@@ -64,6 +69,8 @@ export type Expression = {
   example2En?: string;
   example2Ja?: string;
   similarExpressions?: string[];
+  // 資格試験の頻出タグ（例: ["TOEIC"]）。category（表現）とは独立した横断タグ。
+  examTags?: string[];
   usageNotes?: string;
   verificationStatus: VerificationStatus;
   audioMemo?: string;

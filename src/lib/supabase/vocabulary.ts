@@ -23,6 +23,7 @@ type DbVocabularyRow = {
   example_ja: string | null;
   synonyms: string[] | null;
   business_field: string[] | null;
+  exam_tags: string[] | null;
   level: string;
   usage_notes: string | null;
   verification_status: string;
@@ -42,6 +43,7 @@ function fromDbRow(row: DbVocabularyRow): Vocabulary {
     exampleJa: row.example_ja ?? undefined,
     synonyms: row.synonyms ?? undefined,
     businessField: row.business_field ?? undefined,
+    examTags: row.exam_tags ?? undefined,
     level: row.level as VocabLevel,
     usageNotes: row.usage_notes ?? undefined,
     verificationStatus: row.verification_status as VocabVerificationStatus,
@@ -50,29 +52,13 @@ function fromDbRow(row: DbVocabularyRow): Vocabulary {
   };
 }
 
-// 公開済み単語の一覧取得（新しい順）
+// 公開済み単語の一覧取得（新しい順）。TOEIC頻出の単語もexam_tagsが付いた状態でここに含まれる
+// （単語帳・表現一覧に吸収する設計に伴い、category絞り込み専用の取得関数は廃止した）。
 export async function listPublishedVocabulary(): Promise<Vocabulary[]> {
   const { data, error } = await supabaseAdmin
     .from("vocabulary")
     .select()
     .eq("publish_status", "公開")
-    .order("created_at", { ascending: false })
-    .limit(LIST_LIMIT);
-
-  if (error) {
-    throw new Error(`単語一覧の取得に失敗しました: ${error.message}`);
-  }
-
-  return (data as DbVocabularyRow[]).map(fromDbRow);
-}
-
-// カテゴリ絞り込みの公開済み単語一覧（新しい順）。TOEIC単語などの拡張カテゴリ表示用。
-export async function listPublishedVocabularyByCategory(category: string): Promise<Vocabulary[]> {
-  const { data, error } = await supabaseAdmin
-    .from("vocabulary")
-    .select()
-    .eq("publish_status", "公開")
-    .eq("category", category)
     .order("created_at", { ascending: false })
     .limit(LIST_LIMIT);
 
