@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BrainCircuit, ChevronRight, Lock, Shuffle } from "lucide-react";
+import { BrainCircuit, ChevronRight, GraduationCap, Lock, Shuffle } from "lucide-react";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
 import { getPlan } from "@/lib/supabase/profile";
 import { getProgressSummary } from "@/lib/supabase/word-review";
@@ -12,8 +12,8 @@ type PracticePageProps = {
 };
 
 // 演習ハブ。「学んだ単語・表現を実際に使えるか試す」機能をここに集約する。
-// 現状は単語復習（間隔反復・ランダム学習）とライティング添削の2タブ。
-// 将来的にTOEIC形式の演習・弱点診断タブもここに追加していく想定
+// 単語復習（間隔反復・ランダム学習）・ライティング添削・TOEIC演習（Part5）の3タブ。
+// 将来的に弱点診断タブもここに追加していく想定
 // （設計の経緯は`_reference/`のメモ、または過去のチャット参照）。
 export default async function PracticePage({ searchParams }: PracticePageProps) {
   const user = await getCurrentUser();
@@ -22,7 +22,7 @@ export default async function PracticePage({ searchParams }: PracticePageProps) 
   }
 
   const { tab } = await searchParams;
-  const activeTab = tab === "writing" ? "writing" : "review";
+  const activeTab = tab === "writing" ? "writing" : tab === "toeic" ? "toeic" : "review";
 
   const plan = await getPlan(user.id);
   const summary = activeTab === "review" && plan !== "free" ? await getProgressSummary(user.id) : null;
@@ -51,6 +51,17 @@ export default async function PracticePage({ searchParams }: PracticePageProps) 
       >
         ライティング添削
       </Link>
+      <Link
+        href="/practice?tab=toeic"
+        className={cn(
+          "border-b-2 px-3 py-2 text-sm font-medium transition-colors",
+          activeTab === "toeic"
+            ? "border-accent text-accent"
+            : "border-transparent text-zinc-500 hover:text-zinc-900"
+        )}
+      >
+        TOEIC演習
+      </Link>
     </div>
   );
 
@@ -65,6 +76,23 @@ export default async function PracticePage({ searchParams }: PracticePageProps) 
 
       {activeTab === "writing" ? (
         <WritingFeedbackForm />
+      ) : activeTab === "toeic" ? (
+        <section className="rounded-xl border border-zinc-200 bg-zinc-100/50 p-6">
+          <div className="mb-2 flex items-center gap-2">
+            <GraduationCap className="h-4 w-4 text-accent" />
+            <h2 className="text-sm font-semibold text-zinc-900">TOEIC演習（Part5）</h2>
+          </div>
+          <p className="mb-4 text-sm text-zinc-500">
+            文法・語彙の穴埋め問題を10問、ランダムに出題します。回答するとその場で解説が見られます。
+          </p>
+          <Link
+            href="/practice/toeic-quiz"
+            className="flex items-center justify-center gap-1.5 rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-accent/30 transition-colors hover:bg-accent/90"
+          >
+            <GraduationCap className="h-4 w-4" />
+            TOEIC演習を始める（10問）
+          </Link>
+        </section>
       ) : (
         <div className="space-y-8">
           {/* ランダム学習：誰でも利用可能 */}
