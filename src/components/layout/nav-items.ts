@@ -19,8 +19,8 @@ export const navItems: NavItem[] = [
     icon: BookOpen,
   },
   {
-    label: "単語学習",
-    href: "/vocabulary/learn",
+    label: "演習",
+    href: "/practice",
     icon: BrainCircuit,
   },
   {

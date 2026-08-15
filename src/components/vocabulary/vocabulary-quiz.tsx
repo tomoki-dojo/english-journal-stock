@@ -11,7 +11,7 @@ type VocabularyQuizProps = {
   // trueの場合のみ回答結果をAPIに送信し、間隔反復の状態（箱レベル・次回復習日）を更新する。
   // ランダム学習ではfalseにして、正誤判定だけ行いSRS状態には一切影響させない。
   persistResults?: boolean;
-  // 完了画面の「戻る」リンク先。省略時は/vocabulary/learn。
+  // 完了画面の「戻る」リンク先。省略時は/practice。
   backHref?: string;
   backLabel?: string;
 };
@@ -21,8 +21,8 @@ type AnswerState = "unanswered" | "correct" | "incorrect";
 export function VocabularyQuiz({
   questions,
   persistResults = true,
-  backHref = "/vocabulary/learn",
-  backLabel = "学習ダッシュボードに戻る",
+  backHref = "/practice",
+  backLabel = "演習に戻る",
 }: VocabularyQuizProps) {
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);

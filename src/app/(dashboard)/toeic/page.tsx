@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ExpressionStockList } from "@/components/expressions";
 import { VocabularyList } from "@/components/vocabulary";
-import { WritingFeedbackForm } from "@/components/writing-feedback";
 import { applyPlanGating, listPublishedExpressionsByCategory } from "@/lib/supabase/expressions";
 import { listPublishedVocabularyByCategory } from "@/lib/supabase/vocabulary";
 import { listSavedExpressionIds } from "@/lib/supabase/saved-expressions";
@@ -17,7 +16,7 @@ const TOEIC_EXPRESSION_CATEGORY = "TOEIC表現";
 // TOEIC対策の入口ページ。シーン別のビジネス表現（既存ホーム）とは別枠で、
 // 「TOEICのスコアだけでなく、そのまま実務で使える」実務接続を訴求する。
 // 単語帳・表現ストックのコンポーネントをcategory絞り込みで再利用しているだけなので、
-// マイリスト・学習リスト（間隔反復）は既存の/vocabulary, /vocabulary/learnとデータを共有する。
+// マイリスト・単語復習（間隔反復）は既存の/vocabulary, /practiceとデータを共有する。
 export default async function ToeicPage() {
   let vocabulary: Awaited<ReturnType<typeof listPublishedVocabularyByCategory>> = [];
   let expressions: Awaited<ReturnType<typeof listPublishedExpressionsByCategory>> = [];
@@ -67,12 +66,6 @@ export default async function ToeicPage() {
         )}
       </section>
 
-      <WritingFeedbackForm
-        loggedIn={Boolean(user)}
-        title="学んだ単語・表現を実務文で試す"
-        description="メールの下書きや会議メモなど、実際に書きたい英文を入力すると、学習中の単語・表現を自然に使えないかAIが添削・提案します（文章そのものは保存されません）。"
-      />
-
       <VocabularyList
         vocabulary={vocabulary}
         plan={plan}
@@ -96,9 +89,9 @@ export default async function ToeicPage() {
 
       <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-100/30 px-6 py-8 text-center">
         <p className="text-sm text-zinc-600">
-          単語は「学習リスト」に追加すると間隔反復で復習できます。
-          <Link href="/vocabulary/learn" className="ml-1 underline">
-            単語学習はこちら
+          単語の復習やAIによるライティング添削は「演習」からご利用いただけます。
+          <Link href="/practice" className="ml-1 underline">
+            演習はこちら
           </Link>
         </p>
       </div>

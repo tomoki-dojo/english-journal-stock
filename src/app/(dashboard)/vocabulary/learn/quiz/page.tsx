@@ -15,7 +15,7 @@ export default async function VocabularyQuizPage() {
 
   const plan = await getPlan(user.id);
   if (plan === "free") {
-    redirect("/vocabulary/learn");
+    redirect("/practice");
   }
 
   const questions = await buildQuizQuestions(user.id);
@@ -30,10 +30,10 @@ export default async function VocabularyQuizPage() {
           </p>
         </div>
         <Link
-          href="/vocabulary/learn"
+          href="/practice"
           className="inline-flex items-center gap-1 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90"
         >
-          学習ダッシュボードに戻る
+          演習に戻る
           <ChevronRight className="h-4 w-4" />
         </Link>
       </div>
