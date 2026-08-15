@@ -12,7 +12,7 @@ type PracticePageProps = {
 };
 
 // 演習ハブ。「学んだ単語・表現を実際に使えるか試す」機能をここに集約する。
-// 単語復習（間隔反復・ランダム学習）・ライティング添削・TOEIC演習（Part5）の3タブ。
+// 単語復習（間隔反復・ランダム学習）・TOEIC演習（Part5短文穴埋め・Part6長文穴埋め）・ライティング添削の3タブ。
 // 将来的に弱点診断タブもここに追加していく想定
 // （設計の経緯は`_reference/`のメモ、または過去のチャット参照）。
 export default async function PracticePage({ searchParams }: PracticePageProps) {
@@ -77,22 +77,41 @@ export default async function PracticePage({ searchParams }: PracticePageProps) 
       {activeTab === "writing" ? (
         <WritingFeedbackForm />
       ) : activeTab === "toeic" ? (
-        <section className="rounded-xl border border-zinc-200 bg-zinc-100/50 p-6">
-          <div className="mb-2 flex items-center gap-2">
-            <GraduationCap className="h-4 w-4 text-accent" />
-            <h2 className="text-sm font-semibold text-zinc-900">TOEIC演習（Part5）</h2>
-          </div>
-          <p className="mb-4 text-sm text-zinc-500">
-            文法・語彙の穴埋め問題を10問、ランダムに出題します。回答するとその場で解説が見られます。
-          </p>
-          <Link
-            href="/practice/toeic-quiz"
-            className="flex items-center justify-center gap-1.5 rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-accent/30 transition-colors hover:bg-accent/90"
-          >
-            <GraduationCap className="h-4 w-4" />
-            TOEIC演習を始める（10問）
-          </Link>
-        </section>
+        <div className="space-y-6">
+          <section className="rounded-xl border border-zinc-200 bg-zinc-100/50 p-6">
+            <div className="mb-2 flex items-center gap-2">
+              <GraduationCap className="h-4 w-4 text-accent" />
+              <h2 className="text-sm font-semibold text-zinc-900">TOEIC演習（Part5・短文穴埋め）</h2>
+            </div>
+            <p className="mb-4 text-sm text-zinc-500">
+              文法・語彙の穴埋め問題を10問、ランダムに出題します。回答するとその場で解説が見られます。
+            </p>
+            <Link
+              href="/practice/toeic-quiz"
+              className="flex items-center justify-center gap-1.5 rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-accent/30 transition-colors hover:bg-accent/90"
+            >
+              <GraduationCap className="h-4 w-4" />
+              Part5を始める（10問）
+            </Link>
+          </section>
+
+          <section className="rounded-xl border border-zinc-200 bg-zinc-100/50 p-6">
+            <div className="mb-2 flex items-center gap-2">
+              <GraduationCap className="h-4 w-4 text-accent" />
+              <h2 className="text-sm font-semibold text-zinc-900">TOEIC演習（Part6・長文穴埋め）</h2>
+            </div>
+            <p className="mb-4 text-sm text-zinc-500">
+              メールやお知らせなどの短い文書を読みながら、4つの空所を埋めます。3文書・12問、回答後にその場で解説が見られます。
+            </p>
+            <Link
+              href="/practice/toeic-part6-quiz"
+              className="flex items-center justify-center gap-1.5 rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-accent/30 transition-colors hover:bg-accent/90"
+            >
+              <GraduationCap className="h-4 w-4" />
+              Part6を始める（3文書・12問）
+            </Link>
+          </section>
+        </div>
       ) : (
         <div className="space-y-8">
           {/* ランダム学習：誰でも利用可能 */}

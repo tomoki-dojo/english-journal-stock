@@ -1,9 +1,10 @@
 // src/lib/supabase/toeic-questions.ts
-// TOEIC演習（Part5形式クイズ）のコンテンツ取得。
+// TOEIC演習（Part5形式クイズ・Part6長文穴埋め）のコンテンツ取得。
 import { supabaseAdmin } from "@/lib/supabase/server";
-import type { ToeicQuizQuestion } from "@/components/toeic/types";
+import type { ToeicQuizQuestion, ToeicPart6Passage } from "@/components/toeic/types";
 
 const RANDOM_QUESTION_COUNT = 10;
+const PART6_PASSAGE_COUNT = 3;
 
 type DbToeicQuestionRow = {
   id: string;
@@ -12,6 +13,16 @@ type DbToeicQuestionRow = {
   choices: string[];
   correct_index: number;
   explanation_ja: string;
+};
+
+type DbToeicPart6QuestionRow = DbToeicQuestionRow & {
+  passage_id: string;
+  order_in_passage: number;
+};
+
+type DbToeicPassageRow = {
+  id: string;
+  content_text: string;
 };
 
 function shuffleArray<T>(items: T[]): T[] {
@@ -60,4 +71,53 @@ export async function buildRandomToeicQuestions(limit = RANDOM_QUESTION_COUNT): 
   const picked = shuffleArray(rows).slice(0, limit);
 
   return picked.map(toQuizQuestion);
+}
+
+// TOEIC演習（Part6）：公開済みの文書からランダムにpassageCount件出題する。
+// 1文書=4設問固定（コンテンツ投入時にorder_in_passage 1〜4で必ず揃えている前提）。
+// Part5と同様、誰でも利用可能（Free/Pro問わず）。
+export async function buildRandomToeicPart6Passages(
+  passageCount = PART6_PASSAGE_COUNT
+): Promise<ToeicPart6Passage[]> {
+  const { data: passageRows, error: passageError } = await supabaseAdmin
+    .from("toeic_passages")
+    .select("id, content_text")
+    .eq("part", 6)
+    .eq("publish_status", "公開");
+
+  if (passageError) {
+    throw new Error(`TOEIC長文素材の取得に失敗しました: ${passageError.message}`);
+  }
+
+  const passages = (passageRows ?? []) as DbToeicPassageRow[];
+  const pickedPassages = shuffleArray(passages).slice(0, passageCount);
+  if (pickedPassages.length === 0) return [];
+
+  const { data: questionRows, error: questionError } = await supabaseAdmin
+    .from("toeic_questions")
+    .select("id, skill_tag, question_text, choices, correct_index, explanation_ja, passage_id, order_in_passage")
+    .in(
+      "passage_id",
+      pickedPassages.map((p) => p.id)
+    )
+    .eq("publish_status", "公開");
+
+  if (questionError) {
+    throw new Error(`TOEIC設問の取得に失敗しました: ${questionError.message}`);
+  }
+
+  const questions = (questionRows ?? []) as DbToeicPart6QuestionRow[];
+
+  return pickedPassages.map((passage) => {
+    const passageQuestions = questions
+      .filter((q) => q.passage_id === passage.id)
+      .sort((a, b) => a.order_in_passage - b.order_in_passage)
+      .map(toQuizQuestion);
+
+    return {
+      passageId: passage.id,
+      contentText: passage.content_text,
+      questions: passageQuestions,
+    };
+  });
 }
