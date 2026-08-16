@@ -15,7 +15,7 @@ import type {
   VerificationStatus,
 } from "@/components/expressions/types";
 
-const LIST_LIMIT = 500;
+const LIST_LIMIT = 1000;
 
 type DbExpressionRow = {
   id: string;

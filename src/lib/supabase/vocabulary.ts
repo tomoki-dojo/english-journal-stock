@@ -10,7 +10,7 @@ import type {
   Vocabulary,
 } from "@/components/vocabulary/types";
 
-const LIST_LIMIT = 500;
+const LIST_LIMIT = 1000;
 
 type DbVocabularyRow = {
   id: string;
@@ -67,6 +67,20 @@ export async function listPublishedVocabulary(): Promise<Vocabulary[]> {
   }
 
   return (data as DbVocabularyRow[]).map(fromDbRow);
+}
+
+// ホーム画面などで「◯語収録」とさりげなく出すための軽量カウント取得（行データは取らない）。
+export async function getPublishedVocabularyCount(): Promise<number> {
+  const { count, error } = await supabaseAdmin
+    .from("vocabulary")
+    .select("id", { count: "exact", head: true })
+    .eq("publish_status", "公開");
+
+  if (error) {
+    throw new Error(`単語件数の取得に失敗しました: ${error.message}`);
+  }
+
+  return count ?? 0;
 }
 
 // 学習リスト・出題の誤答生成用：指定したid群の単語を取得

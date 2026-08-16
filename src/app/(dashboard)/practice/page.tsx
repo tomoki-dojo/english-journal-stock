@@ -4,6 +4,7 @@ import { BrainCircuit, ChevronRight, GraduationCap, Lock, Shuffle } from "lucide
 import { getCurrentUser } from "@/lib/supabase/server-auth";
 import { getPlan } from "@/lib/supabase/profile";
 import { getProgressSummary } from "@/lib/supabase/word-review";
+import { getToeicContentCounts } from "@/lib/supabase/toeic-questions";
 import { WritingFeedbackForm } from "@/components/writing-feedback";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +27,7 @@ export default async function PracticePage({ searchParams }: PracticePageProps) 
 
   const plan = await getPlan(user.id);
   const summary = activeTab === "review" && plan !== "free" ? await getProgressSummary(user.id) : null;
+  const toeicCounts = activeTab === "toeic" ? await getToeicContentCounts() : null;
 
   const tabs = (
     <div className="mb-8 flex items-center gap-1 border-b border-zinc-200">
@@ -85,6 +87,9 @@ export default async function PracticePage({ searchParams }: PracticePageProps) 
             </div>
             <p className="mb-4 text-sm text-zinc-500">
               文法・語彙の穴埋め問題を10問、ランダムに出題します。回答するとその場で解説が見られます。
+              {toeicCounts && (
+                <span className="text-zinc-400">（全{toeicCounts.part5QuestionCount}問収録）</span>
+              )}
             </p>
             <Link
               href="/practice/toeic-quiz"
@@ -102,6 +107,11 @@ export default async function PracticePage({ searchParams }: PracticePageProps) 
             </div>
             <p className="mb-4 text-sm text-zinc-500">
               メールやお知らせなどの短い文書を読みながら、4つの空所を埋めます。3文書・12問、回答後にその場で解説が見られます。
+              {toeicCounts && (
+                <span className="text-zinc-400">
+                  （全{toeicCounts.part6PassageCount}文書{toeicCounts.part6QuestionCount}問収録）
+                </span>
+              )}
             </p>
             <Link
               href="/practice/toeic-part6-quiz"

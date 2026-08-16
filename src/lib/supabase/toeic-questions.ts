@@ -25,6 +25,48 @@ type DbToeicPassageRow = {
   content_text: string;
 };
 
+// 演習タブに「全◯問収録」のようにさりげなく総数を出すための軽量カウント取得。
+// 行データは取らずcount headのみ叩くので、一覧取得より低コスト。
+export async function getToeicContentCounts(): Promise<{
+  part5QuestionCount: number;
+  part6PassageCount: number;
+  part6QuestionCount: number;
+}> {
+  const [part5Res, passageRes, part6Res] = await Promise.all([
+    supabaseAdmin
+      .from("toeic_questions")
+      .select("id", { count: "exact", head: true })
+      .eq("part", 5)
+      .eq("publish_status", "公開"),
+    supabaseAdmin
+      .from("toeic_passages")
+      .select("id", { count: "exact", head: true })
+      .eq("part", 6)
+      .eq("publish_status", "公開"),
+    supabaseAdmin
+      .from("toeic_questions")
+      .select("id", { count: "exact", head: true })
+      .eq("part", 6)
+      .eq("publish_status", "公開"),
+  ]);
+
+  if (part5Res.error) {
+    throw new Error(`TOEIC Part5件数の取得に失敗しました: ${part5Res.error.message}`);
+  }
+  if (passageRes.error) {
+    throw new Error(`TOEIC Part6文書件数の取得に失敗しました: ${passageRes.error.message}`);
+  }
+  if (part6Res.error) {
+    throw new Error(`TOEIC Part6設問件数の取得に失敗しました: ${part6Res.error.message}`);
+  }
+
+  return {
+    part5QuestionCount: part5Res.count ?? 0,
+    part6PassageCount: passageRes.count ?? 0,
+    part6QuestionCount: part6Res.count ?? 0,
+  };
+}
+
 function shuffleArray<T>(items: T[]): T[] {
   const result = [...items];
   for (let i = result.length - 1; i > 0; i--) {

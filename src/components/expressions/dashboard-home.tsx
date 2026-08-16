@@ -10,6 +10,12 @@ import { PRO_FEATURE_HIGHLIGHTS, ProFeatureLabelText } from "@/lib/pro-features"
 import type { Expression } from "./types";
 import type { Plan } from "@/lib/plan";
 
+type ToeicCounts = {
+  part5QuestionCount: number;
+  part6PassageCount: number;
+  part6QuestionCount: number;
+};
+
 type DashboardHomeProps = {
   expressions: Expression[];
   loadError?: boolean;
@@ -19,6 +25,9 @@ type DashboardHomeProps = {
   // JST基準の「今日」の日付キー（YYYY-MM-DD）。サーバー側で計算して渡すことで、
   // サーバー/クライアント間のハイドレーション不一致を避ける。
   dateKey: string;
+  // TOEICカードに「◯語・◯選・◯問収録」とさりげなく出すための件数。取得失敗時はnull/0で渡ってくる。
+  vocabularyCount?: number;
+  toeicCounts?: ToeicCounts | null;
 };
 
 // ダッシュボードのホーム画面。
@@ -31,6 +40,8 @@ export function DashboardHome({
   loggedIn = true,
   savedExpressionIds = [],
   dateKey,
+  vocabularyCount = 0,
+  toeicCounts = null,
 }: DashboardHomeProps) {
   const savedIdSet = useMemo(() => new Set(savedExpressionIds), [savedExpressionIds]);
 
@@ -109,8 +120,13 @@ export function DashboardHome({
           <GraduationCap className="h-4 w-4 text-accent" />
           <h2 className="text-sm font-semibold text-zinc-900">TOEIC対策も始めました</h2>
         </div>
-        <p className="mb-4 text-sm text-zinc-500">
+        <p className="mb-1 text-sm text-zinc-500">
           TOEICのスコアだけでなく、そのまま実務でも使える単語・表現を、昇進・海外赴任要件を意識した600〜730点帯中心にまとめています。単語帳・表現一覧では「資格試験」の絞り込みからTOEIC頻出のものだけを探せます。
+        </p>
+        <p className="mb-4 text-xs text-zinc-400">
+          単語{vocabularyCount}語・表現{expressions.length}選を収録
+          {toeicCounts &&
+            `、TOEIC演習はPart5${toeicCounts.part5QuestionCount}問・Part6${toeicCounts.part6PassageCount}文書${toeicCounts.part6QuestionCount}問`}
         </p>
         <div className="flex flex-wrap gap-x-4 gap-y-2">
           <Link

@@ -1,5 +1,7 @@
 import { DashboardHome } from "@/components/expressions";
 import { applyPlanGating, listPublishedExpressions } from "@/lib/supabase/expressions";
+import { getPublishedVocabularyCount } from "@/lib/supabase/vocabulary";
+import { getToeicContentCounts } from "@/lib/supabase/toeic-questions";
 import { listSavedExpressionIds } from "@/lib/supabase/saved-expressions";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
 import { getPlan } from "@/lib/supabase/profile";
@@ -16,6 +18,19 @@ export default async function DashboardHomePage() {
     // expressionsテーブル未作成 or 未接続などでも一覧表示自体は継続する
     console.error(err);
     loadError = true;
+  }
+
+  // TOEIC対策カードに「◯語・◯選・◯問収録」とさりげなく出すための件数。
+  // 取得に失敗してもホーム全体の表示は止めない。
+  let vocabularyCount = 0;
+  let toeicCounts: Awaited<ReturnType<typeof getToeicContentCounts>> | null = null;
+  try {
+    [vocabularyCount, toeicCounts] = await Promise.all([
+      getPublishedVocabularyCount(),
+      getToeicContentCounts(),
+    ]);
+  } catch (err) {
+    console.error(err);
   }
 
   // 未ログインはfree扱い。ログイン済みならprofiles.planを見る。
@@ -42,6 +57,8 @@ export default async function DashboardHomePage() {
       loggedIn={Boolean(user)}
       savedExpressionIds={savedExpressionIds}
       dateKey={getTodayDateKey()}
+      vocabularyCount={vocabularyCount}
+      toeicCounts={toeicCounts}
     />
   );
 }
