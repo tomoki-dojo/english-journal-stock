@@ -1,9 +1,12 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { ExpressionCard } from "./expression-card";
 import { ExpressionFilters } from "./expression-filters";
 import { AdUnit } from "@/components/ads/ad-unit";
+import { Pagination } from "@/components/ui/pagination";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
+import { EXPRESSION_PAGE_SIZE } from "@/lib/pagination-constants";
 import type {
   Expression,
   SceneTagFilter,
@@ -17,7 +20,16 @@ import type { Plan } from "@/lib/plan";
 // 何件のカードごとに広告を1枚挟むか（Freeプランのみ）
 const AD_INTERVAL = 6;
 
+type SearchApiResponse = {
+  items: Expression[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+};
+
 type ExpressionStockListProps = {
+  // serverMode=falseのときは全件配列（クライアント側で絞り込む）。
+  // serverMode=trueのときは初回SSRで取得した1ページ目のみ（以降はAPI経由で取得）。
   expressions: Expression[];
   loadError?: boolean;
   plan: Plan;
@@ -33,6 +45,12 @@ type ExpressionStockListProps = {
   initialIntentTag?: IntentTagFilter;
   // 同様に、外部リンク（例: ホームのTOEIC導線）からあらかじめ選択しておく資格試験タグ。
   initialExamTag?: ExamTagFilter;
+  // trueのとき、絞り込み・ページ送りをサーバー側検索API（/api/expressions/search）に委ねる。
+  // カタログ全体を検索する/vocabulary, /libraryで使用。/mylistのような
+  // 「渡された配列だけを絞り込む」用途ではfalse（デフォルト）のまま使う。
+  serverMode?: boolean;
+  // serverMode時、絞り込みなしでの公開件数（DB全体の総数）。空状態メッセージの出し分けに使う。
+  initialTotalCount?: number;
 };
 
 function matchesKeyword(expression: Expression, keyword: string) {
@@ -67,6 +85,8 @@ export function ExpressionStockList({
   initialSceneTag = "すべて",
   initialIntentTag = "すべて",
   initialExamTag = "すべて",
+  serverMode = false,
+  initialTotalCount,
 }: ExpressionStockListProps) {
   const savedIdSet = useMemo(() => new Set(savedExpressionIds), [savedExpressionIds]);
   const showAds = plan === "free";
@@ -75,17 +95,99 @@ export function ExpressionStockList({
   const intentTagGated = plan === "free";
   const initialSceneTagBlocked = sceneTagGated && initialSceneTag !== "すべて";
   const initialIntentTagBlocked = intentTagGated && initialIntentTag !== "すべて";
-  const [keyword, setKeyword] = useState("");
-  const [sceneTag, setSceneTag] = useState<SceneTagFilter>(
+
+  const [keyword, setKeywordRaw] = useState("");
+  const [sceneTag, setSceneTagRaw] = useState<SceneTagFilter>(
     initialSceneTagBlocked ? "すべて" : initialSceneTag
   );
-  const [formality, setFormality] = useState<FormalityFilter>("すべて");
-  const [level, setLevel] = useState<LevelFilter>("すべて");
-  const [intentTag, setIntentTag] = useState<IntentTagFilter>(
+  const [formality, setFormalityRaw] = useState<FormalityFilter>("すべて");
+  const [level, setLevelRaw] = useState<LevelFilter>("すべて");
+  const [intentTag, setIntentTagRaw] = useState<IntentTagFilter>(
     initialIntentTagBlocked ? "すべて" : initialIntentTag
   );
-  const [examTag, setExamTag] = useState<ExamTagFilter>(initialExamTag);
+  const [examTag, setExamTagRaw] = useState<ExamTagFilter>(initialExamTag);
+  const [page, setPage] = useState(1);
 
+  // 絞り込み条件を変更したときはページを1に戻す（サーバーモードのみ意味を持つ）。
+  function setKeyword(value: string) {
+    setKeywordRaw(value);
+    if (serverMode) setPage(1);
+  }
+  function setSceneTag(value: SceneTagFilter) {
+    setSceneTagRaw(value);
+    if (serverMode) setPage(1);
+  }
+  function setFormality(value: FormalityFilter) {
+    setFormalityRaw(value);
+    if (serverMode) setPage(1);
+  }
+  function setLevel(value: LevelFilter) {
+    setLevelRaw(value);
+    if (serverMode) setPage(1);
+  }
+  function setIntentTag(value: IntentTagFilter) {
+    setIntentTagRaw(value);
+    if (serverMode) setPage(1);
+  }
+  function setExamTag(value: ExamTagFilter) {
+    setExamTagRaw(value);
+    if (serverMode) setPage(1);
+  }
+
+  const debouncedKeyword = useDebouncedValue(keyword, 350);
+
+  // --- サーバーモード: API経由の検索・ページネーション ---
+  const [serverItems, setServerItems] = useState(expressions);
+  const [serverTotalCount, setServerTotalCount] = useState(initialTotalCount ?? expressions.length);
+  const [isLoading, setIsLoading] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
+  const didMountRef = useRef(false);
+
+  useEffect(() => {
+    if (!serverMode) return;
+    // 初回はSSRで取得済みのデータ（現在のfilter初期値と一致する1ページ目）をそのまま使う。
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
+
+    let cancelled = false;
+    setIsLoading(true);
+    setFetchError(false);
+
+    const params = new URLSearchParams();
+    if (debouncedKeyword.trim()) params.set("keyword", debouncedKeyword.trim());
+    if (sceneTag !== "すべて") params.set("scene", sceneTag);
+    if (formality !== "すべて") params.set("formality", formality);
+    if (level !== "すべて") params.set("level", level);
+    if (intentTag !== "すべて") params.set("intent", intentTag);
+    if (examTag !== "すべて") params.set("exam", examTag);
+    params.set("page", String(page));
+
+    fetch(`/api/expressions/search?${params.toString()}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("表現検索に失敗しました");
+        return res.json() as Promise<SearchApiResponse>;
+      })
+      .then((data) => {
+        if (cancelled) return;
+        setServerItems(data.items);
+        setServerTotalCount(data.totalCount);
+      })
+      .catch(() => {
+        if (!cancelled) setFetchError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverMode, debouncedKeyword, sceneTag, formality, level, intentTag, examTag, page]);
+
+  // --- 静的モード（/mylist等）: 渡された配列をそのままクライアント側で絞り込む ---
   const filteredExpressions = useMemo(() => {
     return expressions.filter((expression) => {
       const keywordMatch = matchesKeyword(expression, keyword);
@@ -102,6 +204,10 @@ export function ExpressionStockList({
       );
     });
   }, [expressions, keyword, sceneTag, formality, level, intentTag, examTag]);
+
+  const displayedItems = serverMode ? serverItems : filteredExpressions;
+  const displayedCount = serverMode ? serverTotalCount : filteredExpressions.length;
+  const catalogEmpty = serverMode ? (initialTotalCount ?? 0) === 0 : expressions.length === 0;
 
   return (
     <div className="space-y-8">
@@ -134,12 +240,24 @@ export function ExpressionStockList({
         </div>
       )}
 
-      <div>
-        <p className="mb-4 text-sm text-zinc-500">{filteredExpressions.length} 件の表現</p>
+      {fetchError && (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-6 py-4 text-sm text-red-700">
+          検索に失敗しました。時間をおいて再度お試しください。
+        </div>
+      )}
 
-        {filteredExpressions.length > 0 ? (
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {filteredExpressions.map((expression, index) => (
+      <div>
+        <p className="mb-4 text-sm text-zinc-500">{displayedCount} 件の表現</p>
+
+        {displayedItems.length > 0 ? (
+          <div
+            className={
+              isLoading
+                ? "grid grid-cols-1 gap-5 opacity-60 transition-opacity md:grid-cols-2 xl:grid-cols-3"
+                : "grid grid-cols-1 gap-5 transition-opacity md:grid-cols-2 xl:grid-cols-3"
+            }
+          >
+            {displayedItems.map((expression, index) => (
               <Fragment key={expression.id}>
                 <ExpressionCard
                   expression={expression}
@@ -158,8 +276,20 @@ export function ExpressionStockList({
         ) : (
           <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-100/30 px-6 py-16 text-center">
             <p className="text-sm text-zinc-500">
-              {expressions.length === 0 ? emptyMessage : "条件に一致する表現が見つかりませんでした。"}
+              {catalogEmpty ? emptyMessage : "条件に一致する表現が見つかりませんでした。"}
             </p>
+          </div>
+        )}
+
+        {serverMode && (
+          <div className="mt-6">
+            <Pagination
+              page={page}
+              pageSize={EXPRESSION_PAGE_SIZE}
+              totalCount={serverTotalCount}
+              onPageChange={setPage}
+              isLoading={isLoading}
+            />
           </div>
         )}
       </div>

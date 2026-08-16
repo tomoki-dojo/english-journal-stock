@@ -3,6 +3,7 @@
 // 閲覧・保存（マイリスト）・ランダム学習は未ログインでも/Freeでも全員可能（保存はログイン必須）。
 // Pro限定は「学習を始めて間隔反復（今日の復習）を行う」機能面のみ。
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { VOCABULARY_PAGE_SIZE } from "@/lib/pagination-constants";
 import type {
   PartOfSpeech,
   VocabLevel,
@@ -67,6 +68,56 @@ export async function listPublishedVocabulary(): Promise<Vocabulary[]> {
   }
 
   return (data as DbVocabularyRow[]).map(fromDbRow);
+}
+
+type DbVocabularySearchRow = DbVocabularyRow & { total_count: number };
+
+export type VocabularySearchParams = {
+  keyword?: string;
+  level?: string;
+  examTag?: string;
+  page?: number;
+  pageSize?: number;
+};
+
+export type VocabularySearchResult = {
+  items: Vocabulary[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+};
+
+// 単語帳一覧（/vocabulary, /library）用のサーバー側検索・ページネーション。
+// キーワード・レベル・資格試験タグはDB関数 search_vocabulary 側でバインドパラメータとして扱うため、
+// カンマ・括弧などの記号を含む検索語を渡しても安全（PostgRESTのor()文字列組み立てを避けている）。
+export async function searchPublishedVocabulary(
+  params: VocabularySearchParams = {}
+): Promise<VocabularySearchResult> {
+  const page = Math.max(1, params.page ?? 1);
+  const pageSize = params.pageSize ?? VOCABULARY_PAGE_SIZE;
+  const offset = (page - 1) * pageSize;
+
+  const { data, error } = await supabaseAdmin.rpc("search_vocabulary", {
+    p_keyword: params.keyword?.trim() || null,
+    p_level: params.level || null,
+    p_exam_tag: params.examTag || null,
+    p_limit: pageSize,
+    p_offset: offset,
+  });
+
+  if (error) {
+    throw new Error(`単語検索に失敗しました: ${error.message}`);
+  }
+
+  const rows = (data ?? []) as DbVocabularySearchRow[];
+  const totalCount = rows[0]?.total_count ?? 0;
+
+  return {
+    items: rows.map(fromDbRow),
+    totalCount,
+    page,
+    pageSize,
+  };
 }
 
 // ホーム画面などで「◯語収録」とさりげなく出すための軽量カウント取得（行データは取らない）。

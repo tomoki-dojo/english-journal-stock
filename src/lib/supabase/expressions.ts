@@ -6,6 +6,7 @@
 // 意味・例文はプランに関わらず全員に見せる（is_premiumによるマスクは廃止済み）。
 // Pro限定は機能面（シーン別絞り込み・マイリスト無制限・音声再生）のみで差別化する。
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { EXPRESSION_PAGE_SIZE } from "@/lib/pagination-constants";
 import type {
   Expression,
   Formality,
@@ -72,6 +73,120 @@ function fromDbRow(row: DbExpressionRow): Expression {
     hasAudioExpression: Boolean(row.audio_expression_path),
     hasAudioExample1: Boolean(row.audio_example_1_path),
     hasAudioExample2: Boolean(row.audio_example_2_path),
+  };
+}
+
+// search_expressions RPCの戻り値用。生の音声Storageパスの代わりにhas_audio_*のbooleanを返す
+// （DB関数側で既に生パスを捨てているので、ここでもraw pathは扱わない）。
+type DbExpressionSearchRow = {
+  id: string;
+  code: string;
+  category: string;
+  scene_tags: string[];
+  formality: string[];
+  level: string;
+  intent_tags: string[] | null;
+  expression_en: string;
+  meaning_ja: string;
+  example_1_en: string | null;
+  example_1_ja: string | null;
+  example_2_en: string | null;
+  example_2_ja: string | null;
+  similar_expressions: string[] | null;
+  exam_tags: string[] | null;
+  usage_notes: string | null;
+  verification_status: string;
+  audio_memo: string | null;
+  publish_status: string;
+  is_premium: boolean;
+  created_at: string;
+  has_audio_expression: boolean;
+  has_audio_example_1: boolean;
+  has_audio_example_2: boolean;
+  total_count: number;
+};
+
+function fromSearchDbRow(row: DbExpressionSearchRow): Expression {
+  return {
+    id: row.id,
+    code: row.code,
+    category: row.category,
+    sceneTags: row.scene_tags as SceneTag[],
+    formality: row.formality as Formality[],
+    level: row.level as Level,
+    intentTags: (row.intent_tags as IntentTag[] | null) ?? undefined,
+    expressionEn: row.expression_en,
+    isPremium: row.is_premium,
+    locked: false,
+    meaningJa: row.meaning_ja,
+    example1En: row.example_1_en ?? undefined,
+    example1Ja: row.example_1_ja ?? undefined,
+    example2En: row.example_2_en ?? undefined,
+    example2Ja: row.example_2_ja ?? undefined,
+    similarExpressions: row.similar_expressions ?? undefined,
+    examTags: row.exam_tags ?? undefined,
+    usageNotes: row.usage_notes ?? undefined,
+    verificationStatus: row.verification_status as VerificationStatus,
+    audioMemo: row.audio_memo ?? undefined,
+    publishStatus: row.publish_status,
+    createdAt: row.created_at,
+    hasAudioExpression: row.has_audio_expression,
+    hasAudioExample1: row.has_audio_example_1,
+    hasAudioExample2: row.has_audio_example_2,
+  };
+}
+
+export type ExpressionSearchParams = {
+  keyword?: string;
+  sceneTag?: string;
+  formality?: string;
+  level?: string;
+  intentTag?: string;
+  examTag?: string;
+  page?: number;
+  pageSize?: number;
+};
+
+export type ExpressionSearchResult = {
+  items: Expression[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+};
+
+// 表現一覧（/vocabulary, /library）用のサーバー側検索・ページネーション。
+// 絞り込み条件はDB関数 search_expressions 側でバインドパラメータとして扱うため、
+// カンマ・括弧などの記号を含む検索語を渡しても安全（PostgRESTのor()文字列組み立てを避けている）。
+export async function searchPublishedExpressions(
+  params: ExpressionSearchParams = {}
+): Promise<ExpressionSearchResult> {
+  const page = Math.max(1, params.page ?? 1);
+  const pageSize = params.pageSize ?? EXPRESSION_PAGE_SIZE;
+  const offset = (page - 1) * pageSize;
+
+  const { data, error } = await supabaseAdmin.rpc("search_expressions", {
+    p_keyword: params.keyword?.trim() || null,
+    p_scene_tag: params.sceneTag || null,
+    p_formality: params.formality || null,
+    p_level: params.level || null,
+    p_intent_tag: params.intentTag || null,
+    p_exam_tag: params.examTag || null,
+    p_limit: pageSize,
+    p_offset: offset,
+  });
+
+  if (error) {
+    throw new Error(`表現検索に失敗しました: ${error.message}`);
+  }
+
+  const rows = (data ?? []) as DbExpressionSearchRow[];
+  const totalCount = rows[0]?.total_count ?? 0;
+
+  return {
+    items: rows.map(fromSearchDbRow),
+    totalCount,
+    page,
+    pageSize,
   };
 }
 
