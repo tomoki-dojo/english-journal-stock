@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
 import { Check, ChevronRight, GraduationCap, Sparkles } from "lucide-react";
@@ -59,13 +60,22 @@ export function DashboardHome({
 
   return (
     <div className="space-y-10">
-      <div>
+      <div className="relative">
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
           今日のビジネス英語表現
         </h1>
         <p className="mt-2 text-sm text-zinc-500">
           今日のピックアップとシーン別の表現をお届けします。全件はいつでも検索から探せます。
         </p>
+        {/* ホーム画面のさりげない装飾。クマのマスコットがタイトル横からひょこっと覗く */}
+        <Image
+          src="/mascot/bear-suit.png"
+          alt=""
+          width={44}
+          height={44}
+          priority
+          className="animate-mascot-bob pointer-events-none absolute -top-3 right-0 select-none sm:-top-4 sm:right-2"
+        />
       </div>
 
       {loadError && (

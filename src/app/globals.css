@@ -38,3 +38,24 @@ body {
     text-wrap: balance;
   }
 }
+
+/* ホーム画面のマスコット装飾用。派手にならないよう、ごく控えめに上下に揺れるだけ。 */
+@keyframes mascot-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.animate-mascot-bob {
+  animation: mascot-bob 3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-mascot-bob {
+    animation: none;
+  }
+}
