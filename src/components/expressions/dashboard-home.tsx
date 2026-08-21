@@ -60,22 +60,24 @@ export function DashboardHome({
 
   return (
     <div className="space-y-10">
-      <div className="relative">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
-          今日のビジネス英語表現
-        </h1>
-        <p className="mt-2 text-sm text-zinc-500">
-          今日のピックアップとシーン別の表現をお届けします。全件はいつでも検索から探せます。
-        </p>
-        {/* ホーム画面のさりげない装飾。クマのマスコットがタイトル横からひょこっと覗く */}
+      <div className="flex items-start gap-3">
+        {/* ホーム画面のマスコット装飾。タイトルの隣に添えて、案内役のような立ち位置にする */}
         <Image
           src="/mascot/bear-suit.png"
           alt=""
-          width={44}
-          height={44}
+          width={56}
+          height={56}
           priority
-          className="animate-mascot-bob pointer-events-none absolute -top-3 right-0 select-none sm:-top-4 sm:right-2"
+          className="animate-mascot-bob pointer-events-none mt-0.5 shrink-0 select-none"
         />
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
+            今日のビジネス英語表現
+          </h1>
+          <p className="mt-2 text-sm text-zinc-500">
+            今日のピックアップとシーン別の表現をお届けします。全件はいつでも検索から探せます。
+          </p>
+        </div>
       </div>
 
       {loadError && (
