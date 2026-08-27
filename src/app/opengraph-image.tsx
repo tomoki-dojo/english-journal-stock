@@ -55,7 +55,7 @@ export default function OpengraphImage() {
             lineHeight: 1.5,
           }}
         >
-          ネイティブ表現・ビジネス英語をシーン別に管理できる学習アプリ（開発中）
+          ネイティブ表現・ビジネス英語をシーン別に管理できる学習アプリ
         </div>
       </div>
     ),
