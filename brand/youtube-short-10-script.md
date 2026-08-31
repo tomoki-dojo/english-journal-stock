@@ -41,7 +41,7 @@
 
 ト書き：クマ、真顔で椅子から立ち上がり、その場で小さくくるっと一周してから席に戻る。
 
-クマ（回りながら、英語→日本語）：**"Circle back?"** 「そんなに犬っぽいですか？」
+クマ（回りながら、英語）：**"Circle back? Am I being that dog-like?"**
 （テロップ：サークルバックって、そんなに犬っぽいですか？）
 
 **同僚の反応（笑いをこらえて）**：
@@ -85,7 +85,7 @@
 1. 犬か！
 2. さっきの企画書、ちょっと気になるところがあって…（クマの日本語セリフ）
 3. "Let's circle back to this later, once we have more data."（もっとデータが揃ってから、後でまた話し合おう）
-4. "Circle back?"「そんなに犬っぽいですか？」
+4. "Circle back? Am I being that dog-like?"（サークルバックって、そんなに犬っぽいですか？）
 5. "Yeah, following it that literally is pretty dog-like."（そうだね、そこまで文字通りに従うのは、なんか犬っぽいね）
 6. え…犬っぽいって言われた…否定できないのがつらい…（クマの心の声）
 7. circle back (to something) = 後で改めてこの話題に戻る、また話し合う
