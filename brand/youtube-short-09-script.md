@@ -41,7 +41,7 @@
 
 ト書き：クマ、手元のバインダーのページを一枚めくり、きょとんとした顔で同僚を見る。
 
-クマ（真顔で、英語→日本語）：**"Turn the page? Okay,"** 「何ページのことですか？」
+クマ（真顔で、英語）：**"Turn the page? Okay, which page?"**
 （テロップ：ページをめくるんですね。オーケー、何ページのことですか？）
 
 **同僚のオチ（皮肉交じり）**：
@@ -85,7 +85,7 @@
 1. ページ、めくります！？
 2. この間の出店の件、なんか微妙な感じですよねぇ…（クマの日本語セリフ）
 3. "Honestly, let's just turn the page on this and move on."（正直、これはもう終わりにして次に進みましょう）
-4. "Turn the page? Okay,"「何ページのことですか？」（ページをめくるんですね。オーケー、何ページのことですか？）
+4. "Turn the page? Okay, which page?"（ページをめくるんですね。オーケー、何ページのことですか？）
 5. "Okay, keep turning the page until you're on the same page."（オーケー、私たちの意見が合うまでページをめくり続けてね）
 6. え…本当にめくるやつじゃなかったのか…（クマの心の声）
 7. turn the page (on something) = 過去のことを水に流して、新しく始める
