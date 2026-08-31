@@ -1,4 +1,4 @@
-# 英語Shorts 固定コメント案（#1〜#6）
+# 英語Shorts 固定コメント案（#1〜#10）
 
 各動画に自分のアカウントでコメント投稿→固定（コメント右上の「︙」→「固定」）して使う想定。
 フォーマット：フレーズの振り返り→軽い問いかけ（エンゲージメント狙い）→アプリへの誘導。
@@ -50,5 +50,37 @@ Wi-Fiの話じゃなくて「対応する余裕がない」って意味なんで
 ```
 今日の「Let's table this.」、知ってましたか？
 アメリカでは「保留にしよう」、イギリスでは真逆に「今すぐ話そう」という意味になります。ややこしいですよね…同じ経験ある人、コメントで教えてください🐻
+他の表現はアプリでまとめてチェック👉 https://app.upskillenglish.bear-fruit.online
+```
+
+## #7 low-hanging fruit
+
+```
+今日の「Let's focus on the low-hanging fruit first.」、知ってましたか？
+低い位置の果物じゃなくて「すぐ着手できる簡単な課題」って意味なんです。文字通りに受け取っちゃった人、コメントで教えてください🐻
+他の表現はアプリでまとめてチェック👉 https://app.upskillenglish.bear-fruit.online
+```
+
+## #8 heads up
+
+```
+今日の「Just wanted to give you a heads up about tomorrow's meeting.」、知ってましたか？
+「頭を上げろ」でも「面を上げい」でもなくて「事前に伝えておきたい」って意味なんです。似たような勘違いしたことある人、コメントで教えてください🐻
+他の表現はアプリでまとめてチェック👉 https://app.upskillenglish.bear-fruit.online
+```
+
+## #9 turn the page
+
+```
+今日の「Let's turn the page on this.」、知ってましたか？
+本当にページをめくる動作じゃなくて「この件はもう終わりにして次に進もう」って意味なんです。空とぼけたくなる気持ち、わかる人コメントで教えてください🐻
+他の表現はアプリでまとめてチェック👉 https://app.upskillenglish.bear-fruit.online
+```
+
+## #10 circle back
+
+```
+今日の「Let's circle back to this later.」、知ってましたか？
+本当にぐるっと一周する必要はなくて「後でまた話し合おう」って意味なんです。文字通りにやったら犬っぽいって言われた人、コメントで教えてください🐻
 他の表現はアプリでまとめてチェック👉 https://app.upskillenglish.bear-fruit.online
 ```
