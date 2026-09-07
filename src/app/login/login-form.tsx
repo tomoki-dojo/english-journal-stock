@@ -23,9 +23,18 @@ const REASON_MESSAGES: Record<string, string> = {
 
 type LoginFormProps = {
   reason?: string;
+  // ログイン後に戻る先。未指定ならダッシュボード（"/"）。
+  // "/"始まりの内部パス以外（外部URL等）は無視してオープンリダイレクトを防ぐ。
+  next?: string;
 };
 
-export function LoginForm({ reason }: LoginFormProps) {
+function sanitizeNext(next: string | undefined): string {
+  if (!next || !next.startsWith("/") || next.startsWith("//")) return "/";
+  return next;
+}
+
+export function LoginForm({ reason, next }: LoginFormProps) {
+  const redirectTo = sanitizeNext(next);
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("password");
 
@@ -55,8 +64,8 @@ export function LoginForm({ reason }: LoginFormProps) {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        // メール内リンクをクリックした後にここへ戻ってくる
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        // メール内リンクをクリックした後にここへ戻ってくる（nextで元のページに戻す）
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
       },
     });
 
@@ -89,7 +98,7 @@ export function LoginForm({ reason }: LoginFormProps) {
       return;
     }
 
-    router.push("/");
+    router.push(redirectTo);
     router.refresh();
   };
 

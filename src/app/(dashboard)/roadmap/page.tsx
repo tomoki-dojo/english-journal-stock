@@ -17,7 +17,7 @@ type RoadmapPageProps = {
 export default async function RoadmapPage({ searchParams }: RoadmapPageProps) {
   const user = await getCurrentUser();
   if (!user) {
-    redirect("/login?reason=roadmap");
+    redirect("/login?reason=roadmap&next=/roadmap");
   }
 
   const state = await getUserRoadmapState(user.id);

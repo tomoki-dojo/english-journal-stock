@@ -1,11 +1,11 @@
 import { LoginForm } from "./login-form";
 
 type LoginPageProps = {
-  searchParams: Promise<{ reason?: string }>;
+  searchParams: Promise<{ reason?: string; next?: string }>;
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const { reason } = await searchParams;
+  const { reason, next } = await searchParams;
 
-  return <LoginForm reason={reason} />;
+  return <LoginForm reason={reason} next={next} />;
 }
