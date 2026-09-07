@@ -18,6 +18,7 @@ const REASON_MESSAGES: Record<string, string> = {
   settings: "アカウント設定は無料ログインが必要です。",
   "writing-feedback": "AI添削機能は無料ログインでご利用いただけます（月の利用回数に上限があります）。",
   practice: "「演習」は無料ログインでご利用いただけます（一部の機能はPro限定です）。",
+  roadmap: "スピーキング・ロードマップは無料ログインでご利用いただけます（一部の機能はPro限定です）。",
 };
 
 type LoginFormProps = {
