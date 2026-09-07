@@ -28,3 +28,41 @@ export type OnboardingQuizResult = {
   startStage: RoadmapStage;
   track: OnboardingTrack;
 };
+
+// Stage1（音読・シャドーイング）の3サブステップ。correct_streakの値の範囲から導出する
+// （0-1=リピーティング, 2-3=オーバーラッピング, 4-5=シャドーイング, 6=卒業）。
+export const Stage1SubStepValues = ["リピーティング", "オーバーラッピング", "シャドーイング"] as const;
+export type Stage1SubStep = (typeof Stage1SubStepValues)[number];
+
+export const STAGE1_GRADUATE_STREAK = 6;
+
+export function getStage1SubStep(streak: number): Stage1SubStep {
+  if (streak >= 4) return "シャドーイング";
+  if (streak >= 2) return "オーバーラッピング";
+  return "リピーティング";
+}
+
+// Stage1で1問出題する対象フレーズ（今は表現のみ。単語は将来的な拡張候補）。
+export type Stage1Phrase = {
+  expressionId: string;
+  expressionEn: string;
+  meaningJa?: string;
+  hasAudio: boolean;
+};
+
+export type Stage1NextResponse =
+  | {
+      done: false;
+      phrase: Stage1Phrase;
+      streak: number;
+      subStep: Stage1SubStep;
+      remainingCount: number;
+      totalCount: number;
+    }
+  | { done: true; totalCount: number };
+
+export type Stage1ReportResult = {
+  streak: number;
+  subStep: Stage1SubStep;
+  graduated: boolean;
+};
