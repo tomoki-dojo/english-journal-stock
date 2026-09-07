@@ -2,14 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Check, PartyPopper, Volume2, X } from "lucide-react";
-import { cn } from "@/lib/utils";
-import type { Stage1NextResponse, Stage1SubStep } from "./types";
-
-const SUB_STEP_LABELS: Record<Stage1SubStep, string> = {
-  リピーティング: "リピーティング（聞いてすぐ真似する）",
-  オーバーラッピング: "オーバーラッピング（音声と一緒に声に出す）",
-  シャドーイング: "シャドーイング（少し遅れて声に出す）",
-};
+import type { Stage1NextResponse } from "./types";
 
 type LoadState = "loading" | "ready" | "done" | "error";
 
@@ -112,7 +105,7 @@ export function Stage1Practice() {
     );
   }
 
-  const { phrase, subStep, remainingCount, totalCount } = next;
+  const { phrase, remainingCount, totalCount } = next;
 
   return (
     <div>
@@ -123,27 +116,14 @@ export function Stage1Practice() {
         </div>
       )}
 
-      <div className="mb-4 flex items-center justify-between text-xs text-zinc-500">
-        <span>
-          残り {remainingCount} / {totalCount}
-        </span>
-        <div className="flex gap-1">
-          {(["リピーティング", "オーバーラッピング", "シャドーイング"] as Stage1SubStep[]).map((s) => (
-            <span
-              key={s}
-              className={cn(
-                "rounded-full px-2 py-0.5",
-                s === subStep ? "bg-accent/10 text-accent font-medium" : "text-zinc-300"
-              )}
-            >
-              {s}
-            </span>
-          ))}
-        </div>
+      <div className="mb-4 text-xs text-zinc-500">
+        残り {remainingCount} / {totalCount}
       </div>
 
       <div className="rounded-xl border border-zinc-200 bg-zinc-100/50 p-6">
-        <p className="mb-1 text-xs text-zinc-400">{SUB_STEP_LABELS[subStep]}</p>
+        <p className="mb-1 text-xs text-zinc-400">
+          音声を真似して声に出す→一緒に言う→少し遅れて言う、と徐々にレベルを上げてみましょう。
+        </p>
         <p className="mb-4 text-lg font-medium text-zinc-900">{phrase.expressionEn}</p>
         {phrase.meaningJa && <p className="mb-4 text-sm text-zinc-500">{phrase.meaningJa}</p>}
 

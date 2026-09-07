@@ -3,16 +3,7 @@
 import { useEffect, useState } from "react";
 import { Check, Hourglass, PartyPopper, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Stage2NextResponse, Stage2SubStep } from "./types";
-
-const SUB_STEP_LABELS: Record<Stage2SubStep, string> = {
-  穴埋め音読: "穴埋め音読（空欄に入る語句を選んで、声に出して読む）",
-  全文瞬間英作文: "全文瞬間英作文（日本語を見て、正しい英文を選ぶ）",
-  文脈からの想起: "文脈からの想起（思い出しながら、正しい英文を選ぶ）",
-  微改変: "微改変（少し変えて、自分の言葉で言ってみる）",
-};
-
-const SUB_STEP_ORDER: Stage2SubStep[] = ["穴埋め音読", "全文瞬間英作文", "文脈からの想起", "微改変"];
+import type { Stage2NextResponse } from "./types";
 
 type LoadState = "loading" | "ready" | "done" | "not_ready" | "error";
 
@@ -119,7 +110,7 @@ export function Stage2Practice() {
     );
   }
 
-  const { subStep, remainingCount, totalCount } = next;
+  const { remainingCount, totalCount } = next;
 
   return (
     <div>
@@ -130,28 +121,11 @@ export function Stage2Practice() {
         </div>
       )}
 
-      <div className="mb-4 flex items-center justify-between text-xs text-zinc-500">
-        <span>
-          残り {remainingCount} / {totalCount}
-        </span>
-        <div className="flex gap-1">
-          {SUB_STEP_ORDER.map((s) => (
-            <span
-              key={s}
-              className={cn(
-                "rounded-full px-2 py-0.5",
-                s === subStep ? "bg-accent/10 text-accent font-medium" : "text-zinc-300"
-              )}
-            >
-              {s}
-            </span>
-          ))}
-        </div>
+      <div className="mb-4 text-xs text-zinc-500">
+        残り {remainingCount} / {totalCount}
       </div>
 
       <div className="rounded-xl border border-zinc-200 bg-zinc-100/50 p-6">
-        <p className="mb-4 text-xs text-zinc-400">{SUB_STEP_LABELS[subStep]}</p>
-
         {next.kind === "choice" ? (
           <div>
             {next.promptEn ? (
