@@ -7,12 +7,16 @@ import { listPublishedExpressions } from "@/lib/supabase/expressions";
 import { getExpressionAudioSignedUrl } from "@/lib/supabase/expression-audio";
 import {
   STAGE1_GRADUATE_STREAK,
+  STAGE2_GRADUATE_STREAK,
   getStage1SubStep,
+  getStage2SubStep,
   type OnboardingQuizAnswers,
   type OnboardingQuizResult,
   type RoadmapStage,
   type Stage1NextResponse,
   type Stage1ReportResult,
+  type Stage2NextResponse,
+  type Stage2ReportResult,
   type UserRoadmapState,
 } from "@/components/roadmap/types";
 
@@ -209,29 +213,32 @@ export async function getStage1Next(userId: string): Promise<Stage1NextResponse>
   };
 }
 
-// Stage1の「言えた/言えなかった」の結果を記録する。
+// Stage1・2共通：speaking_stage_progressのcorrect_streakを更新する。
 // 失敗してもstreakは減らさない（後退させない設計）。streakが卒業ラインに達したら習得済みにする。
-export async function reportStage1Result(
+// 取り組んだこと自体を「今日練習した」記録にする（正誤は問わない）。
+async function reportStageStreakResult(
   userId: string,
+  stage: 1 | 2,
   expressionId: string,
+  graduateStreak: number,
   correct: boolean
-): Promise<Stage1ReportResult> {
+): Promise<{ streak: number; graduated: boolean }> {
   const { data: existing, error: fetchError } = await supabaseAdmin
     .from("speaking_stage_progress")
     .select("correct_streak")
     .eq("user_id", userId)
     .eq("phrase_id", expressionId)
     .eq("phrase_source", "expression")
-    .eq("stage", 1)
+    .eq("stage", stage)
     .maybeSingle();
 
   if (fetchError) {
-    throw new Error(`Stage1進捗の取得に失敗しました: ${fetchError.message}`);
+    throw new Error(`Stage${stage}進捗の取得に失敗しました: ${fetchError.message}`);
   }
 
   const currentStreak = existing?.correct_streak ?? 0;
-  const newStreak = correct ? Math.min(currentStreak + 1, STAGE1_GRADUATE_STREAK) : currentStreak;
-  const graduated = newStreak >= STAGE1_GRADUATE_STREAK;
+  const newStreak = correct ? Math.min(currentStreak + 1, graduateStreak) : currentStreak;
+  const graduated = newStreak >= graduateStreak;
   const status = graduated ? "習得済み" : newStreak > 0 ? "練習中" : "未着手";
 
   const { error: upsertError } = await supabaseAdmin.from("speaking_stage_progress").upsert(
@@ -239,7 +246,7 @@ export async function reportStage1Result(
       user_id: userId,
       phrase_id: expressionId,
       phrase_source: "expression",
-      stage: 1,
+      stage,
       status,
       correct_streak: newStreak,
       last_result: correct ? "correct" : "incorrect",
@@ -249,17 +256,32 @@ export async function reportStage1Result(
   );
 
   if (upsertError) {
-    throw new Error(`Stage1進捗の保存に失敗しました: ${upsertError.message}`);
+    throw new Error(`Stage${stage}進捗の保存に失敗しました: ${upsertError.message}`);
   }
 
-  // 取り組んだこと自体を「今日練習した」記録にする（正誤は問わない）
   await recordDailyPractice(userId);
 
   if (graduated) {
     await incrementTotalMasteredCount(userId);
   }
 
-  return { streak: newStreak, subStep: getStage1SubStep(newStreak), graduated };
+  return { streak: newStreak, graduated };
+}
+
+// Stage1の「言えた/言えなかった」の結果を記録する。
+export async function reportStage1Result(
+  userId: string,
+  expressionId: string,
+  correct: boolean
+): Promise<Stage1ReportResult> {
+  const { streak, graduated } = await reportStageStreakResult(
+    userId,
+    1,
+    expressionId,
+    STAGE1_GRADUATE_STREAK,
+    correct
+  );
+  return { streak, subStep: getStage1SubStep(streak), graduated };
 }
 
 // user_roadmap_state.total_mastered_countを+1する（都度集計を避けるためのキャッシュ更新）。
@@ -296,4 +318,179 @@ export async function getStage1AudioUrl(userId: string, expressionId: string): P
   }
 
   return getExpressionAudioSignedUrl(expressionId, "expression");
+}
+
+// =========================================
+// Stage2（瞬間英作文）
+// =========================================
+
+type DbStage2ContentRow = {
+  expression_id: string;
+  blank_target: string;
+  blank_choices: string[];
+  sentence_choices: string[];
+  expressions: {
+    code: string;
+    expression_en: string;
+    meaning_ja: string | null;
+  } | null;
+};
+
+// Fisher-Yatesシャッフル（選択肢の並び順をランダムにする）
+function shuffleArray<T>(items: T[]): T[] {
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+// Stage1を卒業済み（stage1で習得済み）のexpression_idの集合を取得する。
+// Stage2はStage1で覚えたフレーズを引き出す練習のため、Stage1卒業済みのフレーズだけを対象にする。
+async function getStage1GraduatedExpressionIds(userId: string): Promise<Set<string>> {
+  const { data, error } = await supabaseAdmin
+    .from("speaking_stage_progress")
+    .select("phrase_id")
+    .eq("user_id", userId)
+    .eq("stage", 1)
+    .eq("phrase_source", "expression")
+    .eq("status", "習得済み");
+
+  if (error) {
+    throw new Error(`Stage1卒業済みフレーズの取得に失敗しました: ${error.message}`);
+  }
+
+  return new Set((data ?? []).map((row) => row.phrase_id as string));
+}
+
+// Stage2用に作り込まれたコンテンツ（stage2_quiz_content）を、Stage1卒業済みのものに絞り、
+// code順に並べて取得する。
+async function listStage2ContentPool(userId: string): Promise<DbStage2ContentRow[]> {
+  const graduatedIds = await getStage1GraduatedExpressionIds(userId);
+  if (graduatedIds.size === 0) return [];
+
+  const { data, error } = await supabaseAdmin
+    .from("stage2_quiz_content")
+    .select("expression_id, blank_target, blank_choices, sentence_choices, expressions(code, expression_en, meaning_ja)");
+
+  if (error) {
+    throw new Error(`Stage2コンテンツの取得に失敗しました: ${error.message}`);
+  }
+
+  const rows = (data ?? []) as unknown as DbStage2ContentRow[];
+  return rows
+    .filter((row) => graduatedIds.has(row.expression_id) && row.expressions)
+    .sort((a, b) => (a.expressions!.code).localeCompare(b.expressions!.code));
+}
+
+// Stage2で次に出題する問題を1件決める。
+// - Stage1卒業済みのフレーズがまだない、またはStage2コンテンツが未作成の範囲ならnot_ready
+// - 対象プール内を全て卒業済みならdone
+export async function getStage2Next(userId: string): Promise<Stage2NextResponse> {
+  const pool = await listStage2ContentPool(userId);
+  if (pool.length === 0) {
+    return { status: "not_ready" };
+  }
+
+  const { data: progressData, error: progressError } = await supabaseAdmin
+    .from("speaking_stage_progress")
+    .select("phrase_id, status, correct_streak")
+    .eq("user_id", userId)
+    .eq("stage", 2)
+    .eq("phrase_source", "expression");
+
+  if (progressError) {
+    throw new Error(`Stage2進捗の取得に失敗しました: ${progressError.message}`);
+  }
+
+  const progressMap = new Map<string, { status: string; correct_streak: number }>();
+  for (const row of progressData ?? []) {
+    progressMap.set(row.phrase_id as string, {
+      status: row.status as string,
+      correct_streak: row.correct_streak as number,
+    });
+  }
+
+  const totalCount = pool.length;
+  const graduatedCount = pool.filter((row) => progressMap.get(row.expression_id)?.status === "習得済み").length;
+
+  const next = pool.find((row) => progressMap.get(row.expression_id)?.status !== "習得済み");
+
+  if (!next) {
+    return { status: "done", totalCount };
+  }
+
+  const streak = progressMap.get(next.expression_id)?.correct_streak ?? 0;
+  const subStep = getStage2SubStep(streak);
+  const remainingCount = totalCount - graduatedCount;
+  const meaningJa = next.expressions!.meaning_ja ?? undefined;
+  const expressionEn = next.expressions!.expression_en;
+
+  if (subStep === "微改変") {
+    return {
+      status: "question",
+      kind: "free",
+      subStep,
+      streak,
+      expressionId: next.expression_id,
+      expressionEn,
+      meaningJa,
+      remainingCount,
+      totalCount,
+    };
+  }
+
+  if (subStep === "穴埋め音読") {
+    const choices = shuffleArray(next.blank_choices);
+    const correctIndex = choices.indexOf(next.blank_target);
+    const promptEn = expressionEn.replace(next.blank_target, "___");
+
+    return {
+      status: "question",
+      kind: "choice",
+      subStep,
+      streak,
+      expressionId: next.expression_id,
+      meaningJa,
+      promptEn,
+      choices,
+      correctIndex,
+      remainingCount,
+      totalCount,
+    };
+  }
+
+  // 全文瞬間英作文・文脈からの想起：どちらも同じsentence_choicesを使い回す
+  const choices = shuffleArray(next.sentence_choices);
+  const correctIndex = choices.indexOf(expressionEn);
+
+  return {
+    status: "question",
+    kind: "choice",
+    subStep,
+    streak,
+    expressionId: next.expression_id,
+    meaningJa,
+    choices,
+    correctIndex,
+    remainingCount,
+    totalCount,
+  };
+}
+
+// Stage2の結果を記録する（選択問題はクライアント側で正誤判定した結果を、微改変は自己申告を受け取る）。
+export async function reportStage2Result(
+  userId: string,
+  expressionId: string,
+  correct: boolean
+): Promise<Stage2ReportResult> {
+  const { streak, graduated } = await reportStageStreakResult(
+    userId,
+    2,
+    expressionId,
+    STAGE2_GRADUATE_STREAK,
+    correct
+  );
+  return { streak, subStep: getStage2SubStep(streak), graduated };
 }

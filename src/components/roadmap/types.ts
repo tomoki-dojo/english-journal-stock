@@ -66,3 +66,57 @@ export type Stage1ReportResult = {
   subStep: Stage1SubStep;
   graduated: boolean;
 };
+
+// Stage2（瞬間英作文）の4サブステップ。correct_streakの値の範囲から導出する
+// （0-1=穴埋め音読, 2-3=全文瞬間英作文, 4-5=文脈からの想起, 6-7=微改変, 8=卒業）。
+export const Stage2SubStepValues = [
+  "穴埋め音読",
+  "全文瞬間英作文",
+  "文脈からの想起",
+  "微改変",
+] as const;
+export type Stage2SubStep = (typeof Stage2SubStepValues)[number];
+
+export const STAGE2_GRADUATE_STREAK = 8;
+
+export function getStage2SubStep(streak: number): Stage2SubStep {
+  if (streak >= 6) return "微改変";
+  if (streak >= 4) return "文脈からの想起";
+  if (streak >= 2) return "全文瞬間英作文";
+  return "穴埋め音読";
+}
+
+export type Stage2NextResponse =
+  | { status: "not_ready" }
+  | { status: "done"; totalCount: number }
+  | {
+      status: "question";
+      kind: "choice";
+      subStep: Stage2SubStep;
+      streak: number;
+      expressionId: string;
+      meaningJa?: string;
+      // 穴埋め音読のときだけ、空欄化した英文を入れる（それ以外のサブステップはundefined）
+      promptEn?: string;
+      choices: string[];
+      correctIndex: number;
+      remainingCount: number;
+      totalCount: number;
+    }
+  | {
+      status: "question";
+      kind: "free";
+      subStep: Stage2SubStep;
+      streak: number;
+      expressionId: string;
+      expressionEn: string;
+      meaningJa?: string;
+      remainingCount: number;
+      totalCount: number;
+    };
+
+export type Stage2ReportResult = {
+  streak: number;
+  subStep: Stage2SubStep;
+  graduated: boolean;
+};
