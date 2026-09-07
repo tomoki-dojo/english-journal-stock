@@ -3,7 +3,6 @@
 // Stage2以降の出題ロジックは別タスクで実装する。
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getTodayDateKey } from "@/lib/daily-rotation";
-import { listPublishedExpressions } from "@/lib/supabase/expressions";
 import { getExpressionAudioSignedUrl } from "@/lib/supabase/expression-audio";
 import {
   STAGE1_GRADUATE_STREAK,
@@ -175,11 +174,36 @@ async function getStage1ProgressMap(userId: string): Promise<Map<string, Stage1P
   return map;
 }
 
-// 公開済み表現をcode順（安定した順序）に並べたリストを返す。
+type Stage1PoolRow = {
+  id: string;
+  expressionEn: string;
+  meaningJa?: string;
+  hasAudioExpression: boolean;
+};
+
+// 公開済み表現を全件・code順（安定した順序）に取得する。
+// listPublishedExpressions()は/library向けにcreated_at降順+1000件上限で作られており、
+// 全1060件超のような場合に古いバッチが不定順で切り捨てられてしまうため、
+// Stage1・2の出題プールにはそれを流用せず、専用にcode順の全件取得を行う。
 // 日常会話コンテンツができるまでは、トラックに関わらず同じ表現ライブラリを出題する。
-async function listStage1PhrasePool() {
-  const expressions = await listPublishedExpressions();
-  return [...expressions].sort((a, b) => a.code.localeCompare(b.code));
+async function listStage1PhrasePool(): Promise<Stage1PoolRow[]> {
+  const { data, error } = await supabaseAdmin
+    .from("expressions")
+    .select("id, expression_en, meaning_ja, audio_expression_path")
+    .eq("publish_status", "公開")
+    .order("code", { ascending: true })
+    .limit(5000);
+
+  if (error) {
+    throw new Error(`Stage1出題プールの取得に失敗しました: ${error.message}`);
+  }
+
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    expressionEn: row.expression_en as string,
+    meaningJa: (row.meaning_ja as string | null) ?? undefined,
+    hasAudioExpression: Boolean(row.audio_expression_path),
+  }));
 }
 
 // Stage1で次に出題する表現を1件決める。全表現を卒業済みならdone: trueを返す。
