@@ -23,15 +23,19 @@ const STAGE_COLOR = STAGE_COLORS[1];
 const WARMTH_BORDER_ALPHA: Record<WarmthLevel, string> = { 0: "00", 1: "33", 2: "55", 3: "80" };
 const WARMTH_BG_ALPHA: Record<WarmthLevel, string> = { 0: "00", 1: "0a", 2: "12", 3: "1a" };
 
-// ラウンド終了時のキラキラ演出用。中心から放射状に8個の粒を飛ばす（角度は固定・決定的）。
-const SPARKLES = Array.from({ length: 8 }).map((_, i) => {
-  const angle = (i / 8) * Math.PI * 2;
-  const radius = 28;
+// ラウンド終了時のキラキラ演出用。カード上部に沿って10個の粒を散らし、
+// それぞれ少し上・斜めに飛んでフェードする（位置・角度は固定・決定的）。
+const RESULT_SPARKLES = Array.from({ length: 10 }).map((_, i) => {
+  const left = 6 + i * 9;
+  const x = (i % 2 === 0 ? 1 : -1) * (8 + (i % 3) * 6);
+  const y = -(20 + (i % 4) * 10);
   return {
-    x: Math.round(Math.cos(angle) * radius),
-    y: Math.round(Math.sin(angle) * radius),
-    delay: (i % 4) * 0.04,
+    left,
+    x,
+    y,
+    delay: (i % 5) * 0.05,
     warm: i % 2 === 0,
+    large: i % 3 === 0,
   };
 });
 
@@ -47,7 +51,6 @@ export function Stage1Practice() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioLoading, setAudioLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [entering, setEntering] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const currentQuestion = questions[currentIndex];
@@ -82,14 +85,6 @@ export function Stage1Practice() {
     loadRound();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // 問題が切り替わるたびに軽いフェード/スライド演出を入れる
-  // （「問題が変わったのかわかりにくい」という指摘への対応）。
-  useEffect(() => {
-    setEntering(true);
-    const id = requestAnimationFrame(() => setEntering(false));
-    return () => cancelAnimationFrame(id);
-  }, [currentIndex, state]);
 
   async function handlePlayAudio() {
     if (!currentQuestion || !currentQuestion.hasAudio || audioLoading) return;
@@ -178,25 +173,28 @@ export function Stage1Practice() {
     const graduated = results.filter((r) => r.graduated);
 
     return (
-      <div className="rounded-xl border border-zinc-200 bg-zinc-100/50 p-6 text-center">
-        <div className="relative mx-auto mb-3 flex h-6 w-6 items-center justify-center">
-          <PartyPopper className="h-6 w-6" style={{ color: STAGE_COLOR }} />
-          {SPARKLES.map((s, i) => (
-            <span
-              key={i}
-              className="absolute h-1.5 w-1.5 rounded-full animate-round-complete-sparkle"
-              style={
-                {
-                  backgroundColor: s.warm ? STAGE_COLOR : "#fbbf24",
-                  animationDelay: `${s.delay}s`,
-                  "--sparkle-x": `${s.x}px`,
-                  "--sparkle-y": `${s.y}px`,
-                } as React.CSSProperties
-              }
-            />
-          ))}
-        </div>
-        <p className="text-sm font-medium text-zinc-900">
+      <div className="relative overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100/50 p-6 text-center animate-round-complete-pop">
+        {RESULT_SPARKLES.map((s, i) => (
+          <span
+            key={i}
+            className={cn(
+              "absolute top-3 rounded-full animate-round-complete-sparkle",
+              s.large ? "h-2 w-2" : "h-1.5 w-1.5"
+            )}
+            style={
+              {
+                left: `${s.left}%`,
+                backgroundColor: s.warm ? STAGE_COLOR : "#fbbf24",
+                animationDelay: `${s.delay}s`,
+                "--sparkle-x": `${s.x}px`,
+                "--sparkle-y": `${s.y}px`,
+              } as React.CSSProperties
+            }
+          />
+        ))}
+
+        <PartyPopper className="relative mx-auto mb-3 h-6 w-6" style={{ color: STAGE_COLOR }} />
+        <p className="relative text-sm font-medium text-zinc-900">
           今回のラウンド：{results.length}問中{correctCount}問「言えた」
         </p>
 
@@ -221,7 +219,7 @@ export function Stage1Practice() {
             type="button"
             onClick={loadRound}
             style={{ backgroundColor: STAGE_COLOR }}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97]"
           >
             もう1ラウンド
           </button>
@@ -247,10 +245,10 @@ export function Stage1Practice() {
       <RoundHeader stage={1} current={currentIndex + 1} total={questions.length} />
 
       <div
+        key={currentIndex}
         className={cn(
-          "rounded-xl border p-6 transition-all duration-200",
-          hasTint ? "" : "border-zinc-200 bg-zinc-100/50",
-          entering ? "translate-y-1 opacity-0" : "translate-y-0 opacity-100"
+          "animate-question-card-enter rounded-xl border p-6",
+          hasTint ? "" : "border-zinc-200 bg-zinc-100/50"
         )}
         style={
           hasTint
@@ -291,7 +289,7 @@ export function Stage1Practice() {
             disabled={submitting}
             onClick={() => handleReport(true)}
             style={{ backgroundColor: STAGE_COLOR }}
-            className="flex flex-1 scale-100 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-95 disabled:opacity-50"
+            className="flex flex-1 scale-100 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97] disabled:opacity-50"
           >
             <Check className="h-4 w-4" />
             言えた
@@ -300,7 +298,7 @@ export function Stage1Practice() {
             type="button"
             disabled={submitting}
             onClick={() => handleReport(false)}
-            className="flex flex-1 scale-100 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-600 transition-all duration-150 hover:border-zinc-400 active:scale-95 disabled:opacity-50"
+            className="flex flex-1 scale-100 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-600 transition-all duration-150 hover:border-zinc-400 active:scale-[.97] disabled:opacity-50"
           >
             <X className="h-4 w-4" />
             言えなかった

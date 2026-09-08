@@ -60,7 +60,7 @@ body {
   }
 }
 
-/* ラウンド終了時のキラキラ演出。中心から放射状に小さな粒が飛んで消える。 */
+/* ラウンド終了時のキラキラ演出。基準位置から小さな粒が飛んで消える。 */
 @keyframes round-complete-sparkle {
   0% {
     transform: translate(0, 0) scale(1);
@@ -80,5 +80,54 @@ body {
   .animate-round-complete-sparkle {
     animation: none;
     opacity: 0;
+  }
+}
+
+/* ラウンド終了カード全体のポップイン演出。 */
+@keyframes round-complete-pop {
+  0% {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.01);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-round-complete-pop {
+  animation: round-complete-pop 0.35s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-round-complete-pop {
+    animation: none;
+  }
+}
+
+/* Stage1ラウンド中、問題カードが切り替わるときのめくり演出。 */
+@keyframes question-card-enter {
+  0% {
+    transform: perspective(600px) rotateX(-6deg) translateY(8px);
+    opacity: 0;
+  }
+  100% {
+    transform: perspective(600px) rotateX(0deg) translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-question-card-enter {
+  animation: question-card-enter 0.28s ease-out;
+  transform-origin: top center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-question-card-enter {
+    animation: none;
   }
 }
