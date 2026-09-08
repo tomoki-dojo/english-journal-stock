@@ -42,7 +42,9 @@ const RESULT_SPARKLES = Array.from({ length: 10 }).map((_, i) => {
 // Stage2（瞬間英作文）の練習画面。
 // アクティブセット（Stage1卒業済み＆Stage2コンテンツありのフレーズ、先頭7件）から
 // 5件ランダムに出題する「ラウンド」単位で進行する（Stage1と同じ方式）。
-// 穴埋め・全文選択の3サブステップは選択式（正誤はクライアント側で判定して記録するだけ）、
+// 穴埋め・全文瞬間英作文・文脈からの想起の3サブステップは選択式（正誤はクライアント側で判定して
+// 記録するだけ）。全文瞬間英作文と文脈からの想起はUI・選択肢の作り自体は共通で、見せる日本語の
+// 設問文（promptJa。直訳ヒントか状況説明文か）だけがコンテンツ側のデータとして異なる。
 // 微改変は自由発話の自己申告（Stage1と同じ思想でAI不要）。
 export function Stage2Practice() {
   const [state, setState] = useState<ViewState>("loading");
@@ -282,8 +284,8 @@ export function Stage2Practice() {
               <GrowthBadge stage={2} warmth={currentQuestion.warmth} />
               {currentQuestion.promptEn ? (
                 <p className="text-lg font-medium text-zinc-900">{currentQuestion.promptEn}</p>
-              ) : currentQuestion.meaningJa ? (
-                <p className="text-lg font-medium text-zinc-900">{currentQuestion.meaningJa}</p>
+              ) : currentQuestion.promptJa ? (
+                <p className="text-lg font-medium text-zinc-900">{currentQuestion.promptJa}</p>
               ) : null}
             </div>
 

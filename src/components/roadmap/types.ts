@@ -107,12 +107,16 @@ export function getStage2SubStep(streak: number): Stage2SubStep {
 export const STAGE2_ACTIVE_SET_SIZE = 7;
 export const STAGE2_ROUND_SIZE = 5;
 
-// Stage2内のサブ出題形式タグ。「全文瞬間英作文」「文脈からの想起」は見た目が同一（文選択）のため
-// UI上は同じタグに集約する。
-export function getStage2SubFormatLabel(subStep: Stage2SubStep): "穴埋め" | "文選択" | "微改変" {
+// Stage2内のサブ出題形式タグ。以前は「全文瞬間英作文」「文脈からの想起」が実装上まったく同じ
+// 問題（見た目も同一の4択）だったため同じタグに集約していたが、後者を「状況文→表現を選ぶ」
+// 形に差別化したため、タグも分けている。
+export function getStage2SubFormatLabel(
+  subStep: Stage2SubStep
+): "穴埋め" | "瞬間英作文" | "文脈想起" | "微改変" {
   if (subStep === "穴埋め音読") return "穴埋め";
-  if (subStep === "微改変") return "微改変";
-  return "文選択";
+  if (subStep === "全文瞬間英作文") return "瞬間英作文";
+  if (subStep === "文脈からの想起") return "文脈想起";
+  return "微改変";
 }
 
 export type Stage2RoundQuestion =
@@ -123,6 +127,10 @@ export type Stage2RoundQuestion =
       meaningJa?: string;
       // 穴埋め音読のときだけ、空欄化した英文を入れる（それ以外のサブステップはundefined）
       promptEn?: string;
+      // 全文瞬間英作文・文脈からの想起で表示する日本語の設問文。
+      // 前者は直訳ヒント(meaningJa)、後者は状況説明文(context_prompt_ja、未入力ならmeaningJaに
+      // フォールバック)が入る。両者の違いはコンテンツ側のデータであり、UIのロジックは共通。
+      promptJa?: string;
       choices: string[];
       correctIndex: number;
       warmth: WarmthLevel;

@@ -377,6 +377,9 @@ type DbStage2ContentRow = {
   blank_target: string;
   blank_choices: string[];
   sentence_choices: string[];
+  // 「文脈からの想起」用の状況説明文。未入力の間はmeaning_jaにフォールバックする
+  // （コンテンツ制作が追いつくまでの暫定措置。詳細はDBカラムコメント参照）。
+  context_prompt_ja: string | null;
   expressions: {
     code: string;
     expression_en: string;
@@ -420,7 +423,9 @@ async function listStage2ContentPool(userId: string): Promise<DbStage2ContentRow
 
   const { data, error } = await supabaseAdmin
     .from("stage2_quiz_content")
-    .select("expression_id, blank_target, blank_choices, sentence_choices, expressions(code, expression_en, meaning_ja)");
+    .select(
+      "expression_id, blank_target, blank_choices, sentence_choices, context_prompt_ja, expressions(code, expression_en, meaning_ja)"
+    );
 
   if (error) {
     throw new Error(`Stage2コンテンツの取得に失敗しました: ${error.message}`);
@@ -510,15 +515,22 @@ function buildStage2Question(
     };
   }
 
-  // 全文瞬間英作文・文脈からの想起：どちらも同じsentence_choicesを使い回す
+  // 全文瞬間英作文・文脈からの想起：選択肢(sentence_choices)は共通で使い回すが、
+  // 設問として見せる日本語文(promptJa)を変えることで問い方を差別化する。
+  // ・全文瞬間英作文：直訳ヒント(meaningJa)を見せて、対応する英文を選ばせる
+  // ・文脈からの想起：直訳ヒントは見せず、状況説明文(context_prompt_ja)だけを見せて
+  //   場面から表現を選ばせる（直訳できなくても場面から引き出す力を試す）。
+  //   context_prompt_jaが未入力のフレーズは、コンテンツ制作が追いつくまでmeaningJaにフォールバックする。
   const choices = shuffleArray(row.sentence_choices);
   const correctIndex = choices.indexOf(expressionEn);
+  const promptJa = subStep === "文脈からの想起" ? row.context_prompt_ja ?? meaningJa : meaningJa;
 
   return {
     kind: "choice",
     subStep,
     expressionId: row.expression_id,
     meaningJa,
+    promptJa,
     choices,
     correctIndex,
     warmth,
