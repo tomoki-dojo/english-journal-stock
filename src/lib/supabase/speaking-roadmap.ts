@@ -477,7 +477,12 @@ async function getStage2ActiveSet(userId: string): Promise<{
   return { activeSet, totalCount, remainingCount };
 }
 
-// アクティブセットの1件から、出題形式（穴埋め／文選択／微改変）に応じた問題を組み立てる。
+// アクティブセットの1件から、出題形式（穴埋め／全文瞬間英作文／文脈からの想起／微改変）に応じた
+// 問題を組み立てる。「声に出すこと」が全Stage共通の大前提のため、微改変以外の3ステップも
+// クリックで正誤判定する形にはせず、「声に出す→答えを確認する→自己申告」のkind:"produce"にする
+// （2026-09-09の設計変更。経緯は_reference/speaking-roadmap-design.md参照）。
+// 以前の選択肢データ(blank_choices/sentence_choices)は、答え合わせ画面の
+// 「似ているけど違う表現」の参考表示(referenceChoices)として引き続き活用する。
 function buildStage2Question(
   row: DbStage2ContentRow,
   subStep: Stage2SubStep,
@@ -499,40 +504,38 @@ function buildStage2Question(
   }
 
   if (subStep === "穴埋め音読") {
-    const choices = shuffleArray(row.blank_choices);
-    const correctIndex = choices.indexOf(row.blank_target);
     const promptEn = expressionEn.replace(row.blank_target, "___");
+    const referenceChoices = shuffleArray(row.blank_choices.filter((c) => c !== row.blank_target));
 
     return {
-      kind: "choice",
+      kind: "produce",
       subStep,
       expressionId: row.expression_id,
       meaningJa,
       promptEn,
-      choices,
-      correctIndex,
+      answerText: expressionEn,
+      referenceChoices,
       warmth,
     };
   }
 
-  // 全文瞬間英作文・文脈からの想起：選択肢(sentence_choices)は共通で使い回すが、
-  // 設問として見せる日本語文(promptJa)を変えることで問い方を差別化する。
-  // ・全文瞬間英作文：直訳ヒント(meaningJa)を見せて、対応する英文を選ばせる
+  // 全文瞬間英作文・文脈からの想起：答え合わせで見せる参考表現(sentence_choices)は共通で使い回すが、
+  // 声に出す前に見せる日本語文(promptJa)を変えることで問い方を差別化する。
+  // ・全文瞬間英作文：直訳ヒント(meaningJa)を見せて、その英文を声に出させる
   // ・文脈からの想起：直訳ヒントは見せず、状況説明文(context_prompt_ja)だけを見せて
-  //   場面から表現を選ばせる（直訳できなくても場面から引き出す力を試す）。
+  //   場面から表現を思い出して声に出させる（直訳できなくても場面から引き出す力を試す）。
   //   context_prompt_jaが未入力のフレーズは、コンテンツ制作が追いつくまでmeaningJaにフォールバックする。
-  const choices = shuffleArray(row.sentence_choices);
-  const correctIndex = choices.indexOf(expressionEn);
+  const referenceChoices = shuffleArray(row.sentence_choices.filter((c) => c !== expressionEn));
   const promptJa = subStep === "文脈からの想起" ? row.context_prompt_ja ?? meaningJa : meaningJa;
 
   return {
-    kind: "choice",
+    kind: "produce",
     subStep,
     expressionId: row.expression_id,
     meaningJa,
     promptJa,
-    choices,
-    correctIndex,
+    answerText: expressionEn,
+    referenceChoices,
     warmth,
   };
 }

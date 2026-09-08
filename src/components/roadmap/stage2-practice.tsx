@@ -42,16 +42,16 @@ const RESULT_SPARKLES = Array.from({ length: 10 }).map((_, i) => {
 // Stage2（瞬間英作文）の練習画面。
 // アクティブセット（Stage1卒業済み＆Stage2コンテンツありのフレーズ、先頭7件）から
 // 5件ランダムに出題する「ラウンド」単位で進行する（Stage1と同じ方式）。
-// 穴埋め・全文瞬間英作文・文脈からの想起の3サブステップは選択式（正誤はクライアント側で判定して
-// 記録するだけ）。全文瞬間英作文と文脈からの想起はUI・選択肢の作り自体は共通で、見せる日本語の
-// 設問文（promptJa。直訳ヒントか状況説明文か）だけがコンテンツ側のデータとして異なる。
-// 微改変は自由発話の自己申告（Stage1と同じ思想でAI不要）。
+// 「声に出すこと」が全Stage共通の大前提のため、穴埋め・全文瞬間英作文・文脈からの想起の
+// 3サブステップも、4択をクリックして正誤判定する形にはせず「声に出す→答えを確認する→
+// 言えたか自己申告する」（kind: "produce"）で進行する。以前作った選択肢データは、答え合わせ画面の
+// 「似ているけど違う表現」の参考表示として使う。微改変は変わらず自由発話の自己申告。
 export function Stage2Practice() {
   const [state, setState] = useState<ViewState>("loading");
   const [questions, setQuestions] = useState<Stage2RoundQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [results, setResults] = useState<QuestionResult[]>([]);
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [revealed, setRevealed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [remainingToUnlock, setRemainingToUnlock] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +62,7 @@ export function Stage2Practice() {
     setState("loading");
     setCurrentIndex(0);
     setResults([]);
-    setSelectedIndex(null);
+    setRevealed(false);
     setError(null);
 
     try {
@@ -99,7 +99,7 @@ export function Stage2Practice() {
     setError(null);
 
     const displayText =
-      currentQuestion.kind === "free" ? currentQuestion.expressionEn : currentQuestion.choices[currentQuestion.correctIndex];
+      currentQuestion.kind === "free" ? currentQuestion.expressionEn : currentQuestion.answerText;
 
     try {
       const res = await fetch("/api/roadmap/stage2/report", {
@@ -125,7 +125,7 @@ export function Stage2Practice() {
 
       if (currentIndex + 1 < questions.length) {
         setCurrentIndex((i) => i + 1);
-        setSelectedIndex(null);
+        setRevealed(false);
       } else {
         setState("round_complete");
       }
@@ -136,11 +136,9 @@ export function Stage2Practice() {
     }
   }
 
-  function handleChoiceSelect(choiceIndex: number) {
-    if (!currentQuestion || currentQuestion.kind !== "choice" || selectedIndex !== null) return;
-    setSelectedIndex(choiceIndex);
-    const isCorrect = choiceIndex === currentQuestion.correctIndex;
-    setTimeout(() => submitResult(isCorrect), 600);
+  function handleReveal() {
+    if (!currentQuestion || currentQuestion.kind !== "produce" || revealed) return;
+    setRevealed(true);
   }
 
   if (state === "loading") {
@@ -278,9 +276,9 @@ export function Stage2Practice() {
             : undefined
         }
       >
-        {currentQuestion.kind === "choice" ? (
+        {currentQuestion.kind === "produce" ? (
           <div>
-            <div className="mb-4 flex items-center gap-2">
+            <div className="mb-1 flex items-center gap-2">
               <GrowthBadge stage={2} warmth={currentQuestion.warmth} />
               {currentQuestion.promptEn ? (
                 <p className="text-lg font-medium text-zinc-900">{currentQuestion.promptEn}</p>
@@ -288,34 +286,66 @@ export function Stage2Practice() {
                 <p className="text-lg font-medium text-zinc-900">{currentQuestion.promptJa}</p>
               ) : null}
             </div>
+            <p className="mb-4 text-xs text-zinc-400">まず声に出して言ってみよう。言えたら答えを確認します。</p>
 
-            <div className="space-y-2">
-              {currentQuestion.choices.map((choice, i) => {
-                const isSelected = selectedIndex === i;
-                const isCorrectChoice = i === currentQuestion.correctIndex;
-                const showResult = selectedIndex !== null;
-                return (
+            {!revealed ? (
+              <button
+                type="button"
+                onClick={handleReveal}
+                className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed px-4 py-2.5 text-sm font-medium transition-all duration-150 active:scale-[.97]"
+                style={{ borderColor: STAGE_COLOR, color: STAGE_COLOR }}
+              >
+                答えを確認する
+              </button>
+            ) : (
+              <div className="animate-question-card-enter">
+                <div
+                  className="mb-3 rounded-lg border px-4 py-3"
+                  style={{ borderColor: withAlpha(STAGE_COLOR, "55"), backgroundColor: withAlpha(STAGE_COLOR, "12") }}
+                >
+                  <p className="text-base font-semibold text-zinc-900">{currentQuestion.answerText}</p>
+                </div>
+
+                {currentQuestion.referenceChoices.length > 0 && (
+                  <div className="mb-4">
+                    <p className="mb-1.5 text-xs text-zinc-400">
+                      {currentQuestion.subStep === "穴埋め音読"
+                        ? "似ているけど、ここでは不自然な言い方"
+                        : "似た場面で使う他の表現"}
+                    </p>
+                    <ul className="space-y-1">
+                      {currentQuestion.referenceChoices.map((choice) => (
+                        <li key={choice} className="rounded-md bg-zinc-100/70 px-3 py-1.5 text-sm text-zinc-500">
+                          {choice}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <div className="flex gap-3">
                   <button
-                    key={i}
                     type="button"
-                    disabled={selectedIndex !== null}
-                    onClick={() => handleChoiceSelect(i)}
-                    className={cn(
-                      "flex w-full items-center justify-between rounded-lg border px-4 py-2.5 text-left text-sm transition-all duration-150 active:scale-[.97]",
-                      showResult && isCorrectChoice
-                        ? "border-emerald-300 bg-emerald-50 text-emerald-800"
-                        : showResult && isSelected
-                          ? "border-red-300 bg-red-50 text-red-800"
-                          : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
-                    )}
+                    disabled={submitting}
+                    onClick={() => submitResult(true)}
+                    style={{ backgroundColor: STAGE_COLOR }}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97] disabled:opacity-50"
                   >
-                    {choice}
-                    {showResult && isCorrectChoice && <Check className="h-4 w-4" />}
-                    {showResult && isSelected && !isCorrectChoice && <X className="h-4 w-4" />}
+                    <Check className="h-4 w-4" />
+                    言えた
                   </button>
-                );
-              })}
-            </div>
+                  <button
+                    type="button"
+                    disabled={submitting}
+                    onClick={() => submitResult(false)}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-600 transition-all duration-150 hover:border-zinc-400 active:scale-[.97] disabled:opacity-50"
+                  >
+                    <X className="h-4 w-4" />
+                    言えなかった
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div>

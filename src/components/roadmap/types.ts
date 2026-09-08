@@ -119,9 +119,15 @@ export function getStage2SubFormatLabel(
   return "微改変";
 }
 
+// Stage2は「声に出すこと」が全Stage共通の大前提（_reference/speaking-roadmap-design.md参照）。
+// 以前は穴埋め音読・全文瞬間英作文・文脈からの想起の3ステップが「4択をクリックして正誤判定」する
+// 学校のテストのような形式だったため、2026-09-09に「声に出す→答えを確認する→言えたか自己申告する」
+// という産出中心の形に作り直した（kind: "produce"）。クリック式の選択肢正誤判定はもう無く、
+// Stage1・微改変と同じく自己申告ベースになる。以前の選択肢データ(blank_choices/sentence_choices)は
+// 答え合わせ画面の参考表示（似ているけど違う表現）として活用し、無駄にしない。
 export type Stage2RoundQuestion =
   | {
-      kind: "choice";
+      kind: "produce";
       subStep: Stage2SubStep;
       expressionId: string;
       meaningJa?: string;
@@ -131,8 +137,10 @@ export type Stage2RoundQuestion =
       // 前者は直訳ヒント(meaningJa)、後者は状況説明文(context_prompt_ja、未入力ならmeaningJaに
       // フォールバック)が入る。両者の違いはコンテンツ側のデータであり、UIのロジックは共通。
       promptJa?: string;
-      choices: string[];
-      correctIndex: number;
+      // 声に出した後、答え合わせで表示する正解の全文
+      answerText: string;
+      // 答え合わせ画面でだけ表示する「似ているけど違う表現」の参考リスト（answerTextは含まない）
+      referenceChoices: string[];
       warmth: WarmthLevel;
     }
   | {
