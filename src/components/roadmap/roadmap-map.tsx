@@ -29,6 +29,8 @@ type RoadmapMapProps = {
 // 1枚の画像ビジュアル(アイソメ都市)の上にStage1〜5の建物/ボタンを直接重ねて表示し、
 // 下にボタン一覧を並べる構成にはしない。アイソメ都市の実イラストは別タスク（#150）で、
 // ここでは「だいたいこの辺りに配置する」という座標・状態設計だけを先に作る。
+// 建物同士は手前(Stage1)→奥(Stage5)の緩い奥行き進行を保ちつつ位置を軽くジグザグさせ、
+// 各Stageのボタン(横長ピル)は建物の真上ではなく、そばに寄せた位置に浮かせて配置する。
 export function RoadmapMap({ currentStage }: RoadmapMapProps) {
   return (
     <div className="relative mb-6 aspect-[4/3] w-full overflow-hidden rounded-2xl border border-zinc-200 bg-gradient-to-b from-sky-50 to-zinc-100 sm:aspect-[2/1]">
@@ -39,10 +41,6 @@ export function RoadmapMap({ currentStage }: RoadmapMapProps) {
         const anchor = STAGE_MAP_ANCHORS[stage];
         const unlocked = stage <= currentStage;
         const interactive = unlocked && IMPLEMENTED_STAGES.includes(stage);
-        const style = {
-          top: `${anchor.top}%`,
-          left: `${anchor.left}%`,
-        };
         const markerSize = markerSizeStyle(anchor.size);
 
         if (!interactive) {
@@ -52,7 +50,7 @@ export function RoadmapMap({ currentStage }: RoadmapMapProps) {
             <div
               key={stage}
               className="absolute -translate-x-1/2 -translate-y-1/2"
-              style={style}
+              style={{ top: `${anchor.building.top}%`, left: `${anchor.building.left}%` }}
               aria-hidden="true"
             >
               <div
@@ -67,37 +65,50 @@ export function RoadmapMap({ currentStage }: RoadmapMapProps) {
         const Icon = meta.icon;
         const color = STAGE_COLORS[stage];
         const isCurrent = stage === currentStage;
+        const buttonTop = anchor.building.top + anchor.buttonOffset.top;
+        const buttonLeft = anchor.building.left + anchor.buttonOffset.left;
 
         return (
-          <Link
-            key={stage}
-            href={meta.href}
-            className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 transition-transform active:scale-95"
-            style={style}
-          >
+          <div key={stage}>
+            {/* 建物マーカー本体（実イラスト実装までのプレースホルダー）。ボタンとは別要素として、
+                建物の位置そのものを表す。 */}
             <div
-              className="flex items-center justify-center rounded-2xl shadow-sm transition-shadow hover:shadow-md"
+              className="absolute -translate-x-1/2 -translate-y-1/2 rounded-2xl"
               style={{
+                top: `${anchor.building.top}%`,
+                left: `${anchor.building.left}%`,
                 width: markerSize,
                 height: markerSize,
                 backgroundColor: withAlpha(color, "26"),
                 border: `2px solid ${color}`,
                 boxShadow: isCurrent ? `0 0 0 4px ${withAlpha(color, "1a")}` : undefined,
               }}
+              aria-hidden="true"
             >
               <Icon
-                className="h-[45%] w-[45%]"
+                className="absolute left-1/2 top-1/2 h-[45%] w-[45%] -translate-x-1/2 -translate-y-1/2"
                 style={{ color }}
                 strokeWidth={2.25}
               />
             </div>
-            <span
-              className="whitespace-nowrap rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-semibold shadow-sm sm:text-xs"
-              style={{ color }}
+
+            {/* Stageの入口ボタン。建物の真上ではなく、そばに寄せた位置に浮かせる横長ピル。 */}
+            <Link
+              href={meta.href}
+              className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-white/95 px-3 py-1.5 shadow-sm transition-transform hover:shadow-md active:scale-95"
+              style={{
+                top: `${buttonTop}%`,
+                left: `${buttonLeft}%`,
+                border: `1.5px solid ${color}`,
+              }}
             >
-              {meta.caption}
-            </span>
-          </Link>
+              <Icon className="h-3.5 w-3.5 flex-shrink-0" style={{ color }} strokeWidth={2.25} />
+              <span className="text-xs font-semibold" style={{ color }}>
+                {meta.label}
+              </span>
+              <span className="text-[10px] text-zinc-500">{meta.caption}</span>
+            </Link>
+          </div>
         );
       })}
     </div>
