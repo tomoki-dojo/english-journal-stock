@@ -1,18 +1,16 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Building2, ChevronRight, Flame, Mic, PenLine, Sparkles } from "lucide-react";
+import { Flame, Sparkles } from "lucide-react";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
 import {
   getCurrentStreak,
   getUserRoadmapState,
 } from "@/lib/supabase/speaking-roadmap";
 import { OnboardingQuiz } from "@/components/roadmap/onboarding-quiz";
-import { STAGE_COLORS } from "@/components/roadmap/stage-colors";
+import { RoadmapMap } from "@/components/roadmap/roadmap-map";
 
 // スピーキング・ロードマップのホーム（「箱庭画面」）。
 // 練習画面（クイズ）とは別画面に分離し、ここは箱庭ビジュアル＋各Stageへの入り口だけを持つ拠点画面にする。
-// 箱庭ビジュアル本体（アイソメ都市）は別タスクで実装するため、ここでは実装予定エリアを
-// プレースホルダーとして確保するだけにとどめる（詳細は brand/isometric-city-asset-spec.md 参照）。
+// 各Stageへの入り口はRoadmapMap内に直接埋め込まれており、ページ側に別途リンク一覧は置かない。
 export default async function RoadmapPage() {
   const user = await getCurrentUser();
   if (!user) {
@@ -37,22 +35,11 @@ export default async function RoadmapPage() {
       </div>
 
       {/*
-        箱庭ビジュアル実装予定エリア。
-        今後ここに以下の3層を重ねて描画する想定（brand/isometric-city-asset-spec.md参照）：
-        1. 密度：既存ビルが習得量に応じてフロアを増やす（継続増築）
-        2. 拡張：大きな節目ごとに新種の建物が新区画に建つ（倉庫・放送局・カフェ・電波塔など）
-        3. 質感：自転車・植木鉢・配達ボックスなどの小物パーツが蓄積する
-        アイソメタイル比率（2:1）に合わせてaspect-[2/1]にしてある。
+        箱庭ビジュアル本体。Stage1〜5の建物/ボタンを1枚のマップ上に直接重ねる構成
+        （下にボタン一覧は並べない）。実イラスト（brand/isometric-city-asset-spec.md）は
+        別タスク（#150）で差し替える前提で、ここでは配置・解放状態のロジックだけ実装している。
       */}
-      <div className="mb-6 flex aspect-[2/1] items-center justify-center overflow-hidden rounded-2xl border border-dashed border-zinc-300 bg-gradient-to-b from-sky-50 to-zinc-100">
-        <div className="px-6 text-center">
-          <Building2 className="mx-auto mb-2 h-8 w-8 text-zinc-300" />
-          <p className="text-sm text-zinc-400">箱庭ビジュアル実装予定エリア</p>
-          <p className="mt-1 text-xs text-zinc-400">
-            密度（増築）・拡張（新築）・質感（小物パーツ）の3層をここに重ねていきます
-          </p>
-        </div>
-      </div>
+      <RoadmapMap currentStage={state.currentStage} />
 
       <div className="mb-6 grid grid-cols-2 gap-3">
         <div className="rounded-xl border border-zinc-200 bg-zinc-100/50 p-4 text-center">
@@ -69,46 +56,6 @@ export default async function RoadmapPage() {
           </div>
           <p className="mt-1 text-xs text-zinc-500">連続practice日数</p>
         </div>
-      </div>
-
-      <div className="space-y-4">
-        <Link
-          href="/roadmap/stage1"
-          style={{ borderLeftColor: STAGE_COLORS[1], borderLeftWidth: 4 }}
-          className="flex items-center gap-4 rounded-xl border border-zinc-200 bg-zinc-100/50 p-6 transition-colors hover:bg-zinc-100"
-        >
-          <div
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full"
-            style={{ backgroundColor: `${STAGE_COLORS[1]}1a`, color: STAGE_COLORS[1] }}
-          >
-            <Mic className="h-5 w-5" />
-          </div>
-          <div className="flex-1">
-            <h2 className="text-sm font-semibold text-zinc-900">Stage1・音読/シャドーイング</h2>
-            <p className="mt-1 text-sm text-zinc-500">短いフレーズを声に出して、耳と口を慣らします。</p>
-          </div>
-          <ChevronRight className="h-5 w-5 flex-shrink-0 text-zinc-400" />
-        </Link>
-
-        <Link
-          href="/roadmap/stage2"
-          style={{ borderLeftColor: STAGE_COLORS[2], borderLeftWidth: 4 }}
-          className="flex items-center gap-4 rounded-xl border border-zinc-200 bg-zinc-100/50 p-6 transition-colors hover:bg-zinc-100"
-        >
-          <div
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full"
-            style={{ backgroundColor: `${STAGE_COLORS[2]}1a`, color: STAGE_COLORS[2] }}
-          >
-            <PenLine className="h-5 w-5" />
-          </div>
-          <div className="flex-1">
-            <h2 className="text-sm font-semibold text-zinc-900">Stage2・瞬間英作文</h2>
-            <p className="mt-1 text-sm text-zinc-500">
-              Stage1で覚えたフレーズを、見ずに組み立てられるようにします。
-            </p>
-          </div>
-          <ChevronRight className="h-5 w-5 flex-shrink-0 text-zinc-400" />
-        </Link>
       </div>
     </div>
   );
