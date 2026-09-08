@@ -1,34 +1,59 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Check, PartyPopper, Volume2, X } from "lucide-react";
-import type { Stage1NextResponse } from "./types";
+import { cn } from "@/lib/utils";
+import { RoundHeader } from "./round-header";
+import { WarmthDot } from "./warmth-dot";
+import type { Stage1RoundQuestion, Stage1RoundResponse } from "./types";
 
-type LoadState = "loading" | "ready" | "done" | "error";
+type ViewState = "loading" | "round" | "round_complete" | "done" | "error";
+
+type QuestionResult = {
+  expressionId: string;
+  expressionEn: string;
+  correct: boolean;
+  graduated: boolean;
+};
 
 // Stage1（音読・シャドーイング）の練習画面。
-// AIによる正誤判定はせず、「言えた/言えなかった」の自己申告で進める（設計通りコストゼロ）。
+// アクティブセット（未卒業フレーズの先頭7件）から5件ランダムに出題する「ラウンド」単位で進行する。
+// 1問終わるごとに次のフレーズに切り替わるので、1フレーズを卒業するまで固定、という単調さを避ける。
+// AIによる正誤判定はせず、「言えた/言えなかった」の自己申告で進める。
 export function Stage1Practice() {
-  const [state, setState] = useState<LoadState>("loading");
-  const [next, setNext] = useState<Stage1NextResponse | null>(null);
+  const [state, setState] = useState<ViewState>("loading");
+  const [questions, setQuestions] = useState<Stage1RoundQuestion[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [results, setResults] = useState<QuestionResult[]>([]);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioLoading, setAudioLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [justGraduated, setJustGraduated] = useState(false);
+  const [entering, setEntering] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  async function loadNext() {
+  const currentQuestion = questions[currentIndex];
+
+  async function loadRound() {
     setState("loading");
-    setJustGraduated(false);
+    setCurrentIndex(0);
+    setResults([]);
     setAudioUrl(null);
     setError(null);
 
     try {
-      const res = await fetch("/api/roadmap/stage1/next");
+      const res = await fetch("/api/roadmap/stage1/round");
       if (!res.ok) throw new Error("出題データの取得に失敗しました");
-      const json: Stage1NextResponse = await res.json();
-      setNext(json);
-      setState(json.done ? "done" : "ready");
+      const json: Stage1RoundResponse = await res.json();
+
+      if (json.status === "done") {
+        setQuestions([]);
+        setState("done");
+        return;
+      }
+
+      setQuestions(json.questions);
+      setState("round");
     } catch (err) {
       setError(err instanceof Error ? err.message : "出題データの取得に失敗しました");
       setState("error");
@@ -36,15 +61,24 @@ export function Stage1Practice() {
   }
 
   useEffect(() => {
-    loadNext();
+    loadRound();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 問題が切り替わるたびに軽いフェード/スライド演出を入れる
+  // （「問題が変わったのかわかりにくい」という指摘への対応）。
+  useEffect(() => {
+    setEntering(true);
+    const id = requestAnimationFrame(() => setEntering(false));
+    return () => cancelAnimationFrame(id);
+  }, [currentIndex, state]);
+
   async function handlePlayAudio() {
-    if (!next || next.done || !next.phrase.hasAudio || audioLoading) return;
+    if (!currentQuestion || !currentQuestion.hasAudio || audioLoading) return;
     setAudioLoading(true);
     try {
       const res = await fetch(
-        `/api/roadmap/stage1/audio?expressionId=${encodeURIComponent(next.phrase.expressionId)}`
+        `/api/roadmap/stage1/audio?expressionId=${encodeURIComponent(currentQuestion.expressionId)}`
       );
       if (!res.ok) throw new Error("音声の取得に失敗しました");
       const json = await res.json();
@@ -58,7 +92,7 @@ export function Stage1Practice() {
   }
 
   async function handleReport(correct: boolean) {
-    if (!next || next.done || submitting) return;
+    if (!currentQuestion || submitting) return;
     setSubmitting(true);
     setError(null);
 
@@ -66,7 +100,7 @@ export function Stage1Practice() {
       const res = await fetch("/api/roadmap/stage1/report", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ expressionId: next.phrase.expressionId, correct }),
+        body: JSON.stringify({ expressionId: currentQuestion.expressionId, correct }),
       });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -74,11 +108,21 @@ export function Stage1Practice() {
       }
       const json = await res.json();
 
-      if (json.result.graduated) {
-        setJustGraduated(true);
-        setTimeout(loadNext, 1200);
+      setResults((prev) => [
+        ...prev,
+        {
+          expressionId: currentQuestion.expressionId,
+          expressionEn: currentQuestion.expressionEn,
+          correct,
+          graduated: Boolean(json.result?.graduated),
+        },
+      ]);
+      setAudioUrl(null);
+
+      if (currentIndex + 1 < questions.length) {
+        setCurrentIndex((i) => i + 1);
       } else {
-        await loadNext();
+        setState("round_complete");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "結果の保存に失敗しました");
@@ -95,39 +139,95 @@ export function Stage1Practice() {
     return <p className="text-sm text-red-600">{error ?? "エラーが発生しました"}</p>;
   }
 
-  if (state === "done" || !next || next.done) {
+  if (state === "done") {
     return (
       <div className="rounded-xl border border-zinc-200 bg-zinc-100/50 px-6 py-10 text-center">
         <PartyPopper className="mx-auto mb-3 h-6 w-6 text-accent" />
         <p className="text-sm text-zinc-700">Stage1（音読・シャドーイング）は全て卒業しました。</p>
         <p className="mt-1 text-xs text-zinc-400">Stage2は準備中です。もうしばらくお待ちください。</p>
+        <Link
+          href="/roadmap"
+          className="mt-4 inline-flex items-center gap-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-accent/40"
+        >
+          街に戻る
+        </Link>
       </div>
     );
   }
 
-  const { phrase, remainingCount, totalCount } = next;
+  if (state === "round_complete") {
+    const correctCount = results.filter((r) => r.correct).length;
+    const graduated = results.filter((r) => r.graduated);
+
+    return (
+      <div className="rounded-xl border border-zinc-200 bg-zinc-100/50 p-6 text-center">
+        <PartyPopper className="mx-auto mb-3 h-6 w-6 text-accent" />
+        <p className="text-sm font-medium text-zinc-900">
+          今回のラウンド：{results.length}問中{correctCount}問「言えた」
+        </p>
+
+        {graduated.length > 0 && (
+          <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-left text-sm text-emerald-800">
+            <p className="mb-1 font-medium">卒業したフレーズ</p>
+            <ul className="space-y-0.5">
+              {graduated.map((r) => (
+                <li key={r.expressionId}>{r.expressionEn}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* 箱庭ビジュアル実装後、ここに増築・小物パーツなどの街の変化を表示する予定 */}
+        <div className="mt-4 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-3 text-xs text-zinc-400">
+          （街の変化はここに表示予定です）
+        </div>
+
+        <div className="mt-6 flex gap-3">
+          <button
+            type="button"
+            onClick={loadRound}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent/90"
+          >
+            もう1ラウンド
+          </button>
+          <Link
+            href="/roadmap"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-accent/40"
+          >
+            街に戻る
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentQuestion) {
+    return <p className="text-sm text-zinc-400">読み込み中...</p>;
+  }
 
   return (
     <div>
-      {justGraduated && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800">
-          <PartyPopper className="h-4 w-4" />
-          このフレーズを卒業しました！次のフレーズに進みます。
-        </div>
-      )}
+      <RoundHeader stage={1} current={currentIndex + 1} total={questions.length} />
 
-      <div className="mb-4 text-xs text-zinc-500">
-        残り {remainingCount} / {totalCount}
-      </div>
-
-      <div className="rounded-xl border border-zinc-200 bg-zinc-100/50 p-6">
-        <p className="mb-1 text-xs text-zinc-400">
+      <div
+        className={cn(
+          "rounded-xl border border-zinc-200 bg-zinc-100/50 p-6 transition-all duration-200",
+          entering ? "translate-y-1 opacity-0" : "translate-y-0 opacity-100"
+        )}
+      >
+        <p className="mb-3 text-xs text-zinc-400">
           音声を真似して声に出す→一緒に言う→少し遅れて言う、と徐々にレベルを上げてみましょう。
         </p>
-        <p className="mb-4 text-lg font-medium text-zinc-900">{phrase.expressionEn}</p>
-        {phrase.meaningJa && <p className="mb-4 text-sm text-zinc-500">{phrase.meaningJa}</p>}
 
-        {phrase.hasAudio && (
+        <div className="mb-1 flex items-center gap-2">
+          <WarmthDot warmth={currentQuestion.warmth} />
+          <p className="text-lg font-medium text-zinc-900">{currentQuestion.expressionEn}</p>
+        </div>
+        {currentQuestion.meaningJa && (
+          <p className="mb-4 text-sm text-zinc-500">{currentQuestion.meaningJa}</p>
+        )}
+
+        {currentQuestion.hasAudio && (
           <button
             type="button"
             onClick={handlePlayAudio}
@@ -163,7 +263,7 @@ export function Stage1Practice() {
         {error && <p className="mt-3 text-xs text-red-600">{error}</p>}
       </div>
 
-      {audioUrl === null && !phrase.hasAudio && (
+      {audioUrl === null && !currentQuestion.hasAudio && (
         <p className="mt-3 text-xs text-zinc-400">このフレーズには音声がまだありません。テキストで練習してください。</p>
       )}
     </div>

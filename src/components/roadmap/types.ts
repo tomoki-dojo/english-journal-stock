@@ -50,16 +50,31 @@ export type Stage1Phrase = {
   hasAudio: boolean;
 };
 
-export type Stage1NextResponse =
+// 「あと何回で卒業か」を数字で見せない代わりの、見た目だけの習熟度カーブ（0=初見〜3=卒業間近）。
+// UIでは色の濃さなど非数値の手がかりとして使う。
+export type WarmthLevel = 0 | 1 | 2 | 3;
+
+export function computeWarmth(streak: number, graduateStreak: number): WarmthLevel {
+  if (streak <= 0) return 0;
+  const level = Math.ceil((streak / graduateStreak) * 3);
+  return Math.min(3, Math.max(0, level)) as WarmthLevel;
+}
+
+// アクティブセット（未卒業フレーズの先頭からN件）とラウンド（1回に出す問題数）のサイズ。
+// 新しい状態は持たず、毎回動的に計算する。
+export const STAGE1_ACTIVE_SET_SIZE = 7;
+export const STAGE1_ROUND_SIZE = 5;
+
+export type Stage1RoundQuestion = Stage1Phrase & { warmth: WarmthLevel };
+
+export type Stage1RoundResponse =
   | {
-      done: false;
-      phrase: Stage1Phrase;
-      streak: number;
-      subStep: Stage1SubStep;
+      status: "round";
+      questions: Stage1RoundQuestion[];
       remainingCount: number;
       totalCount: number;
     }
-  | { done: true; totalCount: number };
+  | { status: "done"; totalCount: number };
 
 export type Stage1ReportResult = {
   streak: number;

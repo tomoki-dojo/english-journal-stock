@@ -5,15 +5,18 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { getTodayDateKey } from "@/lib/daily-rotation";
 import { getExpressionAudioSignedUrl } from "@/lib/supabase/expression-audio";
 import {
+  STAGE1_ACTIVE_SET_SIZE,
   STAGE1_GRADUATE_STREAK,
+  STAGE1_ROUND_SIZE,
   STAGE2_GRADUATE_STREAK,
+  computeWarmth,
   getStage1SubStep,
   getStage2SubStep,
   type OnboardingQuizAnswers,
   type OnboardingQuizResult,
   type RoadmapStage,
-  type Stage1NextResponse,
   type Stage1ReportResult,
+  type Stage1RoundResponse,
   type Stage2NextResponse,
   type Stage2ReportResult,
   type UserRoadmapState,
@@ -206,33 +209,50 @@ async function listStage1PhrasePool(): Promise<Stage1PoolRow[]> {
   }));
 }
 
-// Stage1で次に出題する表現を1件決める。全表現を卒業済みならdone: trueを返す。
-export async function getStage1Next(userId: string): Promise<Stage1NextResponse> {
+// Stage1のアクティブセット（未卒業フレーズの先頭からSTAGE1_ACTIVE_SET_SIZE件）を計算する。
+// 新しい状態は持たず、毎回動的に計算するだけでよい（あるフレーズが卒業した瞬間、
+// 自動的にアクティブセットから外れ、次のフレーズが繰り上がる）。
+async function getStage1ActiveSet(userId: string): Promise<{
+  activeSet: (Stage1PoolRow & { streak: number })[];
+  totalCount: number;
+  remainingCount: number;
+}> {
   const pool = await listStage1PhrasePool();
   const progressMap = await getStage1ProgressMap(userId);
 
   const totalCount = pool.length;
-  const graduatedCount = pool.filter((e) => progressMap.get(e.id)?.status === "習得済み").length;
+  const nonGraduated = pool.filter((e) => progressMap.get(e.id)?.status !== "習得済み");
+  const remainingCount = nonGraduated.length;
 
-  const next = pool.find((e) => progressMap.get(e.id)?.status !== "習得済み");
+  const activeSet = nonGraduated.slice(0, STAGE1_ACTIVE_SET_SIZE).map((e) => ({
+    ...e,
+    streak: progressMap.get(e.id)?.correct_streak ?? 0,
+  }));
 
-  if (!next) {
-    return { done: true, totalCount };
+  return { activeSet, totalCount, remainingCount };
+}
+
+// Stage1のラウンド（ミニクイズ1回分）を決める。
+// アクティブセット（最大7件）から最大5件をランダムに選んで返す。全て卒業済みならdoneを返す。
+export async function getStage1Round(userId: string): Promise<Stage1RoundResponse> {
+  const { activeSet, totalCount, remainingCount } = await getStage1ActiveSet(userId);
+
+  if (activeSet.length === 0) {
+    return { status: "done", totalCount };
   }
 
-  const streak = progressMap.get(next.id)?.correct_streak ?? 0;
+  const sampled = shuffleArray(activeSet).slice(0, Math.min(STAGE1_ROUND_SIZE, activeSet.length));
 
   return {
-    done: false,
-    phrase: {
-      expressionId: next.id,
-      expressionEn: next.expressionEn,
-      meaningJa: next.meaningJa,
-      hasAudio: next.hasAudioExpression,
-    },
-    streak,
-    subStep: getStage1SubStep(streak),
-    remainingCount: totalCount - graduatedCount,
+    status: "round",
+    questions: sampled.map((e) => ({
+      expressionId: e.id,
+      expressionEn: e.expressionEn,
+      meaningJa: e.meaningJa,
+      hasAudio: e.hasAudioExpression,
+      warmth: computeWarmth(e.streak, STAGE1_GRADUATE_STREAK),
+    })),
+    remainingCount,
     totalCount,
   };
 }
@@ -333,11 +353,11 @@ async function incrementTotalMasteredCount(userId: string): Promise<void> {
 }
 
 // Stage1練習画面専用の音声URL発行。
-// ライブラリの音声再生（Pro限定）とは別ルートで、「そのユーザーの現在のStage1出題フレーズ」
-// と一致する場合のみ発行する（任意のexpressionIdを指定して聴ける汎用APIにはしない）。
+// ライブラリの音声再生（Pro限定）とは別ルートで、「そのユーザーの現在のアクティブセットに
+// 含まれるフレーズ」と一致する場合のみ発行する（任意のexpressionIdを指定して聴ける汎用APIにはしない）。
 export async function getStage1AudioUrl(userId: string, expressionId: string): Promise<string | null> {
-  const next = await getStage1Next(userId);
-  if (next.done || next.phrase.expressionId !== expressionId) {
+  const { activeSet } = await getStage1ActiveSet(userId);
+  if (!activeSet.some((e) => e.id === expressionId)) {
     return null;
   }
 
