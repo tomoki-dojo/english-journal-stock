@@ -11,11 +11,10 @@ export default function RoadmapLayout({ children }: { children: React.ReactNode 
     <div className="min-h-dvh bg-gradient-to-b from-amber-50 via-white to-sky-50">
       <header className="border-b border-amber-100/80 bg-white/60 backdrop-blur-sm">
         <div className="mx-auto flex max-w-3xl items-center px-6 py-3">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" aria-label="UpskillEnglishへ戻る" className="flex items-center">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent/10 ring-1 ring-accent/20">
               <span className="font-mono text-xs font-semibold text-accent">Up</span>
             </div>
-            <span className="text-xs font-medium text-zinc-400">UpskillEnglishへ戻る</span>
           </Link>
         </div>
       </header>
