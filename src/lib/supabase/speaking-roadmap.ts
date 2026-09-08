@@ -8,7 +8,9 @@ import {
   STAGE1_ACTIVE_SET_SIZE,
   STAGE1_GRADUATE_STREAK,
   STAGE1_ROUND_SIZE,
+  STAGE2_ACTIVE_SET_SIZE,
   STAGE2_GRADUATE_STREAK,
+  STAGE2_ROUND_SIZE,
   computeWarmth,
   getStage1SubStep,
   getStage2SubStep,
@@ -17,8 +19,10 @@ import {
   type RoadmapStage,
   type Stage1ReportResult,
   type Stage1RoundResponse,
-  type Stage2NextResponse,
   type Stage2ReportResult,
+  type Stage2RoundQuestion,
+  type Stage2RoundResponse,
+  type Stage2SubStep,
   type UserRoadmapState,
 } from "@/components/roadmap/types";
 
@@ -428,14 +432,14 @@ async function listStage2ContentPool(userId: string): Promise<DbStage2ContentRow
     .sort((a, b) => (a.expressions!.code).localeCompare(b.expressions!.code));
 }
 
-// Stage2で次に出題する問題を1件決める。
-// - Stage1卒業済みのフレーズがまだない、またはStage2コンテンツが未作成の範囲ならnot_ready
-// - 対象プール内を全て卒業済みならdone
-export async function getStage2Next(userId: string): Promise<Stage2NextResponse> {
+// Stage2のアクティブセット（未卒業フレーズの先頭からSTAGE2_ACTIVE_SET_SIZE件）を計算する。
+// Stage1と同じく新しい状態は持たず、毎回動的に計算するだけでよい。
+async function getStage2ActiveSet(userId: string): Promise<{
+  activeSet: (DbStage2ContentRow & { streak: number; subStep: Stage2SubStep })[];
+  totalCount: number;
+  remainingCount: number;
+}> {
   const pool = await listStage2ContentPool(userId);
-  if (pool.length === 0) {
-    return { status: "not_ready" };
-  }
 
   const { data: progressData, error: progressError } = await supabaseAdmin
     .from("speaking_stage_progress")
@@ -457,67 +461,92 @@ export async function getStage2Next(userId: string): Promise<Stage2NextResponse>
   }
 
   const totalCount = pool.length;
-  const graduatedCount = pool.filter((row) => progressMap.get(row.expression_id)?.status === "習得済み").length;
+  const nonGraduated = pool.filter((row) => progressMap.get(row.expression_id)?.status !== "習得済み");
+  const remainingCount = nonGraduated.length;
 
-  const next = pool.find((row) => progressMap.get(row.expression_id)?.status !== "習得済み");
+  const activeSet = nonGraduated.slice(0, STAGE2_ACTIVE_SET_SIZE).map((row) => {
+    const streak = progressMap.get(row.expression_id)?.correct_streak ?? 0;
+    return { ...row, streak, subStep: getStage2SubStep(streak) };
+  });
 
-  if (!next) {
-    return { status: "done", totalCount };
-  }
+  return { activeSet, totalCount, remainingCount };
+}
 
-  const streak = progressMap.get(next.expression_id)?.correct_streak ?? 0;
-  const subStep = getStage2SubStep(streak);
-  const remainingCount = totalCount - graduatedCount;
-  const meaningJa = next.expressions!.meaning_ja ?? undefined;
-  const expressionEn = next.expressions!.expression_en;
+// アクティブセットの1件から、出題形式（穴埋め／文選択／微改変）に応じた問題を組み立てる。
+function buildStage2Question(
+  row: DbStage2ContentRow,
+  subStep: Stage2SubStep,
+  streak: number
+): Stage2RoundQuestion {
+  const meaningJa = row.expressions!.meaning_ja ?? undefined;
+  const expressionEn = row.expressions!.expression_en;
+  const warmth = computeWarmth(streak, STAGE2_GRADUATE_STREAK);
 
   if (subStep === "微改変") {
     return {
-      status: "question",
       kind: "free",
       subStep,
-      streak,
-      expressionId: next.expression_id,
+      expressionId: row.expression_id,
       expressionEn,
       meaningJa,
-      remainingCount,
-      totalCount,
+      warmth,
     };
   }
 
   if (subStep === "穴埋め音読") {
-    const choices = shuffleArray(next.blank_choices);
-    const correctIndex = choices.indexOf(next.blank_target);
-    const promptEn = expressionEn.replace(next.blank_target, "___");
+    const choices = shuffleArray(row.blank_choices);
+    const correctIndex = choices.indexOf(row.blank_target);
+    const promptEn = expressionEn.replace(row.blank_target, "___");
 
     return {
-      status: "question",
       kind: "choice",
       subStep,
-      streak,
-      expressionId: next.expression_id,
+      expressionId: row.expression_id,
       meaningJa,
       promptEn,
       choices,
       correctIndex,
-      remainingCount,
-      totalCount,
+      warmth,
     };
   }
 
   // 全文瞬間英作文・文脈からの想起：どちらも同じsentence_choicesを使い回す
-  const choices = shuffleArray(next.sentence_choices);
+  const choices = shuffleArray(row.sentence_choices);
   const correctIndex = choices.indexOf(expressionEn);
 
   return {
-    status: "question",
     kind: "choice",
     subStep,
-    streak,
-    expressionId: next.expression_id,
+    expressionId: row.expression_id,
     meaningJa,
     choices,
     correctIndex,
+    warmth,
+  };
+}
+
+// Stage2のラウンド（ミニクイズ1回分）を決める。
+// アクティブセットがSTAGE2_ACTIVE_SET_SIZE（7件）に届いていない間は、初解放前・補充後の
+// 再開待ちを区別せず、常にnot_readyを返す（母数が少ないと同じような問題ばかりになるため）。
+// 対象プール内を全て卒業済みならdoneを返す。
+export async function getStage2Round(userId: string): Promise<Stage2RoundResponse> {
+  const { activeSet, totalCount, remainingCount } = await getStage2ActiveSet(userId);
+
+  if (activeSet.length < STAGE2_ACTIVE_SET_SIZE) {
+    if (remainingCount === 0 && totalCount > 0) {
+      return { status: "done", totalCount };
+    }
+    return {
+      status: "not_ready",
+      remainingToUnlock: STAGE2_ACTIVE_SET_SIZE - activeSet.length,
+    };
+  }
+
+  const sampled = shuffleArray(activeSet).slice(0, Math.min(STAGE2_ROUND_SIZE, activeSet.length));
+
+  return {
+    status: "round",
+    questions: sampled.map((row) => buildStage2Question(row, row.subStep, row.streak)),
     remainingCount,
     totalCount,
   };

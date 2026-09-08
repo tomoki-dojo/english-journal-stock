@@ -1,35 +1,85 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Check, Hourglass, PartyPopper, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Stage2NextResponse } from "./types";
+import { RoundHeader } from "./round-header";
+import { GrowthBadge } from "./growth-badge";
+import { STAGE_COLORS, withAlpha } from "./stage-colors";
+import { getStage2SubFormatLabel } from "./types";
+import type { Stage2RoundQuestion, Stage2RoundResponse, WarmthLevel } from "./types";
 
-type LoadState = "loading" | "ready" | "done" | "not_ready" | "error";
+type ViewState = "loading" | "round" | "round_complete" | "not_ready" | "done" | "error";
+
+type QuestionResult = {
+  expressionId: string;
+  expressionEn: string;
+  correct: boolean;
+  graduated: boolean;
+};
+
+const STAGE_COLOR = STAGE_COLORS[2];
+// warmth（0〜3）に応じて、問題カードの縁・背景にStage2カラーをうっすら重ねる度合い。
+const WARMTH_BORDER_ALPHA: Record<WarmthLevel, string> = { 0: "00", 1: "33", 2: "55", 3: "80" };
+const WARMTH_BG_ALPHA: Record<WarmthLevel, string> = { 0: "00", 1: "0a", 2: "12", 3: "1a" };
+
+// ラウンド終了時のキラキラ演出用（Stage1と同じ配置ロジック）。
+const RESULT_SPARKLES = Array.from({ length: 10 }).map((_, i) => {
+  const left = 6 + i * 9;
+  const x = (i % 2 === 0 ? 1 : -1) * (8 + (i % 3) * 6);
+  const y = -(20 + (i % 4) * 10);
+  return {
+    left,
+    x,
+    y,
+    delay: (i % 5) * 0.05,
+    warm: i % 2 === 0,
+    large: i % 3 === 0,
+  };
+});
 
 // Stage2（瞬間英作文）の練習画面。
+// アクティブセット（Stage1卒業済み＆Stage2コンテンツありのフレーズ、先頭7件）から
+// 5件ランダムに出題する「ラウンド」単位で進行する（Stage1と同じ方式）。
 // 穴埋め・全文選択の3サブステップは選択式（正誤はクライアント側で判定して記録するだけ）、
 // 微改変は自由発話の自己申告（Stage1と同じ思想でAI不要）。
 export function Stage2Practice() {
-  const [state, setState] = useState<LoadState>("loading");
-  const [next, setNext] = useState<Stage2NextResponse | null>(null);
+  const [state, setState] = useState<ViewState>("loading");
+  const [questions, setQuestions] = useState<Stage2RoundQuestion[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [results, setResults] = useState<QuestionResult[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [justGraduated, setJustGraduated] = useState(false);
+  const [remainingToUnlock, setRemainingToUnlock] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
-  async function loadNext() {
+  const currentQuestion = questions[currentIndex];
+
+  async function loadRound() {
     setState("loading");
-    setJustGraduated(false);
+    setCurrentIndex(0);
+    setResults([]);
     setSelectedIndex(null);
     setError(null);
 
     try {
-      const res = await fetch("/api/roadmap/stage2/next");
+      const res = await fetch("/api/roadmap/stage2/round");
       if (!res.ok) throw new Error("出題データの取得に失敗しました");
-      const json: Stage2NextResponse = await res.json();
-      setNext(json);
-      setState(json.status === "question" ? "ready" : json.status);
+      const json: Stage2RoundResponse = await res.json();
+
+      if (json.status === "not_ready") {
+        setRemainingToUnlock(json.remainingToUnlock);
+        setState("not_ready");
+        return;
+      }
+      if (json.status === "done") {
+        setState("done");
+        return;
+      }
+
+      setQuestions(json.questions);
+      setState("round");
     } catch (err) {
       setError(err instanceof Error ? err.message : "出題データの取得に失敗しました");
       setState("error");
@@ -37,19 +87,23 @@ export function Stage2Practice() {
   }
 
   useEffect(() => {
-    loadNext();
+    loadRound();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function submitResult(correct: boolean) {
-    if (!next || next.status !== "question" || submitting) return;
+    if (!currentQuestion || submitting) return;
     setSubmitting(true);
     setError(null);
+
+    const displayText =
+      currentQuestion.kind === "free" ? currentQuestion.expressionEn : currentQuestion.choices[currentQuestion.correctIndex];
 
     try {
       const res = await fetch("/api/roadmap/stage2/report", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ expressionId: next.expressionId, correct }),
+        body: JSON.stringify({ expressionId: currentQuestion.expressionId, correct }),
       });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -57,11 +111,21 @@ export function Stage2Practice() {
       }
       const json = await res.json();
 
-      if (json.result.graduated) {
-        setJustGraduated(true);
-        setTimeout(loadNext, 1200);
+      setResults((prev) => [
+        ...prev,
+        {
+          expressionId: currentQuestion.expressionId,
+          expressionEn: displayText,
+          correct,
+          graduated: Boolean(json.result?.graduated),
+        },
+      ]);
+
+      if (currentIndex + 1 < questions.length) {
+        setCurrentIndex((i) => i + 1);
+        setSelectedIndex(null);
       } else {
-        await loadNext();
+        setState("round_complete");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "結果の保存に失敗しました");
@@ -71,9 +135,9 @@ export function Stage2Practice() {
   }
 
   function handleChoiceSelect(choiceIndex: number) {
-    if (!next || next.status !== "question" || next.kind !== "choice" || selectedIndex !== null) return;
+    if (!currentQuestion || currentQuestion.kind !== "choice" || selectedIndex !== null) return;
     setSelectedIndex(choiceIndex);
-    const isCorrect = choiceIndex === next.correctIndex;
+    const isCorrect = choiceIndex === currentQuestion.correctIndex;
     setTimeout(() => submitResult(isCorrect), 600);
   }
 
@@ -89,55 +153,144 @@ export function Stage2Practice() {
     return (
       <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-100/30 px-6 py-10 text-center">
         <Hourglass className="mx-auto mb-3 h-6 w-6 text-zinc-400" />
-        <p className="text-sm text-zinc-500">
-          Stage2はStage1を卒業したフレーズから始まります。まずはStage1を進めてください。
-        </p>
+        <p className="text-sm text-zinc-500">Stage2はStage1をあと{remainingToUnlock}個卒業すると開きます。</p>
+        <Link
+          href="/roadmap/stage1"
+          className="mt-4 inline-flex items-center gap-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
+        >
+          Stage1に進む
+        </Link>
       </div>
     );
   }
 
-  if (state === "done" || !next || next.status !== "question") {
+  if (state === "done") {
     return (
       <div className="rounded-xl border border-zinc-200 bg-zinc-100/50 px-6 py-10 text-center">
-        <PartyPopper className="mx-auto mb-3 h-6 w-6 text-accent" />
-        <p className="text-sm text-zinc-700">
-          今のところ、Stage2に出題できる範囲は全て卒業しました。
-        </p>
-        <p className="mt-1 text-xs text-zinc-400">
-          Stage1をさらに進めると、次のフレーズがStage2に出てきます。
-        </p>
+        <PartyPopper className="mx-auto mb-3 h-6 w-6" style={{ color: STAGE_COLOR }} />
+        <p className="text-sm text-zinc-700">今のところ、Stage2に出題できる範囲は全て卒業しました。</p>
+        <p className="mt-1 text-xs text-zinc-400">Stage1をさらに進めると、次のフレーズがStage2に出てきます。</p>
+        <Link
+          href="/roadmap"
+          className="mt-4 inline-flex items-center gap-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
+        >
+          街に戻る
+        </Link>
       </div>
     );
   }
 
-  const { remainingCount, totalCount } = next;
+  if (state === "round_complete") {
+    const correctCount = results.filter((r) => r.correct).length;
+    const graduated = results.filter((r) => r.graduated);
+
+    return (
+      <div className="relative overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100/50 p-6 text-center animate-round-complete-pop">
+        {RESULT_SPARKLES.map((s, i) => (
+          <span
+            key={i}
+            className={cn(
+              "absolute top-3 rounded-full animate-round-complete-sparkle",
+              s.large ? "h-2 w-2" : "h-1.5 w-1.5"
+            )}
+            style={
+              {
+                left: `${s.left}%`,
+                backgroundColor: s.warm ? STAGE_COLOR : "#fbbf24",
+                animationDelay: `${s.delay}s`,
+                "--sparkle-x": `${s.x}px`,
+                "--sparkle-y": `${s.y}px`,
+              } as React.CSSProperties
+            }
+          />
+        ))}
+
+        <PartyPopper className="relative mx-auto mb-3 h-6 w-6" style={{ color: STAGE_COLOR }} />
+        <p className="relative text-sm font-medium text-zinc-900">
+          今回のラウンド：{results.length}問中{correctCount}問正解
+        </p>
+
+        {graduated.length > 0 && (
+          <div className="relative mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-left text-sm text-emerald-800">
+            <p className="mb-1 font-medium">卒業したフレーズ</p>
+            <ul className="space-y-0.5">
+              {graduated.map((r) => (
+                <li key={r.expressionId}>{r.expressionEn}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div className="relative mt-4 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-3 text-xs text-zinc-400">
+          （街の変化はここに表示予定です）
+        </div>
+
+        <div className="relative mt-6 flex gap-3">
+          <button
+            type="button"
+            onClick={loadRound}
+            style={{ backgroundColor: STAGE_COLOR }}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97]"
+          >
+            もう1ラウンド
+          </button>
+          <Link
+            href="/roadmap"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
+          >
+            街に戻る
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentQuestion) {
+    return <p className="text-sm text-zinc-400">読み込み中...</p>;
+  }
+
+  const hasTint = currentQuestion.warmth > 0;
+  const subFormatLabel = getStage2SubFormatLabel(currentQuestion.subStep);
 
   return (
     <div>
-      {justGraduated && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800">
-          <PartyPopper className="h-4 w-4" />
-          このフレーズを卒業しました！次のフレーズに進みます。
-        </div>
-      )}
+      <RoundHeader
+        stage={2}
+        subFormatLabel={subFormatLabel}
+        current={currentIndex + 1}
+        total={questions.length}
+      />
 
-      <div className="mb-4 text-xs text-zinc-500">
-        残り {remainingCount} / {totalCount}
-      </div>
-
-      <div className="rounded-xl border border-zinc-200 bg-zinc-100/50 p-6">
-        {next.kind === "choice" ? (
+      <div
+        key={currentIndex}
+        className={cn(
+          "animate-question-card-enter rounded-xl border p-6",
+          hasTint ? "" : "border-zinc-200 bg-zinc-100/50"
+        )}
+        style={
+          hasTint
+            ? {
+                borderColor: withAlpha(STAGE_COLOR, WARMTH_BORDER_ALPHA[currentQuestion.warmth]),
+                backgroundColor: withAlpha(STAGE_COLOR, WARMTH_BG_ALPHA[currentQuestion.warmth]),
+              }
+            : undefined
+        }
+      >
+        {currentQuestion.kind === "choice" ? (
           <div>
-            {next.promptEn ? (
-              <p className="mb-4 text-lg font-medium text-zinc-900">{next.promptEn}</p>
-            ) : next.meaningJa ? (
-              <p className="mb-4 text-lg font-medium text-zinc-900">{next.meaningJa}</p>
-            ) : null}
+            <div className="mb-4 flex items-center gap-2">
+              <GrowthBadge stage={2} warmth={currentQuestion.warmth} />
+              {currentQuestion.promptEn ? (
+                <p className="text-lg font-medium text-zinc-900">{currentQuestion.promptEn}</p>
+              ) : currentQuestion.meaningJa ? (
+                <p className="text-lg font-medium text-zinc-900">{currentQuestion.meaningJa}</p>
+              ) : null}
+            </div>
 
             <div className="space-y-2">
-              {next.choices.map((choice, i) => {
+              {currentQuestion.choices.map((choice, i) => {
                 const isSelected = selectedIndex === i;
-                const isCorrectChoice = i === next.correctIndex;
+                const isCorrectChoice = i === currentQuestion.correctIndex;
                 const showResult = selectedIndex !== null;
                 return (
                   <button
@@ -146,12 +299,12 @@ export function Stage2Practice() {
                     disabled={selectedIndex !== null}
                     onClick={() => handleChoiceSelect(i)}
                     className={cn(
-                      "flex w-full items-center justify-between rounded-lg border px-4 py-2.5 text-left text-sm transition-colors",
+                      "flex w-full items-center justify-between rounded-lg border px-4 py-2.5 text-left text-sm transition-all duration-150 active:scale-[.97]",
                       showResult && isCorrectChoice
                         ? "border-emerald-300 bg-emerald-50 text-emerald-800"
                         : showResult && isSelected
                           ? "border-red-300 bg-red-50 text-red-800"
-                          : "border-zinc-200 bg-white text-zinc-700 hover:border-accent/40"
+                          : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
                     )}
                   >
                     {choice}
@@ -164,17 +317,20 @@ export function Stage2Practice() {
           </div>
         ) : (
           <div>
-            <p className="mb-1 text-lg font-medium text-zinc-900">{next.expressionEn}</p>
-            {next.meaningJa && <p className="mb-4 text-sm text-zinc-500">{next.meaningJa}</p>}
-            <p className="mb-3 text-xs text-zinc-400">
-              主語や時制を少し変えて、自分の言葉で声に出してみてください。言えたら結果を選んでください。
-            </p>
+            <div className="mb-1 flex items-center gap-2">
+              <GrowthBadge stage={2} warmth={currentQuestion.warmth} />
+              <p className="text-lg font-medium text-zinc-900">{currentQuestion.expressionEn}</p>
+            </div>
+            {currentQuestion.meaningJa && (
+              <p className="mb-4 text-sm text-zinc-500">{currentQuestion.meaningJa}</p>
+            )}
             <div className="flex gap-3">
               <button
                 type="button"
                 disabled={submitting}
                 onClick={() => submitResult(true)}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
+                style={{ backgroundColor: STAGE_COLOR }}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97] disabled:opacity-50"
               >
                 <Check className="h-4 w-4" />
                 言えた
@@ -183,7 +339,7 @@ export function Stage2Practice() {
                 type="button"
                 disabled={submitting}
                 onClick={() => submitResult(false)}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:border-zinc-400 disabled:opacity-50"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-600 transition-all duration-150 hover:border-zinc-400 active:scale-[.97] disabled:opacity-50"
               >
                 <X className="h-4 w-4" />
                 言えなかった

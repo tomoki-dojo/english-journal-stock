@@ -101,31 +101,47 @@ export function getStage2SubStep(streak: number): Stage2SubStep {
   return "穴埋め音読";
 }
 
-export type Stage2NextResponse =
-  | { status: "not_ready" }
-  | { status: "done"; totalCount: number }
+// Stage2のアクティブセット（未卒業＆コンテンツありフレーズの先頭からN件）とラウンドのサイズ。
+// Stage1と同じ規模。「7件に届くまではラウンドを出さない」を、初解放・補充後の再開の両方に
+// 同じ条件として使う（同じような問題ばかりになる母数不足を防ぐため）。
+export const STAGE2_ACTIVE_SET_SIZE = 7;
+export const STAGE2_ROUND_SIZE = 5;
+
+// Stage2内のサブ出題形式タグ。「全文瞬間英作文」「文脈からの想起」は見た目が同一（文選択）のため
+// UI上は同じタグに集約する。
+export function getStage2SubFormatLabel(subStep: Stage2SubStep): "穴埋め" | "文選択" | "微改変" {
+  if (subStep === "穴埋め音読") return "穴埋め";
+  if (subStep === "微改変") return "微改変";
+  return "文選択";
+}
+
+export type Stage2RoundQuestion =
   | {
-      status: "question";
       kind: "choice";
       subStep: Stage2SubStep;
-      streak: number;
       expressionId: string;
       meaningJa?: string;
       // 穴埋め音読のときだけ、空欄化した英文を入れる（それ以外のサブステップはundefined）
       promptEn?: string;
       choices: string[];
       correctIndex: number;
-      remainingCount: number;
-      totalCount: number;
+      warmth: WarmthLevel;
     }
   | {
-      status: "question";
       kind: "free";
       subStep: Stage2SubStep;
-      streak: number;
       expressionId: string;
       expressionEn: string;
       meaningJa?: string;
+      warmth: WarmthLevel;
+    };
+
+export type Stage2RoundResponse =
+  | { status: "not_ready"; remainingToUnlock: number }
+  | { status: "done"; totalCount: number }
+  | {
+      status: "round";
+      questions: Stage2RoundQuestion[];
       remainingCount: number;
       totalCount: number;
     };

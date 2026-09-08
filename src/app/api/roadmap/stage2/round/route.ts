@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
-import { getStage2Next } from "@/lib/supabase/speaking-roadmap";
+import { getStage2Round } from "@/lib/supabase/speaking-roadmap";
 
-// Stage2で次に出題する問題を1件返す。
+// Stage2のラウンド（アクティブセット最大7件から最大5件をランダム抽出したミニクイズ1回分）を返す。
+// アクティブセットが7件に届いていなければstatus: "not_ready"、対象プールを全て卒業済みならdoneを返す。
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) {
@@ -10,8 +11,8 @@ export async function GET() {
   }
 
   try {
-    const next = await getStage2Next(user.id);
-    return NextResponse.json(next);
+    const round = await getStage2Round(user.id);
+    return NextResponse.json(round);
   } catch (err) {
     const message = err instanceof Error ? err.message : "出題データの取得に失敗しました";
     return NextResponse.json({ error: message }, { status: 500 });
