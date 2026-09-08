@@ -5,8 +5,9 @@ import Link from "next/link";
 import { Check, PartyPopper, Volume2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RoundHeader } from "./round-header";
-import { WarmthDot } from "./warmth-dot";
-import type { Stage1RoundQuestion, Stage1RoundResponse } from "./types";
+import { GrowthBadge } from "./growth-badge";
+import { STAGE_COLORS, withAlpha } from "./stage-colors";
+import type { Stage1RoundQuestion, Stage1RoundResponse, WarmthLevel } from "./types";
 
 type ViewState = "loading" | "round" | "round_complete" | "done" | "error";
 
@@ -16,6 +17,11 @@ type QuestionResult = {
   correct: boolean;
   graduated: boolean;
 };
+
+const STAGE_COLOR = STAGE_COLORS[1];
+// warmth（0〜3）に応じて、フレーズカードの縁・背景にStage1カラーをうっすら重ねる度合い。
+const WARMTH_BORDER_ALPHA: Record<WarmthLevel, string> = { 0: "00", 1: "33", 2: "55", 3: "80" };
+const WARMTH_BG_ALPHA: Record<WarmthLevel, string> = { 0: "00", 1: "0a", 2: "12", 3: "1a" };
 
 // Stage1（音読・シャドーイング）の練習画面。
 // アクティブセット（未卒業フレーズの先頭7件）から5件ランダムに出題する「ラウンド」単位で進行する。
@@ -142,12 +148,12 @@ export function Stage1Practice() {
   if (state === "done") {
     return (
       <div className="rounded-xl border border-zinc-200 bg-zinc-100/50 px-6 py-10 text-center">
-        <PartyPopper className="mx-auto mb-3 h-6 w-6 text-accent" />
+        <PartyPopper className="mx-auto mb-3 h-6 w-6" style={{ color: STAGE_COLOR }} />
         <p className="text-sm text-zinc-700">Stage1（音読・シャドーイング）は全て卒業しました。</p>
         <p className="mt-1 text-xs text-zinc-400">Stage2は準備中です。もうしばらくお待ちください。</p>
         <Link
           href="/roadmap"
-          className="mt-4 inline-flex items-center gap-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-accent/40"
+          className="mt-4 inline-flex items-center gap-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
         >
           街に戻る
         </Link>
@@ -161,7 +167,7 @@ export function Stage1Practice() {
 
     return (
       <div className="rounded-xl border border-zinc-200 bg-zinc-100/50 p-6 text-center">
-        <PartyPopper className="mx-auto mb-3 h-6 w-6 text-accent" />
+        <PartyPopper className="mx-auto mb-3 h-6 w-6" style={{ color: STAGE_COLOR }} />
         <p className="text-sm font-medium text-zinc-900">
           今回のラウンド：{results.length}問中{correctCount}問「言えた」
         </p>
@@ -186,13 +192,14 @@ export function Stage1Practice() {
           <button
             type="button"
             onClick={loadRound}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent/90"
+            style={{ backgroundColor: STAGE_COLOR }}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
           >
             もう1ラウンド
           </button>
           <Link
             href="/roadmap"
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-accent/40"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
           >
             街に戻る
           </Link>
@@ -205,22 +212,33 @@ export function Stage1Practice() {
     return <p className="text-sm text-zinc-400">読み込み中...</p>;
   }
 
+  const hasTint = currentQuestion.warmth > 0;
+
   return (
     <div>
       <RoundHeader stage={1} current={currentIndex + 1} total={questions.length} />
 
       <div
         className={cn(
-          "rounded-xl border border-zinc-200 bg-zinc-100/50 p-6 transition-all duration-200",
+          "rounded-xl border p-6 transition-all duration-200",
+          hasTint ? "" : "border-zinc-200 bg-zinc-100/50",
           entering ? "translate-y-1 opacity-0" : "translate-y-0 opacity-100"
         )}
+        style={
+          hasTint
+            ? {
+                borderColor: withAlpha(STAGE_COLOR, WARMTH_BORDER_ALPHA[currentQuestion.warmth]),
+                backgroundColor: withAlpha(STAGE_COLOR, WARMTH_BG_ALPHA[currentQuestion.warmth]),
+              }
+            : undefined
+        }
       >
         <p className="mb-3 text-xs text-zinc-400">
           音声を真似して声に出す→一緒に言う→少し遅れて言う、と徐々にレベルを上げてみましょう。
         </p>
 
         <div className="mb-1 flex items-center gap-2">
-          <WarmthDot warmth={currentQuestion.warmth} />
+          <GrowthBadge stage={1} warmth={currentQuestion.warmth} />
           <p className="text-lg font-medium text-zinc-900">{currentQuestion.expressionEn}</p>
         </div>
         {currentQuestion.meaningJa && (
@@ -232,7 +250,7 @@ export function Stage1Practice() {
             type="button"
             onClick={handlePlayAudio}
             disabled={audioLoading}
-            className="mb-4 inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-700 transition-colors hover:border-accent/40 disabled:opacity-50"
+            className="mb-4 inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-700 transition-colors hover:border-zinc-400 disabled:opacity-50"
           >
             <Volume2 className="h-4 w-4" />
             {audioLoading ? "読み込み中..." : "音声を聴く"}
@@ -245,7 +263,8 @@ export function Stage1Practice() {
             type="button"
             disabled={submitting}
             onClick={() => handleReport(true)}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
+            style={{ backgroundColor: STAGE_COLOR }}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             <Check className="h-4 w-4" />
             言えた

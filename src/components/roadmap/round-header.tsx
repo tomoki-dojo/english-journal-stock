@@ -1,7 +1,7 @@
 "use client";
 
 import { Mic, PenLine } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { STAGE_COLORS, withAlpha } from "./stage-colors";
 
 type RoundHeaderProps = {
   stage: 1 | 2;
@@ -13,35 +13,24 @@ type RoundHeaderProps = {
 };
 
 // Stage1・Stage2（さらにサブ出題形式）を一目で見分けるための、練習画面共通の常時表示ヘッダー。
-// 色・アイコンで判別できるようにし、進捗は「ラウンド内の◯問目」のみを数字で見せる
-// （フレーズ単体の習熟度は別途WarmthDotで非数値表現する）。
+// 色はSTAGE_COLORS（Stage1〜5のテーマカラー）で判別できるようにし、進捗は
+// 「ラウンド内の◯問目」のみを数字で見せる（フレーズ単体の習熟度は別途GrowthBadgeで非数値表現する）。
 const STAGE_META = {
-  1: {
-    label: "Stage1",
-    icon: Mic,
-    badgeClass: "bg-amber-100 text-amber-700",
-    dotClass: "bg-amber-400",
-  },
-  2: {
-    label: "Stage2",
-    icon: PenLine,
-    badgeClass: "bg-accent/10 text-accent",
-    dotClass: "bg-accent",
-  },
+  1: { label: "Stage1", icon: Mic },
+  2: { label: "Stage2", icon: PenLine },
 } as const;
 
 export function RoundHeader({ stage, subFormatLabel, current, total }: RoundHeaderProps) {
   const meta = STAGE_META[stage];
   const Icon = meta.icon;
+  const color = STAGE_COLORS[stage];
 
   return (
     <div className="mb-4 flex items-center justify-between">
       <div className="flex items-center gap-2">
         <span
-          className={cn(
-            "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold",
-            meta.badgeClass
-          )}
+          className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold"
+          style={{ backgroundColor: withAlpha(color, "1a"), color }}
         >
           <Icon className="h-3.5 w-3.5" />
           {meta.label}
@@ -61,7 +50,8 @@ export function RoundHeader({ stage, subFormatLabel, current, total }: RoundHead
           {Array.from({ length: total }).map((_, i) => (
             <span
               key={i}
-              className={cn("h-1.5 w-1.5 rounded-full", i < current ? meta.dotClass : "bg-zinc-200")}
+              className="h-1.5 w-1.5 rounded-full transition-colors"
+              style={{ backgroundColor: i < current ? color : "#e4e4e7" }}
             />
           ))}
         </div>

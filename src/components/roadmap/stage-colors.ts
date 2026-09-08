@@ -10,3 +10,9 @@ export const STAGE_COLORS: Record<1 | 2 | 3 | 4 | 5, string> = {
   4: "#0891b2", // シアン
   5: "#0269a1", // ブランドティールブルーそのもの（本体のaccentと同じ）
 };
+
+// #rrggbb + 2桁のアルファ値（00〜ff）を連結して、8桁hexの半透明色を作る簡易ヘルパー。
+// Tailwindの動的クラス名はJITで拾えないため、Stageカラーはinline styleで扱う。
+export function withAlpha(hex: string, alphaHex: string): string {
+  return `${hex}${alphaHex}`;
+}

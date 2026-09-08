@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Building2, ChevronRight, Flame, Sparkles } from "lucide-react";
+import { Building2, ChevronRight, Flame, Mic, PenLine, Sparkles } from "lucide-react";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
 import {
   getCurrentStreak,
   getUserRoadmapState,
 } from "@/lib/supabase/speaking-roadmap";
 import { OnboardingQuiz } from "@/components/roadmap/onboarding-quiz";
+import { STAGE_COLORS } from "@/components/roadmap/stage-colors";
 
 // スピーキング・ロードマップのホーム（「箱庭画面」）。
 // 練習画面（クイズ）とは別画面に分離し、ここは箱庭ビジュアル＋各Stageへの入り口だけを持つ拠点画面にする。
@@ -73,9 +74,16 @@ export default async function RoadmapPage() {
       <div className="space-y-4">
         <Link
           href="/roadmap/stage1"
-          className="flex items-center justify-between rounded-xl border border-zinc-200 bg-zinc-100/50 p-6 transition-colors hover:border-accent/40"
+          style={{ borderLeftColor: STAGE_COLORS[1], borderLeftWidth: 4 }}
+          className="flex items-center gap-4 rounded-xl border border-zinc-200 bg-zinc-100/50 p-6 transition-colors hover:bg-zinc-100"
         >
-          <div>
+          <div
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full"
+            style={{ backgroundColor: `${STAGE_COLORS[1]}1a`, color: STAGE_COLORS[1] }}
+          >
+            <Mic className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
             <h2 className="text-sm font-semibold text-zinc-900">Stage1・音読/シャドーイング</h2>
             <p className="mt-1 text-sm text-zinc-500">短いフレーズを声に出して、耳と口を慣らします。</p>
           </div>
@@ -84,9 +92,16 @@ export default async function RoadmapPage() {
 
         <Link
           href="/roadmap/stage2"
-          className="flex items-center justify-between rounded-xl border border-zinc-200 bg-zinc-100/50 p-6 transition-colors hover:border-accent/40"
+          style={{ borderLeftColor: STAGE_COLORS[2], borderLeftWidth: 4 }}
+          className="flex items-center gap-4 rounded-xl border border-zinc-200 bg-zinc-100/50 p-6 transition-colors hover:bg-zinc-100"
         >
-          <div>
+          <div
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full"
+            style={{ backgroundColor: `${STAGE_COLORS[2]}1a`, color: STAGE_COLORS[2] }}
+          >
+            <PenLine className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
             <h2 className="text-sm font-semibold text-zinc-900">Stage2・瞬間英作文</h2>
             <p className="mt-1 text-sm text-zinc-500">
               Stage1で覚えたフレーズを、見ずに組み立てられるようにします。

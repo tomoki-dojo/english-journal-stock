@@ -1,0 +1,25 @@
+import { Circle, Flower2, Sprout } from "lucide-react";
+import { STAGE_COLORS } from "./stage-colors";
+import type { WarmthLevel } from "./types";
+
+type GrowthBadgeProps = {
+  stage: 1 | 2;
+  warmth: WarmthLevel;
+};
+
+// フレーズ単体の習熟度を、数字を出さずに「育っていく」ビジュアルで伝える
+// （種→芽→開花）。色は今取り組んでいるStageのテーマカラーを使う。
+export function GrowthBadge({ stage, warmth }: GrowthBadgeProps) {
+  const color = STAGE_COLORS[stage];
+
+  if (warmth === 0) {
+    return <Circle className="h-4 w-4 text-zinc-300" aria-hidden="true" />;
+  }
+  if (warmth === 1) {
+    return <Sprout className="h-4 w-4" style={{ color, opacity: 0.55 }} aria-hidden="true" />;
+  }
+  if (warmth === 2) {
+    return <Sprout className="h-4 w-4" style={{ color }} aria-hidden="true" />;
+  }
+  return <Flower2 className="h-4 w-4" style={{ color }} aria-hidden="true" />;
+}
