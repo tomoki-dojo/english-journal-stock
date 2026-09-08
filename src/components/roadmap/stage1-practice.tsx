@@ -23,6 +23,18 @@ const STAGE_COLOR = STAGE_COLORS[1];
 const WARMTH_BORDER_ALPHA: Record<WarmthLevel, string> = { 0: "00", 1: "33", 2: "55", 3: "80" };
 const WARMTH_BG_ALPHA: Record<WarmthLevel, string> = { 0: "00", 1: "0a", 2: "12", 3: "1a" };
 
+// ラウンド終了時のキラキラ演出用。中心から放射状に8個の粒を飛ばす（角度は固定・決定的）。
+const SPARKLES = Array.from({ length: 8 }).map((_, i) => {
+  const angle = (i / 8) * Math.PI * 2;
+  const radius = 28;
+  return {
+    x: Math.round(Math.cos(angle) * radius),
+    y: Math.round(Math.sin(angle) * radius),
+    delay: (i % 4) * 0.04,
+    warm: i % 2 === 0,
+  };
+});
+
 // Stage1（音読・シャドーイング）の練習画面。
 // アクティブセット（未卒業フレーズの先頭7件）から5件ランダムに出題する「ラウンド」単位で進行する。
 // 1問終わるごとに次のフレーズに切り替わるので、1フレーズを卒業するまで固定、という単調さを避ける。
@@ -167,7 +179,23 @@ export function Stage1Practice() {
 
     return (
       <div className="rounded-xl border border-zinc-200 bg-zinc-100/50 p-6 text-center">
-        <PartyPopper className="mx-auto mb-3 h-6 w-6" style={{ color: STAGE_COLOR }} />
+        <div className="relative mx-auto mb-3 flex h-6 w-6 items-center justify-center">
+          <PartyPopper className="h-6 w-6" style={{ color: STAGE_COLOR }} />
+          {SPARKLES.map((s, i) => (
+            <span
+              key={i}
+              className="absolute h-1.5 w-1.5 rounded-full animate-round-complete-sparkle"
+              style={
+                {
+                  backgroundColor: s.warm ? STAGE_COLOR : "#fbbf24",
+                  animationDelay: `${s.delay}s`,
+                  "--sparkle-x": `${s.x}px`,
+                  "--sparkle-y": `${s.y}px`,
+                } as React.CSSProperties
+              }
+            />
+          ))}
+        </div>
         <p className="text-sm font-medium text-zinc-900">
           今回のラウンド：{results.length}問中{correctCount}問「言えた」
         </p>
@@ -257,14 +285,13 @@ export function Stage1Practice() {
           </button>
         )}
 
-        <p className="mb-3 text-xs text-zinc-400">声に出して練習したら、結果を選んでください。</p>
         <div className="flex gap-3">
           <button
             type="button"
             disabled={submitting}
             onClick={() => handleReport(true)}
             style={{ backgroundColor: STAGE_COLOR }}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="flex flex-1 scale-100 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-95 disabled:opacity-50"
           >
             <Check className="h-4 w-4" />
             言えた
@@ -273,7 +300,7 @@ export function Stage1Practice() {
             type="button"
             disabled={submitting}
             onClick={() => handleReport(false)}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:border-zinc-400 disabled:opacity-50"
+            className="flex flex-1 scale-100 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-600 transition-all duration-150 hover:border-zinc-400 active:scale-95 disabled:opacity-50"
           >
             <X className="h-4 w-4" />
             言えなかった
