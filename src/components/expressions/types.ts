@@ -9,6 +9,13 @@ export const SceneTagValues = [
   "プレゼン",
   "依頼・断り",
   "交渉",
+  // ここから下はスピーキング・ロードマップのStage1〜3向け日常会話タグ（2026-09-09追加）。
+  // 上記7つは全てビジネス文脈で、日常会話に該当するタグが存在しなかったため新設した。
+  "買い物",
+  "外食",
+  "旅行",
+  "友人",
+  "体調",
 ] as const;
 export type SceneTag = (typeof SceneTagValues)[number];
 
