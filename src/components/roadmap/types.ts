@@ -167,3 +167,40 @@ export type Stage2ReportResult = {
   subStep: Stage2SubStep;
   graduated: boolean;
 };
+
+// Stage0（使い分けパーツ）：Stage1〜5の一本道とは別の、いつでも寄れる独立エリア（ゲートにはしない。
+// _reference/speaking-roadmap-design.mdの「Stage0の位置づけ」参照）。
+// 「日本語の感覚のまま英語にすると事故る使い分けポイント」（例：可算名詞は単数のまま裸で使えない）を
+// 1つの「感覚」（usage_rule）として扱い、語彙を変えた出題文（usage_rule_prompts）を繰り返しぶつける。
+// 1フレーズを覚えて卒業ではなく、同じ感覚に対する複数パターンで安定して「言えた」が続くまでを
+// 卒業条件とする。「言えなかった」を選んだときだけ核イメージの解説（coreImageJa）を出す
+// （初回だけでなく毎回。テスト効果を狙い、先に解説は読ませない）。
+export const STAGE0_GRADUATE_STREAK = 6;
+export const STAGE0_ACTIVE_SET_SIZE = 7;
+export const STAGE0_ROUND_SIZE = 5;
+
+export type Stage0RoundQuestion = {
+  usageRuleId: string;
+  errorTag: string;
+  title: string;
+  // ラウンド生成時にそのruleに紐づくprompt群からランダムに1件選んだもの。
+  promptJa: string;
+  answerEn: string;
+  // 「言えなかった」を選んだときだけUIで表示する。先には見せない。
+  coreImageJa: string;
+  warmth: WarmthLevel;
+};
+
+export type Stage0RoundResponse =
+  | {
+      status: "round";
+      questions: Stage0RoundQuestion[];
+      remainingCount: number;
+      totalCount: number;
+    }
+  | { status: "done"; totalCount: number };
+
+export type Stage0ReportResult = {
+  streak: number;
+  graduated: boolean;
+};

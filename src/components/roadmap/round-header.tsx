@@ -1,21 +1,22 @@
 "use client";
 
-import { Mic, PenLine } from "lucide-react";
+import { Lightbulb, Mic, PenLine } from "lucide-react";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
 
 type RoundHeaderProps = {
-  stage: 1 | 2;
-  // Stage2の出題形式（穴埋め／文選択／微改変）を表す小タグ。Stage1では未指定。
+  stage: 0 | 1 | 2;
+  // Stage2の出題形式（穴埋め／文選択／微改変）を表す小タグ。Stage1・Stage0では未指定。
   subFormatLabel?: string;
   // ラウンド内の問題番号（1始まり）と、ラウンドの総問題数
   current: number;
   total: number;
 };
 
-// Stage1・Stage2（さらにサブ出題形式）を一目で見分けるための、練習画面共通の常時表示ヘッダー。
-// 色はSTAGE_COLORS（Stage1〜5のテーマカラー）で判別できるようにし、進捗は
-// 「ラウンド内の◯問目」のみを数字で見せる（フレーズ単体の習熟度は別途GrowthBadgeで非数値表現する）。
+// Stage0・Stage1・Stage2（さらにサブ出題形式）を一目で見分けるための、練習画面共通の常時表示ヘッダー。
+// 色はSTAGE_COLORS（Stage0は独立エリアとして紫、Stage1〜5のテーマカラー）で判別できるようにし、
+// 進捗は「ラウンド内の◯問目」のみを数字で見せる（フレーズ単体の習熟度は別途GrowthBadgeで非数値表現する）。
 const STAGE_META = {
+  0: { label: "使い分けパーツ", icon: Lightbulb },
   1: { label: "Stage1", icon: Mic },
   2: { label: "Stage2", icon: PenLine },
 } as const;

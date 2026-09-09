@@ -5,6 +5,9 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { getTodayDateKey } from "@/lib/daily-rotation";
 import { getExpressionAudioSignedUrl } from "@/lib/supabase/expression-audio";
 import {
+  STAGE0_ACTIVE_SET_SIZE,
+  STAGE0_GRADUATE_STREAK,
+  STAGE0_ROUND_SIZE,
   STAGE1_ACTIVE_SET_SIZE,
   STAGE1_GRADUATE_STREAK,
   STAGE1_ROUND_SIZE,
@@ -17,6 +20,8 @@ import {
   type OnboardingQuizAnswers,
   type OnboardingQuizResult,
   type RoadmapStage,
+  type Stage0ReportResult,
+  type Stage0RoundResponse,
   type Stage1ReportResult,
   type Stage1RoundResponse,
   type Stage2ReportResult,
@@ -309,17 +314,18 @@ export async function getStage1Round(userId: string): Promise<Stage1RoundRespons
 // 取り組んだこと自体を「今日練習した」記録にする（正誤は問わない）。
 async function reportStageStreakResult(
   userId: string,
-  stage: 1 | 2,
+  stage: 0 | 1 | 2,
   expressionId: string,
   graduateStreak: number,
-  correct: boolean
+  correct: boolean,
+  phraseSource: "expression" | "usage_rule" = "expression"
 ): Promise<{ streak: number; graduated: boolean }> {
   const { data: existing, error: fetchError } = await supabaseAdmin
     .from("speaking_stage_progress")
     .select("correct_streak")
     .eq("user_id", userId)
     .eq("phrase_id", expressionId)
-    .eq("phrase_source", "expression")
+    .eq("phrase_source", phraseSource)
     .eq("stage", stage)
     .maybeSingle();
 
@@ -336,7 +342,7 @@ async function reportStageStreakResult(
     {
       user_id: userId,
       phrase_id: expressionId,
-      phrase_source: "expression",
+      phrase_source: phraseSource,
       stage,
       status,
       correct_streak: newStreak,
@@ -627,4 +633,135 @@ export async function reportStage2Result(
     correct
   );
   return { streak, subStep: getStage2SubStep(streak), graduated };
+}
+
+// ============================================================
+// Stage0（使い分けパーツ）
+// Stage1〜5の一本道とは別の、いつでも寄れる独立エリア（ゲートにはしない）。
+// _reference/speaking-roadmap-design.md「使い分けパーツコンテンツ」の節を参照。
+// ============================================================
+
+type UsageRulePoolRow = {
+  id: string;
+  errorTag: string;
+  title: string;
+  coreImageJa: string;
+  prompts: { promptJa: string; answerEn: string }[];
+};
+
+// 公開済みのusage_rulesを、紐づくusage_rule_prompts込みでcode順に取得する。
+// 現状件数が少ない（数十件規模の見込み）ため、Stage1で踏んだPostgRESTの行数上限バグの
+// リスクは当面ない。件数が増えてきたら同種の対策を検討する。
+async function listUsageRulePool(): Promise<UsageRulePoolRow[]> {
+  const { data, error } = await supabaseAdmin
+    .from("usage_rules")
+    .select("id, code, error_tag, title, core_image_ja, usage_rule_prompts(prompt_ja, answer_en)")
+    .eq("publish_status", "公開")
+    .order("code", { ascending: true });
+
+  if (error) {
+    throw new Error(`Stage0出題プールの取得に失敗しました: ${error.message}`);
+  }
+
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    errorTag: row.error_tag as string,
+    title: row.title as string,
+    coreImageJa: row.core_image_ja as string,
+    prompts: ((row.usage_rule_prompts ?? []) as { prompt_ja: string; answer_en: string }[]).map((p) => ({
+      promptJa: p.prompt_ja,
+      answerEn: p.answer_en,
+    })),
+  }));
+}
+
+// Stage0のアクティブセット（未卒業の「感覚」の先頭からSTAGE0_ACTIVE_SET_SIZE件）を計算する。
+// Stage1・2と同じく新しい状態は持たず、毎回動的に計算する。
+async function getStage0ActiveSet(userId: string): Promise<{
+  activeSet: (UsageRulePoolRow & { streak: number })[];
+  totalCount: number;
+  remainingCount: number;
+}> {
+  const pool = await listUsageRulePool();
+
+  const { data: progressData, error: progressError } = await supabaseAdmin
+    .from("speaking_stage_progress")
+    .select("phrase_id, status, correct_streak")
+    .eq("user_id", userId)
+    .eq("stage", 0)
+    .eq("phrase_source", "usage_rule");
+
+  if (progressError) {
+    throw new Error(`Stage0進捗の取得に失敗しました: ${progressError.message}`);
+  }
+
+  const progressMap = new Map<string, { status: string; correct_streak: number }>();
+  for (const row of progressData ?? []) {
+    progressMap.set(row.phrase_id as string, {
+      status: row.status as string,
+      correct_streak: row.correct_streak as number,
+    });
+  }
+
+  const totalCount = pool.length;
+  const nonGraduated = pool.filter((rule) => progressMap.get(rule.id)?.status !== "習得済み");
+  const remainingCount = nonGraduated.length;
+
+  const activeSet = nonGraduated.slice(0, STAGE0_ACTIVE_SET_SIZE).map((rule) => ({
+    ...rule,
+    streak: progressMap.get(rule.id)?.correct_streak ?? 0,
+  }));
+
+  return { activeSet, totalCount, remainingCount };
+}
+
+// Stage0のラウンド（ミニクイズ1回分）を決める。
+// アクティブセットから最大STAGE0_ROUND_SIZE件を選び、各ruleにつき出題文を1つランダムに選ぶ
+// （同じ感覚でも毎回語彙を変えて出題することで、暗記ではなく感覚そのものの定着を狙う）。
+// coreImageJaは「言えなかった」を選んだときだけUI側で表示する（先には見せない。テスト効果）。
+export async function getStage0Round(userId: string): Promise<Stage0RoundResponse> {
+  const { activeSet, totalCount, remainingCount } = await getStage0ActiveSet(userId);
+
+  if (activeSet.length === 0) {
+    return { status: "done", totalCount };
+  }
+
+  const sampled = shuffleArray(activeSet).slice(0, Math.min(STAGE0_ROUND_SIZE, activeSet.length));
+
+  return {
+    status: "round",
+    questions: sampled
+      .filter((rule) => rule.prompts.length > 0)
+      .map((rule) => {
+        const prompt = rule.prompts[Math.floor(Math.random() * rule.prompts.length)];
+        return {
+          usageRuleId: rule.id,
+          errorTag: rule.errorTag,
+          title: rule.title,
+          promptJa: prompt.promptJa,
+          answerEn: prompt.answerEn,
+          coreImageJa: rule.coreImageJa,
+          warmth: computeWarmth(rule.streak, STAGE0_GRADUATE_STREAK),
+        };
+      }),
+    remainingCount,
+    totalCount,
+  };
+}
+
+// Stage0の結果を記録する（「言えた/言えなかった」の自己申告）。
+export async function reportStage0Result(
+  userId: string,
+  usageRuleId: string,
+  correct: boolean
+): Promise<Stage0ReportResult> {
+  const { streak, graduated } = await reportStageStreakResult(
+    userId,
+    0,
+    usageRuleId,
+    STAGE0_GRADUATE_STREAK,
+    correct,
+    "usage_rule"
+  );
+  return { streak, graduated };
 }
