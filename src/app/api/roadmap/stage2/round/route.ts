@@ -4,6 +4,10 @@ import { getStage2Round } from "@/lib/supabase/speaking-roadmap";
 
 // Stage2のラウンド（アクティブセット最大7件から最大5件をランダム抽出したミニクイズ1回分）を返す。
 // アクティブセットが7件に届いていなければstatus: "not_ready"、対象プールを全て卒業済みならdoneを返す。
+// Stage1と同じ理由でキャッシュを明示的に無効化する（route.ts参照）。
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) {
@@ -12,7 +16,7 @@ export async function GET() {
 
   try {
     const round = await getStage2Round(user.id);
-    return NextResponse.json(round);
+    return NextResponse.json(round, { headers: { "Cache-Control": "no-store, must-revalidate" } });
   } catch (err) {
     const message = err instanceof Error ? err.message : "出題データの取得に失敗しました";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -63,7 +63,7 @@ export function Stage1Practice() {
     setError(null);
 
     try {
-      const res = await fetch("/api/roadmap/stage1/round");
+      const res = await fetch("/api/roadmap/stage1/round", { cache: "no-store" });
       if (!res.ok) throw new Error("出題データの取得に失敗しました");
       const json: Stage1RoundResponse = await res.json();
 
