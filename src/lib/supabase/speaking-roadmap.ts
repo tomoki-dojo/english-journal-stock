@@ -186,17 +186,33 @@ type Stage1PoolRow = {
   expressionEn: string;
   meaningJa?: string;
   hasAudioExpression: boolean;
+  sceneTags: string[];
 };
 
-// 公開済み表現を全件・code順（安定した順序）に取得する。
+// 日常会話向けのシーンタグ（2026-09-09追加）。design doc「Stage1〜3は日常会話寄りのコンテンツで
+// 進め、Stage4〜5でビジネスシーンに橋渡しする」という方針に対し、Stage1・2の出題プールが
+// 単純なcode順だとビジネス表現（会議・交渉など、code順で先に登録されている）が優先されてしまい、
+// 日常会話コンテンツにほぼ辿り着けない状態だった。そのため出題順は「日常会話タグを含むものを
+// 先に、それ以外は従来通りcode順」という優先度付けに変更する。
+const DAILY_SCENE_TAGS = ["買い物", "外食", "旅行", "友人", "体調"] as const;
+
+function isDailyScene(sceneTags: string[]): boolean {
+  return sceneTags.some((tag) => (DAILY_SCENE_TAGS as readonly string[]).includes(tag));
+}
+
+// 日常会話タグを含む行を先頭に寄せる安定ソート（各グループ内の元の順序＝code順は維持される）。
+function sortDailyFirst<T extends { sceneTags: string[] }>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => Number(isDailyScene(b.sceneTags)) - Number(isDailyScene(a.sceneTags)));
+}
+
+// 公開済み表現を全件・code順（安定した順序）に取得し、日常会話タグを優先する順に並べ替える。
 // listPublishedExpressions()は/library向けにcreated_at降順+1000件上限で作られており、
 // 全1060件超のような場合に古いバッチが不定順で切り捨てられてしまうため、
 // Stage1・2の出題プールにはそれを流用せず、専用にcode順の全件取得を行う。
-// 日常会話コンテンツができるまでは、トラックに関わらず同じ表現ライブラリを出題する。
 async function listStage1PhrasePool(): Promise<Stage1PoolRow[]> {
   const { data, error } = await supabaseAdmin
     .from("expressions")
-    .select("id, expression_en, meaning_ja, audio_expression_path")
+    .select("id, expression_en, meaning_ja, audio_expression_path, scene_tags")
     .eq("publish_status", "公開")
     .order("code", { ascending: true })
     .limit(5000);
@@ -205,12 +221,15 @@ async function listStage1PhrasePool(): Promise<Stage1PoolRow[]> {
     throw new Error(`Stage1出題プールの取得に失敗しました: ${error.message}`);
   }
 
-  return (data ?? []).map((row) => ({
+  const rows = (data ?? []).map((row) => ({
     id: row.id as string,
     expressionEn: row.expression_en as string,
     meaningJa: (row.meaning_ja as string | null) ?? undefined,
     hasAudioExpression: Boolean(row.audio_expression_path),
+    sceneTags: (row.scene_tags as string[] | null) ?? [],
   }));
+
+  return sortDailyFirst(rows);
 }
 
 // Stage1のアクティブセット（未卒業フレーズの先頭からSTAGE1_ACTIVE_SET_SIZE件）を計算する。
@@ -384,6 +403,7 @@ type DbStage2ContentRow = {
     code: string;
     expression_en: string;
     meaning_ja: string | null;
+    scene_tags: string[] | null;
   } | null;
 };
 
@@ -416,7 +436,7 @@ async function getStage1GraduatedExpressionIds(userId: string): Promise<Set<stri
 }
 
 // Stage2用に作り込まれたコンテンツ（stage2_quiz_content）を、Stage1卒業済みのものに絞り、
-// code順に並べて取得する。
+// code順に並べたうえで、Stage1と同じく日常会話タグを優先する順に並べ替えて取得する。
 async function listStage2ContentPool(userId: string): Promise<DbStage2ContentRow[]> {
   const graduatedIds = await getStage1GraduatedExpressionIds(userId);
   if (graduatedIds.size === 0) return [];
@@ -424,7 +444,7 @@ async function listStage2ContentPool(userId: string): Promise<DbStage2ContentRow
   const { data, error } = await supabaseAdmin
     .from("stage2_quiz_content")
     .select(
-      "expression_id, blank_target, blank_choices, sentence_choices, context_prompt_ja, expressions(code, expression_en, meaning_ja)"
+      "expression_id, blank_target, blank_choices, sentence_choices, context_prompt_ja, expressions(code, expression_en, meaning_ja, scene_tags)"
     );
 
   if (error) {
@@ -432,9 +452,11 @@ async function listStage2ContentPool(userId: string): Promise<DbStage2ContentRow
   }
 
   const rows = (data ?? []) as unknown as DbStage2ContentRow[];
-  return rows
+  const sortedByCode = rows
     .filter((row) => graduatedIds.has(row.expression_id) && row.expressions)
     .sort((a, b) => (a.expressions!.code).localeCompare(b.expressions!.code));
+
+  return sortDailyFirst(sortedByCode.map((row) => ({ ...row, sceneTags: row.expressions!.scene_tags ?? [] })));
 }
 
 // Stage2のアクティブセット（未卒業フレーズの先頭からSTAGE2_ACTIVE_SET_SIZE件）を計算する。
