@@ -7,14 +7,18 @@ import { getStage0Round } from "@/lib/supabase/speaking-roadmap";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-export async function GET() {
+export async function GET(request: Request) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "この機能を利用するにはログインが必要です" }, { status: 401 });
   }
 
+  // ?errorTag=冠詞 のようにカテゴリを指定すると、そのカテゴリだけに絞って出題する。
+  // 未指定なら全カテゴリを対象にする（従来通り）。
+  const errorTag = new URL(request.url).searchParams.get("errorTag") ?? undefined;
+
   try {
-    const round = await getStage0Round(user.id);
+    const round = await getStage0Round(user.id, errorTag);
     return NextResponse.json(round, { headers: { "Cache-Control": "no-store, must-revalidate" } });
   } catch (err) {
     const message = err instanceof Error ? err.message : "出題データの取得に失敗しました";

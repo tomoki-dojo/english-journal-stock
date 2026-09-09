@@ -650,14 +650,21 @@ type UsageRulePoolRow = {
 };
 
 // 公開済みのusage_rulesを、紐づくusage_rule_prompts込みでcode順に取得する。
+// errorTagを指定すると、そのカテゴリ（冠詞・可算不可算など）だけに絞り込む
+// （「冠詞だけ集中的に練習したい」というカテゴリ別練習に対応するため）。
 // 現状件数が少ない（数十件規模の見込み）ため、Stage1で踏んだPostgRESTの行数上限バグの
 // リスクは当面ない。件数が増えてきたら同種の対策を検討する。
-async function listUsageRulePool(): Promise<UsageRulePoolRow[]> {
-  const { data, error } = await supabaseAdmin
+async function listUsageRulePool(errorTag?: string): Promise<UsageRulePoolRow[]> {
+  let query = supabaseAdmin
     .from("usage_rules")
     .select("id, code, error_tag, title, core_image_ja, usage_rule_prompts(prompt_ja, answer_en)")
-    .eq("publish_status", "公開")
-    .order("code", { ascending: true });
+    .eq("publish_status", "公開");
+
+  if (errorTag) {
+    query = query.eq("error_tag", errorTag);
+  }
+
+  const { data, error } = await query.order("code", { ascending: true });
 
   if (error) {
     throw new Error(`Stage0出題プールの取得に失敗しました: ${error.message}`);
@@ -675,14 +682,33 @@ async function listUsageRulePool(): Promise<UsageRulePoolRow[]> {
   }));
 }
 
+// カテゴリ選択UI用に、現在公開済みのusage_rulesが実際に持っているerror_tagの一覧を返す
+// （まだコンテンツが無いカテゴリを選択肢に出さないようにするため、固定リストではなく実データから導出する）。
+export async function listUsageRuleErrorTags(): Promise<string[]> {
+  const { data, error } = await supabaseAdmin
+    .from("usage_rules")
+    .select("error_tag")
+    .eq("publish_status", "公開");
+
+  if (error) {
+    throw new Error(`Stage0カテゴリ一覧の取得に失敗しました: ${error.message}`);
+  }
+
+  return Array.from(new Set((data ?? []).map((row) => row.error_tag as string)));
+}
+
 // Stage0のアクティブセット（未卒業の「感覚」の先頭からSTAGE0_ACTIVE_SET_SIZE件）を計算する。
+// errorTagを指定すると、そのカテゴリの感覚だけを対象にする。
 // Stage1・2と同じく新しい状態は持たず、毎回動的に計算する。
-async function getStage0ActiveSet(userId: string): Promise<{
+async function getStage0ActiveSet(
+  userId: string,
+  errorTag?: string
+): Promise<{
   activeSet: (UsageRulePoolRow & { streak: number })[];
   totalCount: number;
   remainingCount: number;
 }> {
-  const pool = await listUsageRulePool();
+  const pool = await listUsageRulePool(errorTag);
 
   const { data: progressData, error: progressError } = await supabaseAdmin
     .from("speaking_stage_progress")
@@ -718,9 +744,10 @@ async function getStage0ActiveSet(userId: string): Promise<{
 // Stage0のラウンド（ミニクイズ1回分）を決める。
 // アクティブセットから最大STAGE0_ROUND_SIZE件を選び、各ruleにつき出題文を1つランダムに選ぶ
 // （同じ感覚でも毎回語彙を変えて出題することで、暗記ではなく感覚そのものの定着を狙う）。
-// coreImageJaは「言えなかった」を選んだときだけUI側で表示する（先には見せない。テスト効果）。
-export async function getStage0Round(userId: string): Promise<Stage0RoundResponse> {
-  const { activeSet, totalCount, remainingCount } = await getStage0ActiveSet(userId);
+// coreImageJaは答え合わせの時点で必ずUI側に表示する（自己申告の正誤に関係なく毎回）。
+// errorTagを指定すると、そのカテゴリ（冠詞・可算不可算など）だけに絞って出題する。
+export async function getStage0Round(userId: string, errorTag?: string): Promise<Stage0RoundResponse> {
+  const { activeSet, totalCount, remainingCount } = await getStage0ActiveSet(userId, errorTag);
 
   if (activeSet.length === 0) {
     return { status: "done", totalCount };

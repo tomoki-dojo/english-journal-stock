@@ -18,6 +18,12 @@ type QuestionResult = {
   graduated: boolean;
 };
 
+type Stage0PracticeProps = {
+  // カテゴリ選択UI用に、公開済みusage_rulesが実際に持っているerror_tagの一覧
+  // （まだコンテンツが無いカテゴリは選択肢に出てこない）。
+  availableErrorTags: string[];
+};
+
 const STAGE_COLOR = STAGE_COLORS[0];
 const WARMTH_BORDER_ALPHA: Record<WarmthLevel, string> = { 0: "00", 1: "33", 2: "55", 3: "80" };
 const WARMTH_BG_ALPHA: Record<WarmthLevel, string> = { 0: "00", 1: "0a", 2: "12", 3: "1a" };
@@ -49,7 +55,11 @@ const RESULT_SPARKLES = Array.from({ length: 10 }).map((_, i) => {
 // 出す設計にしていたが、「なんとなく」で言えた側を選んでしまう人もいるため、自己申告の正誤に
 // 関係なく毎回見せる形に変更した）。自己申告の「言えた/言えなかった」はストリーク（卒業判定）
 // にのみ使う。
-export function Stage0Practice() {
+//
+// カテゴリ選択（2026-09-09追加）：「冠詞だけ集中的に練習したい」という声を受け、error_tagで
+// 絞り込めるようにした。選択状態はnull=「すべて」として扱い、練習画面のどのビューでも
+// 常に切り替えられる（選択を変えたら新しいラウンドを取り直す）。
+export function Stage0Practice({ availableErrorTags }: Stage0PracticeProps) {
   const [state, setState] = useState<ViewState>("loading");
   const [questions, setQuestions] = useState<Stage0RoundQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -57,10 +67,11 @@ export function Stage0Practice() {
   const [revealed, setRevealed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedErrorTag, setSelectedErrorTag] = useState<string | null>(null);
 
   const currentQuestion = questions[currentIndex];
 
-  async function loadRound() {
+  async function loadRound(errorTag: string | null) {
     setState("loading");
     setCurrentIndex(0);
     setResults([]);
@@ -68,7 +79,10 @@ export function Stage0Practice() {
     setError(null);
 
     try {
-      const res = await fetch("/api/roadmap/stage0/round", { cache: "no-store" });
+      const url = errorTag
+        ? `/api/roadmap/stage0/round?errorTag=${encodeURIComponent(errorTag)}`
+        : "/api/roadmap/stage0/round";
+      const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) throw new Error("出題データの取得に失敗しました");
       const json: Stage0RoundResponse = await res.json();
 
@@ -87,9 +101,14 @@ export function Stage0Practice() {
   }
 
   useEffect(() => {
-    loadRound();
+    loadRound(selectedErrorTag);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedErrorTag]);
+
+  function handleSelectCategory(tag: string | null) {
+    if (tag === selectedErrorTag) return;
+    setSelectedErrorTag(tag);
+  }
 
   function handleReveal() {
     if (!currentQuestion || revealed) return;
@@ -143,26 +162,78 @@ export function Stage0Practice() {
     }
   }
 
+  // カテゴリ選択の横並びピル。「すべて」＋公開済みのerror_tag一覧。1カテゴリしかない間は
+  // 出し分ける意味が薄いので、2件以上あるときだけ表示する。
+  const categorySelector =
+    availableErrorTags.length > 1 ? (
+      <div className="mb-4 flex flex-wrap gap-1.5">
+        <button
+          type="button"
+          onClick={() => handleSelectCategory(null)}
+          className="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+          style={
+            selectedErrorTag === null
+              ? { backgroundColor: STAGE_COLOR, color: "#fff" }
+              : { backgroundColor: withAlpha(STAGE_COLOR, "12"), color: STAGE_COLOR }
+          }
+        >
+          すべて
+        </button>
+        {availableErrorTags.map((tag) => (
+          <button
+            key={tag}
+            type="button"
+            onClick={() => handleSelectCategory(tag)}
+            className="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+            style={
+              selectedErrorTag === tag
+                ? { backgroundColor: STAGE_COLOR, color: "#fff" }
+                : { backgroundColor: withAlpha(STAGE_COLOR, "12"), color: STAGE_COLOR }
+            }
+          >
+            {tag}
+          </button>
+        ))}
+      </div>
+    ) : null;
+
   if (state === "loading") {
-    return <p className="text-sm text-zinc-400">読み込み中...</p>;
+    return (
+      <div>
+        {categorySelector}
+        <p className="text-sm text-zinc-400">読み込み中...</p>
+      </div>
+    );
   }
 
   if (state === "error") {
-    return <p className="text-sm text-red-600">{error ?? "エラーが発生しました"}</p>;
+    return (
+      <div>
+        {categorySelector}
+        <p className="text-sm text-red-600">{error ?? "エラーが発生しました"}</p>
+      </div>
+    );
   }
 
   if (state === "done") {
     return (
-      <div className="rounded-xl border border-zinc-200 bg-zinc-100/50 px-6 py-10 text-center">
-        <PartyPopper className="mx-auto mb-3 h-6 w-6" style={{ color: STAGE_COLOR }} />
-        <p className="text-sm text-zinc-700">今のところ、Stage0の感覚は全て卒業しました。</p>
-        <p className="mt-1 text-xs text-zinc-400">新しい感覚が追加されたら、またここに出てきます。</p>
-        <Link
-          href="/roadmap"
-          className="mt-4 inline-flex items-center gap-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
-        >
-          街に戻る
-        </Link>
+      <div>
+        {categorySelector}
+        <div className="rounded-xl border border-zinc-200 bg-zinc-100/50 px-6 py-10 text-center">
+          <PartyPopper className="mx-auto mb-3 h-6 w-6" style={{ color: STAGE_COLOR }} />
+          <p className="text-sm text-zinc-700">
+            {selectedErrorTag
+              ? `今のところ、「${selectedErrorTag}」の感覚は全て卒業しました。`
+              : "今のところ、Stage0の感覚は全て卒業しました。"}
+          </p>
+          <p className="mt-1 text-xs text-zinc-400">新しい感覚が追加されたら、またここに出てきます。</p>
+          <Link
+            href="/roadmap"
+            className="mt-4 inline-flex items-center gap-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
+          >
+            街に戻る
+          </Link>
+        </div>
       </div>
     );
   }
@@ -172,70 +243,79 @@ export function Stage0Practice() {
     const graduated = results.filter((r) => r.graduated);
 
     return (
-      <div className="relative overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100/50 p-6 text-center animate-round-complete-pop">
-        {RESULT_SPARKLES.map((s, i) => (
-          <span
-            key={i}
-            className={cn(
-              "absolute top-3 rounded-full animate-round-complete-sparkle",
-              s.large ? "h-2 w-2" : "h-1.5 w-1.5"
-            )}
-            style={
-              {
-                left: `${s.left}%`,
-                backgroundColor: s.warm ? STAGE_COLOR : "#fbbf24",
-                animationDelay: `${s.delay}s`,
-                "--sparkle-x": `${s.x}px`,
-                "--sparkle-y": `${s.y}px`,
-              } as React.CSSProperties
-            }
-          />
-        ))}
+      <div>
+        {categorySelector}
+        <div className="relative overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100/50 p-6 text-center animate-round-complete-pop">
+          {RESULT_SPARKLES.map((s, i) => (
+            <span
+              key={i}
+              className={cn(
+                "absolute top-3 rounded-full animate-round-complete-sparkle",
+                s.large ? "h-2 w-2" : "h-1.5 w-1.5"
+              )}
+              style={
+                {
+                  left: `${s.left}%`,
+                  backgroundColor: s.warm ? STAGE_COLOR : "#fbbf24",
+                  animationDelay: `${s.delay}s`,
+                  "--sparkle-x": `${s.x}px`,
+                  "--sparkle-y": `${s.y}px`,
+                } as React.CSSProperties
+              }
+            />
+          ))}
 
-        <PartyPopper className="relative mx-auto mb-3 h-6 w-6" style={{ color: STAGE_COLOR }} />
-        <p className="relative text-sm font-medium text-zinc-900">
-          今回のラウンド：{results.length}問中{correctCount}問「言えた」
-        </p>
+          <PartyPopper className="relative mx-auto mb-3 h-6 w-6" style={{ color: STAGE_COLOR }} />
+          <p className="relative text-sm font-medium text-zinc-900">
+            今回のラウンド：{results.length}問中{correctCount}問「言えた」
+          </p>
 
-        {graduated.length > 0 && (
-          <div className="relative mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-left text-sm text-emerald-800">
-            <p className="mb-1 font-medium">身についた感覚</p>
-            <ul className="space-y-0.5">
-              {graduated.map((r) => (
-                <li key={r.usageRuleId}>{r.title}</li>
-              ))}
-            </ul>
+          {graduated.length > 0 && (
+            <div className="relative mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-left text-sm text-emerald-800">
+              <p className="mb-1 font-medium">身についた感覚</p>
+              <ul className="space-y-0.5">
+                {graduated.map((r) => (
+                  <li key={r.usageRuleId}>{r.title}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="relative mt-6 flex gap-3">
+            <button
+              type="button"
+              onClick={() => loadRound(selectedErrorTag)}
+              style={{ backgroundColor: STAGE_COLOR }}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97]"
+            >
+              もう1ラウンド
+            </button>
+            <Link
+              href="/roadmap"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
+            >
+              街に戻る
+            </Link>
           </div>
-        )}
-
-        <div className="relative mt-6 flex gap-3">
-          <button
-            type="button"
-            onClick={loadRound}
-            style={{ backgroundColor: STAGE_COLOR }}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97]"
-          >
-            もう1ラウンド
-          </button>
-          <Link
-            href="/roadmap"
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
-          >
-            街に戻る
-          </Link>
         </div>
       </div>
     );
   }
 
   if (!currentQuestion) {
-    return <p className="text-sm text-zinc-400">読み込み中...</p>;
+    return (
+      <div>
+        {categorySelector}
+        <p className="text-sm text-zinc-400">読み込み中...</p>
+      </div>
+    );
   }
 
   const hasTint = currentQuestion.warmth > 0;
 
   return (
     <div>
+      {categorySelector}
       <RoundHeader stage={0} subFormatLabel="感覚" current={currentIndex + 1} total={questions.length} />
 
       <div

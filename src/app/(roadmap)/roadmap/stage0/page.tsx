@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
-import { getUserRoadmapState } from "@/lib/supabase/speaking-roadmap";
+import { getUserRoadmapState, listUsageRuleErrorTags } from "@/lib/supabase/speaking-roadmap";
 import { OnboardingQuiz } from "@/components/roadmap/onboarding-quiz";
 import { Stage0Practice } from "@/components/roadmap/stage0-practice";
 
@@ -18,6 +18,8 @@ export default async function RoadmapStage0Page() {
   if (!state || !state.onboardingQuizCompleted) {
     return <OnboardingQuiz />;
   }
+
+  const errorTags = await listUsageRuleErrorTags();
 
   return (
     <div className="max-w-xl">
@@ -36,7 +38,7 @@ export default async function RoadmapStage0Page() {
         </p>
       </div>
 
-      <Stage0Practice />
+      <Stage0Practice availableErrorTags={errorTags} />
     </div>
   );
 }
