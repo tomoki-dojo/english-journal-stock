@@ -205,31 +205,55 @@ function sortDailyFirst<T extends { sceneTags: string[] }>(rows: T[]): T[] {
   return [...rows].sort((a, b) => Number(isDailyScene(b.sceneTags)) - Number(isDailyScene(a.sceneTags)));
 }
 
-// 公開済み表現を全件・code順（安定した順序）に取得し、日常会話タグを優先する順に並べ替える。
-// listPublishedExpressions()は/library向けにcreated_at降順+1000件上限で作られており、
-// 全1060件超のような場合に古いバッチが不定順で切り捨てられてしまうため、
-// Stage1・2の出題プールにはそれを流用せず、専用にcode順の全件取得を行う。
+// 公開済み表現を「日常会話タグを含むもの」「含まないもの」に分けてそれぞれcode順に取得し、
+// 前者→後者の順に連結する。
+// 【2026-09-09 発覚したバグの記録】以前は.order("code").limit(5000)で全件を一括取得してから
+// JS側のsortDailyFirst()で並べ替えていたが、SupabaseのPostgREST側にはクライアントの.limit()指定
+// より優先されるデフォルトの行数上限（db-max-rows、既定1000件）があり、これを超える分は
+// 「取得された後」ではなく「取得される前」に切り捨てられる。公開表現がちょうど1000件を超え、
+// かつ新規追加した日常会話20件のcodeが末尾（EX-1071〜）だったため、JS側の並べ替えが実行される
+// 前にデータごと届かず、並べ替えが一切効いていないように見える不具合が起きていた。
+// 対策として、日常会話タグを含む行は専用のクエリ（.overlaps）で別出しにして取得することで、
+// 全体件数が1000件を超えても日常会話タグの行だけは常に取得漏れしないようにする。
 async function listStage1PhrasePool(): Promise<Stage1PoolRow[]> {
-  const { data, error } = await supabaseAdmin
-    .from("expressions")
-    .select("id, expression_en, meaning_ja, audio_expression_path, scene_tags")
-    .eq("publish_status", "公開")
-    .order("code", { ascending: true })
-    .limit(5000);
+  const selectCols = "id, expression_en, meaning_ja, audio_expression_path, scene_tags";
+  const dailyTagsLiteral = `{${DAILY_SCENE_TAGS.join(",")}}`;
 
-  if (error) {
-    throw new Error(`Stage1出題プールの取得に失敗しました: ${error.message}`);
+  const [dailyRes, restRes] = await Promise.all([
+    supabaseAdmin
+      .from("expressions")
+      .select(selectCols)
+      .eq("publish_status", "公開")
+      .overlaps("scene_tags", DAILY_SCENE_TAGS as unknown as string[])
+      .order("code", { ascending: true })
+      .limit(1000),
+    supabaseAdmin
+      .from("expressions")
+      .select(selectCols)
+      .eq("publish_status", "公開")
+      .not("scene_tags", "ov", dailyTagsLiteral)
+      .order("code", { ascending: true })
+      .limit(1000),
+  ]);
+
+  if (dailyRes.error) {
+    throw new Error(`Stage1出題プールの取得に失敗しました: ${dailyRes.error.message}`);
+  }
+  if (restRes.error) {
+    throw new Error(`Stage1出題プールの取得に失敗しました: ${restRes.error.message}`);
   }
 
-  const rows = (data ?? []).map((row) => ({
+  const mapRow = (row: Record<string, unknown>): Stage1PoolRow => ({
     id: row.id as string,
     expressionEn: row.expression_en as string,
     meaningJa: (row.meaning_ja as string | null) ?? undefined,
     hasAudioExpression: Boolean(row.audio_expression_path),
     sceneTags: (row.scene_tags as string[] | null) ?? [],
-  }));
+  });
 
-  return sortDailyFirst(rows);
+  // 日常会話タグの行は既にoverlapsクエリで絞り込み済みなので、ここでのsortDailyFirstは
+  // 「万一分類が重複・漏れした場合の保険」程度の意味。実質的な並び順は上のクエリ2本の連結で決まる。
+  return [...(dailyRes.data ?? []).map(mapRow), ...(restRes.data ?? []).map(mapRow)];
 }
 
 // Stage1のアクティブセット（未卒業フレーズの先頭からSTAGE1_ACTIVE_SET_SIZE件）を計算する。
