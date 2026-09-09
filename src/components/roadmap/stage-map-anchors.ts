@@ -17,6 +17,15 @@ export const STAGE_MAP_ANCHORS: Record<
   5: { building: { top: 14, left: 88 }, buttonOffset: { top: 10, left: -16 }, size: 36 },
 };
 
+// Stage0（使い分けパーツ）専用の配置。Stage1〜5は手前→奥の一本道（対角線上）に並ぶが、
+// Stage0はその道のどこにも属さない独立エリアという扱いのため、あえて道から外れた
+// 右下の余白に単独で置く（「資料館」のような、いつでも寄れるランドマーク）。
+export const STAGE0_MAP_ANCHOR: { building: MapPoint; buttonOffset: MapPoint; size: number } = {
+  building: { top: 88, left: 80 },
+  buttonOffset: { top: 9, left: 4 },
+  size: 46,
+};
+
 // サイズ(px)からレスポンシブなclamp()の幅/高さ文字列を作る（建物マーカー用）。
 // 最小値はサイズの80%を下限にし、一番狭い画面幅（〜360px）でも
 // タップ可能なStage1・2の建物マーカーが潰れすぎないようにする

@@ -44,17 +44,17 @@ const RESULT_SPARKLES = Array.from({ length: 10 }).map((_, i) => {
 // 同じ感覚に対する複数パターンで安定して「言えた」が続くまでを卒業条件とする。
 //
 // フローはStage2のkind:"produce"と似ているが、決定的に違うのは解説（coreImageJa）の出し方：
-// 先に読ませず、まず声に出させる→答えを確認する→自己申告させ、「言えなかった」を選んだときだけ
-// その場で解説を出す（初回に限らず毎回）。先に答えを教えるより、自分でつまずいた直後に
-// 種明かしされる方が記憶に残る、というテスト効果を狙った設計。
+// 先に読ませず、まず声に出させる→答えを確認する、まではStage2と同じ。答え合わせの時点で
+// 解説（核イメージ）も必ず一緒に見せる（2026-09-09：当初は「言えなかった」を選んだ時だけ
+// 出す設計にしていたが、「なんとなく」で言えた側を選んでしまう人もいるため、自己申告の正誤に
+// 関係なく毎回見せる形に変更した）。自己申告の「言えた/言えなかった」はストリーク（卒業判定）
+// にのみ使う。
 export function Stage0Practice() {
   const [state, setState] = useState<ViewState>("loading");
   const [questions, setQuestions] = useState<Stage0RoundQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [results, setResults] = useState<QuestionResult[]>([]);
   const [revealed, setRevealed] = useState(false);
-  // 「言えなかった」を選んだ直後にtrueになり、解説を表示する。「次へ」を押すまで次の問題に進まない。
-  const [showExplanation, setShowExplanation] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,7 +65,6 @@ export function Stage0Practice() {
     setCurrentIndex(0);
     setResults([]);
     setRevealed(false);
-    setShowExplanation(false);
     setError(null);
 
     try {
@@ -100,7 +99,6 @@ export function Stage0Practice() {
   // 次の問題へ進む（ラウンド最後なら結果画面へ）。
   function advanceToNext() {
     setRevealed(false);
-    setShowExplanation(false);
     if (currentIndex + 1 < questions.length) {
       setCurrentIndex((i) => i + 1);
     } else {
@@ -108,8 +106,8 @@ export function Stage0Practice() {
     }
   }
 
-  // 「言えた」なら結果を記録してすぐ次へ。「言えなかった」なら結果を記録したうえで解説を出し、
-  // ユーザーが「次へ」を押すまでその場に留まる（先に解説を読ませず、つまずいた直後に見せる設計）。
+  // 結果を記録してすぐ次へ進む（解説は自己申告に関係なく答え合わせ時点で常に表示済みのため、
+  // ここでの分岐は不要）。
   async function handleSelfReport(correct: boolean) {
     if (!currentQuestion || submitting) return;
     setSubmitting(true);
@@ -137,11 +135,7 @@ export function Stage0Practice() {
         },
       ]);
 
-      if (correct) {
-        advanceToNext();
-      } else {
-        setShowExplanation(true);
-      }
+      advanceToNext();
     } catch (err) {
       setError(err instanceof Error ? err.message : "結果の保存に失敗しました");
     } finally {
@@ -277,50 +271,40 @@ export function Stage0Practice() {
         ) : (
           <div className="animate-question-card-enter">
             <div
-              className="mb-4 rounded-lg border px-4 py-3"
+              className="mb-3 rounded-lg border px-4 py-3"
               style={{ borderColor: withAlpha(STAGE_COLOR, "55"), backgroundColor: withAlpha(STAGE_COLOR, "12") }}
             >
               <p className="text-base font-semibold text-zinc-900">{currentQuestion.answerEn}</p>
             </div>
 
-            {!showExplanation ? (
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  disabled={submitting}
-                  onClick={() => handleSelfReport(true)}
-                  style={{ backgroundColor: STAGE_COLOR }}
-                  className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97] disabled:opacity-50"
-                >
-                  <Check className="h-4 w-4" />
-                  言えた
-                </button>
-                <button
-                  type="button"
-                  disabled={submitting}
-                  onClick={() => handleSelfReport(false)}
-                  className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-600 transition-all duration-150 hover:border-zinc-400 active:scale-[.97] disabled:opacity-50"
-                >
-                  <X className="h-4 w-4" />
-                  言えなかった
-                </button>
-              </div>
-            ) : (
-              <div className="animate-question-card-enter">
-                <div className="mb-4 flex gap-2 rounded-lg border border-violet-200 bg-violet-50 p-3 text-sm text-violet-900">
-                  <Lightbulb className="mt-0.5 h-4 w-4 flex-shrink-0" style={{ color: STAGE_COLOR }} />
-                  <p>{currentQuestion.coreImageJa}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={advanceToNext}
-                  style={{ backgroundColor: STAGE_COLOR }}
-                  className="flex w-full items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97]"
-                >
-                  次へ
-                </button>
-              </div>
-            )}
+            {/* 解説は自己申告の前に、答え合わせと同時に必ず見せる（「なんとなく言えた」を選んだ人が
+                核イメージを読み逃さないように）。 */}
+            <div className="mb-4 flex gap-2 rounded-lg border border-violet-200 bg-violet-50 p-3 text-sm text-violet-900">
+              <Lightbulb className="mt-0.5 h-4 w-4 flex-shrink-0" style={{ color: STAGE_COLOR }} />
+              <p>{currentQuestion.coreImageJa}</p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() => handleSelfReport(true)}
+                style={{ backgroundColor: STAGE_COLOR }}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97] disabled:opacity-50"
+              >
+                <Check className="h-4 w-4" />
+                言えた
+              </button>
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() => handleSelfReport(false)}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-600 transition-all duration-150 hover:border-zinc-400 active:scale-[.97] disabled:opacity-50"
+              >
+                <X className="h-4 w-4" />
+                言えなかった
+              </button>
+            </div>
           </div>
         )}
         {error && <p className="mt-3 text-xs text-red-600">{error}</p>}

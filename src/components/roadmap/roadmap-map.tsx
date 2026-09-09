@@ -1,8 +1,8 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { Mic, PenLine, Radio, Coffee, RadioTower } from "lucide-react";
+import { Lightbulb, Mic, PenLine, Radio, Coffee, RadioTower } from "lucide-react";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
-import { STAGE_MAP_ANCHORS, markerSizeStyle } from "./stage-map-anchors";
+import { STAGE_MAP_ANCHORS, STAGE0_MAP_ANCHOR, markerSizeStyle } from "./stage-map-anchors";
 
 type StageNumber = 1 | 2 | 3 | 4 | 5;
 
@@ -36,6 +36,57 @@ export function RoadmapMap({ currentStage }: RoadmapMapProps) {
     <div className="relative mb-6 aspect-[4/3] w-full overflow-hidden rounded-2xl border border-zinc-200 bg-gradient-to-b from-sky-50 to-zinc-100 sm:aspect-[2/1]">
       {/* 地面のグリッド風の目印。実イラスト実装までの簡易背景。 */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_100%,rgba(255,255,255,0.6),transparent_60%)]" />
+
+      {/*
+        Stage0（使い分けパーツ）。Stage1〜5の一本道（対角線）とは別の独立エリアのため、
+        currentStageによる解放判定はせず常にクリック可能。道から外れた場所に単独で置くことで、
+        「一本道の一部ではない」ことを視覚的にも示す。
+      */}
+      {(() => {
+        const anchor = STAGE0_MAP_ANCHOR;
+        const markerSize = markerSizeStyle(anchor.size);
+        const color = STAGE_COLORS[0];
+        const buttonTop = anchor.building.top + anchor.buttonOffset.top;
+        const buttonLeft = anchor.building.left + anchor.buttonOffset.left;
+
+        return (
+          <div>
+            <div
+              className="absolute -translate-x-1/2 -translate-y-1/2 rounded-2xl"
+              style={{
+                top: `${anchor.building.top}%`,
+                left: `${anchor.building.left}%`,
+                width: markerSize,
+                height: markerSize,
+                backgroundColor: withAlpha(color, "26"),
+                border: `2px dashed ${color}`,
+              }}
+              aria-hidden="true"
+            >
+              <Lightbulb
+                className="absolute left-1/2 top-1/2 h-[45%] w-[45%] -translate-x-1/2 -translate-y-1/2"
+                style={{ color }}
+                strokeWidth={2.25}
+              />
+            </div>
+
+            <Link
+              href="/roadmap/stage0"
+              className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-white/95 px-3 py-1.5 shadow-sm transition-transform hover:shadow-md active:scale-95"
+              style={{
+                top: `${buttonTop}%`,
+                left: `${buttonLeft}%`,
+                border: `1.5px solid ${color}`,
+              }}
+            >
+              <Lightbulb className="h-3.5 w-3.5 flex-shrink-0" style={{ color }} strokeWidth={2.25} />
+              <span className="text-xs font-semibold" style={{ color }}>
+                使い分け
+              </span>
+            </Link>
+          </div>
+        );
+      })()}
 
       {STAGE_NUMBERS.map((stage) => {
         const anchor = STAGE_MAP_ANCHORS[stage];
