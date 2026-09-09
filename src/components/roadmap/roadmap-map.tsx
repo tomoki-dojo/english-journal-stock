@@ -81,8 +81,9 @@ export function RoadmapMap({ currentStage }: RoadmapMapProps) {
             >
               <Lightbulb className="h-3.5 w-3.5 flex-shrink-0" style={{ color }} strokeWidth={2.25} />
               <span className="text-xs font-semibold" style={{ color }}>
-                使い分け
+                Stage0
               </span>
+              <span className="text-[10px] text-zinc-500">感覚</span>
             </Link>
           </div>
         );

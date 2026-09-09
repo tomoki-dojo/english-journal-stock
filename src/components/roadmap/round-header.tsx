@@ -16,7 +16,7 @@ type RoundHeaderProps = {
 // 色はSTAGE_COLORS（Stage0は独立エリアとして紫、Stage1〜5のテーマカラー）で判別できるようにし、
 // 進捗は「ラウンド内の◯問目」のみを数字で見せる（フレーズ単体の習熟度は別途GrowthBadgeで非数値表現する）。
 const STAGE_META = {
-  0: { label: "使い分けパーツ", icon: Lightbulb },
+  0: { label: "Stage0", icon: Lightbulb },
   1: { label: "Stage1", icon: Mic },
   2: { label: "Stage2", icon: PenLine },
 } as const;

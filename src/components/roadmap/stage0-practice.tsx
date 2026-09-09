@@ -155,7 +155,7 @@ export function Stage0Practice() {
     return (
       <div className="rounded-xl border border-zinc-200 bg-zinc-100/50 px-6 py-10 text-center">
         <PartyPopper className="mx-auto mb-3 h-6 w-6" style={{ color: STAGE_COLOR }} />
-        <p className="text-sm text-zinc-700">今のところ、使い分けパーツは全て卒業しました。</p>
+        <p className="text-sm text-zinc-700">今のところ、Stage0の感覚は全て卒業しました。</p>
         <p className="mt-1 text-xs text-zinc-400">新しい感覚が追加されたら、またここに出てきます。</p>
         <Link
           href="/roadmap"
@@ -236,7 +236,7 @@ export function Stage0Practice() {
 
   return (
     <div>
-      <RoundHeader stage={0} current={currentIndex + 1} total={questions.length} />
+      <RoundHeader stage={0} subFormatLabel="感覚" current={currentIndex + 1} total={questions.length} />
 
       <div
         key={currentIndex}
