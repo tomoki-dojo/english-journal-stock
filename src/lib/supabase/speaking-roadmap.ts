@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { getTodayDateKey } from "@/lib/daily-rotation";
 import { getExpressionAudioSignedUrl } from "@/lib/supabase/expression-audio";
 import { judgeStage3Answer, checkStage3Usage } from "@/lib/stage3-ai";
+import { judgeStage4Turn, checkStage4Usage } from "@/lib/stage4-ai";
 import { getOrGenerateBlankChoiceReasons } from "@/lib/stage2-choice-reasons";
 import type { Plan } from "@/lib/plan";
 import {
@@ -19,6 +20,8 @@ import {
   STAGE2_ROUND_SIZE,
   STAGE3_ACTIVE_SET_SIZE,
   STAGE3_GRADUATE_STREAK,
+  STAGE4_GRADUATE_STREAK,
+  STAGE4_TURN_COUNT,
   computeWarmth,
   getStage1SubStep,
   getStage2SubStep,
@@ -37,6 +40,9 @@ import {
   type Stage2SubStep,
   type Stage3SessionResponse,
   type Stage3JudgeResult,
+  type Stage4ScenarioListItem,
+  type Stage4Turn,
+  type Stage4TurnOutcome,
   type UserRoadmapState,
 } from "@/components/roadmap/types";
 
@@ -372,11 +378,11 @@ export async function getStage1Round(userId: string): Promise<Stage1RoundRespons
 // 取り組んだこと自体を「今日練習した」記録にする（正誤は問わない）。
 async function reportStageStreakResult(
   userId: string,
-  stage: 0 | 1 | 2 | 3,
+  stage: 0 | 1 | 2 | 3 | 4,
   expressionId: string,
   graduateStreak: number,
   correct: boolean,
-  phraseSource: "expression" | "usage_rule" = "expression"
+  phraseSource: "expression" | "usage_rule" | "stage4_scenario" = "expression"
 ): Promise<{ streak: number; graduated: boolean }> {
   const { data: existing, error: fetchError } = await supabaseAdmin
     .from("speaking_stage_progress")
@@ -980,14 +986,38 @@ async function getStage3ActiveSet(userId: string): Promise<{
 // 使わず、各Stageの練習ページ自身が「出題できるか」を判定するのと全く同じ基準
 // （アクティブセットが規定数に届いているか）をその場で計算する。新しい永続状態は持たない
 // （_reference/speaking-roadmap-design.mdの「一度きりの永続フラグは持たない」方針を地図にも適用）。
+// Stage4はStage1〜3のようなアクティブセット（表現プール）方式ではなく固定シナリオ方式のため、
+// 「解放できる問題があるか」ではなく「Stage3で何か1つでも卒業できたか」を解放条件にする
+// （Stage3の実績があってはじめて、より高度な会話に進める、という自然な区切り）。
+async function hasAnyStage3Graduation(userId: string): Promise<boolean> {
+  const { count, error } = await supabaseAdmin
+    .from("speaking_stage_progress")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("stage", 3)
+    .eq("phrase_source", "expression")
+    .eq("status", "習得済み");
+
+  if (error) {
+    throw new Error(`Stage3卒業実績の取得に失敗しました: ${error.message}`);
+  }
+
+  return (count ?? 0) > 0;
+}
+
 export async function getRoadmapStageReadiness(
   userId: string
-): Promise<{ stage2Ready: boolean; stage3Ready: boolean }> {
-  const [stage2, stage3] = await Promise.all([getStage2ActiveSet(userId), getStage3ActiveSet(userId)]);
+): Promise<{ stage2Ready: boolean; stage3Ready: boolean; stage4Ready: boolean }> {
+  const [stage2, stage3, stage4Ready] = await Promise.all([
+    getStage2ActiveSet(userId),
+    getStage3ActiveSet(userId),
+    hasAnyStage3Graduation(userId),
+  ]);
 
   return {
     stage2Ready: stage2.activeSet.length >= STAGE2_ACTIVE_SET_SIZE,
     stage3Ready: stage3.activeSet.length > 0,
+    stage4Ready,
   };
 }
 
@@ -1120,6 +1150,162 @@ export async function reportStage3Result(
       feedbackJa: judged.judgment.feedbackJa,
       streak: newStreak,
       subStep: getStage3SubStep(newStreak),
+      graduated,
+      usage: judged.usage,
+    },
+  };
+}
+
+// ============================================================
+// Stage4（AIロールプレイ）
+// Stage1〜3の「表現プールから動的に出題」方式とは違い、固定シナリオ（stage4_scenarios）を
+// 一覧から選んでもらう方式（2026-09-12 設計・ユーザーとの議論で決定）。会話ログや発話内容は
+// DBに保存せず、サーバーは各ターンのリクエストでhistoryを受け取って都度AIに渡すだけの
+// 完全ステートレス設計（セッション用の永続テーブルを持たない）。
+// ============================================================
+
+// 公開中の全シナリオに、そのユーザーの進捗（speaking_stage_progress, stage=4,
+// phrase_source='stage4_scenario'）を重ねて返す。Stage1〜3と違いアクティブセットの概念がなく、
+// 全シナリオを常に選択肢として見せる（数が少ないうちは絞り込む必要がないため）。
+export async function listStage4Scenarios(userId: string): Promise<Stage4ScenarioListItem[]> {
+  const { data: scenarios, error } = await supabaseAdmin
+    .from("stage4_scenarios")
+    .select("id, code, scene_tag, title_ja, situation_ja, goal_ja, opening_line_en, level")
+    .eq("publish_status", "公開")
+    .order("code", { ascending: true });
+
+  if (error) {
+    throw new Error(`Stage4シナリオ一覧の取得に失敗しました: ${error.message}`);
+  }
+
+  const { data: progressRows, error: progressError } = await supabaseAdmin
+    .from("speaking_stage_progress")
+    .select("phrase_id, status, correct_streak")
+    .eq("user_id", userId)
+    .eq("stage", 4)
+    .eq("phrase_source", "stage4_scenario");
+
+  if (progressError) {
+    throw new Error(`Stage4進捗の取得に失敗しました: ${progressError.message}`);
+  }
+
+  const progressMap = new Map<string, { status: string; correct_streak: number }>();
+  for (const row of progressRows ?? []) {
+    progressMap.set(row.phrase_id as string, {
+      status: row.status as string,
+      correct_streak: row.correct_streak as number,
+    });
+  }
+
+  return (scenarios ?? []).map((row) => {
+    const progress = progressMap.get(row.id as string);
+    const streak = progress?.correct_streak ?? 0;
+    return {
+      id: row.id as string,
+      code: row.code as string,
+      sceneTag: row.scene_tag as string,
+      titleJa: row.title_ja as string,
+      situationJa: row.situation_ja as string,
+      goalJa: row.goal_ja as string,
+      openingLineEn: row.opening_line_en as string,
+      level: row.level as "初級" | "中級" | "上級",
+      status: (progress?.status as "未着手" | "練習中" | "習得済み" | undefined) ?? "未着手",
+      warmth: computeWarmth(streak, STAGE4_GRADUATE_STREAK),
+    };
+  });
+}
+
+// シナリオ選択画面で「今日のセッション あと◯回」を表示するための、消費なしの残数確認。
+export async function getStage4UsageInfo(userId: string, plan: Plan): Promise<{ remaining: number; limit: number }> {
+  const check = await checkStage4Usage(userId, plan);
+  return check.allowed
+    ? { remaining: check.remaining + 1, limit: check.limit }
+    : { remaining: 0, limit: check.limit };
+}
+
+// Stage4の1ターン分を処理する。turnIndex===1のときだけ日次セッション開始回数をチェック・消費し、
+// turnIndex===STAGE4_TURN_COUNT（最終ターン）のときだけstreak更新（シナリオ別卒業判定）を行う。
+// Stage3と同様、不正解（誤り）というより「そのターンで検出されたerrorTags」を毎ターン
+// user_error_tag_statsに集計する（最終ターンだけでなく、会話全体のエラー傾向を拾うため）。
+export async function reportStage4Turn(
+  userId: string,
+  plan: Plan,
+  scenarioId: string,
+  turnIndex: number,
+  history: Stage4Turn[],
+  userUtterance: string
+): Promise<Stage4TurnOutcome> {
+  const { data: scenario, error: scenarioError } = await supabaseAdmin
+    .from("stage4_scenarios")
+    .select("title_ja, situation_ja, ai_persona_ja, goal_ja")
+    .eq("id", scenarioId)
+    .eq("publish_status", "公開")
+    .maybeSingle();
+
+  if (scenarioError) {
+    throw new Error(`Stage4シナリオの取得に失敗しました: ${scenarioError.message}`);
+  }
+  if (!scenario) {
+    return { status: "error", message: "対象のシナリオが見つかりませんでした" };
+  }
+
+  const judged = await judgeStage4Turn({
+    userId,
+    plan,
+    scenarioTitleJa: scenario.title_ja as string,
+    situationJa: scenario.situation_ja as string,
+    aiPersonaJa: scenario.ai_persona_ja as string,
+    goalJa: scenario.goal_ja as string,
+    turnIndex,
+    history,
+    userUtterance,
+  });
+
+  if (!judged.ok) {
+    if (judged.reason === "limit_exceeded") {
+      return { status: "limit_exceeded", limit: judged.limit };
+    }
+    return { status: "error", message: judged.message };
+  }
+
+  if (judged.turn.errorTags.length > 0) {
+    await recordErrorTags(userId, judged.turn.errorTags);
+  }
+
+  const isFinalTurn = turnIndex >= STAGE4_TURN_COUNT;
+
+  if (!isFinalTurn) {
+    return {
+      status: "ok",
+      result: {
+        aiReplyEn: judged.turn.aiReplyEn,
+        turnIndex,
+        sessionComplete: false,
+        errorTags: judged.turn.errorTags,
+        usage: judged.usage,
+      },
+    };
+  }
+
+  const { streak, graduated } = await reportStageStreakResult(
+    userId,
+    4,
+    scenarioId,
+    STAGE4_GRADUATE_STREAK,
+    judged.turn.overallPass === true,
+    "stage4_scenario"
+  );
+
+  return {
+    status: "ok",
+    result: {
+      aiReplyEn: judged.turn.aiReplyEn,
+      turnIndex,
+      sessionComplete: true,
+      errorTags: judged.turn.errorTags,
+      overallPass: judged.turn.overallPass === true,
+      feedbackJa: judged.turn.feedbackJa,
+      streak,
       graduated,
       usage: judged.usage,
     },

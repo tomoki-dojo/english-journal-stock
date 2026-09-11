@@ -296,3 +296,81 @@ export type Stage3JudgeResult = {
   graduated: boolean;
   usage: Stage3UsageInfo;
 };
+
+// ============================================================
+// Stage4（AIロールプレイ）
+// 2026-09-12 設計（_reference/speaking-roadmap-design.md参照）。Stage1〜3と違い、追跡単位が
+// 「フレーズ単位」から「会話セッション単位」に変わる。コンテンツはStage1〜3のような
+// アクティブセット方式（表現プールから動的に出題）ではなく、固定シナリオ（stage4_scenarios）を
+// あらかじめ用意し、ユーザーがシーンを選んで会話する方式（ユーザーとの議論で決定：
+// AIによる動的生成は会話の質・一貫性がブレやすいため見送った）。
+//
+// 1回のセッションは固定5ターン（ユーザー発話5回）で終了し、最終ターンでAIが会話全体を評価する。
+// 卒業条件はStage1〜3のstreak方式を踏襲しつつ「シナリオ別に卒業」する（累計セッション数ではない。
+// 「このシナリオはもう話せるようになった」という達成感を個別に出せるほうを採用）。
+// speaking_stage_progressをphrase_source='stage4_scenario', stage=4として流用し、
+// 新規の進捗テーブルは作らない。
+//
+// Stage3同様、発話テキスト・会話ログそのものはDBに保存しない。サーバーは各ターンのリクエストで
+// それまでの会話履歴(history)を受け取って都度AIに渡すだけの完全ステートレス設計にし、
+// セッション用の永続テーブルを持たない（プライバシー配慮とシンプルさの両立）。
+export const STAGE4_TURN_COUNT = 5;
+export const STAGE4_GRADUATE_STREAK = 2;
+
+// 1日のセッション開始回数の上限。Stage3が「1回の発話judge」単位でFree=8/Pro=50だったのに対し、
+// Stage4は「5ターン会話1本」が1回分のコスト単位になる（design doc概算で約0.06円/セッション、
+// Stage3の1回0.02円の3倍程度）ため、セッション単位で少なめの回数に設定する。実コストは誤差
+// レベルのため原価防衛ではなく体験設計上の数字であり、Stage3同様ユーザーの様子を見て調整する
+// 前提（Stage3も2→5→8回と実際に調整した経緯がある）。
+export const STAGE4_FREE_DAILY_LIMIT = 3;
+export const STAGE4_PRO_DAILY_LIMIT = 15;
+
+export type Stage4Scenario = {
+  id: string;
+  code: string;
+  sceneTag: string;
+  titleJa: string;
+  situationJa: string;
+  goalJa: string;
+  openingLineEn: string;
+  level: "初級" | "中級" | "上級";
+};
+
+// シナリオ選択画面用。習熟度はStage1〜3と同じくwarmthで非数値表現する。
+export type Stage4ScenarioListItem = Stage4Scenario & {
+  status: "未着手" | "練習中" | "習得済み";
+  warmth: WarmthLevel;
+};
+
+export type Stage4Turn = { role: "ai" | "user"; text: string };
+
+export type Stage4UsageInfo = { remaining: number; limit: number };
+
+export type Stage4TurnRequest = {
+  scenarioId: string;
+  // 1始まり。1ならセッション開始（日次利用回数を消費）、STAGE4_TURN_COUNTなら最終ターン
+  // （セッション全体の合否判定も行う）。
+  turnIndex: number;
+  // それまでの会話履歴（AIの冒頭発話を含む、直近のuserUtteranceは含まない）。
+  // サーバーはこれを都度受け取るだけでDBには保存しない。
+  history: Stage4Turn[];
+  userUtterance: string;
+};
+
+export type Stage4TurnResult = {
+  aiReplyEn: string;
+  turnIndex: number;
+  sessionComplete: boolean;
+  errorTags: string[];
+  // 最終ターンのみ値が入る
+  overallPass?: boolean;
+  feedbackJa?: string;
+  streak?: number;
+  graduated?: boolean;
+  usage: Stage4UsageInfo;
+};
+
+export type Stage4TurnOutcome =
+  | { status: "ok"; result: Stage4TurnResult }
+  | { status: "limit_exceeded"; limit: number }
+  | { status: "error"; message: string };

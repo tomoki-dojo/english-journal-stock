@@ -7,9 +7,9 @@ import { STAGE_MAP_ANCHORS, STAGE0_MAP_ANCHOR, markerSizeStyle } from "./stage-m
 type StageNumber = 1 | 2 | 3 | 4 | 5;
 
 // 練習画面(/roadmap/stageN)が実際に存在するStageのみ、地図上でクリック可能にする。
-// Stage4〜5は画面自体が未実装のため、進捗上「解放」されていてもリンクは張らない
+// Stage5は画面自体が未実装のため、進捗上「解放」されていてもリンクは張らない
 // （実装が追いついたらここに追加するだけでよい）。
-const IMPLEMENTED_STAGES: readonly StageNumber[] = [1, 2, 3];
+const IMPLEMENTED_STAGES: readonly StageNumber[] = [1, 2, 3, 4];
 
 const STAGE_META: Record<StageNumber, { label: string; caption: string; icon: LucideIcon; href: string }> = {
   1: { label: "Stage1", caption: "音読", icon: Mic, href: "/roadmap/stage1" },
@@ -27,8 +27,10 @@ type RoadmapMapProps = {
   // 修正：以前はuser_roadmap_state.current_stageという、オンボーディング時に1回だけ
   // 書かれて以後更新されない値で解放判定しており、Stage1を卒業してもStage2が
   // 永久に解放されないバグがあった。詳細は_reference/speaking-roadmap-design.md参照）。
-  // Stage4・5は画面自体が未実装のため、この値に関わらずIMPLEMENTED_STAGESで常にロック表示にする。
-  stageReadiness: { stage2Ready: boolean; stage3Ready: boolean };
+  // Stage4はStage3の卒業実績（何か1つでも習得済みか）で判定する（詳細はspeaking-roadmap.tsの
+  // getRoadmapStageReadiness参照）。Stage5は画面自体が未実装のため、この値に関わらず
+  // IMPLEMENTED_STAGESで常にロック表示にする。
+  stageReadiness: { stage2Ready: boolean; stage3Ready: boolean; stage4Ready: boolean };
 };
 
 // スピーキング・ロードマップのホーム＝「箱庭画面」本体。
@@ -42,9 +44,9 @@ export function RoadmapMap({ stageReadiness }: RoadmapMapProps) {
     1: true,
     2: stageReadiness.stage2Ready,
     3: stageReadiness.stage3Ready,
-    // Stage4・5は解放条件そのものが未設計（Stage4以降は将来タスク）。IMPLEMENTED_STAGESにより
+    4: stageReadiness.stage4Ready,
+    // Stage5は解放条件そのものが未設計（将来タスク）。IMPLEMENTED_STAGESにより
     // どのみち常にロック表示になるため、ここでは暫定でfalse固定にしておく。
-    4: false,
     5: false,
   };
   // 「現在地」ハイライト＝実際に解放されている最後（一番奥）のStage。
