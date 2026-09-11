@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Bookmark, ChevronDown } from "lucide-react";
+import { Bookmark, ChevronDown, RotateCcw } from "lucide-react";
 import { AudioPlayButton } from "./audio-play-button";
-import type { Expression, Level, VerificationStatus } from "./types";
+import { ReviewModal } from "./review-modal";
+import type { Expression, Level, RoadmapBoardInfo, VerificationStatus } from "./types";
 import type { Plan } from "@/lib/plan";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,8 @@ type ExpressionCardProps = {
   plan: Plan;
   loggedIn?: boolean;
   initialSaved?: boolean;
+  // 街の掲示板（#153）専用。未指定なら従来通りバッジ・復習ボタンは出さない。
+  roadmapInfo?: RoadmapBoardInfo;
 };
 
 export function ExpressionCard({
@@ -31,11 +34,13 @@ export function ExpressionCard({
   plan,
   loggedIn = true,
   initialSaved = false,
+  roadmapInfo,
 }: ExpressionCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [saved, setSaved] = useState(initialSaved);
   const [savePending, setSavePending] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   const hasMore =
     Boolean(expression.example2En) ||
@@ -121,6 +126,20 @@ export function ExpressionCard({
         >
           {expression.level}
         </span>
+        {roadmapInfo?.badges.map((badge) => (
+          <span
+            key={badge.label}
+            className={cn(
+              "rounded-md px-2 py-1 text-[11px] font-medium",
+              badge.mastered
+                ? "bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-500/20"
+                : "bg-accent/10 text-accent ring-1 ring-accent/20"
+            )}
+          >
+            {badge.label}
+            {badge.mastered ? "習得済み" : "練習中"}
+          </span>
+        ))}
       </div>
 
       <div className="mb-1 flex items-start justify-between gap-2">
@@ -228,11 +247,29 @@ export function ExpressionCard({
                   />
                 </button>
               )}
+              {roadmapInfo && (
+                <button
+                  type="button"
+                  onClick={() => setReviewOpen(true)}
+                  className="flex items-center gap-1 rounded-lg border border-accent/30 bg-accent/10 px-2 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent/20"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  復習する
+                </button>
+              )}
               {saveButton}
             </div>
           </div>
           {saveError && <p className="mt-2 text-xs text-red-600">{saveError}</p>}
         </>
+      {roadmapInfo && reviewOpen && (
+        <ReviewModal
+          expression={expression}
+          plan={plan}
+          loggedIn={loggedIn}
+          onClose={() => setReviewOpen(false)}
+        />
+      )}
     </article>
   );
 }

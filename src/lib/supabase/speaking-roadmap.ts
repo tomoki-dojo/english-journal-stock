@@ -4,6 +4,9 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getTodayDateKey } from "@/lib/daily-rotation";
 import { getExpressionAudioSignedUrl } from "@/lib/supabase/expression-audio";
+import { judgeStage3Answer, checkStage3Usage } from "@/lib/stage3-ai";
+import { getOrGenerateBlankChoiceReasons } from "@/lib/stage2-choice-reasons";
+import type { Plan } from "@/lib/plan";
 import {
   STAGE0_ACTIVE_SET_SIZE,
   STAGE0_GRADUATE_STREAK,
@@ -14,9 +17,12 @@ import {
   STAGE2_ACTIVE_SET_SIZE,
   STAGE2_GRADUATE_STREAK,
   STAGE2_ROUND_SIZE,
+  STAGE3_ACTIVE_SET_SIZE,
+  STAGE3_GRADUATE_STREAK,
   computeWarmth,
   getStage1SubStep,
   getStage2SubStep,
+  getStage3SubStep,
   type OnboardingQuizAnswers,
   type OnboardingQuizResult,
   type RoadmapStage,
@@ -24,10 +30,13 @@ import {
   type Stage0RoundResponse,
   type Stage1ReportResult,
   type Stage1RoundResponse,
+  type Stage2ReferenceChoice,
   type Stage2ReportResult,
   type Stage2RoundQuestion,
   type Stage2RoundResponse,
   type Stage2SubStep,
+  type Stage3SessionResponse,
+  type Stage3JudgeResult,
   type UserRoadmapState,
 } from "@/components/roadmap/types";
 
@@ -109,6 +118,55 @@ export async function recordDailyPractice(userId: string): Promise<void> {
   if (error) {
     throw new Error(`ストリーク記録の保存に失敗しました: ${error.message}`);
   }
+}
+
+// 今日の「賑わい度」（タスク#154）を+1する。Stage0〜3の練習（reportStageStreakResult経由）と
+// 復習フロー（recordExpressionReview）の両方から呼ばれる。daily_streak_logと違い1日1回では
+// なく、行った回数だけ加算する（読み込み→書き込みのため理論上は競合の余地があるが、
+// ゲーミフィケーション用の演出値であり厳密な整合性は求めないため許容する）。
+async function incrementDailyActivity(userId: string): Promise<void> {
+  const dateKey = getTodayDateKey();
+
+  const { data, error: fetchError } = await supabaseAdmin
+    .from("daily_activity_log")
+    .select("count")
+    .eq("user_id", userId)
+    .eq("date_key", dateKey)
+    .maybeSingle();
+
+  if (fetchError) {
+    throw new Error(`賑わい度の取得に失敗しました: ${fetchError.message}`);
+  }
+
+  const current = data?.count ?? 0;
+
+  const { error: upsertError } = await supabaseAdmin.from("daily_activity_log").upsert(
+    { user_id: userId, date_key: dateKey, count: current + 1 },
+    { onConflict: "user_id,date_key" }
+  );
+
+  if (upsertError) {
+    throw new Error(`賑わい度の保存に失敗しました: ${upsertError.message}`);
+  }
+}
+
+// ロードマップホーム画面に出す「今日の賑わい度」。日をまたげば自然に0に戻る
+// （その日のdate_keyの行がまだ存在しないだけなので、リセット処理は不要）。
+export async function getTodayActivityCount(userId: string): Promise<number> {
+  const dateKey = getTodayDateKey();
+
+  const { data, error } = await supabaseAdmin
+    .from("daily_activity_log")
+    .select("count")
+    .eq("user_id", userId)
+    .eq("date_key", dateKey)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`賑わい度の取得に失敗しました: ${error.message}`);
+  }
+
+  return data?.count ?? 0;
 }
 
 // 直近の連続練習日数を計算する（daily_streak_logの日付が今日または昨日から
@@ -314,7 +372,7 @@ export async function getStage1Round(userId: string): Promise<Stage1RoundRespons
 // 取り組んだこと自体を「今日練習した」記録にする（正誤は問わない）。
 async function reportStageStreakResult(
   userId: string,
-  stage: 0 | 1 | 2,
+  stage: 0 | 1 | 2 | 3,
   expressionId: string,
   graduateStreak: number,
   correct: boolean,
@@ -357,6 +415,7 @@ async function reportStageStreakResult(
   }
 
   await recordDailyPractice(userId);
+  await incrementDailyActivity(userId);
 
   if (graduated) {
     await incrementTotalMasteredCount(userId);
@@ -378,7 +437,12 @@ export async function reportStage1Result(
     STAGE1_GRADUATE_STREAK,
     correct
   );
-  return { streak, subStep: getStage1SubStep(streak), graduated };
+
+  // 卒業した回だけ、その卒業がStage2の解放条件（アクティブセットが7件に届く）を
+  // ちょうど満たした瞬間かどうかを調べる（そうでなければ無駄なクエリを避ける）。
+  const stage2JustUnlocked = graduated ? await checkStage2JustUnlocked(userId, expressionId) : false;
+
+  return { streak, subStep: getStage1SubStep(streak), graduated, stage2JustUnlocked };
 }
 
 // user_roadmap_state.total_mastered_countを+1する（都度集計を避けるためのキャッシュ更新）。
@@ -429,6 +493,9 @@ type DbStage2ContentRow = {
   // 「文脈からの想起」用の状況説明文。未入力の間はmeaning_jaにフォールバックする
   // （コンテンツ制作が追いつくまでの暫定措置。詳細はDBカラムコメント参照）。
   context_prompt_ja: string | null;
+  // 穴埋め音読の答え合わせで見せる「なぜ不自然か」の理由のキャッシュ。null=未生成
+  // （getOrGenerateBlankChoiceReasonsが初回アクセス時に生成してこのカラムに書き戻す）。
+  blank_choice_reasons: Stage2ReferenceChoice[] | null;
   expressions: {
     code: string;
     expression_en: string;
@@ -474,7 +541,7 @@ async function listStage2ContentPool(userId: string): Promise<DbStage2ContentRow
   const { data, error } = await supabaseAdmin
     .from("stage2_quiz_content")
     .select(
-      "expression_id, blank_target, blank_choices, sentence_choices, context_prompt_ja, expressions(code, expression_en, meaning_ja, scene_tags)"
+      "expression_id, blank_target, blank_choices, sentence_choices, context_prompt_ja, blank_choice_reasons, expressions(code, expression_en, meaning_ja, scene_tags)"
     );
 
   if (error) {
@@ -487,6 +554,19 @@ async function listStage2ContentPool(userId: string): Promise<DbStage2ContentRow
     .sort((a, b) => (a.expressions!.code).localeCompare(b.expressions!.code));
 
   return sortDailyFirst(sortedByCode.map((row) => ({ ...row, sceneTags: row.expressions!.scene_tags ?? [] })));
+}
+
+// Stage1のあるフレーズが今まさに卒業した直後、その卒業でStage2が「今まさに解放された」かどうかを判定する。
+// Stage2プールは「Stage1卒業済み ∩ Stage2コンテンツあり」の集合なので、卒業後のプール件数から、
+// 今回卒業したフレーズ自体がStage2コンテンツを持つ場合だけ1件差し引けば卒業前の件数が求まる
+// （二度クエリを打って前後を比較する必要はない）。
+async function checkStage2JustUnlocked(userId: string, justGraduatedExpressionId: string): Promise<boolean> {
+  const poolAfter = await listStage2ContentPool(userId);
+  const graduatedHasStage2Content = poolAfter.some((row) => row.expression_id === justGraduatedExpressionId);
+  const countAfter = poolAfter.length;
+  const countBefore = graduatedHasStage2Content ? countAfter - 1 : countAfter;
+
+  return countBefore < STAGE2_ACTIVE_SET_SIZE && countAfter >= STAGE2_ACTIVE_SET_SIZE;
 }
 
 // Stage2のアクティブセット（未卒業フレーズの先頭からSTAGE2_ACTIVE_SET_SIZE件）を計算する。
@@ -535,11 +615,12 @@ async function getStage2ActiveSet(userId: string): Promise<{
 // （2026-09-09の設計変更。経緯は_reference/speaking-roadmap-design.md参照）。
 // 以前の選択肢データ(blank_choices/sentence_choices)は、答え合わせ画面の
 // 「似ているけど違う表現」の参考表示(referenceChoices)として引き続き活用する。
-function buildStage2Question(
+// 穴埋め音読だけAI生成の理由(getOrGenerateBlankChoiceReasons)を要するため非同期関数にしている。
+async function buildStage2Question(
   row: DbStage2ContentRow,
   subStep: Stage2SubStep,
   streak: number
-): Stage2RoundQuestion {
+): Promise<Stage2RoundQuestion> {
   const meaningJa = row.expressions!.meaning_ja ?? undefined;
   const expressionEn = row.expressions!.expression_en;
   const warmth = computeWarmth(streak, STAGE2_GRADUATE_STREAK);
@@ -557,7 +638,18 @@ function buildStage2Question(
 
   if (subStep === "穴埋め音読") {
     const promptEn = expressionEn.replace(row.blank_target, "___");
-    const referenceChoices = shuffleArray(row.blank_choices.filter((c) => c !== row.blank_target));
+    const candidates = shuffleArray(row.blank_choices.filter((c) => c !== row.blank_target));
+    // 「似ているけど不自然」という判定を人間に見せる以上、理由を添える（2026-09-11
+    // 実機フィードバック）。フレーズごとに初回だけAI生成し、以降はDBキャッシュから返す
+    // （全ユーザー共通で使い回せるため実質ゼロコストに収束する）。本当に紛らわしいものだけ
+    // 最大2件に絞るのもこの関数の役割。
+    const referenceChoices = await getOrGenerateBlankChoiceReasons({
+      expressionId: row.expression_id,
+      cached: row.blank_choice_reasons,
+      expressionEn,
+      meaningJa: meaningJa ?? "",
+      candidates,
+    });
 
     return {
       kind: "produce",
@@ -577,7 +669,11 @@ function buildStage2Question(
   // ・文脈からの想起：直訳ヒントは見せず、状況説明文(context_prompt_ja)だけを見せて
   //   場面から表現を思い出して声に出させる（直訳できなくても場面から引き出す力を試す）。
   //   context_prompt_jaが未入力のフレーズは、コンテンツ制作が追いつくまでmeaningJaにフォールバックする。
-  const referenceChoices = shuffleArray(row.sentence_choices.filter((c) => c !== expressionEn));
+  // こちらは「間違い」ではなく「似た場面で使う他の表現」という参考表示のため、穴埋め音読と違い
+  // 不自然な理由をAI生成する対象ではない（reasonJaは空文字のまま。UI側は理由行を出さない）。
+  const referenceChoices: Stage2ReferenceChoice[] = shuffleArray(
+    row.sentence_choices.filter((c) => c !== expressionEn)
+  ).map((text) => ({ text, reasonJa: "" }));
   const promptJa = subStep === "文脈からの想起" ? row.context_prompt_ja ?? meaningJa : meaningJa;
 
   return {
@@ -613,7 +709,7 @@ export async function getStage2Round(userId: string): Promise<Stage2RoundRespons
 
   return {
     status: "round",
-    questions: sampled.map((row) => buildStage2Question(row, row.subStep, row.streak)),
+    questions: await Promise.all(sampled.map((row) => buildStage2Question(row, row.subStep, row.streak))),
     remainingCount,
     totalCount,
   };
@@ -791,4 +887,316 @@ export async function reportStage0Result(
     "usage_rule"
   );
   return { streak, graduated };
+}
+
+// ============================================================
+// Stage3（型を崩して自分の言葉で言う）
+// Stage1・2とは違い「ラウンドでまとめて出す」設計をやめ、1回のAI判定＝1回の本番の発話として
+// 扱う（2026-09-10 設計議論・_reference/speaking-roadmap-design.md参照）。
+// アクティブセットの先頭にある表現1件について、現在のサブステップの問題を都度1問だけ返す。
+// ============================================================
+
+type Stage3PoolRow = { id: string; expressionEn: string; meaningJa?: string };
+
+// Stage1卒業済みのexpressionsを対象プールとする（Stage2と同じ考え方）。件数がまだ少ないため
+// Stage1で踏んだPostgRESTの行数上限バグのリスクは当面ない（増えたら同種の対策を検討する）。
+// 【2026-09-11 発覚したバグの記録】Stage1・Stage2は日常会話タグを先頭に並べ替える対応
+// （sortDailyFirst）が入っていたが、Stage3のプールだけこの対応が漏れており、単純にcode昇順の
+// ままだった。ビジネス表現の方が先に投入されておりcodeが若いため、Stage1をどんな順で卒業しても
+// Stage3の出題は常にビジネス表現から先に出てしまっていた（実機フィードバックで発覚）。
+async function listStage3ContentPool(userId: string): Promise<Stage3PoolRow[]> {
+  const graduatedIds = await getStage1GraduatedExpressionIds(userId);
+  if (graduatedIds.size === 0) return [];
+
+  const { data, error } = await supabaseAdmin
+    .from("expressions")
+    .select("id, code, expression_en, meaning_ja, scene_tags")
+    .eq("publish_status", "公開")
+    .in("id", Array.from(graduatedIds))
+    .order("code", { ascending: true });
+
+  if (error) {
+    throw new Error(`Stage3出題プールの取得に失敗しました: ${error.message}`);
+  }
+
+  return sortDailyFirst(
+    (data ?? []).map((row) => ({
+      id: row.id as string,
+      expressionEn: row.expression_en as string,
+      meaningJa: (row.meaning_ja as string | null) ?? undefined,
+      sceneTags: (row.scene_tags as string[] | null) ?? [],
+    }))
+  );
+}
+
+async function getStage3ProgressMap(
+  userId: string
+): Promise<Map<string, { status: string; correct_streak: number }>> {
+  const { data, error } = await supabaseAdmin
+    .from("speaking_stage_progress")
+    .select("phrase_id, status, correct_streak")
+    .eq("user_id", userId)
+    .eq("stage", 3)
+    .eq("phrase_source", "expression");
+
+  if (error) {
+    throw new Error(`Stage3進捗の取得に失敗しました: ${error.message}`);
+  }
+
+  const map = new Map<string, { status: string; correct_streak: number }>();
+  for (const row of data ?? []) {
+    map.set(row.phrase_id as string, {
+      status: row.status as string,
+      correct_streak: row.correct_streak as number,
+    });
+  }
+  return map;
+}
+
+// Stage3のアクティブセット（未卒業フレーズの先頭からSTAGE3_ACTIVE_SET_SIZE件）を計算する。
+// Stage1・2と同じく新しい状態は持たず、毎回動的に計算する。
+async function getStage3ActiveSet(userId: string): Promise<{
+  activeSet: (Stage3PoolRow & { streak: number })[];
+  totalCount: number;
+  remainingCount: number;
+}> {
+  const pool = await listStage3ContentPool(userId);
+  const progressMap = await getStage3ProgressMap(userId);
+
+  const totalCount = pool.length;
+  const nonGraduated = pool.filter((row) => progressMap.get(row.id)?.status !== "習得済み");
+  const remainingCount = nonGraduated.length;
+
+  const activeSet = nonGraduated.slice(0, STAGE3_ACTIVE_SET_SIZE).map((row) => ({
+    ...row,
+    streak: progressMap.get(row.id)?.correct_streak ?? 0,
+  }));
+
+  return { activeSet, totalCount, remainingCount };
+}
+
+// 箱庭地図（RoadmapMap）でStage2・Stage3を「解放済み」として表示してよいかを判定する。
+// user_roadmap_state.current_stage（オンボーディング時に1回だけ書かれ、以後更新されない値）は
+// 使わず、各Stageの練習ページ自身が「出題できるか」を判定するのと全く同じ基準
+// （アクティブセットが規定数に届いているか）をその場で計算する。新しい永続状態は持たない
+// （_reference/speaking-roadmap-design.mdの「一度きりの永続フラグは持たない」方針を地図にも適用）。
+export async function getRoadmapStageReadiness(
+  userId: string
+): Promise<{ stage2Ready: boolean; stage3Ready: boolean }> {
+  const [stage2, stage3] = await Promise.all([getStage2ActiveSet(userId), getStage3ActiveSet(userId)]);
+
+  return {
+    stage2Ready: stage2.activeSet.length >= STAGE2_ACTIVE_SET_SIZE,
+    stage3Ready: stage3.activeSet.length > 0,
+  };
+}
+
+// Stage3の「今回の1問」を決める。ラウンドではなく、アクティブセットの先頭（＝一番手をつけている
+// 途中の表現）を毎回返す。1日のAI判定利用回数が上限に達している場合は先に判定して弾く
+// （判定を受けられない問題を見せても価値が薄いため）。
+export async function getStage3Session(userId: string, plan: Plan): Promise<Stage3SessionResponse> {
+  const usageCheck = await checkStage3Usage(userId, plan);
+  if (!usageCheck.allowed) {
+    return { status: "limit_exceeded", limit: usageCheck.limit };
+  }
+
+  const { activeSet, totalCount } = await getStage3ActiveSet(userId);
+  if (activeSet.length === 0) {
+    return { status: "done", totalCount };
+  }
+
+  const current = activeSet[0];
+  const subStep = getStage3SubStep(current.streak);
+
+  return {
+    status: "session",
+    question: {
+      expressionId: current.id,
+      subStep,
+      meaningJa: current.meaningJa,
+      hintExpressionEn: subStep === "ヒント付き言い換え" ? current.expressionEn : undefined,
+      warmth: computeWarmth(current.streak, STAGE3_GRADUATE_STREAK),
+    },
+    usage: { remaining: usageCheck.remaining, limit: usageCheck.limit },
+  };
+}
+
+// 該当ユーザーの該当エラータグのmiss_countを+1する（存在しなければ新規作成）。
+// errorTagsは1回の判定につき0〜2件程度の想定のため、N+1で問題ない。
+async function recordErrorTags(userId: string, errorTags: string[]): Promise<void> {
+  for (const tag of errorTags) {
+    const { data: existing, error: fetchError } = await supabaseAdmin
+      .from("user_error_tag_stats")
+      .select("miss_count")
+      .eq("user_id", userId)
+      .eq("error_tag", tag)
+      .maybeSingle();
+
+    if (fetchError) {
+      throw new Error(`エラータグ集計の取得に失敗しました: ${fetchError.message}`);
+    }
+
+    const { error: upsertError } = await supabaseAdmin.from("user_error_tag_stats").upsert(
+      {
+        user_id: userId,
+        error_tag: tag,
+        miss_count: (existing?.miss_count ?? 0) + 1,
+        mastered: false,
+        last_missed_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,error_tag" }
+    );
+
+    if (upsertError) {
+      throw new Error(`エラータグ集計の更新に失敗しました: ${upsertError.message}`);
+    }
+  }
+}
+
+export type Stage3ReportOutcome =
+  | { status: "ok"; result: Stage3JudgeResult }
+  | { status: "limit_exceeded"; limit: number }
+  | { status: "error"; message: string };
+
+// Stage3の発話結果を記録する。Stage1・2と違い自己申告ではなく、AIの判定結果（意味が
+// 伝わっているか）がそのままstreak進行のトリガーになる。不正解時はerrorTagsを
+// user_error_tag_statsに集計する（Stage0と同じ15種のエラータグ体系）。
+export async function reportStage3Result(
+  userId: string,
+  plan: Plan,
+  expressionId: string,
+  userSpokenText: string
+): Promise<Stage3ReportOutcome> {
+  const { data: expr, error: exprError } = await supabaseAdmin
+    .from("expressions")
+    .select("expression_en, meaning_ja")
+    .eq("id", expressionId)
+    .maybeSingle();
+
+  if (exprError) {
+    throw new Error(`表現の取得に失敗しました: ${exprError.message}`);
+  }
+  if (!expr) {
+    return { status: "error", message: "対象の表現が見つかりませんでした" };
+  }
+
+  const progressMap = await getStage3ProgressMap(userId);
+  const currentStreak = progressMap.get(expressionId)?.correct_streak ?? 0;
+  const subStep = getStage3SubStep(currentStreak);
+
+  const judged = await judgeStage3Answer({
+    userId,
+    plan,
+    expressionEn: expr.expression_en as string,
+    meaningJa: (expr.meaning_ja as string | null) ?? "",
+    subStep,
+    userSpokenText,
+  });
+
+  if (!judged.ok) {
+    if (judged.reason === "limit_exceeded") {
+      return { status: "limit_exceeded", limit: judged.limit };
+    }
+    return { status: "error", message: judged.message };
+  }
+
+  const { streak: newStreak, graduated } = await reportStageStreakResult(
+    userId,
+    3,
+    expressionId,
+    STAGE3_GRADUATE_STREAK,
+    judged.judgment.correct
+  );
+
+  if (!judged.judgment.correct && judged.judgment.errorTags.length > 0) {
+    await recordErrorTags(userId, judged.judgment.errorTags);
+  }
+
+  return {
+    status: "ok",
+    result: {
+      correct: judged.judgment.correct,
+      errorTags: judged.judgment.errorTags,
+      feedbackJa: judged.judgment.feedbackJa,
+      streak: newStreak,
+      subStep: getStage3SubStep(newStreak),
+      graduated,
+      usage: judged.usage,
+    },
+  };
+}
+
+// ============================================================
+// 街の掲示板（タスク#153）
+// ゼロから作らず、既存の/library等の検索基盤（ExpressionStockList/ExpressionCard）を流用し、
+// 「ロードマップ（Stage1〜3）で一度でも触れた表現」だけに絞った一覧＋検索を提供する。
+// Stage0のusage_rulesはexpressionsと別物のため対象外（phrase_source='expression'のみ見る）。
+// ============================================================
+
+export type ExpressionRoadmapStageProgress = {
+  status: string; // "習得済み" | "練習中" | "未着手"
+  correctStreak: number;
+};
+
+export type ExpressionRoadmapProgress = {
+  stage1?: ExpressionRoadmapStageProgress;
+  stage2?: ExpressionRoadmapStageProgress;
+  stage3?: ExpressionRoadmapStageProgress;
+};
+
+// そのユーザーがStage1〜3で一度でも触れた表現の進捗を、expression id単位でまとめて返す。
+// 1つの表現がStage1・2・3それぞれで別々に進捗を持ちうる（各Stageは独立した進捗行）ため、
+// phrase_idごとに複数stageの結果を1つのオブジェクトへ集約する。
+export async function listTouchedExpressionProgress(
+  userId: string
+): Promise<Map<string, ExpressionRoadmapProgress>> {
+  const { data, error } = await supabaseAdmin
+    .from("speaking_stage_progress")
+    .select("phrase_id, stage, status, correct_streak")
+    .eq("user_id", userId)
+    .eq("phrase_source", "expression");
+
+  if (error) {
+    throw new Error(`ロードマップ進捗の取得に失敗しました: ${error.message}`);
+  }
+
+  const map = new Map<string, ExpressionRoadmapProgress>();
+  for (const row of data ?? []) {
+    const phraseId = row.phrase_id as string;
+    const stage = row.stage as number;
+    if (stage !== 1 && stage !== 2 && stage !== 3) continue;
+
+    const entry = map.get(phraseId) ?? {};
+    const stageKey = `stage${stage}` as "stage1" | "stage2" | "stage3";
+    entry[stageKey] = {
+      status: row.status as string,
+      correctStreak: row.correct_streak as number,
+    };
+    map.set(phraseId, entry);
+  }
+
+  return map;
+}
+
+// 街の掲示板からの「復習する」で呼ばれる、共通の軽量復習フロー（タスク#154）。
+// Stage1〜3それぞれの出題ロジック（アクティブセット・サブステップ・AI判定など）には一切乗せない。
+// 対象は必ず習得済みのフレーズなので、卒業判定をやり直す必要がなく、記録するのも
+// 「今日これに触れた」という事実（last_practiced_at）と賑わい度カウントだけでよいため。
+// Stage3の再プレイをまともに作るとAI判定コールが毎回走ってしまう（すでに習得済みなのに
+// コストがかかる）という問題も、このアプローチなら発生しない。
+export async function recordExpressionReview(userId: string, expressionId: string): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from("speaking_stage_progress")
+    .update({ last_practiced_at: new Date().toISOString() })
+    .eq("user_id", userId)
+    .eq("phrase_id", expressionId)
+    .eq("phrase_source", "expression")
+    .eq("status", "習得済み");
+
+  if (error) {
+    throw new Error(`復習記録の保存に失敗しました: ${error.message}`);
+  }
+
+  await recordDailyPractice(userId);
+  await incrementDailyActivity(userId);
 }

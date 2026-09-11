@@ -6,6 +6,28 @@ export type OnboardingTrack = (typeof OnboardingTrackValues)[number];
 
 export type RoadmapStage = 1 | 2 | 3 | 4 | 5;
 
+// usage_rules.error_tagのCHECK制約に対応する15種のエラータグカタログ。
+// Stage0（使い分けパーツ）のコンテンツ分類だけでなく、Stage3以降のAI判定結果を
+// 同じ体系のタグに寄せるためにも使う（user_error_tag_statsへの集計はタグ体系を揃えてこそ意味がある）。
+export const ERROR_TAG_VALUES = [
+  "冠詞",
+  "可算・不可算",
+  "前置詞",
+  "句動詞",
+  "語順・文構造",
+  "時制の感覚差",
+  "分詞形容詞",
+  "単数・複数・三人称単数のs",
+  "類義動詞",
+  "依頼・提案の丁寧度",
+  "婉曲・曖昧表現",
+  "決まり文句・あいさつの誤用",
+  "あいづち・リアクションのニュアンス",
+  "否定疑問文への回答",
+  "カタカナ英語・和製英語の罠",
+] as const;
+export type ErrorTag = (typeof ERROR_TAG_VALUES)[number];
+
 // ユーザーごとのロードマップ全体の現在地・累計値（user_roadmap_stateに対応）。
 export type UserRoadmapState = {
   currentStage: RoadmapStage;
@@ -80,6 +102,9 @@ export type Stage1ReportResult = {
   streak: number;
   subStep: Stage1SubStep;
   graduated: boolean;
+  // この卒業が、まさにStage2の解放条件（アクティブセットがSTAGE2_ACTIVE_SET_SIZEに届く）を
+  // 満たした瞬間だった場合にtrue。ラウンド結果画面での「Stage2が解放されました！」演出に使う。
+  stage2JustUnlocked: boolean;
 };
 
 // Stage2（瞬間英作文）の4サブステップ。correct_streakの値の範囲から導出する
@@ -119,6 +144,15 @@ export function getStage2SubFormatLabel(
   return "微改変";
 }
 
+// 答え合わせ画面の参考表示1件分。穴埋め音読ではAIが生成した「なぜ不自然か」の理由(reasonJa)を
+// 添える（stage2-choice-reasons.ts参照、フレーズごとに初回だけAI生成してDBにキャッシュする）。
+// 全文瞬間英作文・文脈からの想起は「似た場面で使う他の表現」という参考表示であり間違いの指摘では
+// ないため、reasonJaは空文字のまま使う（UI側はreasonJaが空なら理由行を出さない）。
+export type Stage2ReferenceChoice = {
+  text: string;
+  reasonJa: string;
+};
+
 // Stage2は「声に出すこと」が全Stage共通の大前提（_reference/speaking-roadmap-design.md参照）。
 // 以前は穴埋め音読・全文瞬間英作文・文脈からの想起の3ステップが「4択をクリックして正誤判定」する
 // 学校のテストのような形式だったため、2026-09-09に「声に出す→答えを確認する→言えたか自己申告する」
@@ -139,8 +173,9 @@ export type Stage2RoundQuestion =
       promptJa?: string;
       // 声に出した後、答え合わせで表示する正解の全文
       answerText: string;
-      // 答え合わせ画面でだけ表示する「似ているけど違う表現」の参考リスト（answerTextは含まない）
-      referenceChoices: string[];
+      // 答え合わせ画面でだけ表示する参考リスト（answerTextは含まない）。最大2件に絞る
+      // （2026-09-11 実機フィードバック：3〜4件は多すぎる、本当に紛らわしいものだけでいい）。
+      referenceChoices: Stage2ReferenceChoice[];
       warmth: WarmthLevel;
     }
   | {
@@ -173,8 +208,8 @@ export type Stage2ReportResult = {
 // 「日本語の感覚のまま英語にすると事故る使い分けポイント」（例：可算名詞は単数のまま裸で使えない）を
 // 1つの「感覚」（usage_rule）として扱い、語彙を変えた出題文（usage_rule_prompts）を繰り返しぶつける。
 // 1フレーズを覚えて卒業ではなく、同じ感覚に対する複数パターンで安定して「言えた」が続くまでを
-// 卒業条件とする。「言えなかった」を選んだときだけ核イメージの解説（coreImageJa）を出す
-// （初回だけでなく毎回。テスト効果を狙い、先に解説は読ませない）。
+// 卒業条件とする。答え合わせのタイミングで、自己申告の正誤に関係なく毎回核イメージの解説
+// （coreImageJa）を出す（テスト効果を狙い、先に解説は読ませない。自己申告はstreak判定にのみ使う）。
 export const STAGE0_GRADUATE_STREAK = 6;
 export const STAGE0_ACTIVE_SET_SIZE = 7;
 export const STAGE0_ROUND_SIZE = 5;
@@ -203,4 +238,61 @@ export type Stage0RoundResponse =
 export type Stage0ReportResult = {
   streak: number;
   graduated: boolean;
+};
+
+// ============================================================
+// Stage3（型を崩して自分の言葉で言う）
+// Stage1・2は「表現を増やして繰り返す」量稽古のためラウンド（まとめて5問）が合っていたが、
+// Stage3は「実際にアウトプットする」質重視の練習であり、かつ1問ごとにAI判定（課金対象の
+// API呼び出し）が発生する。そのため「ラウンドで複数問まとめて出す」設計をやめ、1回のAI判定＝
+// 1回の本番の発話として扱う（2026-09-10 ユーザーとの設計議論で決定）。アクティブセットの
+// 先頭にある表現1件について、現在のサブステップの問題を都度1問だけ返す。
+// Stage1・2は自己申告（言えた/言えなかった）でstreakを進めるが、Stage3は「意味が伝わって
+// いるか」を自分では判断しづらいため、AIの判定結果がそのままstreak進行のトリガーになる。
+export const Stage3SubStepValues = ["ヒント付き言い換え", "自由言い換え", "ミニ拡張"] as const;
+export type Stage3SubStep = (typeof Stage3SubStepValues)[number];
+
+// correct_streakの値の範囲から導出する（0-1=ヒント付き言い換え, 2-3=自由言い換え,
+// 4-5=ミニ拡張, 6=卒業）。Stage1と同じ「各段階連続2回」パターン。
+export const STAGE3_GRADUATE_STREAK = 6;
+export const STAGE3_ACTIVE_SET_SIZE = 7;
+
+export function getStage3SubStep(streak: number): Stage3SubStep {
+  if (streak >= 4) return "ミニ拡張";
+  if (streak >= 2) return "自由言い換え";
+  return "ヒント付き言い換え";
+}
+
+// 1日のAI判定利用回数の上限。実コストはごく僅か（1回0.02円未満）なので原価防衛が目的ではなく、
+// 「体験してから制限にぶつかって課金する」フリーミアム導線として意図的に設ける
+// （_reference/speaking-roadmap-design.md「収益設計（Stage3〜5）」参照）。
+export const STAGE3_FREE_DAILY_LIMIT = 8;
+export const STAGE3_PRO_DAILY_LIMIT = 50;
+
+export type Stage3Question = {
+  expressionId: string;
+  subStep: Stage3SubStep;
+  meaningJa?: string;
+  // 「ヒント付き言い換え」のときだけ、元の表現をヒントとして見せる（自由言い換え・ミニ拡張では隠す）
+  hintExpressionEn?: string;
+  warmth: WarmthLevel;
+};
+
+export type Stage3UsageInfo = { remaining: number; limit: number };
+
+export type Stage3SessionResponse =
+  | { status: "session"; question: Stage3Question; usage: Stage3UsageInfo }
+  | { status: "done"; totalCount: number }
+  | { status: "limit_exceeded"; limit: number };
+
+export type Stage3JudgeResult = {
+  correct: boolean;
+  // 検出されたエラータグ（Stage0のusage_rulesと同じ15種のerror_tagカタログに揃える）。
+  // user_error_tag_statsへの集計に使う。
+  errorTags: string[];
+  feedbackJa: string;
+  streak: number;
+  subStep: Stage3SubStep;
+  graduated: boolean;
+  usage: Stage3UsageInfo;
 };

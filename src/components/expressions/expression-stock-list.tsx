@@ -14,6 +14,7 @@ import type {
   LevelFilter,
   IntentTagFilter,
   ExamTagFilter,
+  RoadmapBoardInfo,
 } from "./types";
 import type { Plan } from "@/lib/plan";
 
@@ -51,6 +52,9 @@ type ExpressionStockListProps = {
   serverMode?: boolean;
   // serverMode時、絞り込みなしでの公開件数（DB全体の総数）。空状態メッセージの出し分けに使う。
   initialTotalCount?: number;
+  // 街の掲示板（#153）専用。expression idごとのロードマップ進捗バッジ・復習リンク。
+  // 未指定ならExpressionCard側も何も表示しない（既存の/library・/mylist等には影響しない）。
+  roadmapInfoByExpressionId?: Map<string, RoadmapBoardInfo>;
 };
 
 function matchesKeyword(expression: Expression, keyword: string) {
@@ -87,6 +91,7 @@ export function ExpressionStockList({
   initialExamTag = "すべて",
   serverMode = false,
   initialTotalCount,
+  roadmapInfoByExpressionId,
 }: ExpressionStockListProps) {
   const savedIdSet = useMemo(() => new Set(savedExpressionIds), [savedExpressionIds]);
   const showAds = plan === "free";
@@ -264,6 +269,7 @@ export function ExpressionStockList({
                   plan={plan}
                   loggedIn={loggedIn}
                   initialSaved={savedIdSet.has(expression.id)}
+                  roadmapInfo={roadmapInfoByExpressionId?.get(expression.id)}
                 />
                 {showAds && index > 0 && (index + 1) % AD_INTERVAL === 0 && (
                   <div className="flex items-center justify-center rounded-xl border border-zinc-200 bg-zinc-100/30 p-3">

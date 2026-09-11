@@ -3,7 +3,7 @@ import { STAGE_COLORS } from "./stage-colors";
 import type { WarmthLevel } from "./types";
 
 type GrowthBadgeProps = {
-  stage: 0 | 1 | 2;
+  stage: 0 | 1 | 2 | 3;
   warmth: WarmthLevel;
 };
 

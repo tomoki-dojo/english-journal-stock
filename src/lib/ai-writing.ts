@@ -133,7 +133,9 @@ async function listRecentVocabForPrompt(userId: string, limit = 5): Promise<Rece
   return vocabList.map((v) => ({ wordEn: v.wordEn, meaningJa: v.meaningJa }));
 }
 
-async function callAnthropic(systemPrompt: string, userText: string, model: string): Promise<string> {
+// Stage3のAI意味判定（stage3-ai.ts）からも同じClaude/Gemini呼び出しロジックを再利用するため、
+// exportしておく（プロンプト内容はai-writing-prompt.ts/stage3-judge-prompt.tsで別々に持つ）。
+export async function callAnthropic(systemPrompt: string, userText: string, model: string): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEYが設定されていません");
 
@@ -149,7 +151,7 @@ async function callAnthropic(systemPrompt: string, userText: string, model: stri
   return block?.type === "text" ? block.text : "";
 }
 
-async function callGemini(systemPrompt: string, userText: string, model: string): Promise<string> {
+export async function callGemini(systemPrompt: string, userText: string, model: string): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEYが設定されていません");
 

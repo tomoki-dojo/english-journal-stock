@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, PartyPopper, Volume2, X } from "lucide-react";
+import { Check, PartyPopper, PenLine, Volume2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RoundHeader } from "./round-header";
 import { GrowthBadge } from "./growth-badge";
@@ -16,6 +16,7 @@ type QuestionResult = {
   expressionEn: string;
   correct: boolean;
   graduated: boolean;
+  stage2JustUnlocked: boolean;
 };
 
 const STAGE_COLOR = STAGE_COLORS[1];
@@ -128,6 +129,7 @@ export function Stage1Practice() {
           expressionEn: currentQuestion.expressionEn,
           correct,
           graduated: Boolean(json.result?.graduated),
+          stage2JustUnlocked: Boolean(json.result?.stage2JustUnlocked),
         },
       ]);
       setAudioUrl(null);
@@ -171,6 +173,7 @@ export function Stage1Practice() {
   if (state === "round_complete") {
     const correctCount = results.filter((r) => r.correct).length;
     const graduated = results.filter((r) => r.graduated);
+    const stage2JustUnlocked = results.some((r) => r.stage2JustUnlocked);
 
     return (
       <div className="relative overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100/50 p-6 text-center animate-round-complete-pop">
@@ -209,10 +212,25 @@ export function Stage1Practice() {
           </div>
         )}
 
-        {/* 箱庭ビジュアル実装後、ここに増築・小物パーツなどの街の変化を表示する予定 */}
-        <div className="mt-4 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-3 text-xs text-zinc-400">
-          （街の変化はここに表示予定です）
-        </div>
+        {stage2JustUnlocked ? (
+          // Stage2の解放条件（アクティブセットが7件に届く）を、このラウンドでちょうど満たした瞬間。
+          // 箱庭ビジュアル実装（#150）までは簡易なバナーとして示す。
+          <div
+            className="relative mt-4 overflow-hidden rounded-lg border p-3 text-left text-sm animate-round-complete-pop"
+            style={{ borderColor: withAlpha(STAGE_COLORS[2], "55"), backgroundColor: withAlpha(STAGE_COLORS[2], "14") }}
+          >
+            <div className="flex items-center gap-1.5 font-semibold" style={{ color: STAGE_COLORS[2] }}>
+              <PenLine className="h-4 w-4" />
+              Stage2が解放されました！
+            </div>
+            <p className="mt-1 text-xs text-zinc-600">瞬間英作文で、覚えたフレーズを今度は自分から引き出す練習に進めます。</p>
+          </div>
+        ) : (
+          // 箱庭ビジュアル実装後、ここに増築・小物パーツなどの街の変化を表示する予定
+          <div className="mt-4 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-3 text-xs text-zinc-400">
+            （街の変化はここに表示予定です）
+          </div>
+        )}
 
         <div className="mt-6 flex gap-3">
           <button

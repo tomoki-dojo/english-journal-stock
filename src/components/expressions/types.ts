@@ -91,3 +91,18 @@ export type Expression = {
 };
 
 export type AudioField = "expression" | "example1" | "example2";
+
+// 街の掲示板（#153）専用：スピーキング・ロードマップでこの表現に触れた進捗を
+// カード上にバッジ＋「復習する」ボタンとして出すための、表示用に整形済みのデータ。
+// ExpressionCard/ExpressionStockListの既存props（Expression本体）とは別に、
+// 任意で渡すoptionalな追加情報として扱う（未指定なら従来通り何も表示しない）。
+export type RoadmapBoardBadge = {
+  label: string; // 例: "Stage1"
+  mastered: boolean; // true=習得済み、false=練習中
+};
+
+// タスク#154で「復習する」はStage別の練習画面へのリンクではなく、共通の軽量復習フロー
+// （ExpressionCard内でモーダルを開く）に変更したため、reviewHrefは持たない。
+export type RoadmapBoardInfo = {
+  badges: RoadmapBoardBadge[];
+};

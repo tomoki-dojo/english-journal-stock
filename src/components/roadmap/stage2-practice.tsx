@@ -286,6 +286,17 @@ export function Stage2Practice() {
                 <p className="text-lg font-medium text-zinc-900">{currentQuestion.promptJa}</p>
               ) : null}
             </div>
+            {/*
+              穴埋め音読（promptEnが入るサブステップ）だけ、meaningJaを手がかりとして併記する。
+              以前はここでmeaningJaが完全に捨てられており（データはあるのに未使用）、空欄の英文
+              だけを見て何も思い出せない場合に手がかりゼロになっていた。選択肢クリック式には
+              戻さず、「産出前にヒントを見る」形で解決する（2026-09-11 実機フィードバックを受けて追加）。
+              全文瞬間英作文・文脈からの想起はpromptJa側に既に適切なヒント（直訳／状況説明）が
+              入っているため、ここでは重複させない。
+            */}
+            {currentQuestion.promptEn && currentQuestion.meaningJa && (
+              <p className="mb-3 text-sm text-zinc-500">{currentQuestion.meaningJa}</p>
+            )}
             <p className="mb-4 text-xs text-zinc-400">まず声に出して言ってみよう。言えたら答えを確認します。</p>
 
             {!revealed ? (
@@ -315,8 +326,11 @@ export function Stage2Practice() {
                     </p>
                     <ul className="space-y-1">
                       {currentQuestion.referenceChoices.map((choice) => (
-                        <li key={choice} className="rounded-md bg-zinc-100/70 px-3 py-1.5 text-sm text-zinc-500">
-                          {choice}
+                        <li key={choice.text} className="rounded-md bg-zinc-100/70 px-3 py-1.5">
+                          <p className="text-sm text-zinc-500">{choice.text}</p>
+                          {/* AI生成の「なぜ不自然か」の理由（穴埋め音読のみ。2026-09-11 実機フィードバックで追加）。
+                              全文瞬間英作文・文脈からの想起はreasonJaが常に空なので、ここは出ない。 */}
+                          {choice.reasonJa && <p className="mt-0.5 text-xs text-zinc-400">{choice.reasonJa}</p>}
                         </li>
                       ))}
                     </ul>

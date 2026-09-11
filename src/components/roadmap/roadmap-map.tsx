@@ -7,9 +7,9 @@ import { STAGE_MAP_ANCHORS, STAGE0_MAP_ANCHOR, markerSizeStyle } from "./stage-m
 type StageNumber = 1 | 2 | 3 | 4 | 5;
 
 // 練習画面(/roadmap/stageN)が実際に存在するStageのみ、地図上でクリック可能にする。
-// Stage3〜5は画面自体が未実装のため、進捗上「解放」されていてもリンクは張らない
+// Stage4〜5は画面自体が未実装のため、進捗上「解放」されていてもリンクは張らない
 // （実装が追いついたらここに追加するだけでよい）。
-const IMPLEMENTED_STAGES: readonly StageNumber[] = [1, 2];
+const IMPLEMENTED_STAGES: readonly StageNumber[] = [1, 2, 3];
 
 const STAGE_META: Record<StageNumber, { label: string; caption: string; icon: LucideIcon; href: string }> = {
   1: { label: "Stage1", caption: "音読", icon: Mic, href: "/roadmap/stage1" },
@@ -22,7 +22,13 @@ const STAGE_META: Record<StageNumber, { label: string; caption: string; icon: Lu
 const STAGE_NUMBERS: StageNumber[] = [1, 2, 3, 4, 5];
 
 type RoadmapMapProps = {
-  currentStage: StageNumber;
+  // Stage1は常に解放。Stage2・3は各Stageの練習ページと同じ基準（アクティブセットが
+  // 規定数に届いているか）でその場で動的に判定した値を渡す（2026-09-11
+  // 修正：以前はuser_roadmap_state.current_stageという、オンボーディング時に1回だけ
+  // 書かれて以後更新されない値で解放判定しており、Stage1を卒業してもStage2が
+  // 永久に解放されないバグがあった。詳細は_reference/speaking-roadmap-design.md参照）。
+  // Stage4・5は画面自体が未実装のため、この値に関わらずIMPLEMENTED_STAGESで常にロック表示にする。
+  stageReadiness: { stage2Ready: boolean; stage3Ready: boolean };
 };
 
 // スピーキング・ロードマップのホーム＝「箱庭画面」本体。
@@ -31,7 +37,18 @@ type RoadmapMapProps = {
 // ここでは「だいたいこの辺りに配置する」という座標・状態設計だけを先に作る。
 // 建物同士は手前(Stage1)→奥(Stage5)の緩い奥行き進行を保ちつつ位置を軽くジグザグさせ、
 // 各Stageのボタン(横長ピル)は建物の真上ではなく、そばに寄せた位置に浮かせて配置する。
-export function RoadmapMap({ currentStage }: RoadmapMapProps) {
+export function RoadmapMap({ stageReadiness }: RoadmapMapProps) {
+  const UNLOCKED: Record<StageNumber, boolean> = {
+    1: true,
+    2: stageReadiness.stage2Ready,
+    3: stageReadiness.stage3Ready,
+    // Stage4・5は解放条件そのものが未設計（Stage4以降は将来タスク）。IMPLEMENTED_STAGESにより
+    // どのみち常にロック表示になるため、ここでは暫定でfalse固定にしておく。
+    4: false,
+    5: false,
+  };
+  // 「現在地」ハイライト＝実際に解放されている最後（一番奥）のStage。
+  const currentStage = [...STAGE_NUMBERS].reverse().find((s) => UNLOCKED[s]) ?? 1;
   return (
     <div className="relative mb-6 aspect-[4/3] w-full overflow-hidden rounded-2xl border border-zinc-200 bg-gradient-to-b from-sky-50 to-zinc-100 sm:aspect-[2/1]">
       {/* 地面のグリッド風の目印。実イラスト実装までの簡易背景。 */}
@@ -91,7 +108,7 @@ export function RoadmapMap({ currentStage }: RoadmapMapProps) {
 
       {STAGE_NUMBERS.map((stage) => {
         const anchor = STAGE_MAP_ANCHORS[stage];
-        const unlocked = stage <= currentStage;
+        const unlocked = UNLOCKED[stage];
         const interactive = unlocked && IMPLEMENTED_STAGES.includes(stage);
         const markerSize = markerSizeStyle(anchor.size);
 
