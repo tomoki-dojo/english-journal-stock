@@ -79,6 +79,14 @@ nano .env.production
 なお、TOEIC対策用の新規テーブル`ai_writing_usage`はSupabase側にすでにマイグレーション適用済み
 （`create_ai_writing_usage`）。VPS側での追加のDB作業は不要です。
 
+スピーキング・ロードマップ機能用のテーブル（`user_roadmap_state` / `speaking_stage_progress` /
+`usage_rules` / `usage_rule_prompts` / `stage2_quiz_content` / `stage3_usage` /
+`daily_activity_log` / `user_error_tag_stats`）も同様にSupabase側にマイグレーション適用済みです。
+VPS側での追加のDB作業は不要ですが、Stage3のAI意味判定・Stage2穴埋めの選択肢理由生成は
+上記の`ANTHROPIC_API_KEY`/`GEMINI_API_KEY`/`AI_WRITING_PROVIDER`をAI添削機能と共用するため、
+これらのキーが未設定だとロードマップのStage3・Stage2穴埋めの一部機能が動かない点に注意
+（新規の環境変数は不要）。
+
 **重要：`docker compose`コマンドは必ず`--env-file .env.production`を付けて実行してください。**
 docker-composeの`${変数}`展開は`.env`という名前のファイルしか自動で読まないため、
 `.env.production`のままだと`NEXT_PUBLIC_SUPABASE_URL`などがビルドに反映されず、
@@ -202,6 +210,26 @@ Stripeダッシュボードの該当Webhookから「テストイベントを送�
 - [ ] `/vocabulary/learn` の「今日の復習」はFreeでロック表示、Proで進捗ダッシュボード→クイズに進める
 - [ ] 今日の復習で回答すると次回復習日が更新される（同じ単語が翌日以降まで出てこないか確認）
 - [ ] ランダム学習で回答しても次回復習日が変化しない（SRS状態に影響しないことを確認）
+
+**スピーキング・ロードマップ（`/roadmap`）**
+
+- [ ] 初回アクセス時にオンボーディング診断（クイズ）が表示され、完了すると`user_roadmap_state`が作成される
+- [ ] ロードマップのマップ画面でStage0（使い分けパーツ）が practice できる
+- [ ] Stage1（音読・シャドーイング）のラウンドが最後まで進み、卒業判定（streak）が機能する
+- [ ] Stage1をクリアしてStage2の解放しきい値（アクティブセット7件）を初めて満たしたとき、
+      ラウンド最終画面に「Stage2が解放されました！」の演出が表示される（それ以外の回では出ない）
+- [ ] マップ画面のStage2/Stage3のロック表示が、`current_stage`ではなく実際のアクティブセット件数に
+      応じて動的に解放される（Stage1をやり込むほどStage2が解放されることを確認）
+- [ ] Stage2（瞬間英作文）の穴埋め音読サブステップで、参考選択肢と一緒に「なぜ不自然か」の理由
+      （`blank_choice_reasons`、最大2件）が表示される。表示前にmeaningJa（意味のヒント）が出ることも確認
+- [ ] Stage3（自分の言葉で言う）で音声入力が動き、AIによる意味判定が返る
+- [ ] Stage3の「ヒント付き言い換え」で、ヒントが最初は隠れており「ヒントを出す」ボタンで表示される
+- [ ] Stage3の出題内容が日常会話寄り・ビジネス寄りに偏らず、Stage1の卒業順（日常会話優先）に
+      対応した順序で出てくる
+- [ ] マイク権限がブロックされている状態でStage3を開くと、「マイクの使用が許可されていません…」
+      など原因が分かるエラーメッセージが表示される（汎用エラーメッセージのみにならない）
+- [ ] 街の掲示板（卒業済み表現の一覧）が表示される
+- [ ] 復習・賑わい度演出（今日の活動ログに応じた演出）が表示される
 
 ---
 
