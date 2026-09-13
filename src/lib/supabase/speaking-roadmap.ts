@@ -7,6 +7,7 @@ import { getExpressionAudioSignedUrl } from "@/lib/supabase/expression-audio";
 import { judgeStage3Answer, checkStage3Usage } from "@/lib/stage3-ai";
 import { judgeStage4Turn, checkStage4Usage } from "@/lib/stage4-ai";
 import { getOrGenerateBlankChoiceReasons } from "@/lib/stage2-choice-reasons";
+import { getOrGenerateStage3HintBlank } from "@/lib/stage3-hint-blank";
 import type { Plan } from "@/lib/plan";
 import {
   STAGE0_ACTIVE_SET_SIZE,
@@ -902,7 +903,14 @@ export async function reportStage0Result(
 // アクティブセットの先頭にある表現1件について、現在のサブステップの問題を都度1問だけ返す。
 // ============================================================
 
-type Stage3PoolRow = { id: string; expressionEn: string; meaningJa?: string };
+type Stage3PoolRow = {
+  id: string;
+  expressionEn: string;
+  meaningJa?: string;
+  // 「ヒント付き言い換え」で見せる穴埋めヒントのキャッシュ（expressions.stage3_hint_blank_en）。
+  // 未生成ならnull（getStage3Sessionで初回アクセス時にAI生成してキャッシュする）。
+  stage3HintBlankEn: string | null;
+};
 
 // Stage1卒業済みのexpressionsを対象プールとする（Stage2と同じ考え方）。件数がまだ少ないため
 // Stage1で踏んだPostgRESTの行数上限バグのリスクは当面ない（増えたら同種の対策を検討する）。
@@ -916,7 +924,7 @@ async function listStage3ContentPool(userId: string): Promise<Stage3PoolRow[]> {
 
   const { data, error } = await supabaseAdmin
     .from("expressions")
-    .select("id, code, expression_en, meaning_ja, scene_tags")
+    .select("id, code, expression_en, meaning_ja, scene_tags, stage3_hint_blank_en")
     .eq("publish_status", "公開")
     .in("id", Array.from(graduatedIds))
     .order("code", { ascending: true });
@@ -930,6 +938,7 @@ async function listStage3ContentPool(userId: string): Promise<Stage3PoolRow[]> {
       id: row.id as string,
       expressionEn: row.expression_en as string,
       meaningJa: (row.meaning_ja as string | null) ?? undefined,
+      stage3HintBlankEn: (row.stage3_hint_blank_en as string | null) ?? null,
       sceneTags: (row.scene_tags as string[] | null) ?? [],
     }))
   );
@@ -1038,13 +1047,27 @@ export async function getStage3Session(userId: string, plan: Plan): Promise<Stag
   const current = activeSet[0];
   const subStep = getStage3SubStep(current.streak);
 
+  // 「ヒント付き言い換え」のときだけ穴埋めヒントが必要（他のサブステップでは呼ばずAI呼び出しを
+  // 省く）。expressions.expression_enをそのまま見せていた以前の挙動をやめ、重要な語句だけを
+  // 空欄にしたヒントに変更した（2026-09-13 実機フィードバック：正解の全文が見えると
+  // そのまま読み上げるだけで通ってしまう）。
+  const hintExpressionEn =
+    subStep === "ヒント付き言い換え"
+      ? await getOrGenerateStage3HintBlank({
+          expressionId: current.id,
+          cached: current.stage3HintBlankEn,
+          expressionEn: current.expressionEn,
+          meaningJa: current.meaningJa ?? "",
+        })
+      : undefined;
+
   return {
     status: "session",
     question: {
       expressionId: current.id,
       subStep,
       meaningJa: current.meaningJa,
-      hintExpressionEn: subStep === "ヒント付き言い換え" ? current.expressionEn : undefined,
+      hintExpressionEn,
       warmth: computeWarmth(current.streak, STAGE3_GRADUATE_STREAK),
     },
     usage: { remaining: usageCheck.remaining, limit: usageCheck.limit },

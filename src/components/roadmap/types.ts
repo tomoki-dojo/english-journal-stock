@@ -273,7 +273,10 @@ export type Stage3Question = {
   expressionId: string;
   subStep: Stage3SubStep;
   meaningJa?: string;
-  // 「ヒント付き言い換え」のときだけ、元の表現をヒントとして見せる（自由言い換え・ミニ拡張では隠す）
+  // 「ヒント付き言い換え」のときだけ、重要な語句を空欄にしたヒント文を見せる
+  // （自由言い換え・ミニ拡張では隠す）。以前は正解の全文をそのまま見せていたが、
+  // 一字一句読み上げるだけで通ってしまうため、2026-09-13に穴埋め形式へ変更した
+  // （stage3-hint-blank.ts参照。expressions.stage3_hint_blank_enに初回生成分をキャッシュ）。
   hintExpressionEn?: string;
   warmth: WarmthLevel;
 };
