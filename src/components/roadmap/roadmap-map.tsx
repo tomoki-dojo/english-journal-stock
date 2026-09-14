@@ -2,7 +2,13 @@ import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { Lightbulb, Mic, PenLine, Radio, Coffee, RadioTower } from "lucide-react";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
-import { STAGE_MAP_ANCHORS, STAGE0_MAP_ANCHOR, markerSizeStyle } from "./stage-map-anchors";
+import {
+  STAGE_MAP_ANCHORS,
+  STAGE0_MAP_ANCHOR,
+  TRUNK_ROAD_POINTS,
+  LANDMARK_MAP_ANCHORS,
+  markerSizeStyle,
+} from "./stage-map-anchors";
 
 type StageNumber = 1 | 2 | 3 | 4 | 5;
 
@@ -68,6 +74,89 @@ export function RoadmapMap({ stageReadiness, proSkipStartStage = null }: Roadmap
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_100%,rgba(255,255,255,0.6),transparent_60%)]" />
 
       {/*
+        道（本道＋ランドマークへの枝道）。preserveAspectRatio="none"でviewBoxを
+        0-100に合わせているので、top/left%の値をそのままSVG座標として使える。
+        本道はfog of warの対象＝到達済み(currentStageまで)の区間しか描画しない。
+        ランドマークへの枝道は、ランドマーク自体がまだ常設プレースホルダー
+        （#150、トリガー未設計）なので常に描画する。
+      */}
+      <svg
+        className="pointer-events-none absolute inset-0 h-full w-full"
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        {currentStage > 1 && (
+          <polyline
+            points={STAGE_NUMBERS.slice(0, currentStage)
+              .map((s) => `${TRUNK_ROAD_POINTS[s].left},${TRUNK_ROAD_POINTS[s].top}`)
+              .join(" ")}
+            fill="none"
+            stroke="#a1a1aa"
+            strokeWidth="0.6"
+            strokeDasharray="2.2 1.4"
+            vectorEffect="non-scaling-stroke"
+          />
+        )}
+
+        {STAGE_NUMBERS.map((stage) => {
+          const showStub = UNLOCKED[stage] || !IMPLEMENTED_STAGES.includes(stage);
+          if (!showStub) return null;
+          const rt = TRUNK_ROAD_POINTS[stage];
+          const b = STAGE_MAP_ANCHORS[stage].building;
+          return (
+            <line
+              key={stage}
+              x1={rt.left}
+              y1={rt.top}
+              x2={b.left}
+              y2={b.top}
+              stroke="#a1a1aa"
+              strokeWidth="0.4"
+              vectorEffect="non-scaling-stroke"
+            />
+          );
+        })}
+
+        {Object.values(LANDMARK_MAP_ANCHORS).map((lm, i) => (
+          <line
+            key={i}
+            x1={lm.branchFrom.left}
+            y1={lm.branchFrom.top}
+            x2={lm.building.left}
+            y2={lm.building.top}
+            stroke="#a1a1aa"
+            strokeWidth="0.35"
+            strokeDasharray="1.5 1.2"
+            vectorEffect="non-scaling-stroke"
+          />
+        ))}
+      </svg>
+
+      {/*
+        ランドマーク5区画（#150、アイソメ都市アセット仕様書Partsリスト D）。
+        どの達成イベントで解放するかのトリガー設計がまだ無いため、現状はStage5と
+        同じ「常に空き地として予約表示するだけ」の状態。区画の広さ(footprint)は
+        まだ絵に反映できていない（サイズだけ大きめにして特別感を出している）。
+      */}
+      {Object.entries(LANDMARK_MAP_ANCHORS).map(([key, lm]) => {
+        const markerSize = markerSizeStyle(lm.size);
+        return (
+          <div
+            key={key}
+            className="absolute -translate-x-1/2 -translate-y-1/2"
+            style={{ top: `${lm.building.top}%`, left: `${lm.building.left}%` }}
+            aria-hidden="true"
+          >
+            <div
+              className="rounded-2xl border-2 border-dashed border-zinc-300/70 bg-white/30"
+              style={{ width: markerSize, height: markerSize }}
+            />
+          </div>
+        );
+      })}
+
+      {/*
         Stage0（使い分けパーツ）。Stage1〜5の一本道（対角線）とは別の独立エリアのため、
         currentStageによる解放判定はせず常にクリック可能。道から外れた場所に単独で置くことで、
         「一本道の一部ではない」ことを視覚的にも示す。
@@ -125,17 +214,23 @@ export function RoadmapMap({ stageReadiness, proSkipStartStage = null }: Roadmap
         const interactive = unlocked && IMPLEMENTED_STAGES.includes(stage);
         const markerSize = markerSizeStyle(anchor.size);
 
-        if (!unlocked) {
+        if (!unlocked && IMPLEMENTED_STAGES.includes(stage)) {
           // 未解放のStageは完全に非表示（fog of war）。実座標を見せてしまうと
           // 「次はここに建つ」と分かってワクワク感が失われるため、何も描画しない。
+          // 2026-09-14修正：以前は`!unlocked`だけで判定しており、Stage5は
+          // UNLOCKED[5]が常にfalse固定のためこの分岐に入って完全に消えてしまって
+          // いた（本来は下のプレースホルダー表示を維持すべきバグ）。Stage5のように
+          // 「まだ画面が無いだけで解放条件自体は未設計」なStageは、IMPLEMENTED_STAGES
+          // に含まれないことを見て区別し、こちらの分岐には入らないようにした。
           return null;
         }
 
         if (!interactive) {
-          // ここに来るのは「解放済みだが、まだ練習画面が実装されていない」Stage
-          // （現状はStage5のみ）。既に得た実績なので隠さず、輪郭だけのシルエット/
-          // 空き地として見せる。「この先まだ何か建つ」という期待だけ残し、押せる
-          // ボタンは出さない。
+          // ここに来るのは「解放済みだが、まだ練習画面が実装されていない」Stage、
+          // または「画面自体が未実装で解放条件も未設計」なStage（現状はどちらも
+          // Stage5のみ）。既に得た実績、または将来必ず来るものなので隠さず、
+          // 輪郭だけのシルエット/空き地として見せる。「この先まだ何か建つ」という
+          // 期待だけ残し、押せるボタンは出さない。
           return (
             <div
               key={stage}
