@@ -65,7 +65,7 @@ export function ProSkipButton({ plan, proSkipEnabled, proSkipStartStage }: ProSk
         <Rocket className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
         {proSkipEnabled
           ? `スキップ中（Stage${proSkipStartStage}から）・変更する`
-          : "スキップする"}
+          : "Stageをスキップする"}
       </button>
 
       {open && !isPro && (
