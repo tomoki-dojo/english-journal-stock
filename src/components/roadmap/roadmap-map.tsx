@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Lightbulb, Mic, PenLine, Radio, Coffee, RadioTower, ClipboardList, Sparkles, Flame } from "lucide-react";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
@@ -364,14 +365,28 @@ export function RoadmapMap({
               />
             </div>
 
+            {/*
+              2026-09-14修正：hover/activeの演出が地味という指摘を受け、より派手にした。
+              hoverでスケール110%＋軽いリフト＋そのボタン自身の色でのグロー(box-shadow)、
+              activeでキュッと90%まで縮む。translate-yはセンタリング用の-50%を
+              calc(-50%-4px)に丸ごと置き換える形でリフトを実現している(単純に
+              hover:-translate-y-1のようなクラスを足すと-50%センタリング自体が
+              上書きされて位置がズレるため)。グロー色は建物ごとに異なる動的な色
+              なので、Tailwindの静的クラス名では表現できず、CSS変数(--glow-color)
+              をstyle経由で渡してshadow-[...var(--glow-color)]で参照している
+              （stage-colors.tsのコメント通り、動的な色はinline style側で扱う方針）。
+            */}
             <Link
               href="/roadmap/stage0"
-              className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-white/95 px-3 py-1.5 shadow-sm transition-transform hover:shadow-md active:scale-95"
-              style={{
-                top: `${buttonTop}%`,
-                left: `${buttonLeft}%`,
-                border: `1.5px solid ${color}`,
-              }}
+              className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-white/95 px-3 py-1.5 shadow-sm transition-all duration-200 ease-out hover:translate-y-[calc(-50%-4px)] hover:scale-110 hover:shadow-[0_10px_24px_-6px_var(--glow-color)] active:scale-90 active:duration-75"
+              style={
+                {
+                  top: `${buttonTop}%`,
+                  left: `${buttonLeft}%`,
+                  border: `1.5px solid ${color}`,
+                  "--glow-color": withAlpha(color, "cc"),
+                } as CSSProperties
+              }
             >
               <Lightbulb className="h-3.5 w-3.5 flex-shrink-0" style={{ color }} strokeWidth={2.25} />
               <span className="text-xs font-semibold" style={{ color }}>
@@ -425,12 +440,15 @@ export function RoadmapMap({
 
             <Link
               href="/roadmap/board"
-              className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-white/95 px-3 py-1.5 shadow-sm transition-transform hover:shadow-md active:scale-95"
-              style={{
-                top: `${buttonTop}%`,
-                left: `${buttonLeft}%`,
-                border: `1.5px solid ${color}`,
-              }}
+              className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-white/95 px-3 py-1.5 shadow-sm transition-all duration-200 ease-out hover:translate-y-[calc(-50%-4px)] hover:scale-110 hover:shadow-[0_10px_24px_-6px_var(--glow-color)] active:scale-90 active:duration-75"
+              style={
+                {
+                  top: `${buttonTop}%`,
+                  left: `${buttonLeft}%`,
+                  border: `1.5px solid ${color}`,
+                  "--glow-color": withAlpha(color, "cc"),
+                } as CSSProperties
+              }
             >
               <ClipboardList className="h-3.5 w-3.5 flex-shrink-0" style={{ color }} strokeWidth={2.25} />
               <span className="text-xs font-semibold" style={{ color }}>
@@ -526,12 +544,15 @@ export function RoadmapMap({
             {/* Stageの入口ボタン。建物の真上ではなく、そばに寄せた位置に浮かせる横長ピル。 */}
             <Link
               href={meta.href}
-              className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-white/95 px-3 py-1.5 shadow-sm transition-transform hover:shadow-md active:scale-95"
-              style={{
-                top: `${buttonTop}%`,
-                left: `${buttonLeft}%`,
-                border: `1.5px solid ${color}`,
-              }}
+              className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-white/95 px-3 py-1.5 shadow-sm transition-all duration-200 ease-out hover:translate-y-[calc(-50%-4px)] hover:scale-110 hover:shadow-[0_10px_24px_-6px_var(--glow-color)] active:scale-90 active:duration-75"
+              style={
+                {
+                  top: `${buttonTop}%`,
+                  left: `${buttonLeft}%`,
+                  border: `1.5px solid ${color}`,
+                  "--glow-color": withAlpha(color, "cc"),
+                } as CSSProperties
+              }
             >
               <Icon className="h-3.5 w-3.5 flex-shrink-0" style={{ color }} strokeWidth={2.25} />
               <span className="text-xs font-semibold" style={{ color }}>
