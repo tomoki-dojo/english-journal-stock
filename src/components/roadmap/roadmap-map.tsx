@@ -27,6 +27,17 @@ const STAGE_META: Record<StageNumber, { label: string; caption: string; icon: Lu
 
 const STAGE_NUMBERS: StageNumber[] = [1, 2, 3, 4, 5];
 
+// 区画の形。2026-09-14追加：それまでは建物・空き地を角丸の正方形で表現していたが、
+// これだとアイソメ都市の「1区画＝ひし形」という区画感覚が全く伝わらないという指摘を受け、
+// 実際のアイソメ投影(2:1)に沿ったひし形／横長六角形に変更した。
+// DIAMOND=1区画（1×1）。viewBoxは0 0 100 50で、幅:高さ=2:1のひし形になる。
+const DIAMOND_VIEWBOX = "0 0 100 50";
+const DIAMOND_POINTS = "50,0 100,25 50,50 0,25";
+// WIDE_HEX=横長ランドマーク用の2区画（1×2）。ひし形のS方向（奥行き軸）を伸ばした
+// 六角形。viewBoxは0 0 100 100（実質、DIAMONDの奥行きを2倍にした形）。
+const WIDE_HEX_VIEWBOX = "0 0 100 100";
+const WIDE_HEX_POINTS = "50,0 100,25 100,75 50,100 0,75 0,25";
+
 type RoadmapMapProps = {
   // Stage1は常に解放。Stage2・3は各Stageの練習ページと同じ基準（アクティブセットが
   // 規定数に届いているか）でその場で動的に判定した値を渡す（2026-09-11
@@ -141,17 +152,27 @@ export function RoadmapMap({ stageReadiness, proSkipStartStage = null }: Roadmap
       */}
       {Object.entries(LANDMARK_MAP_ANCHORS).map(([key, lm]) => {
         const markerSize = markerSizeStyle(lm.size);
+        const isWide = lm.footprint === "1x2";
         return (
           <div
             key={key}
             className="absolute -translate-x-1/2 -translate-y-1/2"
-            style={{ top: `${lm.building.top}%`, left: `${lm.building.left}%` }}
+            style={{ top: `${lm.building.top}%`, left: `${lm.building.left}%`, width: markerSize }}
             aria-hidden="true"
           >
-            <div
-              className="rounded-2xl border-2 border-dashed border-zinc-300/70 bg-white/30"
-              style={{ width: markerSize, height: markerSize }}
-            />
+            <svg
+              viewBox={isWide ? WIDE_HEX_VIEWBOX : DIAMOND_VIEWBOX}
+              className="block w-full"
+            >
+              <polygon
+                points={isWide ? WIDE_HEX_POINTS : DIAMOND_POINTS}
+                fill="rgba(255,255,255,0.35)"
+                stroke="#d4d4d8"
+                strokeWidth="3"
+                strokeDasharray="6 5"
+                vectorEffect="non-scaling-stroke"
+              />
+            </svg>
           </div>
         );
       })}
@@ -171,19 +192,26 @@ export function RoadmapMap({ stageReadiness, proSkipStartStage = null }: Roadmap
         return (
           <div>
             <div
-              className="absolute -translate-x-1/2 -translate-y-1/2 rounded-2xl"
+              className="absolute -translate-x-1/2 -translate-y-1/2"
               style={{
                 top: `${anchor.building.top}%`,
                 left: `${anchor.building.left}%`,
                 width: markerSize,
-                height: markerSize,
-                backgroundColor: withAlpha(color, "26"),
-                border: `2px dashed ${color}`,
               }}
               aria-hidden="true"
             >
+              <svg viewBox={DIAMOND_VIEWBOX} className="block w-full">
+                <polygon
+                  points={DIAMOND_POINTS}
+                  fill={withAlpha(color, "26")}
+                  stroke={color}
+                  strokeWidth="3"
+                  strokeDasharray="5 4"
+                  vectorEffect="non-scaling-stroke"
+                />
+              </svg>
               <Lightbulb
-                className="absolute left-1/2 top-1/2 h-[45%] w-[45%] -translate-x-1/2 -translate-y-1/2"
+                className="absolute left-1/2 top-1/2 h-[85%] w-[85%] -translate-x-1/2 -translate-y-1/2"
                 style={{ color }}
                 strokeWidth={2.25}
               />
@@ -235,13 +263,19 @@ export function RoadmapMap({ stageReadiness, proSkipStartStage = null }: Roadmap
             <div
               key={stage}
               className="absolute -translate-x-1/2 -translate-y-1/2"
-              style={{ top: `${anchor.building.top}%`, left: `${anchor.building.left}%` }}
+              style={{ top: `${anchor.building.top}%`, left: `${anchor.building.left}%`, width: markerSize }}
               aria-hidden="true"
             >
-              <div
-                className="rounded-2xl border-2 border-dashed border-zinc-300/70 bg-white/30"
-                style={{ width: markerSize, height: markerSize }}
-              />
+              <svg viewBox={DIAMOND_VIEWBOX} className="block w-full">
+                <polygon
+                  points={DIAMOND_POINTS}
+                  fill="rgba(255,255,255,0.35)"
+                  stroke="#d4d4d8"
+                  strokeWidth="3"
+                  strokeDasharray="6 5"
+                  vectorEffect="non-scaling-stroke"
+                />
+              </svg>
             </div>
           );
         }
@@ -256,22 +290,28 @@ export function RoadmapMap({ stageReadiness, proSkipStartStage = null }: Roadmap
         return (
           <div key={stage}>
             {/* 建物マーカー本体（実イラスト実装までのプレースホルダー）。ボタンとは別要素として、
-                建物の位置そのものを表す。 */}
+                建物の位置そのものを表す。1区画＝ひし形（アイソメ2:1投影）で表現する。 */}
             <div
-              className="absolute -translate-x-1/2 -translate-y-1/2 rounded-2xl"
+              className="absolute -translate-x-1/2 -translate-y-1/2"
               style={{
                 top: `${anchor.building.top}%`,
                 left: `${anchor.building.left}%`,
                 width: markerSize,
-                height: markerSize,
-                backgroundColor: withAlpha(color, "26"),
-                border: `2px solid ${color}`,
-                boxShadow: isCurrent ? `0 0 0 4px ${withAlpha(color, "1a")}` : undefined,
+                filter: isCurrent ? `drop-shadow(0 0 5px ${withAlpha(color, "80")})` : undefined,
               }}
               aria-hidden="true"
             >
+              <svg viewBox={DIAMOND_VIEWBOX} className="block w-full">
+                <polygon
+                  points={DIAMOND_POINTS}
+                  fill={withAlpha(color, "26")}
+                  stroke={color}
+                  strokeWidth="3"
+                  vectorEffect="non-scaling-stroke"
+                />
+              </svg>
               <Icon
-                className="absolute left-1/2 top-1/2 h-[45%] w-[45%] -translate-x-1/2 -translate-y-1/2"
+                className="absolute left-1/2 top-1/2 h-[85%] w-[85%] -translate-x-1/2 -translate-y-1/2"
                 style={{ color }}
                 strokeWidth={2.25}
               />
