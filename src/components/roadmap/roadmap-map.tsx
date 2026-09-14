@@ -578,10 +578,13 @@ export function RoadmapMap({
         {/*
           2026-09-14再修正：習得フレーズ・ストリークの2つは別々のバッジだと
           Stage/掲示板ボタンの白ピルと紛らわしいという指摘を受け、1つの非白背景
-          （bg-zinc-900/60、白文字）パネルにまとめた。白背景のボタン群とは
-          色そのものが違うため、一目で「表示専用パネル」と区別できる。
+          パネルにまとめた。白背景のボタン群とは色そのものが違うため、
+          一目で「表示専用パネル」と区別できる。
+          2026-09-14再々修正：灰色が濃すぎるという指摘を受け、不透明度を下げつつ
+          backdrop-blurを強め、縁に薄い白いring（ガラスのハイライト）を足して
+          グラスモーフィズム寄りの見た目に調整した。
         */}
-        <div className="pointer-events-auto absolute bottom-3 left-3 flex flex-col gap-1 rounded-md bg-zinc-900/60 px-2.5 py-1.5 text-white backdrop-blur-sm">
+        <div className="pointer-events-auto absolute bottom-3 left-3 flex flex-col gap-1 rounded-md bg-zinc-900/35 px-2.5 py-1.5 text-white shadow-sm shadow-black/10 ring-1 ring-inset ring-white/25 backdrop-blur-md">
           <div className="flex items-center gap-1.5">
             <Sparkles className="h-3.5 w-3.5 text-amber-300" />
             <span className="text-xs font-semibold">{totalMasteredCount}</span>
