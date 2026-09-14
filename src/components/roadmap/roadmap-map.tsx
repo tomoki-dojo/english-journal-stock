@@ -1,14 +1,21 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { Lightbulb, Mic, PenLine, Radio, Coffee, RadioTower } from "lucide-react";
+import { Lightbulb, Mic, PenLine, Radio, Coffee, RadioTower, ClipboardList, Sparkles, Flame } from "lucide-react";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
 import {
   STAGE_MAP_ANCHORS,
   STAGE0_MAP_ANCHOR,
+  BOARD_MAP_ANCHOR,
   TRUNK_ROAD_POINTS,
   LANDMARK_MAP_ANCHORS,
   markerSizeStyle,
 } from "./stage-map-anchors";
+import { ProSkipButton } from "./pro-skip-button";
+import type { Plan } from "@/lib/plan";
+
+// 街の掲示板（タスク#153）専用色。Stage0のバイオレット、本道Stage1〜5の
+// グラデーションのどちらとも被らないローズにする。
+const BOARD_COLOR = "#e11d48";
 
 type StageNumber = 1 | 2 | 3 | 4 | 5;
 
@@ -106,6 +113,15 @@ type RoadmapMapProps = {
   stageReadiness: { stage2Ready: boolean; stage3Ready: boolean; stage4Ready: boolean };
   // Stageスキップで選んだ開始Stage。「現在地」ハイライトをここに合わせる（未使用時はnull）。
   proSkipStartStage?: 2 | 3 | 4 | null;
+  // 2026-09-14追加：/roadmapページを全面マップ中心のレイアウトに再構築した際、
+  // それまでページ側に個別に置いていたStageスキップボタン・統計表示（累計習得
+  // フレーズ・連続practice日数）をマップ内のフローティングHUDとして統合した
+  // ため、必要な値をそのままpropsで受け取る。「今日の賑わい度」は「街を見れば
+  // 賑わいはわかる」という理由で表示自体を廃止した（ユーザー指摘、2026-09-14）。
+  plan: Plan;
+  proSkipEnabled: boolean;
+  totalMasteredCount: number;
+  streak: number;
 };
 
 // スピーキング・ロードマップのホーム＝「箱庭画面」本体。
@@ -119,7 +135,14 @@ type RoadmapMapProps = {
 // （fog of war）。蛇行させても位置が最初から見えていては「次はこの辺に建つ」と分かって
 // しまい意味が薄いため。ただし「解放済みだが画面が未実装」なStage（Stage5）は、既に
 // 実績として得ているものなので引き続きプレースホルダーで見せる（隠すのは未解放分のみ）。
-export function RoadmapMap({ stageReadiness, proSkipStartStage = null }: RoadmapMapProps) {
+export function RoadmapMap({
+  stageReadiness,
+  proSkipStartStage = null,
+  plan,
+  proSkipEnabled,
+  totalMasteredCount,
+  streak,
+}: RoadmapMapProps) {
   const UNLOCKED: Record<StageNumber, boolean> = {
     1: true,
     2: stageReadiness.stage2Ready,
@@ -134,7 +157,15 @@ export function RoadmapMap({ stageReadiness, proSkipStartStage = null }: Roadmap
   // （進捗の実態ではなく「今どこから始めたか」というユーザーの意思決定を反映するため）。
   const currentStage = proSkipStartStage ?? [...STAGE_NUMBERS].reverse().find((s) => UNLOCKED[s]) ?? 1;
   return (
-    <div className="relative mb-6 aspect-[4/3] w-full overflow-hidden rounded-2xl border border-zinc-200 bg-gradient-to-b from-sky-50 to-zinc-100 sm:aspect-[2/1]">
+    <div className="relative aspect-[4/3] w-full sm:aspect-[2/1]">
+      {/*
+        地図の絵柄レイヤー。ここだけoverflow-hiddenで角丸にクリップする。
+        2026-09-14追加：フローティングHUD（下のレイヤー）は意図的にこの外側に置く。
+        Stageスキップボタンの展開パネルがここでクリップされて見切れるのを防ぐため
+        （以前はページ側でマップの外に置くことで同じ問題を回避していたが、
+        マップ全面化に伴いHUD自体をマップ内に持ち込む必要が生じたための構成）。
+      */}
+      <div className="absolute inset-0 overflow-hidden rounded-2xl border border-zinc-200 bg-gradient-to-b from-sky-50 to-zinc-100">
       {/* 地面のグリッド風の目印。実イラスト実装までの簡易背景。 */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_100%,rgba(255,255,255,0.6),transparent_60%)]" />
 
@@ -316,6 +347,65 @@ export function RoadmapMap({ stageReadiness, proSkipStartStage = null }: Roadmap
         );
       })()}
 
+      {/*
+        街の掲示板（タスク#153）。2026-09-14追加：それまで統計カード下に簡易カード
+        リンクとして置いていたものを、Stage0と同じ「一本道とは無関係の独立エリア」
+        としてマップ上の建物マーカーに統合した。常にクリック可能。
+      */}
+      {(() => {
+        const anchor = BOARD_MAP_ANCHOR;
+        const markerSize = markerSizeStyle(anchor.size);
+        const color = BOARD_COLOR;
+        const buttonTop = anchor.building.top + anchor.buttonOffset.top;
+        const buttonLeft = anchor.building.left + anchor.buttonOffset.left;
+
+        return (
+          <div>
+            <div
+              className="absolute -translate-x-1/2 -translate-y-1/2"
+              style={{
+                top: `${anchor.building.top}%`,
+                left: `${anchor.building.left}%`,
+                width: markerSize,
+              }}
+              aria-hidden="true"
+            >
+              <svg viewBox={DIAMOND_VIEWBOX} className="block w-full">
+                <polygon
+                  points={DIAMOND_POINTS}
+                  fill={withAlpha(color, "26")}
+                  stroke={color}
+                  strokeWidth="3"
+                  strokeDasharray="5 4"
+                  vectorEffect="non-scaling-stroke"
+                />
+              </svg>
+              <ClipboardList
+                className="absolute left-1/2 top-1/2 h-[85%] w-[85%] -translate-x-1/2 -translate-y-1/2"
+                style={{ color }}
+                strokeWidth={2.25}
+              />
+            </div>
+
+            <Link
+              href="/roadmap/board"
+              className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-white/95 px-3 py-1.5 shadow-sm transition-transform hover:shadow-md active:scale-95"
+              style={{
+                top: `${buttonTop}%`,
+                left: `${buttonLeft}%`,
+                border: `1.5px solid ${color}`,
+              }}
+            >
+              <ClipboardList className="h-3.5 w-3.5 flex-shrink-0" style={{ color }} strokeWidth={2.25} />
+              <span className="text-xs font-semibold" style={{ color }}>
+                掲示板
+              </span>
+              <span className="text-[10px] text-zinc-500">習得済み一覧</span>
+            </Link>
+          </div>
+        );
+      })()}
+
       {STAGE_NUMBERS.map((stage) => {
         const anchor = STAGE_MAP_ANCHORS[stage];
         const unlocked = UNLOCKED[stage];
@@ -416,6 +506,40 @@ export function RoadmapMap({ stageReadiness, proSkipStartStage = null }: Roadmap
           </div>
         );
       })}
+      </div>
+
+      {/*
+        フローティングHUD。2026-09-14追加：/roadmapページの全面マップ化に伴い、
+        タイトル・Stageスキップボタン・統計表示（累計習得フレーズ→「習得フレーズ」、
+        連続practice日数→「◯日連続で練習中！」に文言変更）をページ本体から撤去し、
+        地図の上に浮かせる形に統合した。「今日の賑わい度」は「街を見ればわかる」ため
+        廃止。地図の絵柄レイヤー（overflow-hidden）の外に置くことで、Stageスキップの
+        展開パネルが見切れないようにしている。
+      */}
+      <div className="pointer-events-none absolute inset-0 z-10">
+        <div className="pointer-events-auto absolute left-3 top-3">
+          <p className="rounded-full border border-zinc-200 bg-white/90 px-3 py-1 text-xs font-semibold tracking-wide text-zinc-600 shadow-sm">
+            スピーキング・ロードマップ
+          </p>
+        </div>
+
+        <div className="pointer-events-auto absolute right-3 top-3">
+          <ProSkipButton plan={plan} proSkipEnabled={proSkipEnabled} proSkipStartStage={proSkipStartStage} />
+        </div>
+
+        <div className="pointer-events-auto absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white/95 px-3 py-1.5 shadow-sm">
+          <Sparkles className="h-3.5 w-3.5 text-accent" />
+          <span className="text-xs font-semibold text-zinc-700">{totalMasteredCount}</span>
+          <span className="text-[10px] text-zinc-500">習得フレーズ</span>
+        </div>
+
+        <div className="pointer-events-auto absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white/95 px-3 py-1.5 shadow-sm">
+          <Flame className="h-3.5 w-3.5 text-accent" />
+          <span className="text-xs font-semibold text-zinc-700">
+            {streak > 0 ? `${streak}日連続で練習中！` : "今日から練習を始めよう"}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

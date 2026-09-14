@@ -90,6 +90,16 @@ export const STAGE0_MAP_ANCHOR: { building: MapPoint; buttonOffset: MapPoint; si
   size: 62,
 };
 
+// 街の掲示板（タスク#153）専用の配置。2026-09-14変更：/roadmapページ全体を
+// 全面マップ中心のレイアウトに再構築した際、それまで統計カード下に簡易カード
+// リンクとして置いていた掲示板を、Stage0と同じ「一本道とは無関係の独立エリア」
+// としてマップ上の建物マーカーに統合した。
+export const BOARD_MAP_ANCHOR: { building: MapPoint; buttonOffset: MapPoint; size: number } = {
+  building: { top: 62, left: 14 },
+  buttonOffset: { top: -13, left: 12 },
+  size: 64,
+};
+
 // サイズ(px)からレスポンシブなclamp()の幅/高さ文字列を作る（建物マーカー用）。
 // 最小値はサイズの80%を下限にし、一番狭い画面幅（〜360px）でも
 // タップ可能なStage1・2の建物マーカーが潰れすぎないようにする
