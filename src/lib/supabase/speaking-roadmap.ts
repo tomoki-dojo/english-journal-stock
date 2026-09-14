@@ -52,6 +52,8 @@ type DbRoadmapStateRow = {
   onboarding_quiz_completed: boolean;
   onboarding_track: string | null;
   total_mastered_count: number;
+  pro_skip_enabled: boolean;
+  pro_skip_start_stage: number | null;
 };
 
 function fromDbRoadmapStateRow(row: DbRoadmapStateRow): UserRoadmapState {
@@ -60,6 +62,8 @@ function fromDbRoadmapStateRow(row: DbRoadmapStateRow): UserRoadmapState {
     onboardingQuizCompleted: row.onboarding_quiz_completed,
     onboardingTrack: row.onboarding_track as UserRoadmapState["onboardingTrack"],
     totalMasteredCount: row.total_mastered_count,
+    proSkipEnabled: row.pro_skip_enabled,
+    proSkipStartStage: row.pro_skip_start_stage as UserRoadmapState["proSkipStartStage"],
   };
 }
 
@@ -67,7 +71,9 @@ function fromDbRoadmapStateRow(row: DbRoadmapStateRow): UserRoadmapState {
 export async function getUserRoadmapState(userId: string): Promise<UserRoadmapState | null> {
   const { data, error } = await supabaseAdmin
     .from("user_roadmap_state")
-    .select("current_stage, onboarding_quiz_completed, onboarding_track, total_mastered_count")
+    .select(
+      "current_stage, onboarding_quiz_completed, onboarding_track, total_mastered_count, pro_skip_enabled, pro_skip_start_stage"
+    )
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -76,6 +82,21 @@ export async function getUserRoadmapState(userId: string): Promise<UserRoadmapSt
   }
 
   return data ? fromDbRoadmapStateRow(data) : null;
+}
+
+// Stageスキップ（#156、Pro限定）の設定を保存する。オンボーディング診断済みのユーザーのみ呼ばれる
+// 想定（user_roadmap_stateの行は必ず存在する）なのでupdateでよい。既に有効な状態で別のStageを
+// 選び直した場合も、同じ呼び出しで単純に上書きする（無効化用の別関数は用意しない。
+// 「今どこから始めたいか」を選び直すだけのUXにしているため）。
+export async function setProSkip(userId: string, startStage: 2 | 3 | 4): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from("user_roadmap_state")
+    .update({ pro_skip_enabled: true, pro_skip_start_stage: startStage })
+    .eq("user_id", userId);
+
+  if (error) {
+    throw new Error(`Stageスキップ設定の保存に失敗しました: ${error.message}`);
+  }
 }
 
 // 会話クイズの回答から、開始Stage（1 or 2）とトラックを判定する。
@@ -1022,19 +1043,35 @@ export async function hasAnyStage3Graduation(userId: string): Promise<boolean> {
   return (count ?? 0) > 0;
 }
 
+// Stage4への実アクセス可否（#156 Stageスキップ、2026-09-14）。
+// 「Stage3を1つ卒業したか」に加えて、Pro限定のスキップ設定（pro_skip_enabled）が
+// 有効な場合も解放する。/roadmap/stage4ページ・/api/roadmap/stage4/scenarios・
+// /api/roadmap/stage4/turnの3箇所すべてで、hasAnyStage3Graduation単体ではなく
+// この関数を使うこと（そうしないと、地図上はスキップで解放表示されるのに実際の
+// ページ・APIでは弾かれるという矛盾が起きる）。
+export async function isStage4Unlocked(userId: string): Promise<boolean> {
+  const [graduated, state] = await Promise.all([
+    hasAnyStage3Graduation(userId),
+    getUserRoadmapState(userId),
+  ]);
+  return graduated || (state?.proSkipEnabled ?? false);
+}
+
 export async function getRoadmapStageReadiness(
   userId: string
 ): Promise<{ stage2Ready: boolean; stage3Ready: boolean; stage4Ready: boolean }> {
-  const [stage2, stage3, stage4Ready] = await Promise.all([
+  const [stage2, stage3, stage4Ready, state] = await Promise.all([
     getStage2ActiveSet(userId),
     getStage3ActiveSet(userId),
     hasAnyStage3Graduation(userId),
+    getUserRoadmapState(userId),
   ]);
+  const proSkipEnabled = state?.proSkipEnabled ?? false;
 
   return {
-    stage2Ready: stage2.activeSet.length >= STAGE2_ACTIVE_SET_SIZE,
-    stage3Ready: stage3.activeSet.length > 0,
-    stage4Ready,
+    stage2Ready: stage2.activeSet.length >= STAGE2_ACTIVE_SET_SIZE || proSkipEnabled,
+    stage3Ready: stage3.activeSet.length > 0 || proSkipEnabled,
+    stage4Ready: stage4Ready || proSkipEnabled,
   };
 }
 

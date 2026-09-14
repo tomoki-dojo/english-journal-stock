@@ -4,7 +4,7 @@ import { getPlan } from "@/lib/supabase/profile";
 import {
   listStage4Scenarios,
   getStage4UsageInfo,
-  hasAnyStage3Graduation,
+  isStage4Unlocked,
 } from "@/lib/supabase/speaking-roadmap";
 
 // Stage4（AIロールプレイ）のシナリオ選択画面用の一覧。公開中の全シナリオに、そのユーザーの
@@ -22,7 +22,7 @@ export async function GET() {
   try {
     // バグ修正（2026-09-14）：ページ側のゲートに加えて、APIを直接叩かれた場合の
     // 防御としてもここで同じ条件をチェックする。
-    const unlocked = await hasAnyStage3Graduation(user.id);
+    const unlocked = await isStage4Unlocked(user.id);
     if (!unlocked) {
       return NextResponse.json(
         { error: "Stage4はStage3の表現を1つ卒業すると開きます" },

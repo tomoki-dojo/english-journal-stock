@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Flame, Sparkles, ClipboardList, ChevronRight, PartyPopper } from "lucide-react";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
+import { getPlan } from "@/lib/supabase/profile";
 import {
   getCurrentStreak,
   getRoadmapStageReadiness,
@@ -10,6 +11,7 @@ import {
 } from "@/lib/supabase/speaking-roadmap";
 import { OnboardingQuiz } from "@/components/roadmap/onboarding-quiz";
 import { RoadmapMap } from "@/components/roadmap/roadmap-map";
+import { ProSkipButton } from "@/components/roadmap/pro-skip-button";
 
 // スピーキング・ロードマップのホーム（「箱庭画面」）。
 // 練習画面（クイズ）とは別画面に分離し、ここは箱庭ビジュアル＋各Stageへの入り口だけを持つ拠点画面にする。
@@ -29,6 +31,7 @@ export default async function RoadmapPage() {
   const streak = await getCurrentStreak(user.id);
   const activityCount = await getTodayActivityCount(user.id);
   const stageReadiness = await getRoadmapStageReadiness(user.id);
+  const plan = await getPlan(user.id);
 
   return (
     <div className="max-w-xl">
@@ -40,13 +43,24 @@ export default async function RoadmapPage() {
       </div>
 
       {/*
+        Stageスキップ（#156、Pro限定・2026-09-14実装）。日常会話パート（Stage1〜3）を飛ばして
+        先のStageから始めたい人向けの常設ボタン。地図の直上に配置する（地図コンテナは
+        overflow-hiddenのため、展開パネルがはみ出ないよう地図の外に置く）。
+      */}
+      <ProSkipButton
+        plan={plan}
+        proSkipEnabled={state.proSkipEnabled}
+        proSkipStartStage={state.proSkipStartStage}
+      />
+
+      {/*
         箱庭ビジュアル本体。Stage1〜5の建物/ボタンに加えて、Stage0（使い分けパーツ）の入り口も
         1枚のマップ上に直接重ねる構成（下にボタン一覧は並べない）。Stage0は一本道の解放判定とは
         無関係に常にクリック可能な独立エリアとして、道から外れた位置に単独で表示する。
         実イラスト（brand/isometric-city-asset-spec.md）は別タスク（#150）で差し替える前提で、
         ここでは配置・解放状態のロジックだけ実装している。
       */}
-      <RoadmapMap stageReadiness={stageReadiness} />
+      <RoadmapMap stageReadiness={stageReadiness} proSkipStartStage={state.proSkipStartStage} />
 
       <div className="mb-6 grid grid-cols-3 gap-3">
         <div className="rounded-xl border border-zinc-200 bg-zinc-100/50 p-4 text-center">

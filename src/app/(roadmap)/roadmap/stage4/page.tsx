@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronLeft, Hourglass } from "lucide-react";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
-import { getUserRoadmapState, hasAnyStage3Graduation } from "@/lib/supabase/speaking-roadmap";
+import { getUserRoadmapState, isStage4Unlocked } from "@/lib/supabase/speaking-roadmap";
 import { OnboardingQuiz } from "@/components/roadmap/onboarding-quiz";
 import { Stage4Practice } from "@/components/roadmap/stage4-practice";
 
@@ -23,8 +23,9 @@ export default async function RoadmapStage4Page() {
   // バグ修正（2026-09-14）：箱庭地図の鍵アイコンだけがこの条件を見ていて、ページ自体は
   // ログイン・オンボーディング完了しかチェックしていなかったため、Stage3を1問も
   // クリアしていなくてもURL直打ちでStage4にフルアクセスできてしまっていた。
-  // ここでも同じ条件（hasAnyStage3Graduation）をサーバー側で必ずチェックする。
-  const unlocked = await hasAnyStage3Graduation(user.id);
+  // ここでも同じ条件をサーバー側で必ずチェックする（isStage4Unlockedは通常の卒業条件に
+  // 加えて、#156 Pro限定Stageスキップが有効な場合も解放する）。
+  const unlocked = await isStage4Unlocked(user.id);
   if (!unlocked) {
     return (
       <div className="max-w-xl">
