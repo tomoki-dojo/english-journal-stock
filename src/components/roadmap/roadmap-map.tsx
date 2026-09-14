@@ -66,9 +66,11 @@ const WIDE_HEX_POINTS = "50,0 100,25 100,75 50,100 0,75 0,25";
 // ため、実寸を保ったまま7×7=49区画に増やしてマップ全体に対するカバー率を
 // 上げた（区画予算22〜24より多いが、これはあくまで置き場所を試すための
 // 参照グリッドなので、実際の区画確定数と一致している必要はない）。
+// 2026-09-14再修正(3)：マップを正方形〜縦長に変更し表示枠が広がったのに合わせて、
+// 1区画の実寸目標も64→78pxに底上げした（マップ全面化で生まれた余白を活用する）。
 const GROUND_GRID_COLS = 7;
 const GROUND_GRID_ROWS = 7;
-const GROUND_GRID_TILE_TARGET_PX = 64; // 1区画の実寸目標(px)。Stage3マーカー相当（2026-09-14: 全体のサイズ底上げに合わせて48→64）
+const GROUND_GRID_TILE_TARGET_PX = 78; // 1区画の実寸目標(px)。Stage3マーカー相当（2026-09-14: 全体のサイズ底上げに合わせて48→64→78）
 const GROUND_GRID_TILE_HALF_H = 50; // viewBox単位。半幅はこの2倍(=2:1投影を厳密に維持)
 const GROUND_GRID_TILE_HALF_W = GROUND_GRID_TILE_HALF_H * 2;
 // 7x7グリッド全体の外形も、個々のタイルと同じく必ず2:1になる（アイソメの性質上）。
@@ -170,7 +172,7 @@ export function RoadmapMap({
     ? "今日から練習を始めよう"
     : hasCurrentStreak
       ? `${streakStats.totalDays}日練習して、${streakStats.current}日連続練習中！`
-      : `${streakStats.totalDays}日練習した実績あり。今日から再開しよう！`;
+      : `${streakStats.totalDays}日練習しています、今日から再開しよう！`;
 
   const UNLOCKED: Record<StageNumber, boolean> = {
     1: true,
@@ -203,14 +205,16 @@ export function RoadmapMap({
 
       {/*
         地面の参照グリッド（一時的なデバッグ用、削除方法は上のGROUND_GRID_TILES
-        定義部分のコメント参照）。1区画≈実際の建物マーカーと同じ実寸(約48px)を
+        定義部分のコメント参照）。1区画≈実際の建物マーカーと同じ実寸を
         保ったまま7×7=49区画を敷き、建物・道を仮配置するときの広さの基準にする。
         個別マーカーと同じ「width指定・height auto」方式なので、コンテナの
         縦横比に関わらず常に正確な2:1のひし形になる。
+        2026-09-14再修正：マップを正方形〜縦長に変更して表示枠が広がったのに
+        合わせ、位置をtop:78%→70%に上げてグリッドの実寸拡大分の余白を確保した。
       */}
       <div
         className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
-        style={{ top: "78%", left: "50%", width: markerSizeStyle(GROUND_GRID_BLOCK_PX) }}
+        style={{ top: "70%", left: "50%", width: markerSizeStyle(GROUND_GRID_BLOCK_PX) }}
         aria-hidden="true"
       >
         <svg viewBox={GROUND_GRID_VIEWBOX} className="block w-full">
@@ -571,18 +575,23 @@ export function RoadmapMap({
           <ProSkipButton plan={plan} proSkipEnabled={proSkipEnabled} proSkipStartStage={proSkipStartStage} />
         </div>
 
-        <div className="pointer-events-auto absolute bottom-3 left-3 flex items-center gap-1.5 rounded-md bg-white/70 px-2.5 py-1 backdrop-blur-sm">
-          <Sparkles className="h-3.5 w-3.5 text-accent" />
-          <span className="text-xs font-semibold text-zinc-700">{totalMasteredCount}</span>
-          <span className="text-[10px] text-zinc-500">習得フレーズ</span>
-        </div>
-
-        <div className="pointer-events-auto absolute bottom-3 right-3 flex flex-col items-end gap-0.5 rounded-md bg-white/70 px-2.5 py-1 backdrop-blur-sm">
+        {/*
+          2026-09-14再修正：習得フレーズ・ストリークの2つは別々のバッジだと
+          Stage/掲示板ボタンの白ピルと紛らわしいという指摘を受け、1つの非白背景
+          （bg-zinc-900/60、白文字）パネルにまとめた。白背景のボタン群とは
+          色そのものが違うため、一目で「表示専用パネル」と区別できる。
+        */}
+        <div className="pointer-events-auto absolute bottom-3 left-3 flex flex-col gap-1 rounded-md bg-zinc-900/60 px-2.5 py-1.5 text-white backdrop-blur-sm">
           <div className="flex items-center gap-1.5">
-            <Flame className="h-3.5 w-3.5 text-accent" />
-            <span className="text-xs font-semibold text-zinc-700">{streakHeadline}</span>
+            <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+            <span className="text-xs font-semibold">{totalMasteredCount}</span>
+            <span className="text-[10px] text-zinc-300">習得フレーズ</span>
           </div>
-          {isRecordTying && <span className="text-[10px] font-bold text-accent">連続記録更新中！</span>}
+          <div className="flex items-center gap-1.5">
+            <Flame className="h-3.5 w-3.5 text-amber-300" />
+            <span className="text-xs font-semibold">{streakHeadline}</span>
+          </div>
+          {isRecordTying && <span className="text-[10px] font-bold text-amber-300">連続記録更新中！</span>}
         </div>
       </div>
     </div>

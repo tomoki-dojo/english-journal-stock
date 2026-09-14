@@ -16,11 +16,16 @@ type MapPoint = { top: number; left: number };
 // 全体を約1.3倍に引き上げた（Stage1: 60→80pxなど）。サイズが大きくなった分、
 // 詰まっていた箇所（特にランドマークとの間）は座標も外側にずらして重なりを
 // 回避している。ズーム・スクロールを導入せず全区画を一画面に収める方針は維持。
+// 2026-09-14再修正：/roadmapを正方形〜縦長レイアウトに変更した際、下部HUD
+// （習得フレーズ・ストリークをまとめた非白背景パネル、bottom-3 left-3）と
+// Stage1・Stage0のボタンが画面最下部で重なってしまっていたため、両者を
+// 上にずらして衝突を避けた（Stage1: building top 90→84・buttonOffset top 8→5、
+// Stage0: building top 90→82・buttonOffset top 9→5、それぞれ下記STAGE0_MAP_ANCHOR参照）。
 export const STAGE_MAP_ANCHORS: Record<
   1 | 2 | 3 | 4 | 5,
   { building: MapPoint; buttonOffset: MapPoint; size: number }
 > = {
-  1: { building: { top: 90, left: 8 }, buttonOffset: { top: 8, left: 10 }, size: 80 },
+  1: { building: { top: 84, left: 8 }, buttonOffset: { top: 5, left: 10 }, size: 80 },
   2: { building: { top: 50, left: 68 }, buttonOffset: { top: -14, left: -12 }, size: 72 },
   3: { building: { top: 80, left: 30 }, buttonOffset: { top: 12, left: 13 }, size: 64 },
   4: { building: { top: 24, left: 74 }, buttonOffset: { top: -12, left: -13 }, size: 56 },
@@ -32,7 +37,7 @@ export const STAGE_MAP_ANCHORS: Record<
 // この2つを結ぶ短い線＝「スタブ」を描く）。道自体はfog of warの対象で、
 // 実際に解放済み(＝到達済み)の区間までしか描画しない。
 export const TRUNK_ROAD_POINTS: Record<1 | 2 | 3 | 4 | 5, MapPoint> = {
-  1: { top: 94, left: 16 },
+  1: { top: 88, left: 16 },
   2: { top: 58, left: 60 },
   3: { top: 74, left: 40 },
   4: { top: 32, left: 64 },
@@ -85,8 +90,8 @@ export const LANDMARK_MAP_ANCHORS: Record<
 // Stage0はその道のどこにも属さない独立エリアという扱いのため、あえて道から外れた
 // 右下の余白に単独で置く（「資料館」のような、いつでも寄れるランドマーク）。
 export const STAGE0_MAP_ANCHOR: { building: MapPoint; buttonOffset: MapPoint; size: number } = {
-  building: { top: 90, left: 84 },
-  buttonOffset: { top: 9, left: 4 },
+  building: { top: 82, left: 84 },
+  buttonOffset: { top: 5, left: 4 },
   size: 62,
 };
 
