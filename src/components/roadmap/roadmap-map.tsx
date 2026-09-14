@@ -147,7 +147,7 @@ export function RoadmapMap({ stageReadiness, proSkipStartStage = null }: Roadmap
       */}
       <div
         className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
-        style={{ top: "50%", left: "50%", width: markerSizeStyle(GROUND_GRID_BLOCK_PX) }}
+        style={{ top: "78%", left: "50%", width: markerSizeStyle(GROUND_GRID_BLOCK_PX) }}
         aria-hidden="true"
       >
         <svg viewBox={GROUND_GRID_VIEWBOX} className="block w-full">
