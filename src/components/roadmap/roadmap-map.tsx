@@ -12,6 +12,7 @@ import {
 } from "./stage-map-anchors";
 import { ProSkipButton } from "./pro-skip-button";
 import type { Plan } from "@/lib/plan";
+import type { StreakStats } from "@/lib/supabase/speaking-roadmap";
 
 // 街の掲示板（タスク#153）専用色。Stage0のバイオレット、本道Stage1〜5の
 // グラデーションのどちらとも被らないローズにする。
@@ -121,7 +122,13 @@ type RoadmapMapProps = {
   plan: Plan;
   proSkipEnabled: boolean;
   totalMasteredCount: number;
-  streak: number;
+  // 2026-09-14修正：それまでは「現在の連続日数」だけを受け取り、streak>0なら
+  // 「◯日連続で練習中！」、0なら「今日から練習を始めよう」の二択で表示していたが、
+  // 「1年続けても1日休んだだけで新規ユーザーと同じ『今日から始めよう』表示に
+  // 戻ってしまうのは違和感がある」というユーザー指摘を受け、現在の連続日数に加えて
+  // 累計練習日数・過去最長記録も渡し、積み上げが常に見える表示に変更した
+  // （表示ロジックの詳細はこのファイル内のstreakHeadline算出部分を参照）。
+  streakStats: StreakStats;
 };
 
 // スピーキング・ロードマップのホーム＝「箱庭画面」本体。
@@ -141,8 +148,30 @@ export function RoadmapMap({
   plan,
   proSkipEnabled,
   totalMasteredCount,
-  streak,
+  streakStats,
 }: RoadmapMapProps) {
+  // ストリーク表示メッセージの合成。
+  // ・累計練習日数が0（＝完全な新規ユーザー）のときだけ「今日から練習を始めよう」。
+  // ・現在の連続日数が1以上なら「◯日練習して、△日連続練習中！」（累計＋現在の連続）。
+  // ・累計はあるが現在の連続が0（＝ストリークが途切れている）なら、積み上げは
+  //   消さずに見せつつ「今日から始めよう」の再スタート感だけを添える。
+  // 「連続記録更新中！」は、現在の連続日数が過去最長と並んでいる＝今まさに自己ベストを
+  // 更新中のときだけ表示する。ただし初めての連続記録（累計＝現在の連続、比較対象となる
+  // 過去の記録がまだ無い）ではただの初回達成であって「更新」ではないため、
+  // totalDays > current（＝今回の連続以外にも練習日がある）も条件に加えている。
+  const hasAnyRecord = streakStats.totalDays > 0;
+  const hasCurrentStreak = streakStats.current > 0;
+  const isRecordTying =
+    hasCurrentStreak &&
+    streakStats.current >= 2 &&
+    streakStats.current === streakStats.longest &&
+    streakStats.totalDays > streakStats.current;
+  const streakHeadline = !hasAnyRecord
+    ? "今日から練習を始めよう"
+    : hasCurrentStreak
+      ? `${streakStats.totalDays}日練習して、${streakStats.current}日連続練習中！`
+      : `${streakStats.totalDays}日練習した実績あり。今日から再開しよう！`;
+
   const UNLOCKED: Record<StageNumber, boolean> = {
     1: true,
     2: stageReadiness.stage2Ready,
@@ -157,7 +186,10 @@ export function RoadmapMap({
   // （進捗の実態ではなく「今どこから始めたか」というユーザーの意思決定を反映するため）。
   const currentStage = proSkipStartStage ?? [...STAGE_NUMBERS].reverse().find((s) => UNLOCKED[s]) ?? 1;
   return (
-    <div className="relative aspect-[4/3] w-full sm:aspect-[2/1]">
+    // 2026-09-14修正：以前は横長(4:3〜2:1)だったが、全面マップ化に伴い表示枠が
+    // 狭く感じるという指摘を受け、正方形〜縦長（モバイルでは縦長寄り、画面が
+    // 広がるにつれ正方形に近づく）に変更した。
+    <div className="relative aspect-[4/5] w-full sm:aspect-square">
       {/*
         地図の絵柄レイヤー。ここだけoverflow-hiddenで角丸にクリップする。
         2026-09-14追加：フローティングHUD（下のレイヤー）は意図的にこの外側に置く。
@@ -511,33 +543,46 @@ export function RoadmapMap({
       {/*
         フローティングHUD。2026-09-14追加：/roadmapページの全面マップ化に伴い、
         タイトル・Stageスキップボタン・統計表示（累計習得フレーズ→「習得フレーズ」、
-        連続practice日数→「◯日連続で練習中！」に文言変更）をページ本体から撤去し、
+        連続practice日数→合成メッセージに文言変更）をページ本体から撤去し、
         地図の上に浮かせる形に統合した。「今日の賑わい度」は「街を見ればわかる」ため
         廃止。地図の絵柄レイヤー（overflow-hidden）の外に置くことで、Stageスキップの
         展開パネルが見切れないようにしている。
+        2026-09-14再修正：HUDの4要素とStage/掲示板の建物入口ボタン（rounded-full・
+        枠線・shadow-smのピル）がデザイン的に被っているという指摘を受け、
+        「被っていいのは掲示板だけ」という方針のもと、建物ボタンとは明確に違う
+        見た目に描き分けた。
+        ①タイトル：ピル/枠線を廃し、テキストそのものに縁取り(text-shadow)を
+          付けて地図の上でも読める形にした（建物ボタンとは形状が根本的に違う）。
+        ②Stageスキップ：rounded-full→rounded-lg・実線枠→破線枠・shadow無し・
+          背景を半透明に弱め、「押せるが主役ではない」トーンダウンをした
+          （スタイル自体はpro-skip-button.tsx側で変更、詳細はそちらのコメント参照）。
+        ③統計表示（習得フレーズ・ストリーク）：枠線・shadowを完全に排し、
+          rounded-mdの薄い背景だけにすることで「表示専用でボタンではない」ことを
+          一目で区別できるようにした。
       */}
       <div className="pointer-events-none absolute inset-0 z-10">
         <div className="pointer-events-auto absolute left-3 top-3">
-          <p className="rounded-full border border-zinc-200 bg-white/90 px-3 py-1 text-xs font-semibold tracking-wide text-zinc-600 shadow-sm">
-            スピーキング・ロードマップ
-          </p>
+          <h1 className="text-sm font-bold tracking-wide text-zinc-700 [text-shadow:0_1px_3px_rgba(255,255,255,0.9),0_0px_1px_rgba(255,255,255,0.9)] sm:text-base">
+            英語が話せるようになる街
+          </h1>
         </div>
 
         <div className="pointer-events-auto absolute right-3 top-3">
           <ProSkipButton plan={plan} proSkipEnabled={proSkipEnabled} proSkipStartStage={proSkipStartStage} />
         </div>
 
-        <div className="pointer-events-auto absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white/95 px-3 py-1.5 shadow-sm">
+        <div className="pointer-events-auto absolute bottom-3 left-3 flex items-center gap-1.5 rounded-md bg-white/70 px-2.5 py-1 backdrop-blur-sm">
           <Sparkles className="h-3.5 w-3.5 text-accent" />
           <span className="text-xs font-semibold text-zinc-700">{totalMasteredCount}</span>
           <span className="text-[10px] text-zinc-500">習得フレーズ</span>
         </div>
 
-        <div className="pointer-events-auto absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white/95 px-3 py-1.5 shadow-sm">
-          <Flame className="h-3.5 w-3.5 text-accent" />
-          <span className="text-xs font-semibold text-zinc-700">
-            {streak > 0 ? `${streak}日連続で練習中！` : "今日から練習を始めよう"}
-          </span>
+        <div className="pointer-events-auto absolute bottom-3 right-3 flex flex-col items-end gap-0.5 rounded-md bg-white/70 px-2.5 py-1 backdrop-blur-sm">
+          <div className="flex items-center gap-1.5">
+            <Flame className="h-3.5 w-3.5 text-accent" />
+            <span className="text-xs font-semibold text-zinc-700">{streakHeadline}</span>
+          </div>
+          {isRecordTying && <span className="text-[10px] font-bold text-accent">連続記録更新中！</span>}
         </div>
       </div>
     </div>

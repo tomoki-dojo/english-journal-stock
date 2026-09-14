@@ -197,42 +197,72 @@ export async function getTodayActivityCount(userId: string): Promise<number> {
   return data?.count ?? 0;
 }
 
-// 直近の連続練習日数を計算する（daily_streak_logの日付が今日または昨日から
-// 何日連続で途切れずに遡れるかをその都度計算する。カウンタのズレを避けるため）。
-export async function getCurrentStreak(userId: string): Promise<number> {
+// 連続練習の統計値（現在の連続日数／過去最長の連続日数／累計練習日数）をまとめて計算する。
+// 2026-09-14追加：それまではgetCurrentStreak（現在の連続日数だけを返す）を使い、
+// UI側も「◯日連続で練習中！」／「今日から練習を始めよう」の二択で表示していたが、
+// 「1年続けても1日休んだだけで『今日から始めよう』になるのは違和感がある」という
+// 指摘を受け、現在の連続日数だけでなく「これまでの積み上げ」も併記する方針に変更した
+// （表示側の詳細は_reference/speaking-roadmap-design.md参照）。
+// daily_streak_logの全履歴を1回のクエリで取得し、その1回分のデータから
+// current/longest/totalDaysの3つをまとめて算出する（クエリを3回に分けない）。
+export type StreakStats = {
+  current: number; // 現在の連続練習日数（今日 or 昨日から遡って何日連続で記録があるか）
+  longest: number; // 過去最長の連続練習日数（現在の連続記録を含む、全履歴中の最大run長）
+  totalDays: number; // 累計の練習日数（連続しているかを問わない、記録がある日の総数）
+};
+
+export async function getStreakStats(userId: string): Promise<StreakStats> {
   const { data, error } = await supabaseAdmin
     .from("daily_streak_log")
     .select("practiced_date")
     .eq("user_id", userId)
     .order("practiced_date", { ascending: false })
-    .limit(400);
+    .limit(2000);
 
   if (error) {
     throw new Error(`ストリークの取得に失敗しました: ${error.message}`);
   }
 
   const dates = (data ?? []).map((row) => row.practiced_date as string);
-  if (dates.length === 0) return 0;
+  const totalDays = dates.length;
+
+  if (totalDays === 0) {
+    return { current: 0, longest: 0, totalDays: 0 };
+  }
 
   const today = getTodayDateKey();
   const yesterday = addDaysToDateKey(today, -1);
 
-  // 今日も昨日も記録がなければストリークは途切れている
-  if (dates[0] !== today && dates[0] !== yesterday) {
-    return 0;
-  }
-
-  let streak = 1;
-  for (let i = 1; i < dates.length; i++) {
-    const expectedPrev = addDaysToDateKey(dates[i - 1], -1);
-    if (dates[i] === expectedPrev) {
-      streak += 1;
-    } else {
-      break;
+  // 現在の連続日数：今日 or 昨日から記録がある場合だけ、そこから遡って連続日数を数える
+  // （今日も昨日も記録がなければストリークは途切れているので0のまま）
+  let current = 0;
+  if (dates[0] === today || dates[0] === yesterday) {
+    current = 1;
+    for (let i = 1; i < dates.length; i++) {
+      const expectedPrev = addDaysToDateKey(dates[i - 1], -1);
+      if (dates[i] === expectedPrev) {
+        current += 1;
+      } else {
+        break;
+      }
     }
   }
 
-  return streak;
+  // 過去最長の連続日数：datesは新しい順に並んでいるので、そのまま連続run長の
+  // 最大値を数える（現在進行中のrunも含めて比較するので「連続記録更新中」の判定に使える）。
+  let longest = 1;
+  let run = 1;
+  for (let i = 1; i < dates.length; i++) {
+    const expectedPrev = addDaysToDateKey(dates[i - 1], -1);
+    if (dates[i] === expectedPrev) {
+      run += 1;
+    } else {
+      run = 1;
+    }
+    if (run > longest) longest = run;
+  }
+
+  return { current, longest, totalDays };
 }
 
 function addDaysToDateKey(dateKey: string, days: number): string {

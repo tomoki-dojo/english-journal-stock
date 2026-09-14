@@ -56,10 +56,17 @@ export function ProSkipButton({ plan, proSkipEnabled, proSkipStartStage }: ProSk
 
   return (
     <div className="mb-3">
+      {/*
+        2026-09-14修正：Stage/掲示板の建物入口ボタン（rounded-full・実線枠・shadow-sm）
+        とデザインが被っているという指摘を受け、意図的に違う見た目にした。
+        rounded-lg（角丸だが円形ではない）・破線枠・shadow無し・半透明背景にすることで
+        「押せるボタンではあるが、建物への入口とは役割が違う／主役ではない」トーンに
+        落としつつ、破線枠とRocketアイコンの存在感で「押してほしい」感触は残している。
+      */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1.5 rounded-full border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 shadow-sm transition-colors hover:border-accent/50"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-zinc-300 bg-white/70 px-2.5 py-1.5 text-[11px] font-medium text-zinc-600 backdrop-blur-sm transition-colors hover:border-accent/50 hover:bg-white/90 hover:text-accent"
       >
         {!isPro && <Lock className="h-3.5 w-3.5 text-zinc-400" aria-hidden="true" />}
         <Rocket className="h-3.5 w-3.5 text-accent" aria-hidden="true" />

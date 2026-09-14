@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
 import { getPlan } from "@/lib/supabase/profile";
-import { getCurrentStreak, getRoadmapStageReadiness, getUserRoadmapState } from "@/lib/supabase/speaking-roadmap";
+import { getStreakStats, getRoadmapStageReadiness, getUserRoadmapState } from "@/lib/supabase/speaking-roadmap";
 import { OnboardingQuiz } from "@/components/roadmap/onboarding-quiz";
 import { RoadmapMap } from "@/components/roadmap/roadmap-map";
 
@@ -27,7 +27,7 @@ export default async function RoadmapPage() {
     return <OnboardingQuiz />;
   }
 
-  const streak = await getCurrentStreak(user.id);
+  const streakStats = await getStreakStats(user.id);
   const stageReadiness = await getRoadmapStageReadiness(user.id);
   const plan = await getPlan(user.id);
 
@@ -38,7 +38,7 @@ export default async function RoadmapPage() {
       plan={plan}
       proSkipEnabled={state.proSkipEnabled}
       totalMasteredCount={state.totalMasteredCount}
-      streak={streak}
+      streakStats={streakStats}
     />
   );
 }
