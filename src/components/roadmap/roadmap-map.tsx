@@ -43,24 +43,35 @@ const WIDE_HEX_POINTS = "50,0 100,25 100,75 50,100 0,75 0,25";
 // 実際のアイソメ地面イラスト（#150）ができたら、この`GROUND_GRID_TILES`関連の
 // 定義・描画ブロックごと削除してよい。
 //
-// 2026-09-14再修正：最初の実装はコンテナ全面を覆うSVG(viewBox 0 0 100 100,
+// 2026-09-14再修正(1)：最初の実装はコンテナ全面を覆うSVG(viewBox 0 0 100 100,
 // preserveAspectRatio="none")の中にひし形を描いていたが、コンテナ自体が
 // 正方形ではない(4:3や2:1)ため、縦横で別々の倍率で引き伸ばされてひし形の
 // 比率が2:1から大きく崩れてしまっていた（他の建物マーカーは個別のSVGを
 // width指定・height auto(＝内在的なaspect ratioを保持)で描画しているため
 // この問題を起こさない）。同じ「単体SVGをwidth指定・height autoで描く」
 // 方式に変更し、常に正確な2:1を保つようにした。
-// あわせて、コンテナ全面を埋め尽くすのではなく、以前整理した区画予算
-// （専有14＋空き8〜10≒22〜24区画）に近い数として5列×5行=25区画の
-// ブロックだけを地図中央付近に配置するよう縮小した。
-const GROUND_GRID_COLS = 5;
-const GROUND_GRID_ROWS = 5;
+// 2026-09-14再修正(2)：ブロック全体の表示幅を「コンテナ幅の78%」という
+// 決め方にしていたところ、逆算すると1区画が約110px相当になり、実際の
+// 建物マーカー(36〜62px)の倍近いサイズになっていた。1区画の実寸を
+// GROUND_GRID_TILE_TARGET_PXで指定し、そこからブロック全体のpx幅を
+// 逆算する方式に変更。あわせて、5×5=25区画だとマップの一部しか埋まらない
+// ため、実寸を保ったまま7×7=49区画に増やしてマップ全体に対するカバー率を
+// 上げた（区画予算22〜24より多いが、これはあくまで置き場所を試すための
+// 参照グリッドなので、実際の区画確定数と一致している必要はない）。
+const GROUND_GRID_COLS = 7;
+const GROUND_GRID_ROWS = 7;
+const GROUND_GRID_TILE_TARGET_PX = 48; // 1区画の実寸目標(px)。Stage3マーカー相当
 const GROUND_GRID_TILE_HALF_H = 50; // viewBox単位。半幅はこの2倍(=2:1投影を厳密に維持)
 const GROUND_GRID_TILE_HALF_W = GROUND_GRID_TILE_HALF_H * 2;
-// 5x5グリッド全体の外形も、個々のタイルと同じく必ず2:1になる（アイソメの性質上）。
+// 7x7グリッド全体の外形も、個々のタイルと同じく必ず2:1になる（アイソメの性質上）。
 const GROUND_GRID_VIEWBOX_H = (GROUND_GRID_COLS + GROUND_GRID_ROWS - 2) * GROUND_GRID_TILE_HALF_H;
 const GROUND_GRID_VIEWBOX_W = GROUND_GRID_VIEWBOX_H * 2;
 const GROUND_GRID_VIEWBOX = `0 0 ${GROUND_GRID_VIEWBOX_W} ${GROUND_GRID_VIEWBOX_H}`;
+// 1区画=GROUND_GRID_TILE_TARGET_PXになるよう、ブロック全体のpx幅を逆算する
+// （viewBox上で1タイル幅は2:1グリッド全体の幅の (2/(cols+rows-2)) を占める）。
+const GROUND_GRID_BLOCK_PX = Math.round(
+  (GROUND_GRID_TILE_TARGET_PX * (GROUND_GRID_COLS + GROUND_GRID_ROWS - 2)) / 2
+);
 
 function buildGroundGridTiles(): { key: string; points: string }[] {
   const tiles: { key: string; points: string }[] = [];
@@ -129,15 +140,14 @@ export function RoadmapMap({ stageReadiness, proSkipStartStage = null }: Roadmap
 
       {/*
         地面の参照グリッド（一時的なデバッグ用、削除方法は上のGROUND_GRID_TILES
-        定義部分のコメント参照）。5×5=25区画のひし形タイルを、以前整理した
-        区画予算（専有14＋空き8〜10）に近い数だけ地図中央付近に配置し、
-        建物・道を仮配置するときの広さの基準にする。個別マーカーと同じ
-        「width指定・height auto」方式なので、コンテナの縦横比に関わらず
-        常に正確な2:1のひし形になる。
+        定義部分のコメント参照）。1区画≈実際の建物マーカーと同じ実寸(約48px)を
+        保ったまま7×7=49区画を敷き、建物・道を仮配置するときの広さの基準にする。
+        個別マーカーと同じ「width指定・height auto」方式なので、コンテナの
+        縦横比に関わらず常に正確な2:1のひし形になる。
       */}
       <div
         className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
-        style={{ top: "52%", left: "48%", width: "78%" }}
+        style={{ top: "50%", left: "50%", width: markerSizeStyle(GROUND_GRID_BLOCK_PX) }}
         aria-hidden="true"
       >
         <svg viewBox={GROUND_GRID_VIEWBOX} className="block w-full">
