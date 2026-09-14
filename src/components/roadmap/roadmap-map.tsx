@@ -71,7 +71,7 @@ const WIDE_HEX_POINTS = "50,0 100,25 100,75 50,100 0,75 0,25";
 // 1区画の実寸目標も64→78pxに底上げした（マップ全面化で生まれた余白を活用する）。
 const GROUND_GRID_COLS = 7;
 const GROUND_GRID_ROWS = 7;
-const GROUND_GRID_TILE_TARGET_PX = 78; // 1区画の実寸目標(px)。Stage3マーカー相当（2026-09-14: 全体のサイズ底上げに合わせて48→64→78）
+const GROUND_GRID_TILE_TARGET_PX = 92; // 1区画の実寸目標(px)。Stage3マーカー相当（2026-09-14: 全体のサイズ底上げに合わせて48→64→78→92）
 const GROUND_GRID_TILE_HALF_H = 50; // viewBox単位。半幅はこの2倍(=2:1投影を厳密に維持)
 const GROUND_GRID_TILE_HALF_W = GROUND_GRID_TILE_HALF_H * 2;
 // 7x7グリッド全体の外形も、個々のタイルと同じく必ず2:1になる（アイソメの性質上）。
