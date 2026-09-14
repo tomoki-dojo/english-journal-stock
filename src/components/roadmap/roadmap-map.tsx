@@ -38,6 +38,35 @@ const DIAMOND_POINTS = "50,0 100,25 50,50 0,25";
 const WIDE_HEX_VIEWBOX = "0 0 100 100";
 const WIDE_HEX_POINTS = "50,0 100,25 100,75 50,100 0,75 0,25";
 
+// 地面の参照グリッド（2026-09-14追加、一時的なデバッグ用）。
+// 建物や道を仮配置するときの基準がなく置きづらい、という指摘を受けて追加した。
+// アイソメ2:1投影で1区画=ひし形のタイルを地面全体に敷き詰めているだけで、
+// 実際のアイソメ地面イラスト（#150）ができたら、この`GROUND_GRID_TILES`の
+// 描画ブロックごと削除してよい。
+const GROUND_TILE_HALF_W = 10; // viewBox(0-100)単位での1区画の半幅
+const GROUND_TILE_HALF_H = 5; // 半幅の半分＝2:1投影を維持
+const GROUND_GRID_RANGE = 7; // col・rowをそれぞれ-7〜7で敷き詰める
+
+function buildGroundGridTiles(): { key: string; points: string }[] {
+  const tiles: { key: string; points: string }[] = [];
+  for (let col = -GROUND_GRID_RANGE; col <= GROUND_GRID_RANGE; col++) {
+    for (let row = -GROUND_GRID_RANGE; row <= GROUND_GRID_RANGE; row++) {
+      const cx = 50 + (col - row) * GROUND_TILE_HALF_W;
+      const cy = 50 + (col + row) * GROUND_TILE_HALF_H;
+      // 完全に画面外になるタイルは生成しない（DOMを無駄に膨らませないため）
+      if (cx < -20 || cx > 120 || cy < -20 || cy > 120) continue;
+      const n = `${cx},${cy - GROUND_TILE_HALF_H}`;
+      const e = `${cx + GROUND_TILE_HALF_W},${cy}`;
+      const s = `${cx},${cy + GROUND_TILE_HALF_H}`;
+      const w = `${cx - GROUND_TILE_HALF_W},${cy}`;
+      tiles.push({ key: `${col}_${row}`, points: `${n} ${e} ${s} ${w}` });
+    }
+  }
+  return tiles;
+}
+
+const GROUND_GRID_TILES = buildGroundGridTiles();
+
 type RoadmapMapProps = {
   // Stage1は常に解放。Stage2・3は各Stageの練習ページと同じ基準（アクティブセットが
   // 規定数に届いているか）でその場で動的に判定した値を渡す（2026-09-11
@@ -83,6 +112,29 @@ export function RoadmapMap({ stageReadiness, proSkipStartStage = null }: Roadmap
     <div className="relative mb-6 aspect-[4/3] w-full overflow-hidden rounded-2xl border border-zinc-200 bg-gradient-to-b from-sky-50 to-zinc-100 sm:aspect-[2/1]">
       {/* 地面のグリッド風の目印。実イラスト実装までの簡易背景。 */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_100%,rgba(255,255,255,0.6),transparent_60%)]" />
+
+      {/*
+        地面の参照グリッド（一時的なデバッグ用、削除方法は上のGROUND_GRID_TILES
+        定義部分のコメント参照）。1区画=ひし形のタイルを敷き詰めて、建物・道を
+        仮配置するときの広さの基準にする。
+      */}
+      <svg
+        className="pointer-events-none absolute inset-0 h-full w-full"
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        {GROUND_GRID_TILES.map((tile) => (
+          <polygon
+            key={tile.key}
+            points={tile.points}
+            fill="rgba(255,255,255,0.2)"
+            stroke="#d4d4d8"
+            strokeWidth="1.2"
+            vectorEffect="non-scaling-stroke"
+          />
+        ))}
+      </svg>
 
       {/*
         道（本道＋ランドマークへの枝道）。preserveAspectRatio="none"でviewBoxを
