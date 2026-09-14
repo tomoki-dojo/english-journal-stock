@@ -998,7 +998,15 @@ async function getStage3ActiveSet(userId: string): Promise<{
 // Stage4はStage1〜3のようなアクティブセット（表現プール）方式ではなく固定シナリオ方式のため、
 // 「解放できる問題があるか」ではなく「Stage3で何か1つでも卒業できたか」を解放条件にする
 // （Stage3の実績があってはじめて、より高度な会話に進める、という自然な区切り）。
-async function hasAnyStage3Graduation(userId: string): Promise<boolean> {
+//
+// バグ修正（2026-09-14）：当初この関数は箱庭地図の表示（鍵アイコン）専用で、Stage4の
+// 練習ページ・APIルート自体はこの条件を一切チェックしていなかった。Stage2/3は
+// 「出せる問題があるか」というコンテンツ量の話なのでURL直打ちでもnot_readyが返るだけで
+// 実害はないが、Stage4は固定シナリオを持つため、Stage3を1問もやっていないユーザーでも
+// URLを直打ちすればAIロールプレイにフルアクセスできてしまう抜け穴だった。この関数を
+// exportし、/roadmap/stage4のページ・/api/roadmap/stage4/scenarios・/api/roadmap/stage4/turn
+// の3箇所でもサーバー側ゲートとして使うように修正した。
+export async function hasAnyStage3Graduation(userId: string): Promise<boolean> {
   const { count, error } = await supabaseAdmin
     .from("speaking_stage_progress")
     .select("id", { count: "exact", head: true })

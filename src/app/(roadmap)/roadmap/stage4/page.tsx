@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Hourglass } from "lucide-react";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
-import { getUserRoadmapState } from "@/lib/supabase/speaking-roadmap";
+import { getUserRoadmapState, hasAnyStage3Graduation } from "@/lib/supabase/speaking-roadmap";
 import { OnboardingQuiz } from "@/components/roadmap/onboarding-quiz";
 import { Stage4Practice } from "@/components/roadmap/stage4-practice";
 
@@ -18,6 +18,37 @@ export default async function RoadmapStage4Page() {
   const state = await getUserRoadmapState(user.id);
   if (!state || !state.onboardingQuizCompleted) {
     return <OnboardingQuiz />;
+  }
+
+  // バグ修正（2026-09-14）：箱庭地図の鍵アイコンだけがこの条件を見ていて、ページ自体は
+  // ログイン・オンボーディング完了しかチェックしていなかったため、Stage3を1問も
+  // クリアしていなくてもURL直打ちでStage4にフルアクセスできてしまっていた。
+  // ここでも同じ条件（hasAnyStage3Graduation）をサーバー側で必ずチェックする。
+  const unlocked = await hasAnyStage3Graduation(user.id);
+  if (!unlocked) {
+    return (
+      <div className="max-w-xl">
+        <Link
+          href="/roadmap"
+          className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-500 transition-colors hover:text-zinc-900"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          街に戻る
+        </Link>
+        <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-100/30 px-6 py-10 text-center">
+          <Hourglass className="mx-auto mb-3 h-6 w-6 text-zinc-400" />
+          <p className="text-sm text-zinc-500">
+            Stage4はStage3の表現を1つ卒業すると開きます。
+          </p>
+          <Link
+            href="/roadmap/stage3"
+            className="mt-4 inline-flex items-center gap-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
+          >
+            Stage3に進む
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (

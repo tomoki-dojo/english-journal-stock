@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
 import { getPlan } from "@/lib/supabase/profile";
-import { reportStage4Turn } from "@/lib/supabase/speaking-roadmap";
+import { reportStage4Turn, hasAnyStage3Graduation } from "@/lib/supabase/speaking-roadmap";
 import { STAGE4_TURN_COUNT, type Stage4Turn } from "@/components/roadmap/types";
 
 type TurnRequestBody = {
@@ -66,6 +66,17 @@ export async function POST(request: Request) {
   }
 
   try {
+    // バグ修正（2026-09-14）：ページ・シナリオ一覧APIに加えて、AI判定コール自体が
+    // 発生するこのエンドポイントでも同じゲートを防御的にチェックする（コストが発生する
+    // 処理のため、3箇所の中でも特に守る意味が大きい）。
+    const unlocked = await hasAnyStage3Graduation(user.id);
+    if (!unlocked) {
+      return NextResponse.json(
+        { error: "Stage4はStage3の表現を1つ卒業すると開きます" },
+        { status: 403 }
+      );
+    }
+
     const plan = await getPlan(user.id);
     const outcome = await reportStage4Turn(
       user.id,

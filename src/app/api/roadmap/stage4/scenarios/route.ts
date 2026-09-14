@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
 import { getPlan } from "@/lib/supabase/profile";
-import { listStage4Scenarios, getStage4UsageInfo } from "@/lib/supabase/speaking-roadmap";
+import {
+  listStage4Scenarios,
+  getStage4UsageInfo,
+  hasAnyStage3Graduation,
+} from "@/lib/supabase/speaking-roadmap";
 
 // Stage4（AIロールプレイ）のシナリオ選択画面用の一覧。公開中の全シナリオに、そのユーザーの
 // 進捗（習熟度・卒業状態）を重ねて返す。あわせて「今日のセッション あと◯回」の表示用に
@@ -16,6 +20,16 @@ export async function GET() {
   }
 
   try {
+    // バグ修正（2026-09-14）：ページ側のゲートに加えて、APIを直接叩かれた場合の
+    // 防御としてもここで同じ条件をチェックする。
+    const unlocked = await hasAnyStage3Graduation(user.id);
+    if (!unlocked) {
+      return NextResponse.json(
+        { error: "Stage4はStage3の表現を1つ卒業すると開きます" },
+        { status: 403 }
+      );
+    }
+
     const plan = await getPlan(user.id);
     const [scenarios, usage] = await Promise.all([
       listStage4Scenarios(user.id),
