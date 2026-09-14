@@ -41,8 +41,13 @@ type RoadmapMapProps = {
 // 1枚の画像ビジュアル(アイソメ都市)の上にStage1〜5の建物/ボタンを直接重ねて表示し、
 // 下にボタン一覧を並べる構成にはしない。アイソメ都市の実イラストは別タスク（#150）で、
 // ここでは「だいたいこの辺りに配置する」という座標・状態設計だけを先に作る。
-// 建物同士は手前(Stage1)→奥(Stage5)の緩い奥行き進行を保ちつつ位置を軽くジグザグさせ、
-// 各Stageのボタン(横長ピル)は建物の真上ではなく、そばに寄せた位置に浮かせて配置する。
+// 建物同士は手前(Stage1)→奥(Stage5)という大枠の進行方向を保ちつつ、道筋が予測できて
+// しまわないよう位置を大きく蛇行させ、各Stageのボタン(横長ピル)は建物の真上ではなく、
+// そばに寄せた位置に浮かせて配置する（詳細はstage-map-anchors.ts参照）。
+// 2026-09-14修正：未解放のStageは実座標にプレースホルダーを出さず完全に隠すようにした
+// （fog of war）。蛇行させても位置が最初から見えていては「次はこの辺に建つ」と分かって
+// しまい意味が薄いため。ただし「解放済みだが画面が未実装」なStage（Stage5）は、既に
+// 実績として得ているものなので引き続きプレースホルダーで見せる（隠すのは未解放分のみ）。
 export function RoadmapMap({ stageReadiness, proSkipStartStage = null }: RoadmapMapProps) {
   const UNLOCKED: Record<StageNumber, boolean> = {
     1: true,
@@ -120,9 +125,17 @@ export function RoadmapMap({ stageReadiness, proSkipStartStage = null }: Roadmap
         const interactive = unlocked && IMPLEMENTED_STAGES.includes(stage);
         const markerSize = markerSizeStyle(anchor.size);
 
+        if (!unlocked) {
+          // 未解放のStageは完全に非表示（fog of war）。実座標を見せてしまうと
+          // 「次はここに建つ」と分かってワクワク感が失われるため、何も描画しない。
+          return null;
+        }
+
         if (!interactive) {
-          // 未解放（またはまだ画面が無いStage）は、輪郭だけのシルエット/空き地として見せる。
-          // 「この先まだ何か建つ」という期待だけ残し、押せるボタンは出さない。
+          // ここに来るのは「解放済みだが、まだ練習画面が実装されていない」Stage
+          // （現状はStage5のみ）。既に得た実績なので隠さず、輪郭だけのシルエット/
+          // 空き地として見せる。「この先まだ何か建つ」という期待だけ残し、押せる
+          // ボタンは出さない。
           return (
             <div
               key={stage}
