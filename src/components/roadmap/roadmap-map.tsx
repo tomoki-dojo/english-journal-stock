@@ -40,25 +40,39 @@ const WIDE_HEX_POINTS = "50,0 100,25 100,75 50,100 0,75 0,25";
 
 // 地面の参照グリッド（2026-09-14追加、一時的なデバッグ用）。
 // 建物や道を仮配置するときの基準がなく置きづらい、という指摘を受けて追加した。
-// アイソメ2:1投影で1区画=ひし形のタイルを地面全体に敷き詰めているだけで、
-// 実際のアイソメ地面イラスト（#150）ができたら、この`GROUND_GRID_TILES`の
-// 描画ブロックごと削除してよい。
-const GROUND_TILE_HALF_W = 10; // viewBox(0-100)単位での1区画の半幅
-const GROUND_TILE_HALF_H = 5; // 半幅の半分＝2:1投影を維持
-const GROUND_GRID_RANGE = 7; // col・rowをそれぞれ-7〜7で敷き詰める
+// 実際のアイソメ地面イラスト（#150）ができたら、この`GROUND_GRID_TILES`関連の
+// 定義・描画ブロックごと削除してよい。
+//
+// 2026-09-14再修正：最初の実装はコンテナ全面を覆うSVG(viewBox 0 0 100 100,
+// preserveAspectRatio="none")の中にひし形を描いていたが、コンテナ自体が
+// 正方形ではない(4:3や2:1)ため、縦横で別々の倍率で引き伸ばされてひし形の
+// 比率が2:1から大きく崩れてしまっていた（他の建物マーカーは個別のSVGを
+// width指定・height auto(＝内在的なaspect ratioを保持)で描画しているため
+// この問題を起こさない）。同じ「単体SVGをwidth指定・height autoで描く」
+// 方式に変更し、常に正確な2:1を保つようにした。
+// あわせて、コンテナ全面を埋め尽くすのではなく、以前整理した区画予算
+// （専有14＋空き8〜10≒22〜24区画）に近い数として5列×5行=25区画の
+// ブロックだけを地図中央付近に配置するよう縮小した。
+const GROUND_GRID_COLS = 5;
+const GROUND_GRID_ROWS = 5;
+const GROUND_GRID_TILE_HALF_H = 50; // viewBox単位。半幅はこの2倍(=2:1投影を厳密に維持)
+const GROUND_GRID_TILE_HALF_W = GROUND_GRID_TILE_HALF_H * 2;
+// 5x5グリッド全体の外形も、個々のタイルと同じく必ず2:1になる（アイソメの性質上）。
+const GROUND_GRID_VIEWBOX_H = (GROUND_GRID_COLS + GROUND_GRID_ROWS - 2) * GROUND_GRID_TILE_HALF_H;
+const GROUND_GRID_VIEWBOX_W = GROUND_GRID_VIEWBOX_H * 2;
+const GROUND_GRID_VIEWBOX = `0 0 ${GROUND_GRID_VIEWBOX_W} ${GROUND_GRID_VIEWBOX_H}`;
 
 function buildGroundGridTiles(): { key: string; points: string }[] {
   const tiles: { key: string; points: string }[] = [];
-  for (let col = -GROUND_GRID_RANGE; col <= GROUND_GRID_RANGE; col++) {
-    for (let row = -GROUND_GRID_RANGE; row <= GROUND_GRID_RANGE; row++) {
-      const cx = 50 + (col - row) * GROUND_TILE_HALF_W;
-      const cy = 50 + (col + row) * GROUND_TILE_HALF_H;
-      // 完全に画面外になるタイルは生成しない（DOMを無駄に膨らませないため）
-      if (cx < -20 || cx > 120 || cy < -20 || cy > 120) continue;
-      const n = `${cx},${cy - GROUND_TILE_HALF_H}`;
-      const e = `${cx + GROUND_TILE_HALF_W},${cy}`;
-      const s = `${cx},${cy + GROUND_TILE_HALF_H}`;
-      const w = `${cx - GROUND_TILE_HALF_W},${cy}`;
+  const offsetX = (GROUND_GRID_ROWS - 1) * GROUND_GRID_TILE_HALF_W;
+  for (let col = 0; col < GROUND_GRID_COLS; col++) {
+    for (let row = 0; row < GROUND_GRID_ROWS; row++) {
+      const cx = offsetX + (col - row) * GROUND_GRID_TILE_HALF_W;
+      const cy = (col + row) * GROUND_GRID_TILE_HALF_H;
+      const n = `${cx},${cy - GROUND_GRID_TILE_HALF_H}`;
+      const e = `${cx + GROUND_GRID_TILE_HALF_W},${cy}`;
+      const s = `${cx},${cy + GROUND_GRID_TILE_HALF_H}`;
+      const w = `${cx - GROUND_GRID_TILE_HALF_W},${cy}`;
       tiles.push({ key: `${col}_${row}`, points: `${n} ${e} ${s} ${w}` });
     }
   }
@@ -115,26 +129,30 @@ export function RoadmapMap({ stageReadiness, proSkipStartStage = null }: Roadmap
 
       {/*
         地面の参照グリッド（一時的なデバッグ用、削除方法は上のGROUND_GRID_TILES
-        定義部分のコメント参照）。1区画=ひし形のタイルを敷き詰めて、建物・道を
-        仮配置するときの広さの基準にする。
+        定義部分のコメント参照）。5×5=25区画のひし形タイルを、以前整理した
+        区画予算（専有14＋空き8〜10）に近い数だけ地図中央付近に配置し、
+        建物・道を仮配置するときの広さの基準にする。個別マーカーと同じ
+        「width指定・height auto」方式なので、コンテナの縦横比に関わらず
+        常に正確な2:1のひし形になる。
       */}
-      <svg
-        className="pointer-events-none absolute inset-0 h-full w-full"
-        viewBox="0 0 100 100"
-        preserveAspectRatio="none"
+      <div
+        className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
+        style={{ top: "52%", left: "48%", width: "78%" }}
         aria-hidden="true"
       >
-        {GROUND_GRID_TILES.map((tile) => (
-          <polygon
-            key={tile.key}
-            points={tile.points}
-            fill="rgba(255,255,255,0.2)"
-            stroke="#d4d4d8"
-            strokeWidth="1.2"
-            vectorEffect="non-scaling-stroke"
-          />
-        ))}
-      </svg>
+        <svg viewBox={GROUND_GRID_VIEWBOX} className="block w-full">
+          {GROUND_GRID_TILES.map((tile) => (
+            <polygon
+              key={tile.key}
+              points={tile.points}
+              fill="rgba(255,255,255,0.2)"
+              stroke="#d4d4d8"
+              strokeWidth="3"
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
+        </svg>
+      </div>
 
       {/*
         道（本道＋ランドマークへの枝道）。preserveAspectRatio="none"でviewBoxを
