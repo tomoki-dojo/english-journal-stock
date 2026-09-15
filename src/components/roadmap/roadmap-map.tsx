@@ -22,9 +22,8 @@ const BOARD_COLOR = "#e11d48";
 type StageNumber = 1 | 2 | 3 | 4 | 5;
 
 // 練習画面(/roadmap/stageN)が実際に存在するStageのみ、地図上でクリック可能にする。
-// Stage5は画面自体が未実装のため、進捗上「解放」されていてもリンクは張らない
-// （実装が追いついたらここに追加するだけでよい）。
-const IMPLEMENTED_STAGES: readonly StageNumber[] = [1, 2, 3, 4];
+// 2026-09-16：Stage5実装（日常編・ビジネス編ハブページ）に伴い5を追加。
+const IMPLEMENTED_STAGES: readonly StageNumber[] = [1, 2, 3, 4, 5];
 
 const STAGE_META: Record<StageNumber, { label: string; caption: string; icon: LucideIcon; href: string }> = {
   1: { label: "Stage1", caption: "音読", icon: Mic, href: "/roadmap/stage1" },
@@ -109,12 +108,21 @@ type RoadmapMapProps = {
   // 修正：以前はuser_roadmap_state.current_stageという、オンボーディング時に1回だけ
   // 書かれて以後更新されない値で解放判定しており、Stage1を卒業してもStage2が
   // 永久に解放されないバグがあった。詳細は_reference/speaking-roadmap-design.md参照）。
-  // Stage4はStage3の卒業実績（何か1つでも習得済みか）で判定する（詳細はspeaking-roadmap.tsの
-  // getRoadmapStageReadiness参照）。Stage5は画面自体が未実装のため、この値に関わらず
-  // IMPLEMENTED_STAGESで常にロック表示にする。
+  // Stage4はStage3の卒業本数（STAGE4_UNLOCK_STAGE3_GRADUATIONS）で判定する（詳細は
+  // speaking-roadmap.tsのgetRoadmapStageReadiness参照）。Stage5は日常編・ビジネス編が
+  // 独立したトラックのため、対応するStage4シナリオの卒業本数でそれぞれ判定した
+  // stage5DailyReady/stage5BusinessReadyを受け取り、どちらか一方でも解放済みなら
+  // マップ上のStage5マーカー自体は見せる（2026-09-16：Stage5実装に伴いtrueになり得る値に変更。
+  // トラックごとの個別ロック表示はStage5ハブページ側で行う）。
   // stageReadinessはStageスキップ（#156）が有効な間、対応するStageのReadyがtrueになる
   // （getRoadmapStageReadiness側でOR済み）ため、ここでは追加の分岐は不要。
-  stageReadiness: { stage2Ready: boolean; stage3Ready: boolean; stage4Ready: boolean };
+  stageReadiness: {
+    stage2Ready: boolean;
+    stage3Ready: boolean;
+    stage4Ready: boolean;
+    stage5DailyReady: boolean;
+    stage5BusinessReady: boolean;
+  };
   // Stageスキップで選んだ開始Stage。「現在地」ハイライトをここに合わせる（未使用時はnull）。
   proSkipStartStage?: 2 | 3 | 4 | null;
   // 2026-09-14追加：/roadmapページを全面マップ中心のレイアウトに再構築した際、
@@ -180,9 +188,9 @@ export function RoadmapMap({
     2: stageReadiness.stage2Ready,
     3: stageReadiness.stage3Ready,
     4: stageReadiness.stage4Ready,
-    // Stage5は解放条件そのものが未設計（将来タスク）。IMPLEMENTED_STAGESにより
-    // どのみち常にロック表示になるため、ここでは暫定でfalse固定にしておく。
-    5: false,
+    // 日常編・ビジネス編どちらか一方でも解放済みなら、マップ上ではStage5を「解放済み」
+    // として扱う（トラック別のロック表示はStage5ハブページ側の役割）。
+    5: stageReadiness.stage5DailyReady || stageReadiness.stage5BusinessReady,
   };
   // 「現在地」ハイライト＝実際に解放されている最後（一番奥）のStage。
   // ただしStageスキップ（#156）が有効な間は、選んだ開始Stageを優先して現在地として見せる
@@ -469,20 +477,18 @@ export function RoadmapMap({
         if (!unlocked && IMPLEMENTED_STAGES.includes(stage)) {
           // 未解放のStageは完全に非表示（fog of war）。実座標を見せてしまうと
           // 「次はここに建つ」と分かってワクワク感が失われるため、何も描画しない。
-          // 2026-09-14修正：以前は`!unlocked`だけで判定しており、Stage5は
-          // UNLOCKED[5]が常にfalse固定のためこの分岐に入って完全に消えてしまって
-          // いた（本来は下のプレースホルダー表示を維持すべきバグ）。Stage5のように
-          // 「まだ画面が無いだけで解放条件自体は未設計」なStageは、IMPLEMENTED_STAGES
-          // に含まれないことを見て区別し、こちらの分岐には入らないようにした。
+          // 2026-09-16：Stage5実装によりIMPLEMENTED_STAGESに5が含まれるようになったため、
+          // Stage5も他Stageと同じくここでfog of war判定される（日常編・ビジネス編とも
+          // 未解放の間は完全に隠す）。
           return null;
         }
 
         if (!interactive) {
-          // ここに来るのは「解放済みだが、まだ練習画面が実装されていない」Stage、
-          // または「画面自体が未実装で解放条件も未設計」なStage（現状はどちらも
-          // Stage5のみ）。既に得た実績、または将来必ず来るものなので隠さず、
-          // 輪郭だけのシルエット/空き地として見せる。「この先まだ何か建つ」という
-          // 期待だけ残し、押せるボタンは出さない。
+          // ここに来るのは「解放済みだが、まだ練習画面が実装されていない」Stage
+          // （現状のStage1〜5はすべて実装済みのためこの分岐には基本入らないが、
+          // 将来Stageが増えた場合のためのフォールバックとして残している）。
+          // 既に得た実績、または将来必ず来るものなので隠さず、輪郭だけのシルエット/
+          // 空き地として見せる。「この先まだ何か建つ」という期待だけ残し、押せるボタンは出さない。
           return (
             <div
               key={stage}

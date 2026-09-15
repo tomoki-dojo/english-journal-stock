@@ -6,6 +6,7 @@ import { getTodayDateKey } from "@/lib/daily-rotation";
 import { getExpressionAudioSignedUrl } from "@/lib/supabase/expression-audio";
 import { judgeStage3Answer, checkStage3Usage } from "@/lib/stage3-ai";
 import { judgeStage4Turn, checkStage4Usage } from "@/lib/stage4-ai";
+import { judgeStage5Turn, checkStage5Usage } from "@/lib/stage5-ai";
 import { getOrGenerateBlankChoiceReasons } from "@/lib/stage2-choice-reasons";
 import { getOrGenerateStage3HintBlank } from "@/lib/stage3-hint-blank";
 import type { Plan } from "@/lib/plan";
@@ -25,6 +26,9 @@ import {
   STAGE4_GRADUATE_STREAK,
   STAGE4_TURN_COUNT,
   STAGE4_UNLOCK_STAGE3_GRADUATIONS,
+  STAGE5_GRADUATE_STREAK,
+  STAGE5_TURN_COUNT,
+  STAGE5_UNLOCK_STAGE4_GRADUATIONS,
   computeWarmth,
   getStage1SubStep,
   getStage2SubStep,
@@ -46,6 +50,10 @@ import {
   type Stage4ScenarioListItem,
   type Stage4Turn,
   type Stage4TurnOutcome,
+  type Stage5ScenarioListItem,
+  type Stage5Track,
+  type Stage5Turn,
+  type Stage5TurnOutcome,
   type UserRoadmapState,
 } from "@/components/roadmap/types";
 
@@ -432,11 +440,11 @@ export async function getStage1Round(userId: string): Promise<Stage1RoundRespons
 // 取り組んだこと自体を「今日練習した」記録にする（正誤は問わない）。
 async function reportStageStreakResult(
   userId: string,
-  stage: 0 | 1 | 2 | 3 | 4,
+  stage: 0 | 1 | 2 | 3 | 4 | 5,
   expressionId: string,
   graduateStreak: number,
   correct: boolean,
-  phraseSource: "expression" | "usage_rule" | "stage4_scenario" = "expression"
+  phraseSource: "expression" | "usage_rule" | "stage4_scenario" | "stage5_scenario" = "expression"
 ): Promise<{ streak: number; graduated: boolean }> {
   const { data: existing, error: fetchError } = await supabaseAdmin
     .from("speaking_stage_progress")
@@ -1092,13 +1100,75 @@ export async function isStage4Unlocked(userId: string): Promise<boolean> {
   return graduationCount >= STAGE4_UNLOCK_STAGE3_GRADUATIONS || (state?.proSkipEnabled ?? false);
 }
 
-export async function getRoadmapStageReadiness(
+// Stage4卒業済みシナリオのscene_tagから、日常/ビジネスそれぞれのドメインで
+// STAGE5_UNLOCK_STAGE4_GRADUATIONS本以上卒業しているかを返す。Stage5は日常編・ビジネス編が
+// 独立したトラックのため、単一のbooleanではなくドメインごとに判定する
+// （_reference/speaking-roadmap-design.md「Stage5：スキーマ・解放ロジック設計」参照）。
+// Stage4自体はtrack列を持たないため、既存のisDailyScene()でscene_tagから逆算する
+// （Stage5シナリオ側はtrack列で直接判定するので、この関数はStage4→Stage5の解放判定専用）。
+async function getStage5DomainReadiness(
   userId: string
-): Promise<{ stage2Ready: boolean; stage3Ready: boolean; stage4Ready: boolean }> {
-  const [stage2, graduatedStage1Ids, stage3GraduationCount, state] = await Promise.all([
+): Promise<{ dailyReady: boolean; businessReady: boolean }> {
+  const { data: progressRows, error: progressError } = await supabaseAdmin
+    .from("speaking_stage_progress")
+    .select("phrase_id")
+    .eq("user_id", userId)
+    .eq("stage", 4)
+    .eq("phrase_source", "stage4_scenario")
+    .eq("status", "習得済み");
+
+  if (progressError) {
+    throw new Error(`Stage4卒業実績の取得に失敗しました: ${progressError.message}`);
+  }
+
+  const graduatedIds = (progressRows ?? []).map((row) => row.phrase_id as string);
+  if (graduatedIds.length === 0) return { dailyReady: false, businessReady: false };
+
+  const { data: scenarioRows, error: scenarioError } = await supabaseAdmin
+    .from("stage4_scenarios")
+    .select("scene_tag")
+    .in("id", graduatedIds);
+
+  if (scenarioError) {
+    throw new Error(`Stage4シナリオの取得に失敗しました: ${scenarioError.message}`);
+  }
+
+  const tags = (scenarioRows ?? []).map((row) => row.scene_tag as string);
+  const dailyCount = tags.filter((tag) => isDailyScene([tag])).length;
+  const businessCount = tags.length - dailyCount;
+
+  return {
+    dailyReady: dailyCount >= STAGE5_UNLOCK_STAGE4_GRADUATIONS,
+    businessReady: businessCount >= STAGE5_UNLOCK_STAGE4_GRADUATIONS,
+  };
+}
+
+// Stage5への実アクセス可否。トラック別に独立して判定する（proSkipEnabledが有効な場合は
+// 両トラックとも一律で解放——スキップ自体が「全ゲートを一律で通す」既存の意味を踏襲するため、
+// トラックで差をつける理由がない）。Stage4と同じく、地図の表示・scenarios API・turn APIの
+// 3箇所すべてでこの関数を使うこと。
+export async function isStage5TrackUnlocked(userId: string, track: Stage5Track): Promise<boolean> {
+  const [readiness, state] = await Promise.all([
+    getStage5DomainReadiness(userId),
+    getUserRoadmapState(userId),
+  ]);
+  const proSkipEnabled = state?.proSkipEnabled ?? false;
+  const domainReady = track === "daily" ? readiness.dailyReady : readiness.businessReady;
+  return domainReady || proSkipEnabled;
+}
+
+export async function getRoadmapStageReadiness(userId: string): Promise<{
+  stage2Ready: boolean;
+  stage3Ready: boolean;
+  stage4Ready: boolean;
+  stage5DailyReady: boolean;
+  stage5BusinessReady: boolean;
+}> {
+  const [stage2, graduatedStage1Ids, stage3GraduationCount, stage5Readiness, state] = await Promise.all([
     getStage2ActiveSet(userId),
     getStage1GraduatedExpressionIds(userId),
     countStage3Graduations(userId),
+    getStage5DomainReadiness(userId),
     getUserRoadmapState(userId),
   ]);
   const proSkipEnabled = state?.proSkipEnabled ?? false;
@@ -1107,6 +1177,8 @@ export async function getRoadmapStageReadiness(
     stage2Ready: stage2.activeSet.length >= STAGE2_ACTIVE_SET_SIZE || proSkipEnabled,
     stage3Ready: graduatedStage1Ids.size >= STAGE3_UNLOCK_STAGE1_GRADUATIONS || proSkipEnabled,
     stage4Ready: stage3GraduationCount >= STAGE4_UNLOCK_STAGE3_GRADUATIONS || proSkipEnabled,
+    stage5DailyReady: stage5Readiness.dailyReady || proSkipEnabled,
+    stage5BusinessReady: stage5Readiness.businessReady || proSkipEnabled,
   };
 }
 
@@ -1409,6 +1481,184 @@ export async function reportStage4Turn(
     STAGE4_GRADUATE_STREAK,
     judged.turn.overallPass === true,
     "stage4_scenario"
+  );
+
+  return {
+    status: "ok",
+    result: {
+      aiReplyEn: judged.turn.aiReplyEn,
+      turnIndex,
+      sessionComplete: true,
+      errorTags: judged.turn.errorTags,
+      overallPass: judged.turn.overallPass === true,
+      feedbackJa: judged.turn.feedbackJa,
+      streak,
+      graduated,
+      usage: judged.usage,
+    },
+  };
+}
+
+// ============================================================
+// Stage5（上級ロールプレイ）
+// Stage4と全く同じ「固定シナリオを一覧から選んで会話する」方式（stage5_scenarios）。
+// 違いは一覧・利用回数・卒業判定がすべてtrack（daily/business）でスコープされる点のみ
+// （_reference/speaking-roadmap-design.md参照）。
+// ============================================================
+
+// 指定トラックの公開中シナリオに、そのユーザーの進捗を重ねて返す。
+export async function listStage5Scenarios(
+  userId: string,
+  track: Stage5Track
+): Promise<Stage5ScenarioListItem[]> {
+  const dbTrack = track === "daily" ? "日常" : "ビジネス";
+
+  const { data: scenarios, error } = await supabaseAdmin
+    .from("stage5_scenarios")
+    .select("id, code, track, scene_tag, title_ja, situation_ja, goal_ja, opening_line_en, level")
+    .eq("publish_status", "公開")
+    .eq("track", dbTrack)
+    .order("code", { ascending: true });
+
+  if (error) {
+    throw new Error(`Stage5シナリオ一覧の取得に失敗しました: ${error.message}`);
+  }
+
+  const { data: progressRows, error: progressError } = await supabaseAdmin
+    .from("speaking_stage_progress")
+    .select("phrase_id, status, correct_streak")
+    .eq("user_id", userId)
+    .eq("stage", 5)
+    .eq("phrase_source", "stage5_scenario");
+
+  if (progressError) {
+    throw new Error(`Stage5進捗の取得に失敗しました: ${progressError.message}`);
+  }
+
+  const progressMap = new Map<string, { status: string; correct_streak: number }>();
+  for (const row of progressRows ?? []) {
+    progressMap.set(row.phrase_id as string, {
+      status: row.status as string,
+      correct_streak: row.correct_streak as number,
+    });
+  }
+
+  return (scenarios ?? []).map((row) => {
+    const progress = progressMap.get(row.id as string);
+    const streak = progress?.correct_streak ?? 0;
+    return {
+      id: row.id as string,
+      code: row.code as string,
+      track,
+      sceneTag: row.scene_tag as string,
+      titleJa: row.title_ja as string,
+      situationJa: row.situation_ja as string,
+      goalJa: row.goal_ja as string,
+      openingLineEn: row.opening_line_en as string,
+      level: row.level as "中級" | "上級",
+      status: (progress?.status as "未着手" | "練習中" | "習得済み" | undefined) ?? "未着手",
+      warmth: computeWarmth(streak, STAGE5_GRADUATE_STREAK),
+    };
+  });
+}
+
+// turn APIが「このシナリオはどのトラックか」をゲートチェックのために引くための軽量ルックアップ。
+// クライアントからのtrack指定を信用せず、scenarioIdからDBの実データで判定する。
+export async function getStage5ScenarioTrack(scenarioId: string): Promise<Stage5Track | null> {
+  const { data, error } = await supabaseAdmin
+    .from("stage5_scenarios")
+    .select("track")
+    .eq("id", scenarioId)
+    .eq("publish_status", "公開")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Stage5シナリオの取得に失敗しました: ${error.message}`);
+  }
+  if (!data) return null;
+
+  return (data.track as string) === "日常" ? "daily" : "business";
+}
+
+// シナリオ選択画面で「今日のセッション あと◯回」を表示するための、消費なしの残数確認。
+export async function getStage5UsageInfo(userId: string, plan: Plan): Promise<{ remaining: number; limit: number }> {
+  const check = await checkStage5Usage(userId, plan);
+  return check.allowed
+    ? { remaining: check.remaining + 1, limit: check.limit }
+    : { remaining: 0, limit: check.limit };
+}
+
+// Stage5の1ターン分を処理する。turnIndexが1のときだけ日次セッション開始回数をチェック・消費し、
+// STAGE5_TURN_COUNT（最終ターン）のときだけstreak更新（シナリオ別卒業判定）を行う。
+// trackはクライアントの指定を信用せず、scenarioIdからDB側のtrack列を引いて使う
+// （turnIndex>1のリクエストでもtrackを都度取得し直すことで、解放判定を常に正しいドメインで行う）。
+export async function reportStage5Turn(
+  userId: string,
+  plan: Plan,
+  scenarioId: string,
+  turnIndex: number,
+  history: Stage5Turn[],
+  userUtterance: string
+): Promise<Stage5TurnOutcome> {
+  const { data: scenario, error: scenarioError } = await supabaseAdmin
+    .from("stage5_scenarios")
+    .select("title_ja, situation_ja, ai_persona_ja, goal_ja")
+    .eq("id", scenarioId)
+    .eq("publish_status", "公開")
+    .maybeSingle();
+
+  if (scenarioError) {
+    throw new Error(`Stage5シナリオの取得に失敗しました: ${scenarioError.message}`);
+  }
+  if (!scenario) {
+    return { status: "error", message: "対象のシナリオが見つかりませんでした" };
+  }
+
+  const judged = await judgeStage5Turn({
+    userId,
+    plan,
+    scenarioTitleJa: scenario.title_ja as string,
+    situationJa: scenario.situation_ja as string,
+    aiPersonaJa: scenario.ai_persona_ja as string,
+    goalJa: scenario.goal_ja as string,
+    turnIndex,
+    history,
+    userUtterance,
+  });
+
+  if (!judged.ok) {
+    if (judged.reason === "limit_exceeded") {
+      return { status: "limit_exceeded", limit: judged.limit };
+    }
+    return { status: "error", message: judged.message };
+  }
+
+  if (judged.turn.errorTags.length > 0) {
+    await recordErrorTags(userId, judged.turn.errorTags);
+  }
+
+  const isFinalTurn = turnIndex >= STAGE5_TURN_COUNT;
+
+  if (!isFinalTurn) {
+    return {
+      status: "ok",
+      result: {
+        aiReplyEn: judged.turn.aiReplyEn,
+        turnIndex,
+        sessionComplete: false,
+        errorTags: judged.turn.errorTags,
+        usage: judged.usage,
+      },
+    };
+  }
+
+  const { streak, graduated } = await reportStageStreakResult(
+    userId,
+    5,
+    scenarioId,
+    STAGE5_GRADUATE_STREAK,
+    judged.turn.overallPass === true,
+    "stage5_scenario"
   );
 
   return {

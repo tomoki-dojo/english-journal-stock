@@ -1,10 +1,10 @@
 "use client";
 
-import { Coffee, Lightbulb, Mic, PenLine, Sparkles } from "lucide-react";
+import { Coffee, Lightbulb, Mic, PenLine, RadioTower, Sparkles } from "lucide-react";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
 
 type RoundHeaderProps = {
-  stage: 0 | 1 | 2 | 3 | 4;
+  stage: 0 | 1 | 2 | 3 | 4 | 5;
   // Stage2の出題形式（穴埋め／文選択／微改変）を表す小タグ。Stage1・Stage0では未指定。
   subFormatLabel?: string;
 } & (
@@ -34,6 +34,7 @@ const STAGE_META = {
   2: { label: "Stage2", icon: PenLine },
   3: { label: "Stage3", icon: Sparkles },
   4: { label: "Stage4", icon: Coffee },
+  5: { label: "Stage5", icon: RadioTower },
 } as const;
 
 export function RoundHeader({ stage, subFormatLabel, current, total, usageLabel }: RoundHeaderProps) {

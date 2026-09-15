@@ -403,3 +403,80 @@ export type Stage4TurnOutcome =
   | { status: "ok"; result: Stage4TurnResult }
   | { status: "limit_exceeded"; limit: number }
   | { status: "error"; message: string };
+
+// ============================================================
+// Stage5（上級ロールプレイ）
+// 2026-09-15〜16設計（_reference/speaking-roadmap-design.md「Stage4・Stage5の役割分担の
+// 再設計」「Stage5：スキーマ・解放ロジック設計」参照）。Stage4との違いは2点：
+// (1) 上級（日常・ビジネスとも「不動産屋でアパートを借りる」「経営陣向けに企画を提案する」の
+//     ような難しめのシーン）を扱う。
+// (2) 日常編・ビジネス編が完全に独立したトラックで、それぞれ対応するドメインのStage4シナリオを
+//     STAGE5_UNLOCK_STAGE4_GRADUATIONS本卒業して初めて解放される（「日常だけ極めたい人・
+//     ビジネスだけ極めたい人」という2種類のユーザー像を反映）。
+// 会話の仕組み自体（固定5ターン・最終ターンでAIが会話全体を評価・ステートレス・
+// speaking_stage_progressの流用）はStage4をそのまま踏襲する。
+export const STAGE5_TURN_COUNT = 5;
+
+// Stage4(3)より一段上の卒業streak。他Stageの6〜8までは上げず、「本数」側
+// （STAGE5_UNLOCK_STAGE4_GRADUATIONS）でペースを作る2026-09-16の方針を踏襲。
+export const STAGE5_GRADUATE_STREAK = 4;
+
+// Stage5解放条件：そのドメイン（日常 or ビジネス）のStage4シナリオをこの本数卒業すると、
+// 対応するStage5のトラックが解放される。日常編・ビジネス編は独立に判定する
+// （getStage5DomainReadiness参照）。
+export const STAGE5_UNLOCK_STAGE4_GRADUATIONS = 5;
+
+// Stage4と同じ理由（AI呼び出しコスト）で日次上限を設けるが、テーブル・カウンタはStage4とは
+// 独立させる（stage5_usage。Stage4を使い切った日にStage5に手を出せなくなる、またはその逆が
+// 起きると体験を損ねるため）。初期値はStage4と同じ数字を仮置きし、実運用を見て調整する。
+export const STAGE5_FREE_DAILY_LIMIT = 3;
+export const STAGE5_PRO_DAILY_LIMIT = 15;
+
+export type Stage5Track = "daily" | "business";
+
+export type Stage5Scenario = {
+  id: string;
+  code: string;
+  track: Stage5Track;
+  sceneTag: string;
+  titleJa: string;
+  situationJa: string;
+  goalJa: string;
+  openingLineEn: string;
+  level: "中級" | "上級";
+};
+
+export type Stage5ScenarioListItem = Stage5Scenario & {
+  status: "未着手" | "練習中" | "習得済み";
+  warmth: WarmthLevel;
+};
+
+// ターンの型自体はStage4と全く同じ形だが、Stage4/Stage5は「同じ理由で分離している」という
+// 既存方針（stage3/4のjudge-prompt分離コメント参照）に揃え、型も独立させておく。
+export type Stage5Turn = { role: "ai" | "user"; text: string };
+
+export type Stage5UsageInfo = { remaining: number; limit: number };
+
+export type Stage5TurnRequest = {
+  scenarioId: string;
+  turnIndex: number;
+  history: Stage5Turn[];
+  userUtterance: string;
+};
+
+export type Stage5TurnResult = {
+  aiReplyEn: string;
+  turnIndex: number;
+  sessionComplete: boolean;
+  errorTags: string[];
+  overallPass?: boolean;
+  feedbackJa?: string;
+  streak?: number;
+  graduated?: boolean;
+  usage: Stage5UsageInfo;
+};
+
+export type Stage5TurnOutcome =
+  | { status: "ok"; result: Stage5TurnResult }
+  | { status: "limit_exceeded"; limit: number }
+  | { status: "error"; message: string };
