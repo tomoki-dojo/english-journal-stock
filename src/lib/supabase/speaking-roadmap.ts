@@ -21,8 +21,10 @@ import {
   STAGE2_ROUND_SIZE,
   STAGE3_ACTIVE_SET_SIZE,
   STAGE3_GRADUATE_STREAK,
+  STAGE3_UNLOCK_STAGE1_GRADUATIONS,
   STAGE4_GRADUATE_STREAK,
   STAGE4_TURN_COUNT,
+  STAGE4_UNLOCK_STAGE3_GRADUATIONS,
   computeWarmth,
   getStage1SubStep,
   getStage2SubStep,
@@ -1057,7 +1059,10 @@ async function getStage3ActiveSet(userId: string): Promise<{
 // URLを直打ちすればAIロールプレイにフルアクセスできてしまう抜け穴だった。この関数を
 // exportし、/roadmap/stage4のページ・/api/roadmap/stage4/scenarios・/api/roadmap/stage4/turn
 // の3箇所でもサーバー側ゲートとして使うように修正した。
-export async function hasAnyStage3Graduation(userId: string): Promise<boolean> {
+// Stage3卒業済みフレーズの累計数。2026-09-16改訂前は「1件でもあるか」のbooleanだったが、
+// Stage4解放条件を「1個卒業でOK」から「STAGE4_UNLOCK_STAGE3_GRADUATIONS個卒業」に引き上げた
+// ため、件数そのものを返す形に変更した。
+export async function countStage3Graduations(userId: string): Promise<number> {
   const { count, error } = await supabaseAdmin
     .from("speaking_stage_progress")
     .select("id", { count: "exact", head: true })
@@ -1070,38 +1075,38 @@ export async function hasAnyStage3Graduation(userId: string): Promise<boolean> {
     throw new Error(`Stage3卒業実績の取得に失敗しました: ${error.message}`);
   }
 
-  return (count ?? 0) > 0;
+  return count ?? 0;
 }
 
-// Stage4への実アクセス可否（#156 Stageスキップ、2026-09-14）。
-// 「Stage3を1つ卒業したか」に加えて、Pro限定のスキップ設定（pro_skip_enabled）が
-// 有効な場合も解放する。/roadmap/stage4ページ・/api/roadmap/stage4/scenarios・
-// /api/roadmap/stage4/turnの3箇所すべてで、hasAnyStage3Graduation単体ではなく
-// この関数を使うこと（そうしないと、地図上はスキップで解放表示されるのに実際の
-// ページ・APIでは弾かれるという矛盾が起きる）。
+// Stage4への実アクセス可否（#156 Stageスキップ、2026-09-14。しきい値は2026-09-16改訂）。
+// 「Stage3をSTAGE4_UNLOCK_STAGE3_GRADUATIONS個卒業したか」に加えて、Pro限定のスキップ設定
+// （pro_skip_enabled）が有効な場合も解放する。/roadmap/stage4ページ・
+// /api/roadmap/stage4/scenarios・/api/roadmap/stage4/turnの3箇所すべてで、
+// countStage3Graduations単体ではなくこの関数を使うこと（そうしないと、地図上はスキップで
+// 解放表示されるのに実際のページ・APIでは弾かれるという矛盾が起きる）。
 export async function isStage4Unlocked(userId: string): Promise<boolean> {
-  const [graduated, state] = await Promise.all([
-    hasAnyStage3Graduation(userId),
+  const [graduationCount, state] = await Promise.all([
+    countStage3Graduations(userId),
     getUserRoadmapState(userId),
   ]);
-  return graduated || (state?.proSkipEnabled ?? false);
+  return graduationCount >= STAGE4_UNLOCK_STAGE3_GRADUATIONS || (state?.proSkipEnabled ?? false);
 }
 
 export async function getRoadmapStageReadiness(
   userId: string
 ): Promise<{ stage2Ready: boolean; stage3Ready: boolean; stage4Ready: boolean }> {
-  const [stage2, stage3, stage4Ready, state] = await Promise.all([
+  const [stage2, graduatedStage1Ids, stage3GraduationCount, state] = await Promise.all([
     getStage2ActiveSet(userId),
-    getStage3ActiveSet(userId),
-    hasAnyStage3Graduation(userId),
+    getStage1GraduatedExpressionIds(userId),
+    countStage3Graduations(userId),
     getUserRoadmapState(userId),
   ]);
   const proSkipEnabled = state?.proSkipEnabled ?? false;
 
   return {
     stage2Ready: stage2.activeSet.length >= STAGE2_ACTIVE_SET_SIZE || proSkipEnabled,
-    stage3Ready: stage3.activeSet.length > 0 || proSkipEnabled,
-    stage4Ready: stage4Ready || proSkipEnabled,
+    stage3Ready: graduatedStage1Ids.size >= STAGE3_UNLOCK_STAGE1_GRADUATIONS || proSkipEnabled,
+    stage4Ready: stage3GraduationCount >= STAGE4_UNLOCK_STAGE3_GRADUATIONS || proSkipEnabled,
   };
 }
 
@@ -1109,6 +1114,18 @@ export async function getRoadmapStageReadiness(
 // 途中の表現）を毎回返す。1日のAI判定利用回数が上限に達している場合は先に判定して弾く
 // （判定を受けられない問題を見せても価値が薄いため）。
 export async function getStage3Session(userId: string, plan: Plan): Promise<Stage3SessionResponse> {
+  // 解放条件チェック（2026-09-16改訂）：以前は出題プールに1件でもあれば解放だったが、
+  // Stage3の出題プールはStage1卒業フレーズそのものから作られるため実質「Stage1を1個卒業すれば
+  // 即解放」も同然で、Stage2解放（7個）よりゆるい基準になっていた。Stage1卒業の累計数が
+  // STAGE3_UNLOCK_STAGE1_GRADUATIONSに届くまでは、AI判定コストを払う前に弾く。
+  const graduatedStage1Ids = await getStage1GraduatedExpressionIds(userId);
+  if (graduatedStage1Ids.size < STAGE3_UNLOCK_STAGE1_GRADUATIONS) {
+    return {
+      status: "not_ready",
+      remainingToUnlock: STAGE3_UNLOCK_STAGE1_GRADUATIONS - graduatedStage1Ids.size,
+    };
+  }
+
   const usageCheck = await checkStage3Usage(userId, plan);
   if (!usageCheck.allowed) {
     return { status: "limit_exceeded", limit: usageCheck.limit };

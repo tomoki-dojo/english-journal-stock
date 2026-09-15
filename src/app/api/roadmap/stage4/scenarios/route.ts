@@ -25,7 +25,7 @@ export async function GET() {
     const unlocked = await isStage4Unlocked(user.id);
     if (!unlocked) {
       return NextResponse.json(
-        { error: "Stage4はStage3の表現を1つ卒業すると開きます" },
+        { error: "Stage4はStage3の表現を6つ卒業すると開きます" },
         { status: 403 }
       );
     }

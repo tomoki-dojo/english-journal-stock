@@ -263,6 +263,15 @@ export type Stage3SubStep = (typeof Stage3SubStepValues)[number];
 export const STAGE3_GRADUATE_STREAK = 6;
 export const STAGE3_ACTIVE_SET_SIZE = 7;
 
+// Stage3解放条件（2026-09-16改訂）：Stage1卒業フレーズの累計数がこの値に届くとStage3が開く。
+// 以前は「Stage3の出題プールに1件でもあれば解放」（実質Stage1を1個卒業すれば即解放。
+// Stage3の出題プール自体がStage1卒業フレーズから作られ、Stage2の進み具合とは無関係なため）
+// という、Stage2解放（Stage1卒業7個）よりゆるい基準になってしまっていた。「全体の道のりが
+// 数日で終わってしまう」という懸念（_reference/speaking-roadmap-design.md参照）を受け、
+// Stage2解放の7個より明確に多い15個に引き上げる。卒業streak自体（STAGE1_GRADUATE_STREAK）は
+// 上げず、「違う表現をどれだけ卒業したか」という本数側でペースを作る方針。
+export const STAGE3_UNLOCK_STAGE1_GRADUATIONS = 15;
+
 export function getStage3SubStep(streak: number): Stage3SubStep {
   if (streak >= 4) return "ミニ拡張";
   if (streak >= 2) return "自由言い換え";
@@ -291,6 +300,7 @@ export type Stage3UsageInfo = { remaining: number; limit: number };
 
 export type Stage3SessionResponse =
   | { status: "session"; question: Stage3Question; usage: Stage3UsageInfo }
+  | { status: "not_ready"; remainingToUnlock: number }
   | { status: "done"; totalCount: number }
   | { status: "limit_exceeded"; limit: number };
 
@@ -324,7 +334,17 @@ export type Stage3JudgeResult = {
 // それまでの会話履歴(history)を受け取って都度AIに渡すだけの完全ステートレス設計にし、
 // セッション用の永続テーブルを持たない（プライバシー配慮とシンプルさの両立）。
 export const STAGE4_TURN_COUNT = 5;
-export const STAGE4_GRADUATE_STREAK = 2;
+// 2026-09-16改訂：初期値2は他Stage（0/1/3=6, 2=8）と比べて明確な外れ値だった。
+// 「失敗してもstreakは減らない」設計と合わせると実質2回成功すればいいだけで、5ターンの
+// 音声会話という他Stageより重いフォーマットにもかかわらず卒業が早すぎた。3に引き上げる
+// （他Stageの6〜8までは上げない。1本あたりの深追いより、解放条件側＝STAGE4_UNLOCK_STAGE3_
+// GRADUATIONSで卒業本数の幅を稼ぐ方針のため）。
+export const STAGE4_GRADUATE_STREAK = 3;
+
+// Stage4解放条件（2026-09-16改訂）：Stage3卒業フレーズの累計数がこの値に届くとStage4が開く。
+// 以前は「Stage3を1つでも卒業すれば解放」だった。STAGE3_UNLOCK_STAGE1_GRADUATIONSと同じ理由で、
+// 「違う表現をどれだけ卒業したか」の本数側に引き上げる。
+export const STAGE4_UNLOCK_STAGE3_GRADUATIONS = 6;
 
 // 1日のセッション開始回数の上限。Stage3が「1回の発話judge」単位でFree=8/Pro=50だったのに対し、
 // Stage4は「5ターン会話1本」が1回分のコスト単位になる（design doc概算で約0.06円/セッション、

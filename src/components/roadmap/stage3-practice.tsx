@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, Mic, PartyPopper, RotateCcw, Square, X } from "lucide-react";
+import { Check, Hourglass, Mic, PartyPopper, RotateCcw, Square, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RoundHeader } from "./round-header";
 import { GrowthBadge } from "./growth-badge";
@@ -10,7 +10,7 @@ import { STAGE_COLORS, withAlpha } from "./stage-colors";
 import { useSpeechRecognition } from "@/lib/use-speech-recognition";
 import type { Stage3JudgeResult, Stage3Question, Stage3SessionResponse, Stage3UsageInfo } from "./types";
 
-type ViewState = "loading" | "question" | "done" | "limit_exceeded" | "error";
+type ViewState = "loading" | "question" | "not_ready" | "done" | "limit_exceeded" | "error";
 // prompt: まだ声に出していない。review: 発話（または手入力）の内容を確認・修正できる。
 // judging: AI判定中。result: 判定結果を表示中。
 type AnswerPhase = "prompt" | "review" | "judging" | "result";
@@ -30,6 +30,7 @@ export function Stage3Practice() {
   const [result, setResult] = useState<Stage3JudgeResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [limit, setLimit] = useState(0);
+  const [remainingToUnlock, setRemainingToUnlock] = useState(0);
   // 「ヒント付き言い換え」のヒント（お手本の英文）を最初から見せず、押したときだけ出す
   // （2026-09-11 実機フィードバック：ヒントを常時表示すると、それをそのまま読み上げるだけで
   // 通ってしまい「自分の言葉で言う」練習にならない。AI判定側は一字一句同じでも正解のまま変えない
@@ -56,6 +57,11 @@ export function Stage3Practice() {
       }
       const session = json as Stage3SessionResponse;
 
+      if (session.status === "not_ready") {
+        setRemainingToUnlock(session.remainingToUnlock);
+        setState("not_ready");
+        return;
+      }
       if (session.status === "done") {
         setState("done");
         return;
@@ -132,6 +138,21 @@ export function Stage3Practice() {
 
   if (state === "error") {
     return <p className="text-sm text-red-600">{error ?? "エラーが発生しました"}</p>;
+  }
+
+  if (state === "not_ready") {
+    return (
+      <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-100/30 px-6 py-10 text-center">
+        <Hourglass className="mx-auto mb-3 h-6 w-6 text-zinc-400" />
+        <p className="text-sm text-zinc-500">Stage3はStage1をあと{remainingToUnlock}個卒業すると開きます。</p>
+        <Link
+          href="/roadmap/stage1"
+          className="mt-4 inline-flex items-center gap-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
+        >
+          Stage1に進む
+        </Link>
+      </div>
+    );
   }
 
   if (state === "done") {

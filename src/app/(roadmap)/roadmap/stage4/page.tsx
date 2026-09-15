@@ -39,7 +39,7 @@ export default async function RoadmapStage4Page() {
         <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-100/30 px-6 py-10 text-center">
           <Hourglass className="mx-auto mb-3 h-6 w-6 text-zinc-400" />
           <p className="text-sm text-zinc-500">
-            Stage4はStage3の表現を1つ卒業すると開きます。
+            Stage4はStage3の表現を6つ卒業すると開きます。
           </p>
           <Link
             href="/roadmap/stage3"
