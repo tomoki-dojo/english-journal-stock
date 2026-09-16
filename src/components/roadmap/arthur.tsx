@@ -18,16 +18,20 @@ export const ARTHUR_AVATAR_SRC = "/mascot/bear-suit.png";
 type ArthurAvatarProps = {
   size?: number;
   className?: string;
+  // ごく控えめに上下に揺れる待機アニメーション（globals.cssのanimate-mascot-bobを流用）。
+  // 常時視界に入るRoundHeaderのタグでは付ける、会話バブルの中では付けない、など呼び出し側で選べるようにしてある。
+  animated?: boolean;
 };
 
 // 円形アバター単体。RoundHeaderの小バッジやStage4/5のチャット吹き出しなど、サイズだけ変えて使い回す。
-export function ArthurAvatar({ size = 24, className }: ArthurAvatarProps) {
+export function ArthurAvatar({ size = 24, className, animated = false }: ArthurAvatarProps) {
   const [failed, setFailed] = useState(false);
 
   return (
     <span
       className={cn(
         "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-amber-100 ring-1 ring-amber-200/70",
+        animated && "animate-mascot-bob",
         className
       )}
       style={{ width: size, height: size }}
@@ -52,7 +56,7 @@ export function ArthurAvatar({ size = 24, className }: ArthurAvatarProps) {
 export function ArthurTag({ className }: { className?: string }) {
   return (
     <span className={cn("inline-flex items-center gap-1.5 text-xs font-medium text-zinc-500", className)}>
-      <ArthurAvatar size={20} />
+      <ArthurAvatar size={20} animated />
       {ARTHUR_NAME}
     </span>
   );
