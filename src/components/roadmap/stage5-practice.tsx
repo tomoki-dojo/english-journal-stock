@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { RoundHeader } from "./round-header";
 import { GrowthBadge } from "./growth-badge";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
+import { ARTHUR_NAME, ArthurAvatar } from "./arthur";
 import { useSpeechRecognition } from "@/lib/use-speech-recognition";
 import {
   STAGE5_TURN_COUNT,
@@ -302,15 +303,13 @@ export function Stage5Practice({ track }: Stage5PracticeProps) {
       <div className="mb-3 flex flex-col gap-2 rounded-xl border border-zinc-200 bg-white p-4">
         {history.map((turn, i) => (
           <div key={i} className={cn("flex items-start gap-2", turn.role === "user" && "flex-row-reverse")}>
-            <div
-              className={cn(
-                "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold",
-                turn.role === "ai" ? "text-white" : "bg-zinc-200 text-zinc-600"
-              )}
-              style={turn.role === "ai" ? { backgroundColor: STAGE_COLOR } : undefined}
-            >
-              {turn.role === "ai" ? "AI" : <User2 className="h-3.5 w-3.5" />}
-            </div>
+            {turn.role === "ai" ? (
+              <ArthurAvatar size={24} />
+            ) : (
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-zinc-600">
+                <User2 className="h-3.5 w-3.5" />
+              </div>
+            )}
             <div
               className={cn(
                 "max-w-[80%] rounded-lg px-3 py-1.5 text-sm",
@@ -318,6 +317,11 @@ export function Stage5Practice({ track }: Stage5PracticeProps) {
               )}
               style={turn.role === "user" ? { backgroundColor: STAGE_COLOR } : undefined}
             >
+              {turn.role === "ai" && (
+                <p className="mb-0.5 text-[10px] font-semibold" style={{ color: STAGE_COLOR }}>
+                  {ARTHUR_NAME}
+                </p>
+              )}
               {turn.text}
             </div>
           </div>

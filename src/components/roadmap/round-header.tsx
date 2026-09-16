@@ -2,6 +2,7 @@
 
 import { Coffee, Lightbulb, Mic, PenLine, RadioTower, Sparkles } from "lucide-react";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
+import { ArthurTag } from "./arthur";
 
 type RoundHeaderProps = {
   stage: 0 | 1 | 2 | 3 | 4 | 5;
@@ -43,40 +44,45 @@ export function RoundHeader({ stage, subFormatLabel, current, total, usageLabel 
   const color = STAGE_COLORS[stage];
 
   return (
-    <div className="mb-4 flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <span
-          className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold"
-          style={{ backgroundColor: withAlpha(color, "1a"), color }}
-        >
-          <Icon className="h-3.5 w-3.5" />
-          {meta.label}
-        </span>
-        {subFormatLabel && (
-          <span className="rounded-full bg-zinc-200/70 px-2 py-1 text-xs font-medium text-zinc-600">
-            {subFormatLabel}
+    <div className="mb-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span
+            className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold"
+            style={{ backgroundColor: withAlpha(color, "1a"), color }}
+          >
+            <Icon className="h-3.5 w-3.5" />
+            {meta.label}
           </span>
+          {subFormatLabel && (
+            <span className="rounded-full bg-zinc-200/70 px-2 py-1 text-xs font-medium text-zinc-600">
+              {subFormatLabel}
+            </span>
+          )}
+        </div>
+
+        {usageLabel !== undefined ? (
+          <span className="text-xs text-zinc-400">{usageLabel}</span>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-zinc-400">
+              {current}/{total}問目
+            </span>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: total }).map((_, i) => (
+                <span
+                  key={i}
+                  className="h-1.5 w-1.5 rounded-full transition-colors"
+                  style={{ backgroundColor: i < current ? color : "#e4e4e7" }}
+                />
+              ))}
+            </div>
+          </div>
         )}
       </div>
 
-      {usageLabel !== undefined ? (
-        <span className="text-xs text-zinc-400">{usageLabel}</span>
-      ) : (
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-zinc-400">
-            {current}/{total}問目
-          </span>
-          <div className="flex items-center gap-1">
-            {Array.from({ length: total }).map((_, i) => (
-              <span
-                key={i}
-                className="h-1.5 w-1.5 rounded-full transition-colors"
-                style={{ backgroundColor: i < current ? color : "#e4e4e7" }}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+      {/* アーサー（練習相手）の常時表示。Stage0〜5すべての練習画面共通で、見守り役として存在感を出す。 */}
+      <ArthurTag className="mt-1.5" />
     </div>
   );
 }
