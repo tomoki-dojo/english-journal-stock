@@ -48,9 +48,23 @@ const DIAMOND_POINTS = "50,0 100,25 50,50 0,25";
 // 出来たため、Stage1の建物マーカーだけ実画像に差し替えて配置感を確認する。他Stageは
 // 引き続きひし形プレースホルダー。本番の全Stage差し替えは、素材が揃うまでこの
 // マッピングにパスを追加していく形で進める想定。
-const TEST_BUILDING_IMAGES: Partial<Record<StageNumber, { src: string; width: number; height: number }>> = {
-  // 中段（body）+最上段（roof）を合成した2階建てテスト画像。継ぎ目の扱いは要検討（チャット参照）。
-  1: { src: "/roadmap/buildings/building_stack2_concrete_test.png", width: 386, height: 384 },
+//
+// groundAnchorTopPercent：画像の中で「建物の接地点（一番下の頂点、地面に触れる点）」が
+// 上端から何%の位置にあるか。ひし形プレースホルダー（DIAMOND_POINTS）は画像の中心=接地点
+// ではなく、実際の建物PNGは屋根の分だけ上に大きく余白が伸びるため、画像の中心をマス目の
+// 中心に合わせる（-translate-y-1/2）と接地点が大きく下にズレて浮いて見える
+// （2026-09-17、ユーザー指摘で発覚）。そのためこの画像だけは中心(-50%)ではなく、
+// 実際にPillow(alphaチャンネルの最下段の行)で測った接地点の位置でtranslateする。
+const TEST_BUILDING_IMAGES: Partial<
+  Record<StageNumber, { src: string; width: number; height: number; groundAnchorTopPercent: number }>
+> = {
+  // 中段（body）+最上段（roof）を合成した2階建てテスト画像。
+  1: {
+    src: "/roadmap/buildings/building_stack2_concrete_test.png",
+    width: 386,
+    height: 384,
+    groundAnchorTopPercent: 97.4,
+  },
 };
 // WIDE_HEX=横長ランドマーク用の2区画（1×2）。ひし形のS方向（奥行き軸）を伸ばした
 // 六角形。viewBoxは0 0 100 100（実質、DIAMONDの奥行きを2倍にした形）。
@@ -325,15 +339,23 @@ export function RoadmapMap({
           const color = STAGE_COLORS[stage];
           const isCurrent = stage === currentStage;
           const testImage = TEST_BUILDING_IMAGES[stage];
+          // ひし形プレースホルダーは画像の中心=接地点なので-50%/-50%centeringのままでよいが、
+          // 実際の建物PNG(testImage)は接地点が中心よりかなり下にあるため、
+          // groundAnchorTopPercentを使ってその点がマス目の中心に来るようtranslateする
+          // （そうしないと建物が浮いて見える。2026-09-17、ユーザー指摘で修正）。
+          const groundAnchorTransform = testImage
+            ? `translate(-50%, -${testImage.groundAnchorTopPercent}%)`
+            : "translate(-50%, -50%)";
 
           return (
             <div
               key={stage}
-              className="absolute -translate-x-1/2 -translate-y-1/2"
+              className="absolute"
               style={{
                 top: `${pos.top}%`,
                 left: `${pos.left}%`,
                 width: markerSize,
+                transform: groundAnchorTransform,
                 filter: isCurrent ? `drop-shadow(0 0 5px ${withAlpha(color, "80")})` : undefined,
               }}
             >
