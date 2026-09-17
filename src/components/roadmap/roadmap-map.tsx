@@ -327,17 +327,23 @@ export function RoadmapMap({
             const color = STAGE_COLORS[stage];
             const isCurrent = stage === currentStage;
             const testImage = TEST_BUILDING_IMAGES[stage];
-            // ひし形プレースホルダーは画像の中心=接地点なので0.5（中心）でよいが、実際の
-            // 建物PNG(testImage)は接地点が中心よりかなり下にあるため、groundAnchorTopPercent
-            // を使ってその点がマス目の中心(cy)に来るようforeignObjectのyをずらす。
+            // ひし形プレースホルダーはタイルと全く同じ形・同じ中心を持つ平面図形なので、
+            // 中心(cx,cy)に置けばそのままタイルにぴったり重なる（anchorFraction=0.5でOK）。
+            // 一方、実際の建物PNG(testImage)は「タイルの上に立つ3Dの箱」を表しており、
+            // 1F部分の接地点（画像下端付近、groundAnchorTopPercentで指定）が合わさるべきは
+            // タイルの中心ではなく、タイルの手前（画面下側）の頂点＝(cx, cy+HALF_H)。
+            // ひし形は上下左右4頂点を持つ2:1の図形で、奥行きのある箱を置いたとき、
+            // 見えている手前の垂直な辺はこの下頂点から立ち上がる形になるため（2026-09-17、
+            // 建物がタイルから浮いて見えるというユーザー指摘を受けて中心基準から修正）。
             const hUnits = testImage ? wUnits * (testImage.height / testImage.width) : wUnits / 2;
             const anchorFraction = testImage ? testImage.groundAnchorTopPercent / 100 : 0.5;
+            const anchorCy = testImage ? cy + GROUND_GRID_TILE_HALF_H : cy;
 
             return (
               <foreignObject
                 key={stage}
                 x={cx - wUnits / 2}
-                y={cy - hUnits * anchorFraction}
+                y={anchorCy - hUnits * anchorFraction}
                 width={wUnits}
                 height={hUnits}
                 style={{
