@@ -257,10 +257,18 @@ export function RoadmapMap({
         縦横比に関わらず常に正確な2:1のひし形になる。
         2026-09-14再修正：マップを正方形〜縦長に変更して表示枠が広がったのに
         合わせ、位置をtop:78%→70%に上げてグリッドの実寸拡大分の余白を確保した。
+        2026-09-17再修正：実イラスト（地面タイル）を敷いてみたら、グリッド全体の
+        表示幅を固定px(markerSizeStyle(GROUND_GRID_BLOCK_PX)、552px頭打ち)で
+        頭打ちにしていたせいで、コンテナ（正方形〜縦長のマップ全体）に対して
+        「町」が実際より小さく見えていた（ユーザー指摘）。タイル・建物のサイズ比率は
+        すべてviewBox単位（比率）で計算しているため、このdivの実際の表示px幅は
+        見た目のスケールにしか影響しない＝コンテナに対する%指定に変えても内部の
+        座標計算は一切崩れない。そのため固定px頭打ちをやめ、コンテナ幅に対する
+        %指定に変更し、町全体がマップの余白いっぱいまで大きく見えるようにした。
       */}
       <div
         className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
-        style={{ top: "70%", left: "50%", width: markerSizeStyle(GROUND_GRID_BLOCK_PX) }}
+        style={{ top: "70%", left: "50%", width: "94%" }}
         aria-hidden="true"
       >
         {/*
