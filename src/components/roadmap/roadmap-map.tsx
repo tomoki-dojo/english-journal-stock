@@ -9,7 +9,6 @@ import {
   STAGE_GRID_CELLS,
   STAGE0_MAP_ANCHOR,
   BOARD_MAP_ANCHOR,
-  TRUNK_ROAD_POINTS,
   LANDMARK_MAP_ANCHORS,
   markerSizeStyle,
 } from "./stage-map-anchors";
@@ -281,6 +280,33 @@ export function RoadmapMap({
             />
           ))}
 
+          {/*
+            2026-09-17追加：本道（Stage1→5をつなぐ線）を、建物と同じくこの<svg viewBox>の中に
+            タイルと全く同じcx,cy計算式で描画する。以前は本道をコンテナ全体%座標系の
+            TRUNK_ROAD_POINTS（建物の位置とは無関係な近似値）で描いていたため、建物を
+            グリッド厳密一致に直した今、その建物にスタブ線をつなごうとすると確実にズレる
+            状態だった（ユーザー指摘）。タイル中心同士を直接結ぶことで、建物・道が
+            同じ座標系を共有し、原理的にズレなくなる。
+          */}
+          {currentStage > 1 && (
+            <polyline
+              points={STAGE_NUMBERS.slice(0, currentStage)
+                .map((s) => {
+                  const c = STAGE_GRID_CELLS[s];
+                  const offsetX = (GROUND_GRID_ROWS - 1) * GROUND_GRID_TILE_HALF_W;
+                  const cx = offsetX + (c.col - c.row) * GROUND_GRID_TILE_HALF_W;
+                  const cy = (c.col + c.row) * GROUND_GRID_TILE_HALF_H;
+                  return `${cx},${cy}`;
+                })
+                .join(" ")}
+              fill="none"
+              stroke="#a1a1aa"
+              strokeWidth={6}
+              strokeDasharray="20 13"
+              vectorEffect="non-scaling-stroke"
+            />
+          )}
+
           {STAGE_NUMBERS.map((stage) => {
             const unlocked = UNLOCKED[stage];
             const interactive = unlocked && IMPLEMENTED_STAGES.includes(stage);
@@ -370,11 +396,12 @@ export function RoadmapMap({
       </div>
 
       {/*
-        道（本道＋ランドマークへの枝道）。preserveAspectRatio="none"でviewBoxを
-        0-100に合わせているので、top/left%の値をそのままSVG座標として使える。
-        本道はfog of warの対象＝到達済み(currentStageまで)の区間しか描画しない。
-        ランドマークへの枝道は、ランドマーク自体がまだ常設プレースホルダー
-        （#150、トリガー未設計）なので常に描画する。
+        ランドマークへの枝道のみ。preserveAspectRatio="none"でviewBoxを0-100に合わせて
+        いるので、top/left%の値をそのままSVG座標として使える。
+        2026-09-17：Stage1〜5の本道・スタブはここから撤去し、上の参照グリッドの
+        <svg viewBox>の中（建物と同じ座標系）に移した。ランドマークの枝道はまだ
+        グリッド座標に統一できていない（building/branchFromが近似%のまま）ため、
+        従来通りここに残す（要フォローアップ、_reference/speaking-roadmap-design.md参照）。
       */}
       <svg
         className="pointer-events-none absolute inset-0 h-full w-full"
@@ -382,38 +409,6 @@ export function RoadmapMap({
         preserveAspectRatio="none"
         aria-hidden="true"
       >
-        {currentStage > 1 && (
-          <polyline
-            points={STAGE_NUMBERS.slice(0, currentStage)
-              .map((s) => `${TRUNK_ROAD_POINTS[s].left},${TRUNK_ROAD_POINTS[s].top}`)
-              .join(" ")}
-            fill="none"
-            stroke="#a1a1aa"
-            strokeWidth="0.6"
-            strokeDasharray="2.2 1.4"
-            vectorEffect="non-scaling-stroke"
-          />
-        )}
-
-        {STAGE_NUMBERS.map((stage) => {
-          const showStub = UNLOCKED[stage] || !IMPLEMENTED_STAGES.includes(stage);
-          if (!showStub) return null;
-          const rt = TRUNK_ROAD_POINTS[stage];
-          const b = STAGE_MAP_ANCHORS[stage].building;
-          return (
-            <line
-              key={stage}
-              x1={rt.left}
-              y1={rt.top}
-              x2={b.left}
-              y2={b.top}
-              stroke="#a1a1aa"
-              strokeWidth="0.4"
-              vectorEffect="non-scaling-stroke"
-            />
-          );
-        })}
-
         {Object.values(LANDMARK_MAP_ANCHORS).map((lm, i) => (
           <line
             key={i}
