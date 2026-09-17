@@ -107,8 +107,8 @@ const GROUND_GRID_BLOCK_PX = Math.round(
   (GROUND_GRID_TILE_TARGET_PX * (GROUND_GRID_COLS + GROUND_GRID_ROWS - 2)) / 2
 );
 
-function buildGroundGridTiles(): { key: string; points: string }[] {
-  const tiles: { key: string; points: string }[] = [];
+function buildGroundGridTiles(): { key: string; points: string; cx: number; cy: number }[] {
+  const tiles: { key: string; points: string; cx: number; cy: number }[] = [];
   const offsetX = (GROUND_GRID_ROWS - 1) * GROUND_GRID_TILE_HALF_W;
   for (let col = 0; col < GROUND_GRID_COLS; col++) {
     for (let row = 0; row < GROUND_GRID_ROWS; row++) {
@@ -118,11 +118,17 @@ function buildGroundGridTiles(): { key: string; points: string }[] {
       const e = `${cx + GROUND_GRID_TILE_HALF_W},${cy}`;
       const s = `${cx},${cy + GROUND_GRID_TILE_HALF_H}`;
       const w = `${cx - GROUND_GRID_TILE_HALF_W},${cy}`;
-      tiles.push({ key: `${col}_${row}`, points: `${n} ${e} ${s} ${w}` });
+      tiles.push({ key: `${col}_${row}`, points: `${n} ${e} ${s} ${w}`, cx, cy });
     }
   }
   return tiles;
 }
+
+// 2026-09-17：実際の地面タイル画像（イラレ制作、public/roadmap/ground/tile-base.png）。
+// ひし形の外接矩形ぴったりに書き出し済み（368×184px=2:1）なので、タイルと同じ
+// viewBox座標系の中に<image>でそのまま敷き詰めるだけでグリッドと一致する
+// （建物と同じ理屈で、コンテナのCSS%を経由しないため位置ズレの余地がない）。
+const GROUND_TILE_IMAGE_SRC = "/roadmap/ground/tile-base.png";
 
 const GROUND_GRID_TILES = buildGroundGridTiles();
 
@@ -270,13 +276,14 @@ export function RoadmapMap({
         */}
         <svg viewBox={GROUND_GRID_VIEWBOX} className="block w-full" style={{ overflow: "visible" }}>
           {GROUND_GRID_TILES.map((tile) => (
-            <polygon
+            <image
               key={tile.key}
-              points={tile.points}
-              fill="rgba(255,255,255,0.2)"
-              stroke="#d4d4d8"
-              strokeWidth="3"
-              vectorEffect="non-scaling-stroke"
+              href={GROUND_TILE_IMAGE_SRC}
+              x={tile.cx - GROUND_GRID_TILE_HALF_W}
+              y={tile.cy - GROUND_GRID_TILE_HALF_H}
+              width={GROUND_GRID_TILE_HALF_W * 2}
+              height={GROUND_GRID_TILE_HALF_H * 2}
+              preserveAspectRatio="none"
             />
           ))}
 
