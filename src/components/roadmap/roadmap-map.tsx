@@ -48,7 +48,8 @@ const DIAMOND_POINTS = "50,0 100,25 50,50 0,25";
 // 引き続きひし形プレースホルダー。本番の全Stage差し替えは、素材が揃うまでこの
 // マッピングにパスを追加していく形で進める想定。
 const TEST_BUILDING_IMAGES: Partial<Record<StageNumber, { src: string; width: number; height: number }>> = {
-  1: { src: "/roadmap/buildings/building_roof_concrete.png", width: 386, height: 294 },
+  // 中段（body）+最上段（roof）を合成した2階建てテスト画像。継ぎ目の扱いは要検討（チャット参照）。
+  1: { src: "/roadmap/buildings/building_stack2_concrete_test.png", width: 386, height: 384 },
 };
 // WIDE_HEX=横長ランドマーク用の2区画（1×2）。ひし形のS方向（奥行き軸）を伸ばした
 // 六角形。viewBoxは0 0 100 100（実質、DIAMONDの奥行きを2倍にした形）。
