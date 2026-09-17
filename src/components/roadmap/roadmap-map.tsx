@@ -296,31 +296,21 @@ export function RoadmapMap({
             const cy = (cell.col + cell.row) * GROUND_GRID_TILE_HALF_H;
             const wUnits = STAGE_MAP_ANCHORS[stage].size * GROUND_GRID_PX_TO_UNIT;
 
-            // 【一時デバッグ】狙っているタイル中心(cx,cy)そのものに赤い点を打つ。
-            // ここが本当にマス目の中心に乗っているかを目視確認するための仕込み
-            // （2026-09-17、ズレの原因切り分け用。確認できたら削除する）。
-            const debugDot = (
-              <circle key={`debug-${stage}`} cx={cx} cy={cy} r={6} fill="red" stroke="white" strokeWidth={1.5} />
-            );
-
             if (!interactive) {
               const hUnits = wUnits / 2;
               return (
-                <g key={stage}>
-                  <foreignObject x={cx - wUnits / 2} y={cy - hUnits / 2} width={wUnits} height={hUnits}>
-                    <svg viewBox={DIAMOND_VIEWBOX} className="block h-full w-full">
-                      <polygon
-                        points={DIAMOND_POINTS}
-                        fill="rgba(255,255,255,0.35)"
-                        stroke="#d4d4d8"
-                        strokeWidth="3"
-                        strokeDasharray="6 5"
-                        vectorEffect="non-scaling-stroke"
-                      />
-                    </svg>
-                  </foreignObject>
-                  {debugDot}
-                </g>
+                <foreignObject key={stage} x={cx - wUnits / 2} y={cy - hUnits / 2} width={wUnits} height={hUnits}>
+                  <svg viewBox={DIAMOND_VIEWBOX} className="block h-full w-full">
+                    <polygon
+                      points={DIAMOND_POINTS}
+                      fill="rgba(255,255,255,0.35)"
+                      stroke="#d4d4d8"
+                      strokeWidth="3"
+                      strokeDasharray="6 5"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  </svg>
+                </foreignObject>
               );
             }
 
@@ -336,46 +326,44 @@ export function RoadmapMap({
             const anchorFraction = testImage ? testImage.groundAnchorTopPercent / 100 : 0.5;
 
             return (
-              <g key={stage}>
-                <foreignObject
-                  x={cx - wUnits / 2}
-                  y={cy - hUnits * anchorFraction}
-                  width={wUnits}
-                  height={hUnits}
-                  style={{
-                    overflow: "visible",
-                    filter: isCurrent ? `drop-shadow(0 0 5px ${withAlpha(color, "80")})` : undefined,
-                  }}
-                >
-                  {testImage ? (
-                    <Image
-                      src={testImage.src}
-                      alt=""
-                      width={testImage.width}
-                      height={testImage.height}
-                      className="block h-full w-full"
-                    />
-                  ) : (
-                    <div className="relative h-full w-full">
-                      <svg viewBox={DIAMOND_VIEWBOX} className="block h-full w-full">
-                        <polygon
-                          points={DIAMOND_POINTS}
-                          fill={withAlpha(color, "26")}
-                          stroke={color}
-                          strokeWidth="3"
-                          vectorEffect="non-scaling-stroke"
-                        />
-                      </svg>
-                      <Icon
-                        className="absolute left-1/2 top-1/2 h-[85%] w-[85%] -translate-x-1/2 -translate-y-1/2"
-                        style={{ color }}
-                        strokeWidth={2.25}
+              <foreignObject
+                key={stage}
+                x={cx - wUnits / 2}
+                y={cy - hUnits * anchorFraction}
+                width={wUnits}
+                height={hUnits}
+                style={{
+                  overflow: "visible",
+                  filter: isCurrent ? `drop-shadow(0 0 5px ${withAlpha(color, "80")})` : undefined,
+                }}
+              >
+                {testImage ? (
+                  <Image
+                    src={testImage.src}
+                    alt=""
+                    width={testImage.width}
+                    height={testImage.height}
+                    className="block h-full w-full"
+                  />
+                ) : (
+                  <div className="relative h-full w-full">
+                    <svg viewBox={DIAMOND_VIEWBOX} className="block h-full w-full">
+                      <polygon
+                        points={DIAMOND_POINTS}
+                        fill={withAlpha(color, "26")}
+                        stroke={color}
+                        strokeWidth="3"
+                        vectorEffect="non-scaling-stroke"
                       />
-                    </div>
-                  )}
-                </foreignObject>
-                {debugDot}
-              </g>
+                    </svg>
+                    <Icon
+                      className="absolute left-1/2 top-1/2 h-[85%] w-[85%] -translate-x-1/2 -translate-y-1/2"
+                      style={{ color }}
+                      strokeWidth={2.25}
+                    />
+                  </div>
+                )}
+              </foreignObject>
             );
           })}
         </svg>
