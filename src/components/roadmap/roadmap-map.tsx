@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { CSSProperties } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Lightbulb, Mic, PenLine, Radio, Coffee, RadioTower, ClipboardList, Sparkles, Flame } from "lucide-react";
@@ -41,6 +42,14 @@ const STAGE_NUMBERS: StageNumber[] = [1, 2, 3, 4, 5];
 // DIAMOND=1区画（1×1）。viewBoxは0 0 100 50で、幅:高さ=2:1のひし形になる。
 const DIAMOND_VIEWBOX = "0 0 100 50";
 const DIAMOND_POINTS = "50,0 100,25 50,50 0,25";
+
+// 2026-09-17：#150（アイソメ都市ビジュアル）向けにコンクリ打ちっぱなし建物のテスト画像が
+// 出来たため、Stage1の建物マーカーだけ実画像に差し替えて配置感を確認する。他Stageは
+// 引き続きひし形プレースホルダー。本番の全Stage差し替えは、素材が揃うまでこの
+// マッピングにパスを追加していく形で進める想定。
+const TEST_BUILDING_IMAGES: Partial<Record<StageNumber, { src: string; width: number; height: number }>> = {
+  1: { src: "/roadmap/buildings/building_roof_concrete.png", width: 386, height: 294 },
+};
 // WIDE_HEX=横長ランドマーク用の2区画（1×2）。ひし形のS方向（奥行き軸）を伸ばした
 // 六角形。viewBoxは0 0 100 100（実質、DIAMONDの奥行きを2倍にした形）。
 const WIDE_HEX_VIEWBOX = "0 0 100 100";
@@ -516,11 +525,12 @@ export function RoadmapMap({
         const isCurrent = stage === currentStage;
         const buttonTop = anchor.building.top + anchor.buttonOffset.top;
         const buttonLeft = anchor.building.left + anchor.buttonOffset.left;
+        const testImage = TEST_BUILDING_IMAGES[stage];
 
         return (
           <div key={stage}>
-            {/* 建物マーカー本体（実イラスト実装までのプレースホルダー）。ボタンとは別要素として、
-                建物の位置そのものを表す。1区画＝ひし形（アイソメ2:1投影）で表現する。 */}
+            {/* 建物マーカー本体。実画像（TEST_BUILDING_IMAGES）があればそれを使い、なければ
+                従来どおりひし形プレースホルダー（アイソメ2:1投影）で表現する。 */}
             <div
               className="absolute -translate-x-1/2 -translate-y-1/2"
               style={{
@@ -531,20 +541,32 @@ export function RoadmapMap({
               }}
               aria-hidden="true"
             >
-              <svg viewBox={DIAMOND_VIEWBOX} className="block w-full">
-                <polygon
-                  points={DIAMOND_POINTS}
-                  fill={withAlpha(color, "26")}
-                  stroke={color}
-                  strokeWidth="3"
-                  vectorEffect="non-scaling-stroke"
+              {testImage ? (
+                <Image
+                  src={testImage.src}
+                  alt=""
+                  width={testImage.width}
+                  height={testImage.height}
+                  className="block h-auto w-full"
                 />
-              </svg>
-              <Icon
-                className="absolute left-1/2 top-1/2 h-[85%] w-[85%] -translate-x-1/2 -translate-y-1/2"
-                style={{ color }}
-                strokeWidth={2.25}
-              />
+              ) : (
+                <>
+                  <svg viewBox={DIAMOND_VIEWBOX} className="block w-full">
+                    <polygon
+                      points={DIAMOND_POINTS}
+                      fill={withAlpha(color, "26")}
+                      stroke={color}
+                      strokeWidth="3"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  </svg>
+                  <Icon
+                    className="absolute left-1/2 top-1/2 h-[85%] w-[85%] -translate-x-1/2 -translate-y-1/2"
+                    style={{ color }}
+                    strokeWidth={2.25}
+                  />
+                </>
+              )}
             </div>
 
             {/* Stageの入口ボタン。建物の真上ではなく、そばに寄せた位置に浮かせる横長ピル。 */}
