@@ -6,6 +6,7 @@ import { Lightbulb, Mic, PenLine, Radio, Coffee, RadioTower, ClipboardList, Spar
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
 import {
   STAGE_MAP_ANCHORS,
+  STAGE_GRID_CELLS,
   STAGE0_MAP_ANCHOR,
   BOARD_MAP_ANCHOR,
   TRUNK_ROAD_POINTS,
@@ -111,6 +112,22 @@ function buildGroundGridTiles(): { key: string; points: string }[] {
 }
 
 const GROUND_GRID_TILES = buildGroundGridTiles();
+
+// 2026-09-17追加：Stage建物をこの参照グリッドのマス目に厳密に一致させるためのヘルパー。
+// buildGroundGridTiles()と全く同じ式でタイル中心(cx,cy)を求め、それを「グリッドを描画
+// している箱（下のdiv、top:70%・left:50%・width:GROUND_GRID_BLOCK_PXの-translate-1/2）
+// 自身に対する0〜100%」に変換する。Stage建物マーカーをこの箱の中に同じ%で置けば、
+// コンテナの実際のpx幅がいくつであろうと（グリッド本体と全く同じ箱・同じ%系なので）
+// 必ずマス目の中心にぴったり重なる。
+function gridCellCenterPercent(col: number, row: number): { left: number; top: number } {
+  const offsetX = (GROUND_GRID_ROWS - 1) * GROUND_GRID_TILE_HALF_W;
+  const cx = offsetX + (col - row) * GROUND_GRID_TILE_HALF_W;
+  const cy = (col + row) * GROUND_GRID_TILE_HALF_H;
+  return {
+    left: (cx / GROUND_GRID_VIEWBOX_W) * 100,
+    top: (cy / GROUND_GRID_VIEWBOX_H) * 100,
+  };
+}
 
 type RoadmapMapProps = {
   // Stage1は常に解放。Stage2・3は各Stageの練習ページと同じ基準（アクティブセットが
@@ -248,6 +265,107 @@ export function RoadmapMap({
             />
           ))}
         </svg>
+      </div>
+
+      {/*
+        Stage1〜5の建物マーカー本体。2026-09-17：それまではSTAGE_MAP_ANCHORS.buildingという
+        コンテナ%の近似値を直接使っていたため、実際の建物画像を置くと参照グリッドのマス目
+        からズレて見える問題があった。上の参照グリッドと全く同じ箱（top:70%・left:50%・
+        width:markerSizeStyle(GROUND_GRID_BLOCK_PX)、-translate-1/2）の中に、
+        STAGE_GRID_CELLSで指定したマス目の中心%（gridCellCenterPercent、
+        buildGroundGridTilesと同じ計算式）で置くことで、コンテナの実際のpx幅によらず
+        必ずマス目の中心にぴったり重なるようにしている。aspectRatioを2/1に固定している
+        のは、この箱の中身が絶対配置の子要素だけだと高さが0に潰れてtop%が効かなくなる
+        ため（グリッド本体はSVGの内在的な2:1アスペクトで高さが決まるが、こちらは
+        中身がdivなので明示的に指定する必要がある）。
+        ボタン(Link)・道のスタブは引き続きSTAGE_MAP_ANCHORS.buildingを基準にした近似値
+        のまま（建物のすぐそばに浮かせるだけでピクセル一致は不要なため）。
+      */}
+      <div
+        className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
+        style={{ top: "70%", left: "50%", width: markerSizeStyle(GROUND_GRID_BLOCK_PX), aspectRatio: "2 / 1" }}
+        aria-hidden="true"
+      >
+        {STAGE_NUMBERS.map((stage) => {
+          const unlocked = UNLOCKED[stage];
+          const interactive = unlocked && IMPLEMENTED_STAGES.includes(stage);
+
+          if (!unlocked && IMPLEMENTED_STAGES.includes(stage)) {
+            // fog of war。container-relative側のロジックと判定基準を揃えている。
+            return null;
+          }
+
+          const cell = STAGE_GRID_CELLS[stage];
+          const pos = gridCellCenterPercent(cell.col, cell.row);
+          const markerSize = markerSizeStyle(STAGE_MAP_ANCHORS[stage].size);
+
+          if (!interactive) {
+            return (
+              <div
+                key={stage}
+                className="absolute -translate-x-1/2 -translate-y-1/2"
+                style={{ top: `${pos.top}%`, left: `${pos.left}%`, width: markerSize }}
+              >
+                <svg viewBox={DIAMOND_VIEWBOX} className="block w-full">
+                  <polygon
+                    points={DIAMOND_POINTS}
+                    fill="rgba(255,255,255,0.35)"
+                    stroke="#d4d4d8"
+                    strokeWidth="3"
+                    strokeDasharray="6 5"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                </svg>
+              </div>
+            );
+          }
+
+          const meta = STAGE_META[stage];
+          const Icon = meta.icon;
+          const color = STAGE_COLORS[stage];
+          const isCurrent = stage === currentStage;
+          const testImage = TEST_BUILDING_IMAGES[stage];
+
+          return (
+            <div
+              key={stage}
+              className="absolute -translate-x-1/2 -translate-y-1/2"
+              style={{
+                top: `${pos.top}%`,
+                left: `${pos.left}%`,
+                width: markerSize,
+                filter: isCurrent ? `drop-shadow(0 0 5px ${withAlpha(color, "80")})` : undefined,
+              }}
+            >
+              {testImage ? (
+                <Image
+                  src={testImage.src}
+                  alt=""
+                  width={testImage.width}
+                  height={testImage.height}
+                  className="block h-auto w-full"
+                />
+              ) : (
+                <>
+                  <svg viewBox={DIAMOND_VIEWBOX} className="block w-full">
+                    <polygon
+                      points={DIAMOND_POINTS}
+                      fill={withAlpha(color, "26")}
+                      stroke={color}
+                      strokeWidth="3"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  </svg>
+                  <Icon
+                    className="absolute left-1/2 top-1/2 h-[85%] w-[85%] -translate-x-1/2 -translate-y-1/2"
+                    style={{ color }}
+                    strokeWidth={2.25}
+                  />
+                </>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/*
@@ -478,118 +596,48 @@ export function RoadmapMap({
         );
       })()}
 
+      {/*
+        Stageの入口ボタン（建物の真上ではなく、そばに寄せた位置に浮かせる横長ピル）。
+        2026-09-17：建物マーカー本体は上の「グリッド相対」ブロックに分離したため、
+        ここではボタンのみを描画する（建物・ボタンが別レイヤーになったが、
+        STAGE_MAP_ANCHORS.buildingを共通の基準点にしているので大きくは離れない）。
+      */}
       {STAGE_NUMBERS.map((stage) => {
         const anchor = STAGE_MAP_ANCHORS[stage];
         const unlocked = UNLOCKED[stage];
         const interactive = unlocked && IMPLEMENTED_STAGES.includes(stage);
-        const markerSize = markerSizeStyle(anchor.size);
-
-        if (!unlocked && IMPLEMENTED_STAGES.includes(stage)) {
-          // 未解放のStageは完全に非表示（fog of war）。実座標を見せてしまうと
-          // 「次はここに建つ」と分かってワクワク感が失われるため、何も描画しない。
-          // 2026-09-16：Stage5実装によりIMPLEMENTED_STAGESに5が含まれるようになったため、
-          // Stage5も他Stageと同じくここでfog of war判定される（日常編・ビジネス編とも
-          // 未解放の間は完全に隠す）。
-          return null;
-        }
 
         if (!interactive) {
-          // ここに来るのは「解放済みだが、まだ練習画面が実装されていない」Stage
-          // （現状のStage1〜5はすべて実装済みのためこの分岐には基本入らないが、
-          // 将来Stageが増えた場合のためのフォールバックとして残している）。
-          // 既に得た実績、または将来必ず来るものなので隠さず、輪郭だけのシルエット/
-          // 空き地として見せる。「この先まだ何か建つ」という期待だけ残し、押せるボタンは出さない。
-          return (
-            <div
-              key={stage}
-              className="absolute -translate-x-1/2 -translate-y-1/2"
-              style={{ top: `${anchor.building.top}%`, left: `${anchor.building.left}%`, width: markerSize }}
-              aria-hidden="true"
-            >
-              <svg viewBox={DIAMOND_VIEWBOX} className="block w-full">
-                <polygon
-                  points={DIAMOND_POINTS}
-                  fill="rgba(255,255,255,0.35)"
-                  stroke="#d4d4d8"
-                  strokeWidth="3"
-                  strokeDasharray="6 5"
-                  vectorEffect="non-scaling-stroke"
-                />
-              </svg>
-            </div>
-          );
+          // 未解放（fog of war）、または解放済みだが画面未実装のStageにはボタンを出さない。
+          return null;
         }
 
         const meta = STAGE_META[stage];
         const Icon = meta.icon;
         const color = STAGE_COLORS[stage];
-        const isCurrent = stage === currentStage;
         const buttonTop = anchor.building.top + anchor.buttonOffset.top;
         const buttonLeft = anchor.building.left + anchor.buttonOffset.left;
-        const testImage = TEST_BUILDING_IMAGES[stage];
 
         return (
-          <div key={stage}>
-            {/* 建物マーカー本体。実画像（TEST_BUILDING_IMAGES）があればそれを使い、なければ
-                従来どおりひし形プレースホルダー（アイソメ2:1投影）で表現する。 */}
-            <div
-              className="absolute -translate-x-1/2 -translate-y-1/2"
-              style={{
-                top: `${anchor.building.top}%`,
-                left: `${anchor.building.left}%`,
-                width: markerSize,
-                filter: isCurrent ? `drop-shadow(0 0 5px ${withAlpha(color, "80")})` : undefined,
-              }}
-              aria-hidden="true"
-            >
-              {testImage ? (
-                <Image
-                  src={testImage.src}
-                  alt=""
-                  width={testImage.width}
-                  height={testImage.height}
-                  className="block h-auto w-full"
-                />
-              ) : (
-                <>
-                  <svg viewBox={DIAMOND_VIEWBOX} className="block w-full">
-                    <polygon
-                      points={DIAMOND_POINTS}
-                      fill={withAlpha(color, "26")}
-                      stroke={color}
-                      strokeWidth="3"
-                      vectorEffect="non-scaling-stroke"
-                    />
-                  </svg>
-                  <Icon
-                    className="absolute left-1/2 top-1/2 h-[85%] w-[85%] -translate-x-1/2 -translate-y-1/2"
-                    style={{ color }}
-                    strokeWidth={2.25}
-                  />
-                </>
-              )}
-            </div>
-
-            {/* Stageの入口ボタン。建物の真上ではなく、そばに寄せた位置に浮かせる横長ピル。 */}
-            <Link
-              href={meta.href}
-              className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-white/95 px-3 py-1.5 shadow-sm transition-all duration-200 ease-out hover:translate-y-[calc(-50%-4px)] hover:scale-110 hover:shadow-[0_10px_24px_-6px_var(--glow-color)] active:scale-90 active:duration-75"
-              style={
-                {
-                  top: `${buttonTop}%`,
-                  left: `${buttonLeft}%`,
-                  border: `1.5px solid ${color}`,
-                  "--glow-color": withAlpha(color, "cc"),
-                } as CSSProperties
-              }
-            >
-              <Icon className="h-3.5 w-3.5 flex-shrink-0" style={{ color }} strokeWidth={2.25} />
-              <span className="text-xs font-semibold" style={{ color }}>
-                {meta.label}
-              </span>
-              <span className="text-[10px] text-zinc-500">{meta.caption}</span>
-            </Link>
-          </div>
+          <Link
+            key={stage}
+            href={meta.href}
+            className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-white/95 px-3 py-1.5 shadow-sm transition-all duration-200 ease-out hover:translate-y-[calc(-50%-4px)] hover:scale-110 hover:shadow-[0_10px_24px_-6px_var(--glow-color)] active:scale-90 active:duration-75"
+            style={
+              {
+                top: `${buttonTop}%`,
+                left: `${buttonLeft}%`,
+                border: `1.5px solid ${color}`,
+                "--glow-color": withAlpha(color, "cc"),
+              } as CSSProperties
+            }
+          >
+            <Icon className="h-3.5 w-3.5 flex-shrink-0" style={{ color }} strokeWidth={2.25} />
+            <span className="text-xs font-semibold" style={{ color }}>
+              {meta.label}
+            </span>
+            <span className="text-[10px] text-zinc-500">{meta.caption}</span>
+          </Link>
         );
       })}
       </div>

@@ -45,6 +45,19 @@ type MapPoint = { top: number; left: number };
 //   Stage4 (col=3,row=1) sum=4  diff=+2
 //   Stage5 (col=1,row=1) sum=2  diff=0（最奥・中央寄りで着地）
 // 建物サイズ(80→48px)は従来通り据え置き、奥に行くほど小さくなる遠近感を維持している。
+// 2026-09-17追加：building位置を「地面の参照グリッド」の実際のマス目に厳密に一致させる
+// ため導入。roadmap-map.tsx側でこの(col,row)を、グリッド本体(GROUND_GRID_TILES)と全く
+// 同じ計算式・同じ描画ボックスを使って%に変換するので、コンテナの実寸によらず必ずマス目に
+// ぴったり乗る（下のSTAGE_MAP_ANCHORS.buildingは、ボタン位置の基準としてのみ引き続き
+// 使う近似値。実際の建物画像の位置はこちらのSTAGE_GRID_CELLSが正）。
+export const STAGE_GRID_CELLS: Record<1 | 2 | 3 | 4 | 5, { col: number; row: number }> = {
+  1: { col: 4, row: 6 },
+  2: { col: 5, row: 3 },
+  3: { col: 2, row: 4 },
+  4: { col: 3, row: 1 },
+  5: { col: 1, row: 1 },
+};
+
 export const STAGE_MAP_ANCHORS: Record<
   1 | 2 | 3 | 4 | 5,
   { building: MapPoint; buttonOffset: MapPoint; size: number }
