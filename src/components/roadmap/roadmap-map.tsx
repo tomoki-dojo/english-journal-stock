@@ -281,31 +281,13 @@ export function RoadmapMap({
           ))}
 
           {/*
-            2026-09-17追加：本道（Stage1→5をつなぐ線）を、建物と同じくこの<svg viewBox>の中に
-            タイルと全く同じcx,cy計算式で描画する。以前は本道をコンテナ全体%座標系の
-            TRUNK_ROAD_POINTS（建物の位置とは無関係な近似値）で描いていたため、建物を
-            グリッド厳密一致に直した今、その建物にスタブ線をつなごうとすると確実にズレる
-            状態だった（ユーザー指摘）。タイル中心同士を直接結ぶことで、建物・道が
-            同じ座標系を共有し、原理的にズレなくなる。
+            2026-09-17：Stage1〜5をつなぐ「本道」の線は、建物の中心同士を直線で結ぶと
+            アイソメグリッドの2方向（タイルの辺の向き）のどちらとも一致しない角度になり、
+            マス目から浮いた斜め線に見えてしまう（ユーザー指摘）。グリッドの2方向だけを
+            使った階段状の道に描き直す手もあるが、そもそも道は最終的に実イラストへ
+            差し替わる前提のものなので、中途半端な線を今から描くのはやめ、実イラスト
+            実装（#150）まで道の描画自体を見送ることにした。
           */}
-          {currentStage > 1 && (
-            <polyline
-              points={STAGE_NUMBERS.slice(0, currentStage)
-                .map((s) => {
-                  const c = STAGE_GRID_CELLS[s];
-                  const offsetX = (GROUND_GRID_ROWS - 1) * GROUND_GRID_TILE_HALF_W;
-                  const cx = offsetX + (c.col - c.row) * GROUND_GRID_TILE_HALF_W;
-                  const cy = (c.col + c.row) * GROUND_GRID_TILE_HALF_H;
-                  return `${cx},${cy}`;
-                })
-                .join(" ")}
-              fill="none"
-              stroke="#a1a1aa"
-              strokeWidth={6}
-              strokeDasharray="20 13"
-              vectorEffect="non-scaling-stroke"
-            />
-          )}
 
           {STAGE_NUMBERS.map((stage) => {
             const unlocked = UNLOCKED[stage];
