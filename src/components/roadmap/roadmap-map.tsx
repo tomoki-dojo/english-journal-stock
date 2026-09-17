@@ -127,21 +127,12 @@ function buildGroundGridTiles(): { key: string; points: string }[] {
 
 const GROUND_GRID_TILES = buildGroundGridTiles();
 
-// 2026-09-17追加：Stage建物をこの参照グリッドのマス目に厳密に一致させるためのヘルパー。
-// buildGroundGridTiles()と全く同じ式でタイル中心(cx,cy)を求め、それを「グリッドを描画
-// している箱（下のdiv、top:70%・left:50%・width:GROUND_GRID_BLOCK_PXの-translate-1/2）
-// 自身に対する0〜100%」に変換する。Stage建物マーカーをこの箱の中に同じ%で置けば、
-// コンテナの実際のpx幅がいくつであろうと（グリッド本体と全く同じ箱・同じ%系なので）
-// 必ずマス目の中心にぴったり重なる。
-function gridCellCenterPercent(col: number, row: number): { left: number; top: number } {
-  const offsetX = (GROUND_GRID_ROWS - 1) * GROUND_GRID_TILE_HALF_W;
-  const cx = offsetX + (col - row) * GROUND_GRID_TILE_HALF_W;
-  const cy = (col + row) * GROUND_GRID_TILE_HALF_H;
-  return {
-    left: (cx / GROUND_GRID_VIEWBOX_W) * 100,
-    top: (cy / GROUND_GRID_VIEWBOX_H) * 100,
-  };
-}
+// 2026-09-17追加：Stage建物マーカー（STAGE_MAP_ANCHORS[stage].size、px指定）を、
+// タイルと同じ<svg viewBox>の単位に変換するための係数。「1タイル=GROUND_GRID_TILE_TARGET_PX」
+// という対応関係から逆算している。建物はこの係数を使って、タイルと全く同じviewBox座標系の
+// 中に<foreignObject>で直接描画する（コンテナのCSS%を経由するdiv+top/left%方式は、
+// 実機で見るとズレが生じたため2026-09-17に廃止した）。
+const GROUND_GRID_PX_TO_UNIT = GROUND_GRID_VIEWBOX_W / GROUND_GRID_BLOCK_PX;
 
 type RoadmapMapProps = {
   // Stage1は常に解放。Stage2・3は各Stageの練習ページと同じ基準（アクティブセットが
@@ -267,7 +258,18 @@ export function RoadmapMap({
         style={{ top: "70%", left: "50%", width: markerSizeStyle(GROUND_GRID_BLOCK_PX) }}
         aria-hidden="true"
       >
-        <svg viewBox={GROUND_GRID_VIEWBOX} className="block w-full">
+        {/*
+          2026-09-17：Stage1〜5の建物本体は、div+top/left%方式（グリッドと同じ箱に
+          同じ%で置く）で一度実装したが、実機で見るとマス目からズレていた（ユーザー指摘、
+          2回目）。原因を「コンテナ%を経由する変換に丸め・想定違いの余地がある」と判断し、
+          より確実な方式に変更：タイルを描いているこの<svg viewBox>の中に、
+          <foreignObject>で建物をタイルと全く同じ座標系（cx,cyそのもの、viewBox単位）で
+          直接描画する。コンテナのCSS%計算を一切経由しないため、ズレる余地がない。
+          GROUND_GRID_PX_TO_UNITは「STAGE_MAP_ANCHORS[stage].sizeという px指定サイズ」を
+          このviewBoxの単位に変換するための係数（グリッド1タイル=GROUND_GRID_TILE_TARGET_PXという
+          対応関係から逆算）。
+        */}
+        <svg viewBox={GROUND_GRID_VIEWBOX} className="block w-full" style={{ overflow: "visible" }}>
           {GROUND_GRID_TILES.map((tile) => (
             <polygon
               key={tile.key}
@@ -278,116 +280,93 @@ export function RoadmapMap({
               vectorEffect="non-scaling-stroke"
             />
           ))}
-        </svg>
-      </div>
 
-      {/*
-        Stage1〜5の建物マーカー本体。2026-09-17：それまではSTAGE_MAP_ANCHORS.buildingという
-        コンテナ%の近似値を直接使っていたため、実際の建物画像を置くと参照グリッドのマス目
-        からズレて見える問題があった。上の参照グリッドと全く同じ箱（top:70%・left:50%・
-        width:markerSizeStyle(GROUND_GRID_BLOCK_PX)、-translate-1/2）の中に、
-        STAGE_GRID_CELLSで指定したマス目の中心%（gridCellCenterPercent、
-        buildGroundGridTilesと同じ計算式）で置くことで、コンテナの実際のpx幅によらず
-        必ずマス目の中心にぴったり重なるようにしている。aspectRatioを2/1に固定している
-        のは、この箱の中身が絶対配置の子要素だけだと高さが0に潰れてtop%が効かなくなる
-        ため（グリッド本体はSVGの内在的な2:1アスペクトで高さが決まるが、こちらは
-        中身がdivなので明示的に指定する必要がある）。
-        ボタン(Link)・道のスタブは引き続きSTAGE_MAP_ANCHORS.buildingを基準にした近似値
-        のまま（建物のすぐそばに浮かせるだけでピクセル一致は不要なため）。
-      */}
-      <div
-        className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
-        style={{ top: "70%", left: "50%", width: markerSizeStyle(GROUND_GRID_BLOCK_PX), aspectRatio: "2 / 1" }}
-        aria-hidden="true"
-      >
-        {STAGE_NUMBERS.map((stage) => {
-          const unlocked = UNLOCKED[stage];
-          const interactive = unlocked && IMPLEMENTED_STAGES.includes(stage);
+          {STAGE_NUMBERS.map((stage) => {
+            const unlocked = UNLOCKED[stage];
+            const interactive = unlocked && IMPLEMENTED_STAGES.includes(stage);
 
-          if (!unlocked && IMPLEMENTED_STAGES.includes(stage)) {
-            // fog of war。container-relative側のロジックと判定基準を揃えている。
-            return null;
-          }
+            if (!unlocked && IMPLEMENTED_STAGES.includes(stage)) {
+              // fog of war。container-relative側（ボタン）のロジックと判定基準を揃えている。
+              return null;
+            }
 
-          const cell = STAGE_GRID_CELLS[stage];
-          const pos = gridCellCenterPercent(cell.col, cell.row);
-          const markerSize = markerSizeStyle(STAGE_MAP_ANCHORS[stage].size);
+            const cell = STAGE_GRID_CELLS[stage];
+            const offsetX = (GROUND_GRID_ROWS - 1) * GROUND_GRID_TILE_HALF_W;
+            const cx = offsetX + (cell.col - cell.row) * GROUND_GRID_TILE_HALF_W;
+            const cy = (cell.col + cell.row) * GROUND_GRID_TILE_HALF_H;
+            const wUnits = STAGE_MAP_ANCHORS[stage].size * GROUND_GRID_PX_TO_UNIT;
 
-          if (!interactive) {
-            return (
-              <div
-                key={stage}
-                className="absolute -translate-x-1/2 -translate-y-1/2"
-                style={{ top: `${pos.top}%`, left: `${pos.left}%`, width: markerSize }}
-              >
-                <svg viewBox={DIAMOND_VIEWBOX} className="block w-full">
-                  <polygon
-                    points={DIAMOND_POINTS}
-                    fill="rgba(255,255,255,0.35)"
-                    stroke="#d4d4d8"
-                    strokeWidth="3"
-                    strokeDasharray="6 5"
-                    vectorEffect="non-scaling-stroke"
-                  />
-                </svg>
-              </div>
-            );
-          }
-
-          const meta = STAGE_META[stage];
-          const Icon = meta.icon;
-          const color = STAGE_COLORS[stage];
-          const isCurrent = stage === currentStage;
-          const testImage = TEST_BUILDING_IMAGES[stage];
-          // ひし形プレースホルダーは画像の中心=接地点なので-50%/-50%centeringのままでよいが、
-          // 実際の建物PNG(testImage)は接地点が中心よりかなり下にあるため、
-          // groundAnchorTopPercentを使ってその点がマス目の中心に来るようtranslateする
-          // （そうしないと建物が浮いて見える。2026-09-17、ユーザー指摘で修正）。
-          const groundAnchorTransform = testImage
-            ? `translate(-50%, -${testImage.groundAnchorTopPercent}%)`
-            : "translate(-50%, -50%)";
-
-          return (
-            <div
-              key={stage}
-              className="absolute"
-              style={{
-                top: `${pos.top}%`,
-                left: `${pos.left}%`,
-                width: markerSize,
-                transform: groundAnchorTransform,
-                filter: isCurrent ? `drop-shadow(0 0 5px ${withAlpha(color, "80")})` : undefined,
-              }}
-            >
-              {testImage ? (
-                <Image
-                  src={testImage.src}
-                  alt=""
-                  width={testImage.width}
-                  height={testImage.height}
-                  className="block h-auto w-full"
-                />
-              ) : (
-                <>
-                  <svg viewBox={DIAMOND_VIEWBOX} className="block w-full">
+            if (!interactive) {
+              const hUnits = wUnits / 2;
+              return (
+                <foreignObject key={stage} x={cx - wUnits / 2} y={cy - hUnits / 2} width={wUnits} height={hUnits}>
+                  <svg viewBox={DIAMOND_VIEWBOX} className="block h-full w-full">
                     <polygon
                       points={DIAMOND_POINTS}
-                      fill={withAlpha(color, "26")}
-                      stroke={color}
+                      fill="rgba(255,255,255,0.35)"
+                      stroke="#d4d4d8"
                       strokeWidth="3"
+                      strokeDasharray="6 5"
                       vectorEffect="non-scaling-stroke"
                     />
                   </svg>
-                  <Icon
-                    className="absolute left-1/2 top-1/2 h-[85%] w-[85%] -translate-x-1/2 -translate-y-1/2"
-                    style={{ color }}
-                    strokeWidth={2.25}
+                </foreignObject>
+              );
+            }
+
+            const meta = STAGE_META[stage];
+            const Icon = meta.icon;
+            const color = STAGE_COLORS[stage];
+            const isCurrent = stage === currentStage;
+            const testImage = TEST_BUILDING_IMAGES[stage];
+            // ひし形プレースホルダーは画像の中心=接地点なので0.5（中心）でよいが、実際の
+            // 建物PNG(testImage)は接地点が中心よりかなり下にあるため、groundAnchorTopPercent
+            // を使ってその点がマス目の中心(cy)に来るようforeignObjectのyをずらす。
+            const hUnits = testImage ? wUnits * (testImage.height / testImage.width) : wUnits / 2;
+            const anchorFraction = testImage ? testImage.groundAnchorTopPercent / 100 : 0.5;
+
+            return (
+              <foreignObject
+                key={stage}
+                x={cx - wUnits / 2}
+                y={cy - hUnits * anchorFraction}
+                width={wUnits}
+                height={hUnits}
+                style={{
+                  overflow: "visible",
+                  filter: isCurrent ? `drop-shadow(0 0 5px ${withAlpha(color, "80")})` : undefined,
+                }}
+              >
+                {testImage ? (
+                  <Image
+                    src={testImage.src}
+                    alt=""
+                    width={testImage.width}
+                    height={testImage.height}
+                    className="block h-full w-full"
                   />
-                </>
-              )}
-            </div>
-          );
-        })}
+                ) : (
+                  <div className="relative h-full w-full">
+                    <svg viewBox={DIAMOND_VIEWBOX} className="block h-full w-full">
+                      <polygon
+                        points={DIAMOND_POINTS}
+                        fill={withAlpha(color, "26")}
+                        stroke={color}
+                        strokeWidth="3"
+                        vectorEffect="non-scaling-stroke"
+                      />
+                    </svg>
+                    <Icon
+                      className="absolute left-1/2 top-1/2 h-[85%] w-[85%] -translate-x-1/2 -translate-y-1/2"
+                      style={{ color }}
+                      strokeWidth={2.25}
+                    />
+                  </div>
+                )}
+              </foreignObject>
+            );
+          })}
+        </svg>
       </div>
 
       {/*
