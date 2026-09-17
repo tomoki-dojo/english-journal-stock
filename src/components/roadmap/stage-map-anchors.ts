@@ -44,7 +44,10 @@ type MapPoint = { top: number; left: number };
 //   Stage3 (col=2,row=4) sum=6  diff=-2
 //   Stage4 (col=3,row=1) sum=4  diff=+2
 //   Stage5 (col=1,row=1) sum=2  diff=0（最奥・中央寄りで着地）
-// 建物サイズ(80→48px)は従来通り据え置き、奥に行くほど小さくなる遠近感を維持している。
+// 建物サイズは以前「奥に行くほど小さくなる遠近感」を出すため80→48pxと段階的に縮小していたが、
+// 2026-09-17の建物幅調整で撤去した（下のSTAGE_MAP_ANCHORS参照）。アイソメ投影は元々
+// 遠近法を使わない（奥でも同じ縮尺で描くのが決まりごと）ため、擬似遠近法による縮小は
+// タイル幅とのズレを生むだけで、アイソメの流儀としても不要と判断した。
 // 2026-09-17追加：building位置を「地面の参照グリッド」の実際のマス目に厳密に一致させる
 // ため導入。roadmap-map.tsx側でこの(col,row)を、グリッド本体(GROUND_GRID_TILES)と全く
 // 同じ計算式・同じ描画ボックスを使って%に変換するので、コンテナの実寸によらず必ずマス目に
@@ -62,11 +65,11 @@ export const STAGE_MAP_ANCHORS: Record<
   1 | 2 | 3 | 4 | 5,
   { building: MapPoint; buttonOffset: MapPoint; size: number }
 > = {
-  1: { building: { top: 83, left: 37 }, buttonOffset: { top: 6, left: -11 }, size: 80 },
-  2: { building: { top: 77, left: 63 }, buttonOffset: { top: -4, left: 12 }, size: 72 },
-  3: { building: { top: 70, left: 37 }, buttonOffset: { top: 9, left: -12 }, size: 64 },
-  4: { building: { top: 64, left: 63 }, buttonOffset: { top: -10, left: 11 }, size: 56 },
-  5: { building: { top: 57, left: 50 }, buttonOffset: { top: -11, left: 0 }, size: 48 },
+  1: { building: { top: 83, left: 37 }, buttonOffset: { top: 6, left: -11 }, size: 92 },
+  2: { building: { top: 77, left: 63 }, buttonOffset: { top: -4, left: 12 }, size: 92 },
+  3: { building: { top: 70, left: 37 }, buttonOffset: { top: 9, left: -12 }, size: 92 },
+  4: { building: { top: 64, left: 63 }, buttonOffset: { top: -10, left: 11 }, size: 92 },
+  5: { building: { top: 57, left: 50 }, buttonOffset: { top: -11, left: 0 }, size: 92 },
 };
 
 // 本道（Stage1→5の進行順そのものを表す蛇行ライン）の通過点。上のSTAGE_MAP_ANCHORSの
