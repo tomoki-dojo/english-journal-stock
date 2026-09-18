@@ -109,6 +109,11 @@ const LANDMARK_TEMP_IMAGES: Partial<
     width: 570,
     height: 432,
   },
+  broadcast: {
+    src: "/roadmap/landmarks/landmark_broadcast.png",
+    width: 638,
+    height: 1115,
+  },
 };
 // WIDE_HEX=横長ランドマーク用の2区画（1×2）。ひし形のS方向（奥行き軸）を伸ばした
 // 六角形。viewBoxは0 0 100 100（実質、DIAMONDの奥行きを2倍にした形）。
