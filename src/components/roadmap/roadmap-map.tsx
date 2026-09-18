@@ -331,6 +331,23 @@ export function RoadmapMap({
   // ただしStageスキップ（#156）が有効な間は、選んだ開始Stageを優先して現在地として見せる
   // （進捗の実態ではなく「今どこから始めたか」というユーザーの意思決定を反映するため）。
   const currentStage = proSkipStartStage ?? [...STAGE_NUMBERS].reverse().find((s) => UNLOCKED[s]) ?? 1;
+
+  // 2026-09-19追加：「5×5起点→7×7→…とリングが増えるたびにズームアウトする」案の実装
+  // （_reference/speaking-roadmap-design.md「ズームカメラ仕様」参照）。Tier3以降
+  // （GROUND_GRID_COLS/ROWSの動的化）はまだ実装していないため、今はtierHalfExtentを
+  // 常に3（7×7、現状の中心コアの半径）に固定した状態での動作確認版。
+  // buildingHalfExtent：中心コア内で今見えている建物の広がり。Stage1・Stage0・掲示板
+  // しか解放されていない間は2（5×5相当）、Stage2以降が1つでも解放されたら3（7×7相当）。
+  // cameraHalfExtent = tierHalfExtent(=3)が上回っている間はbuildingHalfExtentを採用
+  // （crop）し、tierHalfExtentを超えた瞬間からはtierHalfExtentをそのまま採用する
+  // （Tier3以降を実装した際、tierHalfExtentが4以上になればここが自動的にcamera=土地の
+  // 全範囲＝ズーム無しに切り替わる）。
+  const TIER_HALF_EXTENT = 3; // 7×7固定（Tier3以降実装まではここが変わらない）
+  const buildingHalfExtent = stageReadiness.stage2Ready ? 3 : 2;
+  const cameraHalfExtent =
+    TIER_HALF_EXTENT > 3 ? TIER_HALF_EXTENT : Math.min(buildingHalfExtent, TIER_HALF_EXTENT);
+  const mapZoomFactor = TIER_HALF_EXTENT / cameraHalfExtent;
+
   return (
     // 2026-09-14修正：以前は横長(4:3〜2:1)だったが、全面マップ化に伴い表示枠が
     // 狭く感じるという指摘を受け、正方形〜縦長（モバイルでは縦長寄り、画面が
@@ -372,7 +389,16 @@ export function RoadmapMap({
           このviewBoxの単位に変換するための係数（グリッド1タイル=GROUND_GRID_TILE_TARGET_PXという
           対応関係から逆算）。
         */}
-        <svg viewBox={GROUND_GRID_VIEWBOX} className="block w-full" style={{ overflow: "visible" }}>
+        <svg
+          viewBox={GROUND_GRID_VIEWBOX}
+          className="block w-full"
+          style={{
+            overflow: "visible",
+            transform: `scale(${mapZoomFactor})`,
+            transformOrigin: "50% 50%",
+            transition: "transform 1.2s ease-out",
+          }}
+        >
           {GROUND_GRID_TILES.map((tile) => (
             <image
               key={tile.key}
