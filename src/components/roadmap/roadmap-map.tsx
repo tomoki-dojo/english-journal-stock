@@ -57,9 +57,15 @@ const DIAMOND_POINTS = "50,0 100,25 50,50 0,25";
 // 2026-09-18更新：旧コンクリ仮素材(building_stack2_concrete_test.png)から、
 // 本番のビル/レンガ/窓デカ3種に仮差し替え。中段(body)をN-1枚+最上段(roof)1枚を
 // Pillowでスクリプト合成したスタック画像（パーツリストAの「フロア数の上限は6〜8階」
-// を試すため、窓デカ型だけ7階まで積んでみている）。積み上げpiddチ(floor間の垂直
+// を試すため、窓デカ型だけ7階まで積んでみている）。積み上げピッチ(floor間の垂直
 // オフセット)は各body画像の「幅が最大になっている帯(flat band)」の高さを
-// alphaチャンネルから実測して使用（3種とも95〜96pxでほぼ共通）。
+// alphaチャンネルから実測（3種とも95〜96px）した上で、さらに-8pxのマージンを
+// 引いている。理由：実測値どおりのピッチだと、フル解像度では隙間なく繋がって
+// 見えるのに、実際の表示サイズまで縮小(next/imageが行う一般的なLANCZOS等の
+// 縮小補間)すると、継ぎ目の濃い輪郭線が縮小時に周囲の明るい色と混ざって薄まり、
+// 白っぽい隙間線のように見えてしまう不具合をユーザーが実機確認で発見。
+// 縮小後も隙間に見えないよう、意図的に8px分多く重ねてある（縮小シミュレーションで
+// 確認済み。歪みが気になるレベルの重なりではない）。
 // groundAnchorTopPercentは最下段bodyの接地点(alpha最下段行)を実測して算出。
 // まだ「どのタイプをどのStageに割り当てるか」の恒久ルールは無い(仕様書の
 // 2026-09-17改訂参照、型とStageの固定対応は決めない方針)ため、この3件も
@@ -71,22 +77,22 @@ const TEST_BUILDING_IMAGES: Partial<
   1: {
     src: "/roadmap/buildings/building_stack_plain_2f.png",
     width: 386,
-    height: 390,
-    groundAnchorTopPercent: 98.21,
+    height: 382,
+    groundAnchorTopPercent: 98.17,
   },
   // レンガ型・3階建て
   2: {
     src: "/roadmap/buildings/building_stack_brick_3f.png",
     width: 386,
-    height: 484,
-    groundAnchorTopPercent: 98.55,
+    height: 468,
+    groundAnchorTopPercent: 98.5,
   },
   // 窓デカ型・7階建て
   3: {
     src: "/roadmap/buildings/building_stack_bigwindow_7f.png",
     width: 386,
-    height: 870,
-    groundAnchorTopPercent: 99.2,
+    height: 822,
+    groundAnchorTopPercent: 99.15,
   },
 };
 
