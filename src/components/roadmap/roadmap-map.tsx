@@ -65,6 +65,21 @@ const TEST_BUILDING_IMAGES: Partial<
     groundAnchorTopPercent: 97.4,
   },
 };
+
+// 2026-09-18追加：倉庫（パーツリストD、Stage2初解放ランドマーク）の本番アート仮置き。
+// ランドマーク側はまだ地面グリッドに厳密ロックされておらず(building/branchFromが
+// 近似%のまま)、footprintも絵に未反映のため、ここでは「見た目の雰囲気だけ確認する」
+// 目的の暫定表示として、既存のプレースホルダー六角形をこの画像に差し替えるだけに留める。
+// 本実装(#150)でグリッド厳密配置に統一する際、座標・アンカー計算をやり直す前提。
+const LANDMARK_TEMP_IMAGES: Partial<
+  Record<keyof typeof LANDMARK_MAP_ANCHORS, { src: string; width: number; height: number }>
+> = {
+  warehouse: {
+    src: "/roadmap/landmarks/landmark_warehouse.png",
+    width: 570,
+    height: 432,
+  },
+};
 // WIDE_HEX=横長ランドマーク用の2区画（1×2）。ひし形のS方向（奥行き軸）を伸ばした
 // 六角形。viewBoxは0 0 100 100（実質、DIAMONDの奥行きを2倍にした形）。
 const WIDE_HEX_VIEWBOX = "0 0 100 100";
@@ -428,6 +443,7 @@ export function RoadmapMap({
       {Object.entries(LANDMARK_MAP_ANCHORS).map(([key, lm]) => {
         const markerSize = markerSizeStyle(lm.size);
         const isWide = lm.footprint === "1x2";
+        const tempImage = LANDMARK_TEMP_IMAGES[key as keyof typeof LANDMARK_MAP_ANCHORS];
         return (
           <div
             key={key}
@@ -435,19 +451,31 @@ export function RoadmapMap({
             style={{ top: `${lm.building.top}%`, left: `${lm.building.left}%`, width: markerSize }}
             aria-hidden="true"
           >
-            <svg
-              viewBox={isWide ? WIDE_HEX_VIEWBOX : DIAMOND_VIEWBOX}
-              className="block w-full"
-            >
-              <polygon
-                points={isWide ? WIDE_HEX_POINTS : DIAMOND_POINTS}
-                fill="rgba(255,255,255,0.35)"
-                stroke="#d4d4d8"
-                strokeWidth="3"
-                strokeDasharray="6 5"
-                vectorEffect="non-scaling-stroke"
+            {tempImage ? (
+              // 接地点(lm.building)を画像の下端中央に合わせて上に伸ばすだけの簡易配置。
+              // footprintの正確な収まりはまだ検証していないので、幅は目安で190%にしてある。
+              <Image
+                src={tempImage.src}
+                alt=""
+                width={tempImage.width}
+                height={tempImage.height}
+                className="pointer-events-none absolute bottom-0 left-1/2 w-[190%] max-w-none -translate-x-1/2 select-none"
               />
-            </svg>
+            ) : (
+              <svg
+                viewBox={isWide ? WIDE_HEX_VIEWBOX : DIAMOND_VIEWBOX}
+                className="block w-full"
+              >
+                <polygon
+                  points={isWide ? WIDE_HEX_POINTS : DIAMOND_POINTS}
+                  fill="rgba(255,255,255,0.35)"
+                  stroke="#d4d4d8"
+                  strokeWidth="3"
+                  strokeDasharray="6 5"
+                  vectorEffect="non-scaling-stroke"
+                />
+              </svg>
+            )}
           </div>
         );
       })}
