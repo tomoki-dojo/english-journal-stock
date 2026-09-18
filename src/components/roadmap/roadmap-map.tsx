@@ -54,15 +54,39 @@ const DIAMOND_POINTS = "50,0 100,25 50,50 0,25";
 // 中心に合わせる（-translate-y-1/2）と接地点が大きく下にズレて浮いて見える
 // （2026-09-17、ユーザー指摘で発覚）。そのためこの画像だけは中心(-50%)ではなく、
 // 実際にPillow(alphaチャンネルの最下段の行)で測った接地点の位置でtranslateする。
+// 2026-09-18更新：旧コンクリ仮素材(building_stack2_concrete_test.png)から、
+// 本番のビル/レンガ/窓デカ3種に仮差し替え。中段(body)をN-1枚+最上段(roof)1枚を
+// Pillowでスクリプト合成したスタック画像（パーツリストAの「フロア数の上限は6〜8階」
+// を試すため、窓デカ型だけ7階まで積んでみている）。積み上げpiddチ(floor間の垂直
+// オフセット)は各body画像の「幅が最大になっている帯(flat band)」の高さを
+// alphaチャンネルから実測して使用（3種とも95〜96pxでほぼ共通）。
+// groundAnchorTopPercentは最下段bodyの接地点(alpha最下段行)を実測して算出。
+// まだ「どのタイプをどのStageに割り当てるか」の恒久ルールは無い(仕様書の
+// 2026-09-17改訂参照、型とStageの固定対応は決めない方針)ため、この3件も
+// 見た目確認用の仮の割り当て。
 const TEST_BUILDING_IMAGES: Partial<
   Record<StageNumber, { src: string; width: number; height: number; groundAnchorTopPercent: number }>
 > = {
-  // 中段（body）+最上段（roof）を合成した2階建てテスト画像。
+  // ビル型・2階建て
   1: {
-    src: "/roadmap/buildings/building_stack2_concrete_test.png",
+    src: "/roadmap/buildings/building_stack_plain_2f.png",
     width: 386,
-    height: 384,
-    groundAnchorTopPercent: 97.4,
+    height: 390,
+    groundAnchorTopPercent: 98.21,
+  },
+  // レンガ型・3階建て
+  2: {
+    src: "/roadmap/buildings/building_stack_brick_3f.png",
+    width: 386,
+    height: 484,
+    groundAnchorTopPercent: 98.55,
+  },
+  // 窓デカ型・7階建て
+  3: {
+    src: "/roadmap/buildings/building_stack_bigwindow_7f.png",
+    width: 386,
+    height: 870,
+    groundAnchorTopPercent: 99.2,
   },
 };
 
