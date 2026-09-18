@@ -85,56 +85,72 @@ export const TRUNK_ROAD_POINTS: Record<1 | 2 | 3 | 4 | 5, MapPoint> = {
   5: { top: 52, left: 50 },
 };
 
-// ランドマーク（アイソメ都市アセット仕様書 Partsリスト D、#150）の5区画。本道上の
+// ランドマーク（アイソメ都市アセット仕様書 Partsリスト D、#150）の4区画。本道上の
 // 交差点(branchFrom)から分かれる枝道の先に立つ、という位置づけ。区画サイズは
-// footprint:'1x2'＝横長の2区画、'tower'＝footprintは1区画のまま階数で魅せる高層棟
-// （検討の詳細は_reference/speaking-roadmap-design.md参照）。
+// footprint:'1x2'＝col方向（左上→右下）に伸びる横長の2区画、'tower'＝2×2の
+// 正方ブロック（検討の詳細は_reference/speaking-roadmap-design.md参照）。
 // どの達成イベントで解放するかというトリガー設計はまだ行っていないため、現状は
 // Stage5と同じ「常に空き地として予約表示するだけ」の状態（roadmap-map.tsx参照）。
-// 2026-09-17修正：上のTRUNK_ROAD_POINTS刷新に合わせ、branchFromを新しい本道の
-// 通過点（またはその中間点）に追従させた。建物位置(building)自体は未調整のため、
-// 枝道の長さ・向きが変わっている可能性がある（実機で見て要調整）。
+// 2026-09-18修正：超高層ビルは2026-09-17の決定で「新規ランドマーク」から
+// 「既存建物に乗せるProスキン」へ位置づけが変わったため、独立ランドマークだった
+// skyscraperキーを削除（src/内に他の参照が無いことをGrepで確認済み）。
+// 2026-09-18修正：下のLANDMARK_GRID_CELLSを新設し、building(%)はSTAGE_MAP_ANCHORSと
+// 同じ「ボタン・枝道スタブ位置の基準としてのみ使う近似値」に位置づけを変更した
+// （実際の建物画像の位置はLANDMARK_GRID_CELLSが正。roadmap-map.tsx側でStage建物と
+// 同じ<foreignObject>グリッド直接描画に統一したため。詳細はそちらのコメント参照）。
 export const LANDMARK_MAP_ANCHORS: Record<
-  "warehouse" | "broadcast" | "cafe" | "tower" | "skyscraper",
+  "warehouse" | "broadcast" | "cafe" | "tower",
   { building: MapPoint; branchFrom: MapPoint; size: number; footprint: "1x2" | "tower" }
 > = {
   warehouse: {
-    building: { top: 70, left: 54 },
+    building: { top: 74.9, left: 72.8 },
     branchFrom: { top: 66, left: 41 }, // 新TRUNK3
     size: 74,
     footprint: "1x2",
   },
   broadcast: {
-    building: { top: 36, left: 8 },
+    building: { top: 68.4, left: 20.8 },
     branchFrom: { top: 66, left: 41 }, // 新TRUNK3
     size: 74,
     footprint: "1x2",
   },
   cafe: {
-    building: { top: 64, left: 90 },
+    building: { top: 61.9, left: 72.8 },
     branchFrom: { top: 73, left: 59 }, // 新TRUNK2
     size: 74,
     footprint: "1x2",
   },
   tower: {
-    building: { top: 4, left: 76 },
+    building: { top: 70.0, left: 82.5 },
     branchFrom: { top: 52, left: 50 }, // 新TRUNK5
     size: 60,
     footprint: "tower",
   },
-  skyscraper: {
-    building: { top: 44, left: 32 },
-    branchFrom: { top: 63, left: 49 }, // 新TRUNK3・TRUNK4の中間点
-    size: 82,
-    footprint: "tower",
-  },
 };
+
+// 2026-09-18追加：ランドマーク・Stage0・掲示板の建物本体を、Stage1〜5と同じ
+// 「地面の参照グリッド」(col,row)∈[0,6]に厳密ロックするための区画指定。
+// Stage1〜5の既存セル {(4,6),(5,3),(2,4),(3,1),(1,1)} と重ならないよう選定した。
+// footprint:'1x2'は(col,row)を左上（起点）として、col方向にwidth-1マス分伸びる
+// （row方向には伸びない。2026-09-17決定の「col方向に統一」に従う）。
+// footprint:'tower'は(col,row)を左上として、col・row方向にそれぞれ+1マス伸びる2×2。
+export const LANDMARK_GRID_CELLS: Record<"warehouse" | "broadcast" | "cafe" | "tower", { col: number; row: number }> = {
+  warehouse: { col: 5, row: 2 }, // 1x2、(5,2)-(6,2)
+  broadcast: { col: 0, row: 5 }, // 1x2、(0,5)-(1,5)
+  cafe: { col: 3, row: 0 }, // 1x2、(3,0)-(4,0)
+  tower: { col: 5, row: 0 }, // 2x2、(5,0)-(6,1)
+};
+
+export const STAGE0_GRID_CELL: { col: number; row: number } = { col: 6, row: 4 };
+export const BOARD_GRID_CELL: { col: number; row: number } = { col: 0, row: 0 };
 
 // Stage0（使い分けパーツ）専用の配置。Stage1〜5は手前→奥の一本道（対角線上）に並ぶが、
 // Stage0はその道のどこにも属さない独立エリアという扱いのため、あえて道から外れた
 // 右下の余白に単独で置く（「資料館」のような、いつでも寄れるランドマーク）。
+// 2026-09-18修正：building(%)はSTAGE_GRID_CELLS方式に合わせ、下のSTAGE0_GRID_CELLから
+// 逆算した近似値に更新（実際の建物位置はSTAGE0_GRID_CELLが正、buttonのみこの%を使う）。
 export const STAGE0_MAP_ANCHOR: { building: MapPoint; buttonOffset: MapPoint; size: number } = {
-  building: { top: 82, left: 84 },
+  building: { top: 83.0, left: 63.0 },
   buttonOffset: { top: 5, left: 4 },
   size: 62,
 };
@@ -143,8 +159,10 @@ export const STAGE0_MAP_ANCHOR: { building: MapPoint; buttonOffset: MapPoint; si
 // 全面マップ中心のレイアウトに再構築した際、それまで統計カード下に簡易カード
 // リンクとして置いていた掲示板を、Stage0と同じ「一本道とは無関係の独立エリア」
 // としてマップ上の建物マーカーに統合した。
+// 2026-09-18修正：building(%)はSTAGE_GRID_CELLS方式に合わせ、下のBOARD_GRID_CELLから
+// 逆算した近似値に更新（実際の建物位置はBOARD_GRID_CELLが正、buttonのみこの%を使う）。
 export const BOARD_MAP_ANCHOR: { building: MapPoint; buttonOffset: MapPoint; size: number } = {
-  building: { top: 62, left: 14 },
+  building: { top: 50.5, left: 50.0 },
   buttonOffset: { top: -13, left: 12 },
   size: 64,
 };

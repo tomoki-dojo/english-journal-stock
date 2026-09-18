@@ -8,8 +8,11 @@ import {
   STAGE_MAP_ANCHORS,
   STAGE_GRID_CELLS,
   STAGE0_MAP_ANCHOR,
+  STAGE0_GRID_CELL,
   BOARD_MAP_ANCHOR,
+  BOARD_GRID_CELL,
   LANDMARK_MAP_ANCHORS,
+  LANDMARK_GRID_CELLS,
   markerSizeStyle,
 } from "./stage-map-anchors";
 import { ProSkipButton } from "./pro-skip-button";
@@ -96,29 +99,35 @@ const TEST_BUILDING_IMAGES: Partial<
   },
 };
 
-// 2026-09-18追加：倉庫（パーツリストD、Stage2初解放ランドマーク）の本番アート仮置き。
-// ランドマーク側はまだ地面グリッドに厳密ロックされておらず(building/branchFromが
-// 近似%のまま)、footprintも絵に未反映のため、ここでは「見た目の雰囲気だけ確認する」
-// 目的の暫定表示として、既存のプレースホルダー六角形をこの画像に差し替えるだけに留める。
-// 本実装(#150)でグリッド厳密配置に統一する際、座標・アンカー計算をやり直す前提。
+// 2026-09-18追加：倉庫・放送局（パーツリストD）の本番アート仮置き。
+// groundAnchorTopPercentはPillowで各画像のalphaチャンネル最下段行を実測して算出
+// （Stage建物と同じ手法。詳細は下のfootprintAnchorCy呼び出し部分のコメント参照）。
 const LANDMARK_TEMP_IMAGES: Partial<
-  Record<keyof typeof LANDMARK_MAP_ANCHORS, { src: string; width: number; height: number }>
+  Record<
+    keyof typeof LANDMARK_MAP_ANCHORS,
+    { src: string; width: number; height: number; groundAnchorTopPercent: number }
+  >
 > = {
   warehouse: {
     src: "/roadmap/landmarks/landmark_warehouse.png",
     width: 570,
     height: 432,
+    groundAnchorTopPercent: 97.69,
   },
   broadcast: {
     src: "/roadmap/landmarks/landmark_broadcast.png",
     width: 638,
     height: 1115,
+    groundAnchorTopPercent: 99.1,
   },
 };
-// WIDE_HEX=横長ランドマーク用の2区画（1×2）。ひし形のS方向（奥行き軸）を伸ばした
-// 六角形。viewBoxは0 0 100 100（実質、DIAMONDの奥行きを2倍にした形）。
-const WIDE_HEX_VIEWBOX = "0 0 100 100";
-const WIDE_HEX_POINTS = "50,0 100,25 100,75 50,100 0,75 0,25";
+// WIDE_HEX_COL=横長ランドマーク用の2区画（1×2、col方向＝左上→右下に伸びる）の
+// プレースホルダー六角形。DIAMOND同様2:1のviewBox(0 0 100 50)の中で、col方向に
+// 隣接する2枚のひし形タイルを実際に合成した形（頂点はbuildGroundGridTilesと同じ
+// cx,cy計算式から2026-09-18に導出。単純にDIAMONDを横に引き伸ばした形ではなく、
+// アイソメの斜め方向に伸びた非対称な六角形になる）。
+const WIDE_HEX_COL_VIEWBOX = "0 0 100 50";
+const WIDE_HEX_COL_POINTS = "33.33,0 0,16.67 33.33,33.33 66.67,50 100,33.33 66.67,16.67";
 
 // 地面の参照グリッド（2026-09-14追加、一時的なデバッグ用）。
 // 建物や道を仮配置するときの基準がなく置きづらい、という指摘を受けて追加した。
@@ -188,6 +197,45 @@ const GROUND_GRID_TILES = buildGroundGridTiles();
 // 中に<foreignObject>で直接描画する（コンテナのCSS%を経由するdiv+top/left%方式は、
 // 実機で見るとズレが生じたため2026-09-17に廃止した）。
 const GROUND_GRID_PX_TO_UNIT = GROUND_GRID_VIEWBOX_W / GROUND_GRID_BLOCK_PX;
+
+// 2026-09-18追加：ランドマーク・Stage0・掲示板をStage1〜5と同じグリッド直接描画に
+// 統一するためのfootprint対応ヘルパー。footprintが1マスを超える区画（1×2ランドマークの
+// col方向2マス、2×2の電波塔）の中心・接地点アンカーを、基準セル(col,row)と
+// footprintの幅(wCells)・奥行き(hCells)から算出する。
+// ・中心cx：footprint内の全マスの中心＝(col+(wCells-1)/2, row+(hCells-1)/2)を
+//   buildGroundGridTilesと同じcx計算式にそのまま代入するだけでよい（cxはcol,rowの
+//   線形関数なので、小数を入れれば自動的に中点になる）。
+// ・接地点cy：footprint内で最も手前（画面下側、col+rowが最大）になるマス＝
+//   (col+wCells-1, row+hCells-1)の南頂点(そのマスのcy+HALF_H)を使う。奥行きのある
+//   建物の1F接地面が画面上でどこに触れるかは、footprint全体の中心ではなく
+//   このマスの南頂点になるため（Stage建物の1×1版アンカー処理と同じ考え方の一般化）。
+function footprintOffsetX(): number {
+  return (GROUND_GRID_ROWS - 1) * GROUND_GRID_TILE_HALF_W;
+}
+function footprintCx(col: number, row: number, wCells: number, hCells: number): number {
+  const ccol = col + (wCells - 1) / 2;
+  const crow = row + (hCells - 1) / 2;
+  return footprintOffsetX() + (ccol - crow) * GROUND_GRID_TILE_HALF_W;
+}
+function footprintCy(col: number, row: number, wCells: number, hCells: number): number {
+  const ccol = col + (wCells - 1) / 2;
+  const crow = row + (hCells - 1) / 2;
+  return (ccol + crow) * GROUND_GRID_TILE_HALF_H;
+}
+function footprintAnchorCy(col: number, row: number, wCells: number, hCells: number): number {
+  const fcol = col + wCells - 1;
+  const frow = row + hCells - 1;
+  return (fcol + frow) * GROUND_GRID_TILE_HALF_H + GROUND_GRID_TILE_HALF_H;
+}
+// footprintの外接ボックス幅・高さ(viewBox単位)。2:1投影の性質上、伸びる方向
+// (col方向／row方向／両方)に関わらずwUnits:hUnits=2:1になる（2026-09-18、
+// 六角形の頂点座標から導出・確認済み）。
+function footprintWUnits(wCells: number, hCells: number): number {
+  return (wCells + hCells) * GROUND_GRID_TILE_HALF_W;
+}
+function footprintHUnitsFlat(wCells: number, hCells: number): number {
+  return (wCells + hCells) * GROUND_GRID_TILE_HALF_H;
+}
 
 type RoadmapMapProps = {
   // Stage1は常に解放。Stage2・3は各Stageの練習ページと同じ基準（アクティブセットが
@@ -437,6 +485,146 @@ export function RoadmapMap({
               </foreignObject>
             );
           })}
+
+          {/*
+            2026-09-18追加：ランドマーク4区画（#150、アイソメ都市アセット仕様書
+            Partsリスト D）の建物本体。従来はStageと別レイヤー（div+top/left%の
+            近似配置）だったが、放送局（縦に高い塔）を仮置きしたところ大きく浮いて
+            見える不具合が発生（ユーザー指摘、2026-09-18）。原因はStage1〜5と違い
+            グリッドに厳密ロックされていなかったこと（本コメント冒頭経緯参照）。
+            Stage建物と全く同じ<svg viewBox>内・<foreignObject>方式に統一し、
+            上のfootprintCx/footprintAnchorCy等のヘルパーでfootprint（1×2／2×2）に
+            対応した中心・接地点を算出する。ボタン・枝道スタブは引き続き下の
+            %ベースレイヤー側に残す（Stage1〜5のボタンも同じ構成のため踏襲）。
+          */}
+          {Object.entries(LANDMARK_MAP_ANCHORS).map(([key, lm]) => {
+            const cell = LANDMARK_GRID_CELLS[key as keyof typeof LANDMARK_GRID_CELLS];
+            const wCells = 2;
+            const hCells = lm.footprint === "tower" ? 2 : 1;
+            const cx = footprintCx(cell.col, cell.row, wCells, hCells);
+            const wUnits = footprintWUnits(wCells, hCells);
+            const tempImage = LANDMARK_TEMP_IMAGES[key as keyof typeof LANDMARK_MAP_ANCHORS];
+
+            const hUnits = tempImage
+              ? wUnits * (tempImage.height / tempImage.width)
+              : footprintHUnitsFlat(wCells, hCells);
+            const anchorFraction = tempImage ? tempImage.groundAnchorTopPercent / 100 : 0.5;
+            const anchorCy = tempImage
+              ? footprintAnchorCy(cell.col, cell.row, wCells, hCells)
+              : footprintCy(cell.col, cell.row, wCells, hCells);
+            const isTower = lm.footprint === "tower";
+
+            return (
+              <foreignObject
+                key={key}
+                x={cx - wUnits / 2}
+                y={anchorCy - hUnits * anchorFraction}
+                width={wUnits}
+                height={hUnits}
+                style={{ overflow: "visible" }}
+              >
+                {tempImage ? (
+                  <Image
+                    src={tempImage.src}
+                    alt=""
+                    width={tempImage.width}
+                    height={tempImage.height}
+                    className="block h-full w-full"
+                  />
+                ) : (
+                  <svg
+                    viewBox={isTower ? DIAMOND_VIEWBOX : WIDE_HEX_COL_VIEWBOX}
+                    className="block h-full w-full"
+                  >
+                    <polygon
+                      points={isTower ? DIAMOND_POINTS : WIDE_HEX_COL_POINTS}
+                      fill="rgba(255,255,255,0.35)"
+                      stroke="#d4d4d8"
+                      strokeWidth="3"
+                      strokeDasharray="6 5"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  </svg>
+                )}
+              </foreignObject>
+            );
+          })}
+
+          {/*
+            2026-09-18追加：Stage0・掲示板の建物本体も同じ理由でグリッド厳密配置に
+            統一（ボタンは引き続き%ベース側）。
+          */}
+          {(() => {
+            const cell = STAGE0_GRID_CELL;
+            const cx = footprintCx(cell.col, cell.row, 1, 1);
+            const cy = footprintCy(cell.col, cell.row, 1, 1);
+            const wUnits = STAGE0_MAP_ANCHOR.size * GROUND_GRID_PX_TO_UNIT;
+            const hUnits = wUnits / 2;
+            const color = STAGE_COLORS[0];
+            return (
+              <foreignObject
+                x={cx - wUnits / 2}
+                y={cy - hUnits / 2}
+                width={wUnits}
+                height={hUnits}
+                style={{ overflow: "visible" }}
+              >
+                <div className="relative h-full w-full">
+                  <svg viewBox={DIAMOND_VIEWBOX} className="block h-full w-full">
+                    <polygon
+                      points={DIAMOND_POINTS}
+                      fill={withAlpha(color, "26")}
+                      stroke={color}
+                      strokeWidth="3"
+                      strokeDasharray="5 4"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  </svg>
+                  <Lightbulb
+                    className="absolute left-1/2 top-1/2 h-[85%] w-[85%] -translate-x-1/2 -translate-y-1/2"
+                    style={{ color }}
+                    strokeWidth={2.25}
+                  />
+                </div>
+              </foreignObject>
+            );
+          })()}
+
+          {(() => {
+            const cell = BOARD_GRID_CELL;
+            const cx = footprintCx(cell.col, cell.row, 1, 1);
+            const cy = footprintCy(cell.col, cell.row, 1, 1);
+            const wUnits = BOARD_MAP_ANCHOR.size * GROUND_GRID_PX_TO_UNIT;
+            const hUnits = wUnits / 2;
+            const color = BOARD_COLOR;
+            return (
+              <foreignObject
+                x={cx - wUnits / 2}
+                y={cy - hUnits / 2}
+                width={wUnits}
+                height={hUnits}
+                style={{ overflow: "visible" }}
+              >
+                <div className="relative h-full w-full">
+                  <svg viewBox={DIAMOND_VIEWBOX} className="block h-full w-full">
+                    <polygon
+                      points={DIAMOND_POINTS}
+                      fill={withAlpha(color, "26")}
+                      stroke={color}
+                      strokeWidth="3"
+                      strokeDasharray="5 4"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  </svg>
+                  <ClipboardList
+                    className="absolute left-1/2 top-1/2 h-[85%] w-[85%] -translate-x-1/2 -translate-y-1/2"
+                    style={{ color }}
+                    strokeWidth={2.25}
+                  />
+                </div>
+              </foreignObject>
+            );
+          })()}
         </svg>
       </div>
 
@@ -470,50 +658,10 @@ export function RoadmapMap({
       </svg>
 
       {/*
-        ランドマーク5区画（#150、アイソメ都市アセット仕様書Partsリスト D）。
-        どの達成イベントで解放するかのトリガー設計がまだ無いため、現状はStage5と
-        同じ「常に空き地として予約表示するだけ」の状態。区画の広さ(footprint)は
-        まだ絵に反映できていない（サイズだけ大きめにして特別感を出している）。
+        ランドマーク建物本体は2026-09-18よりグリッド厳密配置に統一し、上の
+        地面参照グリッド<svg viewBox>内（Stage建物と同じ座標系）に移した
+        （経緯はそちらのコメント参照）。ここには残さない。
       */}
-      {Object.entries(LANDMARK_MAP_ANCHORS).map(([key, lm]) => {
-        const markerSize = markerSizeStyle(lm.size);
-        const isWide = lm.footprint === "1x2";
-        const tempImage = LANDMARK_TEMP_IMAGES[key as keyof typeof LANDMARK_MAP_ANCHORS];
-        return (
-          <div
-            key={key}
-            className="absolute -translate-x-1/2 -translate-y-1/2"
-            style={{ top: `${lm.building.top}%`, left: `${lm.building.left}%`, width: markerSize }}
-            aria-hidden="true"
-          >
-            {tempImage ? (
-              // 接地点(lm.building)を画像の下端中央に合わせて上に伸ばすだけの簡易配置。
-              // footprintの正確な収まりはまだ検証していないので、幅は目安で190%にしてある。
-              <Image
-                src={tempImage.src}
-                alt=""
-                width={tempImage.width}
-                height={tempImage.height}
-                className="pointer-events-none absolute bottom-0 left-1/2 w-[190%] max-w-none -translate-x-1/2 select-none"
-              />
-            ) : (
-              <svg
-                viewBox={isWide ? WIDE_HEX_VIEWBOX : DIAMOND_VIEWBOX}
-                className="block w-full"
-              >
-                <polygon
-                  points={isWide ? WIDE_HEX_POINTS : DIAMOND_POINTS}
-                  fill="rgba(255,255,255,0.35)"
-                  stroke="#d4d4d8"
-                  strokeWidth="3"
-                  strokeDasharray="6 5"
-                  vectorEffect="non-scaling-stroke"
-                />
-              </svg>
-            )}
-          </div>
-        );
-      })}
 
       {/*
         Stage0（使い分けパーツ）。Stage1〜5の一本道（対角線）とは別の独立エリアのため、
@@ -522,38 +670,17 @@ export function RoadmapMap({
       */}
       {(() => {
         const anchor = STAGE0_MAP_ANCHOR;
-        const markerSize = markerSizeStyle(anchor.size);
         const color = STAGE_COLORS[0];
         const buttonTop = anchor.building.top + anchor.buttonOffset.top;
         const buttonLeft = anchor.building.left + anchor.buttonOffset.left;
 
         return (
           <div>
-            <div
-              className="absolute -translate-x-1/2 -translate-y-1/2"
-              style={{
-                top: `${anchor.building.top}%`,
-                left: `${anchor.building.left}%`,
-                width: markerSize,
-              }}
-              aria-hidden="true"
-            >
-              <svg viewBox={DIAMOND_VIEWBOX} className="block w-full">
-                <polygon
-                  points={DIAMOND_POINTS}
-                  fill={withAlpha(color, "26")}
-                  stroke={color}
-                  strokeWidth="3"
-                  strokeDasharray="5 4"
-                  vectorEffect="non-scaling-stroke"
-                />
-              </svg>
-              <Lightbulb
-                className="absolute left-1/2 top-1/2 h-[85%] w-[85%] -translate-x-1/2 -translate-y-1/2"
-                style={{ color }}
-                strokeWidth={2.25}
-              />
-            </div>
+            {/*
+              2026-09-18：建物本体（ひし形+アイコン）は上の地面参照グリッド<svg
+              viewBox>内に移した（STAGE0_GRID_CELLで厳密配置、経緯はそちらのコメント
+              参照）。ここに残すのはボタンのみ。
+            */}
 
             {/*
               2026-09-14修正：hover/activeの演出が地味という指摘を受け、より派手にした。
@@ -595,38 +722,17 @@ export function RoadmapMap({
       */}
       {(() => {
         const anchor = BOARD_MAP_ANCHOR;
-        const markerSize = markerSizeStyle(anchor.size);
         const color = BOARD_COLOR;
         const buttonTop = anchor.building.top + anchor.buttonOffset.top;
         const buttonLeft = anchor.building.left + anchor.buttonOffset.left;
 
         return (
           <div>
-            <div
-              className="absolute -translate-x-1/2 -translate-y-1/2"
-              style={{
-                top: `${anchor.building.top}%`,
-                left: `${anchor.building.left}%`,
-                width: markerSize,
-              }}
-              aria-hidden="true"
-            >
-              <svg viewBox={DIAMOND_VIEWBOX} className="block w-full">
-                <polygon
-                  points={DIAMOND_POINTS}
-                  fill={withAlpha(color, "26")}
-                  stroke={color}
-                  strokeWidth="3"
-                  strokeDasharray="5 4"
-                  vectorEffect="non-scaling-stroke"
-                />
-              </svg>
-              <ClipboardList
-                className="absolute left-1/2 top-1/2 h-[85%] w-[85%] -translate-x-1/2 -translate-y-1/2"
-                style={{ color }}
-                strokeWidth={2.25}
-              />
-            </div>
+            {/*
+              2026-09-18：建物本体（ひし形+アイコン）は上の地面参照グリッド<svg
+              viewBox>内に移した（BOARD_GRID_CELLで厳密配置、経緯はそちらのコメント
+              参照）。ここに残すのはボタンのみ。
+            */}
 
             <Link
               href="/roadmap/board"
