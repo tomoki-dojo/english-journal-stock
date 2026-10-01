@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { Bug, X } from "lucide-react";
 import type { KuwagataShelfTank } from "@/lib/supabase/kuwagata";
 
@@ -57,14 +57,23 @@ const AQUARIUM_BUBBLES: { left: string; bottom: number; size: number }[] = [
   { left: "85%", bottom: 90, size: 3 },
 ];
 
+// 水槽背景の実アート配置先。brand/kuwagata-asset-spec.mdの命名規則どおり
+// public/roadmap/tank/tank_bg_terrarium.png・tank_bg_aquarium.pngを置くだけで反映される。
+// ファイルが無い間は404になるが、2枚目のCSSグラデーションが代わりに表示されるので崩れない
+// （roadmap-room.tsxの部屋背景と同じ、背景レイヤーを重ねる方式）。
+function tankBgStyle(isAquarium: boolean): CSSProperties {
+  const url = isAquarium ? "/roadmap/tank/tank_bg_aquarium.png" : "/roadmap/tank/tank_bg_terrarium.png";
+  const fallback = isAquarium ? "linear-gradient(to bottom, #a5f3fc, #0ea5e9)" : "#e0f2fe";
+  return { backgroundImage: `url(${url}), ${fallback}` };
+}
+
 function EnlargedTankVisual({ tank, color }: { tank: KuwagataShelfTank; color: string }) {
   const isAquarium = tank.speciesAreaCode === "aquarium";
 
   return (
     <div
-      className={`relative mb-3.5 h-40 overflow-hidden rounded-lg border border-zinc-200 ${
-        isAquarium ? "bg-gradient-to-b from-cyan-200 to-sky-500" : "bg-sky-100"
-      }`}
+      className="relative mb-3.5 h-40 overflow-hidden rounded-lg border border-zinc-200 bg-cover bg-center"
+      style={tankBgStyle(isAquarium)}
     >
       {isAquarium ? (
         AQUARIUM_BUBBLES.map((bubble, i) => (

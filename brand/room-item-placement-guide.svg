@@ -1,0 +1,37 @@
+<svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <rect x="0" y="0" width="800" height="600" fill="#fffbeb" stroke="#fcd34d" stroke-width="4"/>
+  <text x="20" y="34" font-size="20" font-weight="bold" fill="#78350f">部屋背景アイテム配置ガイド（4:3・800x600基準）</text>
+  <text x="20" y="58" font-size="14" fill="#92400e">点線の円＝道具が重なる位置。この周辺はできるだけ床/机の開けたスペースにしてください（物を描き込んでもOKですが、円の中心付近は避けてください）。</text>
+
+  <!-- Stage0 -->
+  <circle cx="96" cy="84" r="50" fill="none" stroke="#2563eb" stroke-width="2" stroke-dasharray="6,5"/>
+  <text x="96" y="155" font-size="14" text-anchor="middle" fill="#2563eb">Stage0（虫眼鏡）</text>
+
+  <!-- Stage1 -->
+  <circle cx="416" cy="60" r="50" fill="none" stroke="#16a34a" stroke-width="2" stroke-dasharray="6,5"/>
+  <text x="416" y="131" font-size="14" text-anchor="middle" fill="#16a34a">Stage1（虫カゴ）</text>
+
+  <!-- Stage2 -->
+  <circle cx="680" cy="156" r="50" fill="none" stroke="#0891b2" stroke-width="2" stroke-dasharray="6,5"/>
+  <text x="680" y="227" font-size="14" text-anchor="middle" fill="#0891b2">Stage2（霧吹き）</text>
+
+  <!-- Stage3 -->
+  <circle cx="144" cy="276" r="50" fill="none" stroke="#d97706" stroke-width="2" stroke-dasharray="6,5"/>
+  <text x="144" y="347" font-size="14" text-anchor="middle" fill="#d97706">Stage3（温湿度計）</text>
+
+  <!-- Stage4 -->
+  <circle cx="400" cy="312" r="50" fill="none" stroke="#dc2626" stroke-width="2" stroke-dasharray="6,5"/>
+  <text x="400" y="383" font-size="14" text-anchor="middle" fill="#dc2626">Stage4（ピンセット）</text>
+
+  <!-- Stage5 -->
+  <circle cx="656" cy="348" r="50" fill="none" stroke="#7c3aed" stroke-width="2" stroke-dasharray="6,5"/>
+  <text x="656" y="419" font-size="14" text-anchor="middle" fill="#7c3aed">Stage5（顕微鏡）</text>
+
+  <!-- Corkboard -->
+  <circle cx="176" cy="480" r="50" fill="none" stroke="#e11d48" stroke-width="2" stroke-dasharray="6,5"/>
+  <text x="176" y="551" font-size="14" text-anchor="middle" fill="#e11d48">コルクボード</text>
+
+  <!-- Shelf -->
+  <circle cx="544" cy="504" r="50" fill="none" stroke="#92400e" stroke-width="2" stroke-dasharray="6,5"/>
+  <text x="544" y="575" font-size="14" text-anchor="middle" fill="#92400e">棚</text>
+</svg>
