@@ -55,4 +55,7 @@ export const PLAN_COMPARISON_ROWS: PlanComparisonRow[] = [
   { label: "ランダム学習（単語の練習）", free: "可能", pro: "可能・苦手優先" },
   { label: "今日の復習（効率よく復習）", free: "不可", pro: "可能" },
   { label: "広告", free: "表示あり", pro: "非表示" },
+  { label: "クワたんの棚（新種の表示枠）", free: "10種類まで", pro: "無制限" },
+  { label: "クワたんの採集ロール頻度", free: "通常", pro: "2倍" },
+  { label: "クワたんのPro限定種", free: "出現しない", pro: "出現する" },
 ];

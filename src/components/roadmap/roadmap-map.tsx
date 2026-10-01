@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { CSSProperties } from "react";
 import type { LucideIcon } from "lucide-react";
-import { Lightbulb, Mic, PenLine, Radio, Coffee, RadioTower, ClipboardList, Sparkles, Flame } from "lucide-react";
+import { Lightbulb, Mic, PenLine, Radio, Coffee, RadioTower, ClipboardList, Sparkles, Flame, Bug } from "lucide-react";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
 import {
   STAGE_MAP_ANCHORS,
@@ -22,6 +22,9 @@ import type { StreakStats } from "@/lib/supabase/speaking-roadmap";
 // 街の掲示板（タスク#153）専用色。Stage0のバイオレット、本道Stage1〜5の
 // グラデーションのどちらとも被らないローズにする。
 const BOARD_COLOR = "#e11d48";
+
+// クワガタ育成機能：棚（タスク#253）専用色。既知種シリーズと合わせた琥珀〜茶系にする。
+const SHELF_COLOR = "#92400e";
 
 type StageNumber = 1 | 2 | 3 | 4 | 5;
 
@@ -879,6 +882,27 @@ export function RoadmapMap({
             <span className="text-xs font-semibold">{streakHeadline}</span>
           </div>
           {isRecordTying && <span className="text-[10px] font-bold text-amber-300">連続記録更新中！</span>}
+        </div>
+
+        {/*
+          クワガタ育成機能：棚（タスク#253）への入口。掲示板と同じ「一本道とは無関係の
+          独立エリア」だが、まだ専用のイラスト・グリッド配置を作っていないため、
+          掲示板のような建物マーカー付きの厳密配置ではなく、HUDの空いている右下隅に
+          単純な固定位置のピルとして置くだけにしてある（アイソメ都市アセット自体を
+          置き換えていく過程で、この置き方も見直す想定）。
+        */}
+        <div className="pointer-events-auto absolute bottom-3 right-3">
+          <Link
+            href="/roadmap/shelf"
+            className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white/95 px-3 py-1.5 shadow-sm transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-110 hover:shadow-[0_10px_24px_-6px_var(--glow-color)] active:scale-90 active:duration-75"
+            style={{ border: `1.5px solid ${SHELF_COLOR}`, "--glow-color": withAlpha(SHELF_COLOR, "cc") } as CSSProperties}
+          >
+            <Bug className="h-3.5 w-3.5 flex-shrink-0" style={{ color: SHELF_COLOR }} strokeWidth={2.25} />
+            <span className="text-xs font-semibold" style={{ color: SHELF_COLOR }}>
+              棚
+            </span>
+            <span className="text-[10px] text-zinc-500">クワたん一覧</span>
+          </Link>
         </div>
       </div>
     </div>

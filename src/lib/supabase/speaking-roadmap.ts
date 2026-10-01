@@ -9,6 +9,11 @@ import { judgeStage4Turn, checkStage4Usage } from "@/lib/stage4-ai";
 import { judgeStage5Turn, checkStage5Usage } from "@/lib/stage5-ai";
 import { getOrGenerateBlankChoiceReasons } from "@/lib/stage2-choice-reasons";
 import { getOrGenerateStage3HintBlank } from "@/lib/stage3-hint-blank";
+import {
+  recordStageClearCatch,
+  stockCatchChanceOnMasteredCountUpdate,
+  forceHatchTeppenToAdult,
+} from "@/lib/supabase/kuwagata";
 import type { Plan } from "@/lib/plan";
 import {
   STAGE0_ACTIVE_SET_SIZE,
@@ -106,6 +111,20 @@ export async function setProSkip(userId: string, startStage: 2 | 3 | 4): Promise
 
   if (error) {
     throw new Error(`Stageスキップ設定の保存に失敗しました: ${error.message}`);
+  }
+
+  // クワガタ育成機能（#257）：Stageスキップはstreak卒業の閾値を実質的に飛び越えるため、
+  // 通常なら各Stage解放のタイミングで発火するrecordStageClearCatch（既知種の確定入手）が
+  // 一度も呼ばれず、スキップした区間の既知種だけ永久に手に入らなくなってしまう。
+  // そのため、スキップ発動時に「スキップした区間」に対応する既知種をまとめて確定配布する
+  // （設計doc「Free/Proの扱い」参照）。startStageより前のstage_trigger（2〜4の範囲）が対象。
+  // stage_trigger=1（エークワたん）はサインアップ時点で既に配布済みのため対象外。
+  // stage_trigger=5（テッペンクワたん）はStage5実卒業時の特別な強制羽化と結びついているため、
+  // スキップの一括配布対象にはしない（Stage5自体はproSkipEnabledで即解放されるが、
+  // 卵の配布はStage4卒業の実データに基づくgetStage5DomainReadiness判定を経由する）。
+  const skippedTriggers = [2, 3, 4].filter((trigger) => trigger < startStage);
+  for (const trigger of skippedTriggers) {
+    await recordStageClearCatch(userId, trigger);
   }
 }
 
@@ -510,6 +529,23 @@ export async function reportStage1Result(
   // ちょうど満たした瞬間かどうかを調べる（そうでなければ無駄なクエリを避ける）。
   const stage2JustUnlocked = graduated ? await checkStage2JustUnlocked(userId, expressionId) : false;
 
+  // クワガタ育成機能：Stage2解放＝ホエクワタンの確定採集タイミング
+  // （エークワタンはサインアップ時点で確定済み。handle_new_userトリガー参照）。
+  if (stage2JustUnlocked) {
+    await recordStageClearCatch(userId, 2);
+  }
+
+  // クワガタ育成機能：Stage3解放＝シャベクワタンの確定採集タイミング。Stage3解放もStage1の
+  // 卒業数（graduatedStage1Ids.size）に紐づくため、stage2JustUnlockedと同じくStage1卒業時に
+  // 判定する。「ちょうど閾値を超えた瞬間」だけを捉えるため、閾値との完全一致で判定する
+  // （checkStage2JustUnlockedのcountBefore/countAfter比較と同じ考え方の簡易版）。
+  if (graduated) {
+    const graduatedStage1Ids = await getStage1GraduatedExpressionIds(userId);
+    if (graduatedStage1Ids.size === STAGE3_UNLOCK_STAGE1_GRADUATIONS) {
+      await recordStageClearCatch(userId, 3);
+    }
+  }
+
   return { streak, subStep: getStage1SubStep(streak), graduated, stage2JustUnlocked };
 }
 
@@ -526,15 +562,20 @@ async function incrementTotalMasteredCount(userId: string): Promise<void> {
   }
 
   const current = data?.total_mastered_count ?? 0;
+  const newTotal = current + 1;
 
   const { error: updateError } = await supabaseAdmin
     .from("user_roadmap_state")
-    .update({ total_mastered_count: current + 1 })
+    .update({ total_mastered_count: newTotal })
     .eq("user_id", userId);
 
   if (updateError) {
     throw new Error(`累計習得数の更新に失敗しました: ${updateError.message}`);
   }
+
+  // クワガタ育成機能：新種の採集チャンスのストック（間隔の倍数に達した回だけ内部で+1される。
+  // 実際の抽選はプレイヤーが「採集に出かける」を選んだ時にconsumePendingCatchで行う）。
+  await stockCatchChanceOnMasteredCountUpdate(userId, newTotal);
 }
 
 // Stage1練習画面専用の音声URL発行。
@@ -1329,6 +1370,16 @@ export async function reportStage3Result(
     await recordErrorTags(userId, judged.judgment.errorTags);
   }
 
+  // クワガタ育成機能：Stage4解放＝フルクワたんの確定採集タイミング。Stage4解放はStage3の
+  // 卒業数（countStage3Graduations）に紐づくため、Stage3卒業時に閾値との完全一致で判定する
+  // （reportStage1Result内のStage3解放チェックと同じ考え方）。
+  if (graduated) {
+    const stage3GraduationCount = await countStage3Graduations(userId);
+    if (stage3GraduationCount === STAGE4_UNLOCK_STAGE3_GRADUATIONS) {
+      await recordStageClearCatch(userId, 4);
+    }
+  }
+
   return {
     status: "ok",
     result: {
@@ -1424,7 +1475,7 @@ export async function reportStage4Turn(
 ): Promise<Stage4TurnOutcome> {
   const { data: scenario, error: scenarioError } = await supabaseAdmin
     .from("stage4_scenarios")
-    .select("title_ja, situation_ja, ai_persona_ja, goal_ja")
+    .select("title_ja, situation_ja, ai_persona_ja, goal_ja, scene_tag")
     .eq("id", scenarioId)
     .eq("publish_status", "公開")
     .maybeSingle();
@@ -1482,6 +1533,20 @@ export async function reportStage4Turn(
     judged.turn.overallPass === true,
     "stage4_scenario"
   );
+
+  // Stage5解放（テッペンクワたんの卵配布）。日常/ビジネスどちらのドメインで解放条件を
+  // 満たしたかをこのシナリオのscene_tagから判定する。recordStageClearCatchはべき等なので、
+  // 閾値を跨いだ「その回」だけでなく、既に解放済みの状態で再度満たしても安全に無視される。
+  if (graduated) {
+    const domain: "daily" | "business" = isDailyScene([scenario.scene_tag as string])
+      ? "daily"
+      : "business";
+    const readiness = await getStage5DomainReadiness(userId);
+    const domainReady = domain === "daily" ? readiness.dailyReady : readiness.businessReady;
+    if (domainReady) {
+      await recordStageClearCatch(userId, 5);
+    }
+  }
 
   return {
     status: "ok",
@@ -1660,6 +1725,13 @@ export async function reportStage5Turn(
     judged.turn.overallPass === true,
     "stage5_scenario"
   );
+
+  // テッペンクワたん強制羽化（ロードマップ完走の瞬間）。日常・ビジネスどちらのトラックで
+  // 初めてStage5シナリオを卒業しても、この瞬間を「完走」として扱う。forceHatchTeppenToAdultは
+  // べき等なので、2本目以降のトラックで再度graduatedになっても安全に無視される。
+  if (graduated) {
+    await forceHatchTeppenToAdult(userId);
+  }
 
   return {
     status: "ok",
