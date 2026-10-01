@@ -20,6 +20,7 @@ export default async function KuwagataShelfPage() {
   }
 
   let tanks: Awaited<ReturnType<typeof getKuwagataShelfTanks>>["tanks"] = [];
+  let knownShowcase: Awaited<ReturnType<typeof getKuwagataShelfTanks>>["knownShowcase"] = null;
   let hiddenNewSpeciesTankCount = 0;
   let pendingCatchCount = 0;
   let unlockedAreas: Awaited<ReturnType<typeof getUnlockedAreas>> = [];
@@ -32,6 +33,7 @@ export default async function KuwagataShelfPage() {
       getUnlockedAreas(user.id),
     ]);
     tanks = shelfResult.tanks;
+    knownShowcase = shelfResult.knownShowcase;
     hiddenNewSpeciesTankCount = shelfResult.hiddenNewSpeciesTankCount;
     pendingCatchCount = pending.pendingCatchCount;
     unlockedAreas = areas;
@@ -66,7 +68,7 @@ export default async function KuwagataShelfPage() {
       ) : (
         <>
           <KuwagataCatchExpedition initialPendingCount={pendingCatchCount} initialUnlockedAreas={unlockedAreas} />
-          <KuwagataShelf tanks={tanks} />
+          <KuwagataShelf tanks={tanks} knownShowcase={knownShowcase} />
           {hiddenNewSpeciesTankCount > 0 && (
             <p className="mt-4 text-center text-xs text-amber-700">
               他にも{hiddenNewSpeciesTankCount}種類の水槽がありますが、Freeプランでは表示枠の都合で隠れています。Proにすると全部見られます。

@@ -23,6 +23,8 @@ export const KUWAGATA_RARE_GUARANTEE_MILESTONE = 50;
 
 export const FREE_SHELF_NEW_SPECIES_TANK_CAP = 10;
 
+const KNOWN_SHOWCASE_SPECIES_ID = "known-showcase";
+
 const SIZE_SCALE_MIN = 0.8;
 const SIZE_SCALE_MAX = 1.3;
 
@@ -103,6 +105,9 @@ export type KuwagataShelfTank = {
 };
 
 export type KuwagataShelfResult = {
+  // 既知種（クワたんシリーズ）5種をまとめた1つの棚。複数種が同居する特別枠で、
+  // Free/Proを問わず常に全員表示（表示枠上限の対象外）。1匹もいなければnull。
+  knownShowcase: KuwagataShelfTank | null;
   tanks: KuwagataShelfTank[];
   // Free会員向けの表示枠上限（FREE_SHELF_NEW_SPECIES_TANK_CAP、新種のみ対象）に引っかかって
   // 非表示にした棚の数。0ならPro会員、または上限にまだ達していない。
@@ -110,19 +115,27 @@ export type KuwagataShelfResult = {
 };
 
 // 棚UI用：ユーザーの個体を種類ごとにグルーピングし、「棚」単位に組み立てる。
-// 棚番号＝その種類を初めて採集した順（getUserKuwagataIndividualsがobtained_at昇順のため、
+// 既知種（クワたんシリーズ）は種類をまたいで1つの棚（knownShowcase）にまとめる。
+// 新種の棚番号＝その種類を初めて採集した順（getUserKuwagataIndividualsがobtained_at昇順のため、
 // Map挿入順＝初回採集順がそのまま棚番号の順序になる）。
-// Free会員は新種の棚だけFREE_SHELF_NEW_SPECIES_TANK_CAP件までに絞る（既知種5種は対象外、
+// Free会員は新種の棚だけFREE_SHELF_NEW_SPECIES_TANK_CAP件までに絞る（既知種は対象外、
 // 常に全部表示する）。採集ロールの対象プール自体は絞らない——あくまで棚の「見せ方」の上限。
 export async function getKuwagataShelfTanks(userId: string): Promise<KuwagataShelfResult> {
   const [individuals, plan] = await Promise.all([getUserKuwagataIndividuals(userId), getPlan(userId)]);
 
+  const knownIndividuals: KuwagataShelfIndividual[] = [];
   const bySpecies = new Map<string, KuwagataShelfTank>();
+
   for (const individual of individuals) {
     const shelfIndividual: KuwagataShelfIndividual = {
       ...individual,
       growthStage: getIndividualGrowthStage(individual),
     };
+
+    if (individual.speciesKind === "known") {
+      knownIndividuals.push(shelfIndividual);
+      continue;
+    }
 
     const existing = bySpecies.get(individual.speciesId);
     if (existing) {
@@ -140,20 +153,27 @@ export async function getKuwagataShelfTanks(userId: string): Promise<KuwagataShe
     });
   }
 
-  const allTanks = Array.from(bySpecies.values());
+  const knownShowcase: KuwagataShelfTank | null =
+    knownIndividuals.length > 0
+      ? {
+          speciesId: KNOWN_SHOWCASE_SPECIES_ID,
+          speciesName: "クワたんシリーズ",
+          speciesKind: "known",
+          speciesAreaCode: null,
+          tankNumber: 0,
+          individuals: knownIndividuals,
+        }
+      : null;
+
+  const allNewTanks = Array.from(bySpecies.values());
   if (plan !== "free") {
-    return { tanks: allTanks, hiddenNewSpeciesTankCount: 0 };
+    return { knownShowcase, tanks: allNewTanks, hiddenNewSpeciesTankCount: 0 };
   }
 
-  const known = allTanks.filter((t) => t.speciesKind === "known");
-  const newOnes = allTanks.filter((t) => t.speciesKind === "new");
-  const visibleNewOnes = newOnes.slice(0, FREE_SHELF_NEW_SPECIES_TANK_CAP);
-  const hiddenNewSpeciesTankCount = newOnes.length - visibleNewOnes.length;
+  const visibleNewOnes = allNewTanks.slice(0, FREE_SHELF_NEW_SPECIES_TANK_CAP);
+  const hiddenNewSpeciesTankCount = allNewTanks.length - visibleNewOnes.length;
 
-  // 表示順は棚番号（初回採集順）通りに保つため、絞った後に番号で並べ直す。
-  const tanks = [...known, ...visibleNewOnes].sort((a, b) => a.tankNumber - b.tankNumber);
-
-  return { tanks, hiddenNewSpeciesTankCount };
+  return { knownShowcase, tanks: visibleNewOnes, hiddenNewSpeciesTankCount };
 }
 
 type DbSpeciesRow = {
