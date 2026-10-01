@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles, Bug, X } from "lucide-react";
+import Link from "next/link";
+import { Sparkles, Bug, X, ArrowRight } from "lucide-react";
 import type { KuwagataAreaCode } from "@/lib/supabase/kuwagata";
 
 const AREA_LABEL: Record<KuwagataAreaCode, string> = {
@@ -151,13 +152,22 @@ export function KuwagataCatchExpedition({
             <p className="text-sm font-bold text-zinc-800">{result.speciesName}をゲットした！</p>
             {result.flavorTextJa && <p className="mt-2 text-xs text-zinc-500">{result.flavorTextJa}</p>}
 
-            <button
-              type="button"
-              onClick={closeResult}
-              className="mt-4 rounded-full bg-zinc-800 px-4 py-1.5 text-xs font-semibold text-white hover:bg-zinc-700"
-            >
-              棚を見る
-            </button>
+            <div className="mt-4 flex items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={closeResult}
+                className="rounded-full border border-zinc-300 px-4 py-1.5 text-xs font-semibold text-zinc-600 hover:bg-zinc-50"
+              >
+                棚を見る
+              </button>
+              <Link
+                href="/roadmap"
+                className="flex items-center gap-1 rounded-full bg-zinc-800 px-4 py-1.5 text-xs font-semibold text-white hover:bg-zinc-700"
+              >
+                つづきを練習する
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
           </div>
         </div>
       )}
