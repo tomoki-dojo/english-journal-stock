@@ -92,7 +92,7 @@ export default async function RoadmapBoardPage() {
         expressions={expressions}
         loadError={loadError}
         plan={plan}
-        title="街の掲示板"
+        title="標本箱"
         description="ロードマップで習得した表現だけを集めたトロフィー棚です。キーワードで検索し、いつでも復習できます。"
         emptyMessage="まだ習得した表現がありません。Stage1〜3で練習を重ねると、ここに表現が並んでいきます。"
         roadmapInfoByExpressionId={roadmapInfoByExpressionId}

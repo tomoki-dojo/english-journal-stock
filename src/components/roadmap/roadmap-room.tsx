@@ -197,7 +197,7 @@ export function RoadmapRoom({
           <StageCase
             color={BOARD_COLOR}
             icon={ClipboardList}
-            label="掲示板"
+            label="標本箱"
             caption="表現一覧"
             href="/roadmap/board"
             locked={false}
