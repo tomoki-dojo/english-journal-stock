@@ -7,9 +7,6 @@ import {
   type KuwagataAreaCode,
 } from "@/lib/supabase/kuwagata";
 
-// クワガタ育成機能：採集フロー刷新（2026-10-01）のAPIルート。
-// プレイヤーが棚ページで「採集に出かける」→エリアを選ぶ、という操作をしたときに呼ばれる。
-// GETでストック中の採集チャンス数を返し、POSTでそのうち1つを指定エリアで消費する。
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 

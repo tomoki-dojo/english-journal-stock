@@ -7,9 +7,6 @@ import { getKuwagataEncyclopedia } from "@/lib/supabase/kuwagata";
 import { OnboardingQuiz } from "@/components/roadmap/onboarding-quiz";
 import { KuwagataEncyclopediaView } from "@/components/roadmap/kuwagata-encyclopedia";
 
-// クワガタ育成機能：図鑑ページ（タスク#254）。棚（/roadmap/shelf）とは別の独立ページで、
-// 役割は「見た目（棚）」ではなく「進捗管理（図鑑）」。エリアタブ＋そのエリアの新種
-// コンプリート進捗を見せるアルバム型（設計doc「UI構成」参照）。
 export default async function KuwagataEncyclopediaPage() {
   const user = await getCurrentUser();
   if (!user) {

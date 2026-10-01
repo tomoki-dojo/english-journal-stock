@@ -4,16 +4,6 @@ import { useState } from "react";
 import { Bug, X } from "lucide-react";
 import type { KuwagataShelfTank } from "@/lib/supabase/kuwagata";
 
-// クワガタ育成機能：棚UI（タスク#253）。
-// エリア分類はせず、「棚1」「棚2」…という物理的な棚単位で、捕まえた順に自動で埋まっていく
-// （配置を自分で選ぶ機能は持たせず実装を軽くする、という設計doc通りの方針）。
-// 1タイル＝1種類の水槽。タップするとその種類の個体一覧（サイズ・入手日など）に切り替わる
-// 詳細ビューを開く。
-//
-// アート未制作のため、個体の見た目は今のところ色付きのBugアイコンで代替する。
-// 実イラスト（種類ごとのPNG）が揃ったら、`/roadmap/kuwagata/${code}.png`のような
-// パスを想定して差し替える（本コンポーネントのTankOccupantだけ直せばよい構造にしてある）。
-
 const GROWTH_STAGE_LABEL: Record<string, string> = {
   卵: "卵",
   幼虫: "幼虫",
@@ -21,8 +11,6 @@ const GROWTH_STAGE_LABEL: Record<string, string> = {
   成虫: "成虫",
 };
 
-// 既知種（クワたんシリーズ）は統一感のある琥珀〜茶系、新種は名前から色相をハッシュして
-// 個体ごとにバラけた色にする（実イラストが揃うまでの仮の見分けやすさのための工夫）。
 const KNOWN_SPECIES_COLOR = "#92400e";
 
 function hashHue(seed: string): number {
@@ -44,8 +32,6 @@ function formatDate(iso: string): string {
 }
 
 function TankOccupant({ color, sizeScale }: { color: string; sizeScale: number }) {
-  // sizeScaleは個体差（0.8〜1.3）による見た目の大小のみを表現する。
-  // 成長段階（卵〜成虫）による段階的な見た目差は、実イラストが揃うまでは表現しない。
   const basePx = 28;
   return (
     <Bug
@@ -56,9 +42,6 @@ function TankOccupant({ color, sizeScale }: { color: string; sizeScale: number }
   );
 }
 
-// 拡大水槽ビジュアル内での個体の配置プリセット（left%, bottom px）。
-// 同居個体数が増えても重なりすぎないよう、左右に散らしたスロットを順に割り当てる。
-// スロット数を超える場合は末尾から再利用する（5匹目以降が同じ位置に重なるのは許容）。
 const TANK_VISUAL_SLOTS: { left: string; bottom: number }[] = [
   { left: "62%", bottom: 26 },
   { left: "28%", bottom: 22 },
@@ -67,15 +50,6 @@ const TANK_VISUAL_SLOTS: { left: string; bottom: number }[] = [
   { left: "15%", bottom: 30 },
 ];
 
-// タップ後に開く、その水槽の拡大ビジュアル。水色の水槽＋底の砂の簡易背景の上に、
-// 同居している個体をそれぞれのサイズでプリセット位置に配置する。
-// アート未制作のため、今はTankOccupant（Bugアイコン）をそのまま拡大して使う。
-// 手描きイラストが揃ったら、この背景div・TankOccupantの画像をそれぞれ差し替えるだけでよい。
-//
-// aquarium（Pro限定の新エリア）の種類だけ「水中アクアリウム表示」にする（2026-10-01方針）。
-// テラリウム（陸生の虫を飼う水槽、底に砂）とは見た目を変える：底の砂は無くし、より深い
-// 青緑のグラデーション＋気泡を足し、個体はテラリウムの「砂の上に乗る」固定位置ではなく
-// 水槽内に浮いているような高さに配置する。
 const AQUARIUM_BUBBLES: { left: string; bottom: number; size: number }[] = [
   { left: "20%", bottom: 10, size: 5 },
   { left: "50%", bottom: 60, size: 4 },
@@ -105,7 +79,6 @@ function EnlargedTankVisual({ tank, color }: { tank: KuwagataShelfTank; color: s
       )}
       {tank.individuals.map((individual, index) => {
         const slot = TANK_VISUAL_SLOTS[index % TANK_VISUAL_SLOTS.length];
-        // アクアリウムは個体を少し高めの位置にも散らし、「水中に浮いている」見た目にする。
         const bottom = isAquarium ? slot.bottom + 30 : slot.bottom;
         return (
           <div
@@ -141,8 +114,6 @@ export function KuwagataShelf({ tanks }: { tanks: KuwagataShelfTank[] }) {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {tanks.map((tank) => {
           const color = tankColor(tank);
-          // タイルの代表個体：同居個体の中でいちばん大きい（sizeScaleが最大の）個体を
-          // 水槽の見た目として採用する。
           const representative = tank.individuals.reduce((a, b) => (b.sizeScale > a.sizeScale ? b : a));
 
           return (

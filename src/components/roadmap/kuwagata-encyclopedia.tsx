@@ -8,15 +8,6 @@ import type {
   KuwagataEncyclopediaEntry,
 } from "@/lib/supabase/kuwagata";
 
-// クワガタ育成機能：図鑑UI（タスク#254）。棚（捕まえた順に埋まる「見た目」用の画面）とは
-// 役割を分け、ここは「進捗管理」に専念する。設計doc「UI構成」の通り、
-// エリアタブ＋そのエリアの新種コンプリート進捗を見せるカード形式のアルバム型にする。
-// 既知種（クワたんシリーズ）はどのエリアにも紐づかないため、タブの外に固定セクションとして出す。
-//
-// アート未制作のため、発見済みの見た目は棚と同じ色付きBugアイコンで代替、未発見はLockアイコン
-// ＋「？」のシルエット風カードにする。実イラストが揃ったら、EntryCard内の
-// Bugアイコン部分と、未発見時のシルエット部分をそれぞれ差し替える想定。
-
 const AREA_LABEL: Record<KuwagataAreaCode, string> = {
   area1: "エリア1・庭・裏庭",
   area2: "エリア2・里山・雑木林",
@@ -25,9 +16,6 @@ const AREA_LABEL: Record<KuwagataAreaCode, string> = {
   aquarium: "Pro限定・水中アクアリウム",
 };
 
-// 既知種の入手経緯テキスト（UI文言：「既知種」というカテゴリ名はプレイヤーには出さず、
-// 個体カードの入手経緯テキストで特別感を出す、という設計doc方針に沿ったもの）。
-// stage_triggerの値ごとに固定のコピーを用意する。1はサインアップ時点での確定入手。
 const KNOWN_ACQUISITION_TEXT: Record<number, string> = {
   1: "アカウント作成の日に届いた1匹",
   2: "Stage2解放の日に届いた1匹",
@@ -67,8 +55,6 @@ function formatDate(iso: string): string {
 function EntryCard({ entry, areaLocked }: { entry: KuwagataEncyclopediaEntry; areaLocked?: boolean }) {
   const isKnown = entry.species.kind === "known";
 
-  // Pro限定種をFreeで見ている場合：採集プール自体から除外済みのため「？？？」という
-  // 伏せ字（＝そのうち会えるかも、という期待）は誤解を招く。はっきり「Pro限定」と伝える。
   if (entry.proLocked) {
     return (
       <div className="flex flex-col items-center gap-1.5 rounded-xl border border-dashed border-amber-200 bg-amber-50/60 px-2 py-4">
@@ -81,8 +67,6 @@ function EntryCard({ entry, areaLocked }: { entry: KuwagataEncyclopediaEntry; ar
     );
   }
 
-  // エリア自体が未解放の場合は、そのエリアの新種を一律シルエット表示にする
-  // （種類ごとの発見状況ではなく、エリア解放自体がゲートのため）。
   const locked = areaLocked || !entry.discovered;
 
   if (locked) {

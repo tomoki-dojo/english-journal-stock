@@ -8,10 +8,6 @@ import { OnboardingQuiz } from "@/components/roadmap/onboarding-quiz";
 import { KuwagataShelf } from "@/components/roadmap/kuwagata-shelf";
 import { KuwagataCatchExpedition } from "@/components/roadmap/kuwagata-catch-expedition";
 
-// クワガタ育成機能：棚ページ（タスク#253）。/roadmap/board（街の掲示板）と同じ
-// 「一本道とは無関係の独立ページ」の位置づけ。エリア分類・進捗管理は図鑑ページ
-// （/roadmap/encyclopedia、タスク#254）の役割で、ここは「捕まえた順に棚が埋まっていく」
-// ことだけに専念する。
 export default async function KuwagataShelfPage() {
   const user = await getCurrentUser();
   if (!user) {

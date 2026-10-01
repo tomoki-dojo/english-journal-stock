@@ -5,13 +5,6 @@ import { useRouter } from "next/navigation";
 import { Sparkles, Bug, X } from "lucide-react";
 import type { KuwagataAreaCode } from "@/lib/supabase/kuwagata";
 
-// クワガタ育成機能：採集フロー刷新（2026-10-01）のUI本体。
-// 以前は「裏側で自動的にロールして、プレイヤーには一切通知しない」仕組みだったが、
-// (1) 捕まえた瞬間の演出を出す場所が無い (2) どのエリアで採ったか選べない、という
-// 2つの問題があったため、「チャンスをストック→プレイヤーがエリアを選んで出かける→
-// 結果画面で見せる」方式に変更した（_reference/kuwagata-motif-exploration.mdの
-// 「新種の入手」「レア度システム」参照）。
-
 const AREA_LABEL: Record<KuwagataAreaCode, string> = {
   area1: "庭・裏庭",
   area2: "里山・雑木林",
@@ -28,7 +21,6 @@ type CatchResponse = {
   flavorTextJa: string | null;
 };
 
-// レア度ごとの結果画面の見た目。激レアだけ目立つ縁取り・文言にする。
 const RARITY_STYLE: Record<CatchResponse["rarity"], { border: string; text: string; label: string }> = {
   コモン: { border: "border-zinc-200", text: "text-zinc-700", label: "" },
   レア: { border: "border-sky-300", text: "text-sky-700", label: "レア" },
