@@ -59,10 +59,7 @@ export default async function KuwagataShelfPage() {
         </Link>
       </div>
 
-      <h1 className="mb-1 text-lg font-bold text-zinc-800">クワたんの棚</h1>
-      <p className="mb-5 text-sm text-zinc-500">
-        ロードマップで表現を練習していくと、アーサーのもとにクワガタが届きます。捕まえた順に棚が増えていきます。
-      </p>
+      <h1 className="mb-5 text-lg font-bold text-zinc-800">クワたんの棚</h1>
 
       {loadError ? (
         <p className="text-sm text-red-500">棚の読み込みに失敗しました。時間を置いて再度お試しください。</p>

@@ -42,11 +42,7 @@ export function KuwagataCatchExpedition({
   const [result, setResult] = useState<CatchResponse | null>(null);
 
   if (pendingCount <= 0 && !result) {
-    return (
-      <p className="mb-4 text-xs text-zinc-400">
-        ロードマップで表現を練習していくと、採集に出かけるチャンスが貯まります。
-      </p>
-    );
+    return null;
   }
 
   async function handleGoCatch(areaCode: KuwagataAreaCode) {

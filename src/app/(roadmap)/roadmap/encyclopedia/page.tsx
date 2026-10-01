@@ -38,10 +38,7 @@ export default async function KuwagataEncyclopediaPage() {
         棚に戻る
       </Link>
 
-      <h1 className="mb-1 text-lg font-bold text-zinc-800">図鑑</h1>
-      <p className="mb-5 text-sm text-zinc-500">
-        これまでに出会ったクワガタの記録です。エリアごとの新種コンプリート状況もここで確認できます。
-      </p>
+      <h1 className="mb-5 text-lg font-bold text-zinc-800">図鑑</h1>
 
       {loadError || !encyclopedia ? (
         <p className="text-sm text-red-500">図鑑の読み込みに失敗しました。時間を置いて再度お試しください。</p>
