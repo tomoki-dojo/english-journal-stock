@@ -26,7 +26,7 @@ export default async function RoadmapStage2Page() {
         className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-500 transition-colors hover:text-zinc-900"
       >
         <ChevronLeft className="h-4 w-4" />
-        街に戻る
+        部屋に戻る
       </Link>
 
       <div className="mb-6">

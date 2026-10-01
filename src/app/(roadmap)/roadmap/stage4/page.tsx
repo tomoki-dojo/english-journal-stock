@@ -34,7 +34,7 @@ export default async function RoadmapStage4Page() {
           className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-500 transition-colors hover:text-zinc-900"
         >
           <ChevronLeft className="h-4 w-4" />
-          街に戻る
+          部屋に戻る
         </Link>
         <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-100/30 px-6 py-10 text-center">
           <Hourglass className="mx-auto mb-3 h-6 w-6 text-zinc-400" />
@@ -59,7 +59,7 @@ export default async function RoadmapStage4Page() {
         className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-500 transition-colors hover:text-zinc-900"
       >
         <ChevronLeft className="h-4 w-4" />
-        街に戻る
+        部屋に戻る
       </Link>
 
       <div className="mb-6">

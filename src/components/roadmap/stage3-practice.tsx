@@ -165,7 +165,7 @@ export function Stage3Practice() {
           href="/roadmap"
           className="mt-4 inline-flex items-center gap-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
         >
-          街に戻る
+          部屋に戻る
         </Link>
       </div>
     );
@@ -180,7 +180,7 @@ export function Stage3Practice() {
           href="/roadmap"
           className="mt-4 inline-flex items-center gap-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
         >
-          街に戻る
+          部屋に戻る
         </Link>
       </div>
     );
