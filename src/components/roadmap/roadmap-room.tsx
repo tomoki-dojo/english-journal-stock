@@ -71,17 +71,23 @@ const STAGE_NUMBERS: StageNumber[] = [1, 2, 3, 4, 5];
 // 個別の座標（%）と傾きを持たせて散らした配置にする。実イラスト差し替え時は
 // ここの座標を実際の部屋イラストに合わせて手動で再調整する前提
 // （_reference/kuwagata-motif-exploration.md参照）。
-type ItemPlacement = { left: number; top: number; rotate: number };
+// widthPctは部屋の幅に対するそのアイテムの表示幅の割合。アイテムごとに実物の
+// 大きさが違う（コルクボード・棚は大きい、霧吹き・虫眼鏡は小さい等）ため、
+// 全アイテム共通の固定pxではなく個別に持たせる。高さは画像自体の縦横比に
+// 追従（object-contain）するので、widthPctだけ合わせればよい。
+// 値はユーザーが描いた部屋背景の下書きから実測した比率を初期値にしている
+// （実イラスト差し替え時に微調整する前提。ロック中は従来通り固定48px丸バッジ表示のまま）。
+type ItemPlacement = { left: number; top: number; rotate: number; widthPct: number };
 
 const ITEM_PLACEMENT: Record<string, ItemPlacement> = {
-  stage0: { left: 12, top: 14, rotate: -8 },
-  stage1: { left: 52, top: 10, rotate: 6 },
-  stage2: { left: 85, top: 26, rotate: -5 },
-  stage3: { left: 18, top: 46, rotate: 7 },
-  stage4: { left: 50, top: 52, rotate: -9 },
-  stage5: { left: 82, top: 58, rotate: 4 },
-  board: { left: 22, top: 80, rotate: -4 },
-  shelf: { left: 68, top: 84, rotate: 5 },
+  stage0: { left: 12, top: 14, rotate: -8, widthPct: 11 },
+  stage1: { left: 52, top: 10, rotate: 6, widthPct: 18 },
+  stage2: { left: 85, top: 26, rotate: -5, widthPct: 7 },
+  stage3: { left: 18, top: 46, rotate: 7, widthPct: 8 },
+  stage4: { left: 50, top: 52, rotate: -9, widthPct: 7 },
+  stage5: { left: 82, top: 58, rotate: 4, widthPct: 11 },
+  board: { left: 22, top: 80, rotate: -4, widthPct: 30 },
+  shelf: { left: 68, top: 84, rotate: 5, widthPct: 16 },
 };
 
 type RoadmapRoomProps = {
@@ -120,7 +126,25 @@ function StageCase({
   current: boolean;
   placement: ItemPlacement;
 }) {
-  const content = (
+  // 解放済み＋実アート有りの場合だけ、アイテムごとのwidthPctで実寸表示する
+  // （丸バッジを外し、縦横比はobject-containで画像任せ）。それ以外（未解放／
+  // アート未制作でlucideアイコンのまま）は、従来通り固定48pxの丸バッジ表示。
+  const showRealArt = !locked && imageSrc;
+
+  const content = showRealArt ? (
+    <div className="flex flex-col items-center gap-1">
+      <div
+        style={{ transform: `rotate(${placement.rotate}deg)`, width: "100%" }}
+        className="transition-transform hover:scale-105 active:scale-95"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element -- 任意形状・任意サイズの自前アートなのでnext/imageの固定枠は使わない */}
+        <img src={imageSrc} alt="" className="block w-full object-contain drop-shadow-md" />
+      </div>
+      <span className="text-[10px] font-semibold" style={{ color }}>
+        {label}
+      </span>
+    </div>
+  ) : (
     <div className="flex flex-col items-center gap-1">
       <div
         className="flex h-12 w-12 items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-95"
@@ -132,14 +156,7 @@ function StageCase({
             : "0 3px 6px rgba(0,0,0,0.12)",
         }}
       >
-        {locked ? (
-          <Lock className="h-5 w-5 text-zinc-300" strokeWidth={1.75} />
-        ) : imageSrc ? (
-          // eslint-disable-next-line @next/next/no-img-element -- 任意形状の自前アートなのでnext/imageの固定枠は使わない
-          <img src={imageSrc} alt="" className="h-9 w-9 object-contain" />
-        ) : (
-          <Icon className="h-6 w-6" style={{ color }} strokeWidth={2} />
-        )}
+        {locked ? <Lock className="h-5 w-5 text-zinc-300" strokeWidth={1.75} /> : <Icon className="h-6 w-6" style={{ color }} strokeWidth={2} />}
       </div>
       <span className={`text-[10px] font-semibold ${locked ? "text-zinc-400" : ""}`} style={locked ? undefined : { color }}>
         {label}
@@ -151,7 +168,12 @@ function StageCase({
   return (
     <div
       className="absolute"
-      style={{ left: `${placement.left}%`, top: `${placement.top}%`, transform: "translate(-50%, -50%)" }}
+      style={{
+        left: `${placement.left}%`,
+        top: `${placement.top}%`,
+        transform: "translate(-50%, -50%)",
+        width: showRealArt ? `${placement.widthPct}%` : undefined,
+      }}
     >
       {locked ? content : (
         <Link href={href} className="block">
