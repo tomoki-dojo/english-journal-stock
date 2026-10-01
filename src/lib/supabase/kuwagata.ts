@@ -462,12 +462,15 @@ export async function goCatchInArea(
 
   const picked = pickByRarityWeight(effectivePool);
 
+  // 新種は野生採集＝見つけた時点で成虫という設定。既知種（stage_clear、卵から育てる）と違い
+  // 日数経過での成長段階表示（卵→幼虫→蛹）の対象にしないよう、取得と同時にhatched_atを立てる。
   const { error: insertError } = await supabaseAdmin.from("kuwagata_individuals").insert({
     user_id: userId,
     species_id: picked.id,
     obtained_via: "roll",
     size_scale: randomBetween(SIZE_SCALE_MIN, SIZE_SCALE_MAX),
     mandible_variant: Math.floor(Math.random() * MANDIBLE_VARIANT_COUNT) + 1,
+    hatched_at: new Date().toISOString(),
   });
 
   if (insertError) {
