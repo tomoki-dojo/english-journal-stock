@@ -1,13 +1,13 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
-  Mic,
-  PenLine,
-  Radio,
-  Coffee,
-  RadioTower,
-  Lightbulb,
-  ClipboardList,
+  Search,
+  Container,
+  SprayCan,
+  Thermometer,
+  Pipette,
+  Microscope,
+  StickyNote,
   Bug,
   Lock,
   Sparkles,
@@ -24,12 +24,15 @@ const SHELF_COLOR = "#92400e";
 
 type StageNumber = 1 | 2 | 3 | 4 | 5;
 
+// アイコンは「アーサーの飼育部屋」にある道具（初級→上級の飼育レベル準拠）に対応させている
+// （Search=虫眼鏡、Container=虫カゴ、SprayCan=霧吹き、Thermometer=温度湿度計、
+// Pipette=ピンセット、Microscope=顕微鏡。経緯は_reference/kuwagata-motif-exploration.md参照）。
 const STAGE_META: Record<StageNumber, { label: string; caption: string; icon: LucideIcon; href: string }> = {
-  1: { label: "Stage1", caption: "音読", icon: Mic, href: "/roadmap/stage1" },
-  2: { label: "Stage2", caption: "英作文", icon: PenLine, href: "/roadmap/stage2" },
-  3: { label: "Stage3", caption: "言い換え", icon: Radio, href: "/roadmap/stage3" },
-  4: { label: "Stage4", caption: "会話", icon: Coffee, href: "/roadmap/stage4" },
-  5: { label: "Stage5", caption: "実践", icon: RadioTower, href: "/roadmap/stage5" },
+  1: { label: "Stage1", caption: "音読", icon: Container, href: "/roadmap/stage1" },
+  2: { label: "Stage2", caption: "英作文", icon: SprayCan, href: "/roadmap/stage2" },
+  3: { label: "Stage3", caption: "言い換え", icon: Thermometer, href: "/roadmap/stage3" },
+  4: { label: "Stage4", caption: "会話", icon: Pipette, href: "/roadmap/stage4" },
+  5: { label: "Stage5", caption: "実践", icon: Microscope, href: "/roadmap/stage5" },
 };
 
 const STAGE_NUMBERS: StageNumber[] = [1, 2, 3, 4, 5];
@@ -169,7 +172,7 @@ export function RoadmapRoom({
         <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
           <StageCase
             color={STAGE_COLORS[0]}
-            icon={Lightbulb}
+            icon={Search}
             label="Stage0"
             caption="感覚"
             href="/roadmap/stage0"
@@ -196,8 +199,8 @@ export function RoadmapRoom({
         <div className="grid grid-cols-2 gap-3">
           <StageCase
             color={BOARD_COLOR}
-            icon={ClipboardList}
-            label="標本箱"
+            icon={StickyNote}
+            label="コルクボード"
             caption="表現一覧"
             href="/roadmap/board"
             locked={false}
