@@ -33,22 +33,22 @@ function formatDate(iso: string): string {
 
 // 既知種の実アート(パーツ分解済みSVG)。brand/kuwagata-asset-spec.mdの命名規則どおり
 // public/roadmap/kuwagata/配下に置くだけで反映される。種ごとにfront(正面)/back(背面)を
-// 持てる形にしているが、まだエークワたん(KW-0001)のfrontしか無いため、backが未着手の
-// 種・向きはKnownCreatureSprite側でfrontにフォールバックする(見た目が変わらないだけで、
-// 下方向/歩行方向の判定ロジック自体は先に組んでおく)。ここに無い種はTankOccupantの
-// フォールバック(Bugアイコン)になる。
-// originXPct/originYPctは各パーツの付け根位置を112×112のキャンバスに対する%で記録した
-// ものだが、現状の歩行アニメ(前後にスライドするtranslateX)では未使用。将来、脚ごとに
-// 振れ幅や向きを個別調整する際の参考値として残している。
+// 持てる形にしており、backが未着手の種・向きはKnownCreatureSprite側でfrontにフォール
+// バックする。ここに無い種はTankOccupantのフォールバック(Bugアイコン)になる。
+// legsBehindBody/legsInFrontOfBodyは配列の並び順がそのままDOM描画順(=重ね順)になる。
+// 正面(front)は「奥脚(1本)→本体→手前脚3本→大顎」、背面(back)は「奥脚3本→本体→大顎」
+// という向きごとに違う重なり方になるため、2つの配列に分けて向きごとに自由に組めるように
+// している(体より奥に描く脚=legsBehindBody、体より手前に描く脚=legsInFrontOfBody)。
 const KUWAGATA_ART_DIR = "/roadmap/kuwagata";
 
-type CreaturePartArt = { src: string; originXPct: number; originYPct: number; delay: string };
+type CreaturePartArt = { src: string; delay: string };
 
 type KnownCreatureArt = {
   body: string;
-  mandible: string;
-  legsL: CreaturePartArt[];
-  legR: CreaturePartArt;
+  // 背面からは構造上ほぼ見えないはずのパーツだが、素材があれば使う(無ければ省略可)
+  mandible?: string;
+  legsBehindBody: CreaturePartArt[];
+  legsInFrontOfBody: CreaturePartArt[];
 };
 
 type Facing = "front" | "back";
@@ -58,22 +58,32 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
     front: {
       body: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_body.svg`,
       mandible: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_mandible_01.svg`,
-      legsL: [
-        { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_leg_L1.svg`, originXPct: 59.5, originYPct: 69.6, delay: "0s" },
-        { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_leg_L2.svg`, originXPct: 67.9, originYPct: 65.9, delay: "-0.15s" },
-        { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_leg_L3.svg`, originXPct: 74.7, originYPct: 62.1, delay: "-0.3s" },
+      // 奥脚(見えているのは1本のみ、他2本は本体の陰に隠れる想定で未作成)
+      legsBehindBody: [{ src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_leg_R1.svg`, delay: "-0.55s" }],
+      // 手前脚3本。配列の末尾(L1)が一番手前に重なる
+      legsInFrontOfBody: [
+        { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_leg_L3.svg`, delay: "-0.3s" },
+        { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_leg_L2.svg`, delay: "-0.15s" },
+        { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_leg_L1.svg`, delay: "0s" },
       ],
-      legR: { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_leg_R1.svg`, originXPct: 17.1, originYPct: 64.1, delay: "-0.55s" },
     },
-    // back: 背面アートは未着手。描けたらここに追加するだけで、下に動くと正面・
-    // 上に動くと背面に自動で切り替わるようになる。
+    back: {
+      body: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_back_body.svg`,
+      mandible: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_back_mandible_01.svg`,
+      // 背面は3本とも本体の奥(後ろ)に重なる。描画順はR1→R2→R3→本体の指定どおり
+      legsBehindBody: [
+        { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_back_leg_R1.svg`, delay: "0s" },
+        { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_back_leg_R2.svg`, delay: "-0.15s" },
+        { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_back_leg_R3.svg`, delay: "-0.3s" },
+      ],
+      legsInFrontOfBody: [],
+    },
   },
 };
 
 // 実アートがある種だけ、パーツを重ねた正方形スプライトを描画する(無ければnullを返し、
 // 呼び出し側がBugアイコンにフォールバックする)。描画順は奥から
-// 「奥脚(R、1本のみ)→本体→手前脚(L3→L2→L1)→大顎」。手前の3本は本体より手前(上)に重ねて、
-// 体の陰に隠れず歩いているのが見えるようにする。奥脚は本体の下に隠れて先端だけ覗く。
+// 「legsBehindBody→本体→legsInFrontOfBody→大顎(あれば)」。
 // 一番外側のdivにもanimate-kuwagata-bodyを付け、脚の動きに合わせて本体全体も
 // わずかに上下するようにして「その場で歩いている」感を出す。
 // facingは歩く方向(下/左→正面、上/右→背面)から決まるが、backアートが無い種は
@@ -85,23 +95,26 @@ function KnownCreatureSprite({ code, facing }: { code: string; facing: Facing })
 
   return (
     <div className="relative h-full w-full animate-kuwagata-body">
-      <img
-        src={art.legR.src}
-        alt=""
-        className="absolute inset-0 h-full w-full animate-kuwagata-leg"
-        style={{ animationDelay: art.legR.delay }}
-      />
-      <img src={art.body} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />
-      {[...art.legsL].reverse().map((leg, i) => (
+      {art.legsBehindBody.map((leg, i) => (
         <img
-          key={`l${i}`}
+          key={`behind${i}`}
           src={leg.src}
           alt=""
           className="absolute inset-0 h-full w-full animate-kuwagata-leg"
           style={{ animationDelay: leg.delay }}
         />
       ))}
-      <img src={art.mandible} alt="" className="absolute inset-0 h-full w-full" />
+      <img src={art.body} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />
+      {art.legsInFrontOfBody.map((leg, i) => (
+        <img
+          key={`front${i}`}
+          src={leg.src}
+          alt=""
+          className="absolute inset-0 h-full w-full animate-kuwagata-leg"
+          style={{ animationDelay: leg.delay }}
+        />
+      ))}
+      {art.mandible && <img src={art.mandible} alt="" className="absolute inset-0 h-full w-full" />}
     </div>
   );
 }
