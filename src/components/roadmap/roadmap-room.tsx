@@ -86,12 +86,15 @@ const LABEL_COLOR_OVERRIDE: Partial<Record<StageNumber, string>> = {
 // （実イラスト差し替え時に微調整する前提。ロック中は従来通り固定48px丸バッジ表示のまま）。
 // labelPositionは"below"（デフォルト、画像の下端に少し重ねる）か
 // "center"（画像の中央に完全に重ねる。棚のような縦長アイテム向け）。
+// labelOverlapPxは"below"時の重ね幅（px）。デフォルト12で、アイテムによってもっと
+// 深く被せたい場合はここで調整する（コルクボードなど大きいアイテム向け）。
 type ItemPlacement = {
   left: number;
   top: number;
   rotate: number;
   widthPct: number;
   labelPosition?: "below" | "center";
+  labelOverlapPx?: number;
 };
 
 const ITEM_PLACEMENT: Record<string, ItemPlacement> = {
@@ -102,7 +105,7 @@ const ITEM_PLACEMENT: Record<string, ItemPlacement> = {
   stage4: { left: 39, top: 70, rotate: 0, widthPct: 12 },
   // 机面に接地して見えるよう、widthPct拡大に合わせてtopも下げて調整
   stage5: { left: 53, top: 56, rotate: 0, widthPct: 13 },
-  board: { left: 25, top: 23, rotate: 0, widthPct: 36 },
+  board: { left: 25, top: 23, rotate: 0, widthPct: 40, labelOverlapPx: 20 },
   // 棚は一回り大きくして、画像自体をほぼ床に接地するまで下げる。
   // ラベルは画像下端ではなく中央に完全に重ねる表示にする。
   shelf: { left: 92, top: 64, rotate: 0, widthPct: 22, labelPosition: "center" },
@@ -183,7 +186,7 @@ function StageCase({
     ) : (
       <div className="flex flex-col items-center">
         {itemImage}
-        <div className="-mt-3">{labelEl}</div>
+        <div style={{ marginTop: -(placement.labelOverlapPx ?? 12) }}>{labelEl}</div>
       </div>
     )
   ) : (
