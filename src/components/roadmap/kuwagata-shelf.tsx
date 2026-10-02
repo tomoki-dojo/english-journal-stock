@@ -42,14 +42,42 @@ function TankOccupant({ color, sizeScale }: { color: string; sizeScale: number }
   );
 }
 
-const TANK_VISUAL_SLOTS: { left: string; bottom: number }[] = [
-  { left: "62%", bottom: 26 },
-  { left: "28%", bottom: 22 },
-  { left: "45%", bottom: 34 },
-  { left: "78%", bottom: 20 },
-  { left: "15%", bottom: 30 },
+// テラリウム背景（tank_bg_terrarium.png）の「土の天面」の実測座標（コンテナに対する%）。
+// 画像をピクセル解析し、天面（明るい土色）の連結領域から4頂点を抽出して算出した
+// 平行四辺形（奥=back・右=right・手前=front・左=left）。側面（土の側面・濃い色）や
+// 背景のガラス部分にアイテムが浮いて見えないよう、デコレーション・クワたんはこの中だけに置く。
+const TANK_SURFACE = {
+  back: { left: 26.7, top: 24.8 },
+  right: { left: 97.7, top: 53.9 },
+  left: { left: 1.9, top: 55.2 },
+};
+
+// 平行四辺形なので back + u*(right-back) + v*(left-back) で天面内の任意の点が求まる。
+// u, vは0〜1だが、スプライトの見た目の大きさ分の余白を持たせるため呼び出し側では
+// 0.12〜0.88程度の範囲に収めて「安全地帯」を作る。
+function surfacePoint(u: number, v: number): { left: number; top: number } {
+  const left = TANK_SURFACE.back.left + u * (TANK_SURFACE.right.left - TANK_SURFACE.back.left) + v * (TANK_SURFACE.left.left - TANK_SURFACE.back.left);
+  const top = TANK_SURFACE.back.top + u * (TANK_SURFACE.right.top - TANK_SURFACE.back.top) + v * (TANK_SURFACE.left.top - TANK_SURFACE.back.top);
+  return { left, top };
+}
+
+// クワたん・デコレーションの置き場所(u,v)。0.15〜0.85の範囲に収め、天面の縁ギリギリに
+// スプライトがはみ出さないようにしている(=座標のセーフティゾーン)。
+const CREATURE_SPOTS: { u: number; v: number }[] = [
+  { u: 0.5, v: 0.45 },
+  { u: 0.25, v: 0.25 },
+  { u: 0.78, v: 0.3 },
+  { u: 0.3, v: 0.72 },
+  { u: 0.75, v: 0.75 },
 ];
 
+const DECORATION_SPOTS: { u: number; v: number }[] = [
+  { u: 0.18, v: 0.82 },
+  { u: 0.82, v: 0.18 },
+  { u: 0.55, v: 0.85 },
+];
+
+// アクアリウムはまだ実アート未着手のため、天面の実測座標がない。既存の簡易な泡配置だけ残す。
 const AQUARIUM_BUBBLES: { left: string; bottom: number; size: number }[] = [
   { left: "20%", bottom: 10, size: 5 },
   { left: "50%", bottom: 60, size: 4 },
@@ -66,23 +94,17 @@ const DECORATION_POOL: { id: string; file: string; widthPct: number }[] = [
   { id: "food", file: "/roadmap/tank/tank_item_food.svg", widthPct: 16 },
 ];
 
-const DECORATION_SLOTS: { left: string; bottom: number }[] = [
-  { left: "14%", bottom: 8 },
-  { left: "84%", bottom: 10 },
-  { left: "50%", bottom: 6 },
-];
-
 // 水槽（speciesId）ごとに固定された組み合わせになるよう、開くたびに変わらないシード付き
 // 乱数で選ぶ（hashHueと同じ考え方）。クワたん本体より先にDOMへ描画することで、本体が
 // 手前に重なって見えるようにしている（z-indexは使わず描画順だけで奥行きを表現）。
-function pickDecorations(tank: KuwagataShelfTank): { file: string; widthPct: number; slot: { left: string; bottom: number } }[] {
+function pickDecorations(tank: KuwagataShelfTank): { file: string; widthPct: number; spot: { u: number; v: number } }[] {
   const seed = hashHue(tank.speciesId);
   const count = 1 + (seed % 2);
-  const picks: { file: string; widthPct: number; slot: { left: string; bottom: number } }[] = [];
+  const picks: { file: string; widthPct: number; spot: { u: number; v: number } }[] = [];
   for (let i = 0; i < count; i++) {
     const item = DECORATION_POOL[(seed + i * 7) % DECORATION_POOL.length];
-    const slot = DECORATION_SLOTS[(seed + i) % DECORATION_SLOTS.length];
-    picks.push({ file: item.file, widthPct: item.widthPct, slot });
+    const spot = DECORATION_SPOTS[(seed + i) % DECORATION_SPOTS.length];
+    picks.push({ file: item.file, widthPct: item.widthPct, spot });
   }
   return picks;
 }
@@ -119,26 +141,45 @@ function EnlargedTankVisual({ tank, color }: { tank: KuwagataShelfTank; color: s
       ) : (
         <div className="absolute inset-x-0 bottom-0 h-[18px] bg-amber-100" />
       )}
-      {pickDecorations(tank).map((deco, index) => {
-        const bottom = isAquarium ? deco.slot.bottom + 10 : deco.slot.bottom;
-        return (
-          <div
-            key={index}
-            className="absolute -translate-x-1/2"
-            style={{ left: deco.slot.left, bottom, width: `${deco.widthPct}%` }}
-          >
-            <img src={deco.file} alt="" className="block w-full object-contain drop-shadow-sm" />
-          </div>
-        );
-      })}
+      {!isAquarium &&
+        pickDecorations(tank).map((deco, index) => {
+          const pt = surfacePoint(deco.spot.u, deco.spot.v);
+          return (
+            <div
+              key={index}
+              className="absolute -translate-x-1/2 -translate-y-full"
+              style={{ left: `${pt.left}%`, top: `${pt.top}%`, width: `${deco.widthPct}%` }}
+            >
+              <img src={deco.file} alt="" className="block w-full object-contain drop-shadow-sm" />
+            </div>
+          );
+        })}
       {tank.individuals.map((individual, index) => {
-        const slot = TANK_VISUAL_SLOTS[index % TANK_VISUAL_SLOTS.length];
-        const bottom = isAquarium ? slot.bottom + 30 : slot.bottom;
+        if (isAquarium) {
+          // アクアリウムは実アート未着手のため、従来どおりの簡易配置のまま
+          const left = ["62%", "28%", "45%", "78%", "15%"][index % 5];
+          const bottom = [56, 52, 64, 50, 60][index % 5];
+          return (
+            <div
+              key={individual.id}
+              className="absolute -translate-x-1/2"
+              style={{ left, bottom, transform: index % 2 === 1 ? "translateX(-50%) scaleX(-1)" : "translateX(-50%)" }}
+            >
+              <TankOccupant color={color} sizeScale={individual.sizeScale * 1.4} />
+            </div>
+          );
+        }
+        const spot = CREATURE_SPOTS[index % CREATURE_SPOTS.length];
+        const pt = surfacePoint(spot.u, spot.v);
         return (
           <div
             key={individual.id}
-            className="absolute -translate-x-1/2"
-            style={{ left: slot.left, bottom, transform: index % 2 === 1 ? "translateX(-50%) scaleX(-1)" : "translateX(-50%)" }}
+            className="absolute -translate-y-full"
+            style={{
+              left: `${pt.left}%`,
+              top: `${pt.top}%`,
+              transform: index % 2 === 1 ? "translateX(-50%) translateY(-100%) scaleX(-1)" : "translateX(-50%) translateY(-100%)",
+            }}
           >
             <TankOccupant color={color} sizeScale={individual.sizeScale * 1.4} />
           </div>
@@ -223,11 +264,11 @@ export function KuwagataShelf({
           onClick={() => setSelectedTankId(null)}
         >
           <div
-            className="max-h-[80vh] w-full max-w-sm overflow-y-auto rounded-2xl bg-white p-5 shadow-xl"
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-5 shadow-xl sm:p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-zinc-800">
+              <h2 className="text-base font-bold text-zinc-800 sm:text-lg">
                 {selectedTank.speciesKind === "known"
                   ? selectedTank.speciesName
                   : `棚${selectedTank.tankNumber}・${selectedTank.speciesName}`}
