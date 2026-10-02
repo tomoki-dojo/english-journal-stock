@@ -1,0 +1,522 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_レイヤー_2" data-name="レイヤー 2" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 229.84 284.67">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #a3a3a3;
+        stroke-width: 2.15px;
+      }
+
+      .cls-1, .cls-2, .cls-3, .cls-4, .cls-5, .cls-6, .cls-7, .cls-8, .cls-9, .cls-10, .cls-11, .cls-12, .cls-13, .cls-14, .cls-15, .cls-16, .cls-17, .cls-18, .cls-19, .cls-20, .cls-21, .cls-22, .cls-23, .cls-24, .cls-25, .cls-26, .cls-27, .cls-28, .cls-29, .cls-30, .cls-31, .cls-32, .cls-33, .cls-34, .cls-35, .cls-36, .cls-37, .cls-38, .cls-39, .cls-40, .cls-41, .cls-42, .cls-43, .cls-44, .cls-45, .cls-46, .cls-47, .cls-48, .cls-49, .cls-50, .cls-51, .cls-52, .cls-53, .cls-54, .cls-55, .cls-56, .cls-57, .cls-58, .cls-59, .cls-60, .cls-61, .cls-62, .cls-63, .cls-64, .cls-65, .cls-66, .cls-67, .cls-68, .cls-69, .cls-70, .cls-71, .cls-72, .cls-73, .cls-74, .cls-75, .cls-76, .cls-77, .cls-78 {
+        stroke-linejoin: round;
+      }
+
+      .cls-1, .cls-2, .cls-3, .cls-4, .cls-5, .cls-6, .cls-7, .cls-8, .cls-9, .cls-10, .cls-11, .cls-12, .cls-13, .cls-14, .cls-15, .cls-16, .cls-17, .cls-18, .cls-19, .cls-20, .cls-21, .cls-22, .cls-23, .cls-24, .cls-25, .cls-26, .cls-27, .cls-28, .cls-29, .cls-30, .cls-31, .cls-32, .cls-33, .cls-34, .cls-35, .cls-36, .cls-37, .cls-38, .cls-39, .cls-40, .cls-43, .cls-44, .cls-45, .cls-46, .cls-47, .cls-48, .cls-49, .cls-50, .cls-51, .cls-52, .cls-53, .cls-54, .cls-55, .cls-56, .cls-58, .cls-60, .cls-61, .cls-62, .cls-63, .cls-64, .cls-65, .cls-66, .cls-67, .cls-68, .cls-69, .cls-70, .cls-71, .cls-72, .cls-73, .cls-74, .cls-75, .cls-76, .cls-77, .cls-78 {
+        stroke: #848484;
+      }
+
+      .cls-2 {
+        fill: #b5b5b5;
+        stroke-width: 2.07px;
+      }
+
+      .cls-3 {
+        fill: #c4c4c4;
+        stroke-width: 2px;
+      }
+
+      .cls-4 {
+        fill: #b7b7b7;
+        stroke-width: 2.06px;
+      }
+
+      .cls-5 {
+        fill: #cacaca;
+        stroke-width: 1.98px;
+      }
+
+      .cls-6 {
+        fill: #bbb;
+        stroke-width: 2.04px;
+      }
+
+      .cls-7 {
+        fill: #a7a7a7;
+        stroke-width: 2.13px;
+      }
+
+      .cls-8 {
+        fill: #dbdbdb;
+        stroke-width: 1.9px;
+      }
+
+      .cls-9 {
+        fill: #d9d9d9;
+        stroke-width: 1.91px;
+      }
+
+      .cls-10 {
+        fill: #b9b9b9;
+        stroke-width: 2.05px;
+      }
+
+      .cls-11 {
+        fill: #dedede;
+        stroke-width: 1.89px;
+      }
+
+      .cls-12 {
+        fill: #a6a6a6;
+        stroke-width: 2.13px;
+      }
+
+      .cls-13 {
+        fill: url(#_名称未設定グラデーション_9-4);
+      }
+
+      .cls-13, .cls-14, .cls-15, .cls-41, .cls-42, .cls-55, .cls-57, .cls-74 {
+        stroke-width: 2.14px;
+      }
+
+      .cls-14 {
+        fill: url(#_名称未設定グラデーション_9-2);
+      }
+
+      .cls-15 {
+        fill: url(#_名称未設定グラデーション_9-6);
+      }
+
+      .cls-16 {
+        fill: #adadad;
+        stroke-width: 2.1px;
+      }
+
+      .cls-17 {
+        fill: #d8d8d8;
+        stroke-width: 1.92px;
+      }
+
+      .cls-18 {
+        fill: #b8b8b8;
+        stroke-width: 2.06px;
+      }
+
+      .cls-19 {
+        stroke-width: 3.07px;
+      }
+
+      .cls-19, .cls-61, .cls-64, .cls-78 {
+        fill: #565656;
+      }
+
+      .cls-20 {
+        fill: #cbcbcb;
+        stroke-width: 1.97px;
+      }
+
+      .cls-21 {
+        fill: #dadada;
+        stroke-width: 1.91px;
+      }
+
+      .cls-22 {
+        fill: #c5c5c5;
+        stroke-width: 2px;
+      }
+
+      .cls-23 {
+        fill: #aeaeae;
+        stroke-width: 2.1px;
+      }
+
+      .cls-24 {
+        fill: #d2d2d2;
+        stroke-width: 1.94px;
+      }
+
+      .cls-25 {
+        fill: #afafaf;
+        stroke-width: 2.09px;
+      }
+
+      .cls-26 {
+        fill: #d4d4d4;
+        stroke-width: 1.93px;
+      }
+
+      .cls-27 {
+        fill: #a5a5a5;
+        stroke-width: 2.14px;
+      }
+
+      .cls-28 {
+        fill: #b2b2b2;
+        stroke-width: 2.08px;
+      }
+
+      .cls-29 {
+        fill: #d1d1d1;
+        stroke-width: 1.95px;
+      }
+
+      .cls-30 {
+        fill: #a9a9a9;
+        stroke-width: 2.12px;
+      }
+
+      .cls-31 {
+        fill: #c3c3c3;
+        stroke-width: 2.01px;
+      }
+
+      .cls-32 {
+        fill: #c7c7c7;
+        stroke-width: 1.99px;
+      }
+
+      .cls-33 {
+        fill: #ccc;
+        stroke-width: 1.97px;
+      }
+
+      .cls-34 {
+        fill: silver;
+        stroke-width: 2.02px;
+      }
+
+      .cls-35 {
+        fill: #cecece;
+        stroke-width: 1.96px;
+      }
+
+      .cls-36 {
+        fill: #b6b6b6;
+        stroke-width: 2.06px;
+      }
+
+      .cls-37 {
+        fill: #a4a4a4;
+        stroke-width: 2.14px;
+      }
+
+      .cls-38 {
+        fill: #d5d5d5;
+        stroke-width: 1.93px;
+      }
+
+      .cls-39 {
+        fill: #ddd;
+        stroke-width: 1.89px;
+      }
+
+      .cls-40 {
+        fill: #cdcdcd;
+        stroke-width: 1.96px;
+      }
+
+      .cls-41 {
+        fill: url(#_名称未設定グラデーション_9-3);
+      }
+
+      .cls-41, .cls-42, .cls-57 {
+        stroke: #b8c4c4;
+      }
+
+      .cls-42 {
+        fill: url(#_名称未設定グラデーション_9-5);
+      }
+
+      .cls-43 {
+        fill: #bcbcbc;
+        stroke-width: 2.04px;
+      }
+
+      .cls-44 {
+        fill: #c8c8c8;
+        stroke-width: 1.98px;
+      }
+
+      .cls-45 {
+        fill: #c6c6c6;
+        stroke-width: 1.99px;
+      }
+
+      .cls-46 {
+        stroke-linecap: round;
+        stroke-width: 2.2px;
+      }
+
+      .cls-46, .cls-55, .cls-56 {
+        fill: #a8a8a8;
+      }
+
+      .cls-47 {
+        fill: #c9c9c9;
+        stroke-width: 1.98px;
+      }
+
+      .cls-48 {
+        fill: #acacac;
+        stroke-width: 2.11px;
+      }
+
+      .cls-49 {
+        fill: #c1c1c1;
+        stroke-width: 2.02px;
+      }
+
+      .cls-50 {
+        fill: #bebebe;
+        stroke-width: 2.03px;
+      }
+
+      .cls-51 {
+        fill: #b3b3b3;
+        stroke-width: 2.08px;
+      }
+
+      .cls-52 {
+        fill: #d6d6d6;
+        stroke-width: 1.92px;
+      }
+
+      .cls-53 {
+        fill: #d7d7d7;
+        stroke-width: 1.92px;
+      }
+
+      .cls-54 {
+        fill: #bababa;
+        stroke-width: 2.05px;
+      }
+
+      .cls-56 {
+        stroke-width: 2.12px;
+      }
+
+      .cls-57 {
+        fill: url(#_名称未設定グラデーション_9);
+      }
+
+      .cls-58 {
+        fill: #ababab;
+        stroke-width: 2.11px;
+      }
+
+      .cls-59 {
+        fill: #efefef;
+        stroke: #c7c7c7;
+        stroke-width: 1.54px;
+      }
+
+      .cls-60 {
+        stroke-width: 1.88px;
+      }
+
+      .cls-60, .cls-73, .cls-74 {
+        fill: #e0e0e0;
+      }
+
+      .cls-61 {
+        stroke-width: 1.07px;
+      }
+
+      .cls-62 {
+        fill: #d0d0d0;
+        stroke-width: 1.95px;
+      }
+
+      .cls-63 {
+        fill: #dcdcdc;
+        stroke-width: 1.9px;
+      }
+
+      .cls-64 {
+        stroke-width: 1.77px;
+      }
+
+      .cls-65 {
+        fill: #bdbdbd;
+        stroke-width: 2.03px;
+      }
+
+      .cls-66 {
+        fill: #d3d3d3;
+        stroke-width: 1.94px;
+      }
+
+      .cls-67 {
+        fill: #aaa;
+        stroke-width: 2.12px;
+      }
+
+      .cls-68 {
+        fill: #dfdfdf;
+        stroke-width: 1.89px;
+      }
+
+      .cls-69 {
+        fill: #b1b1b1;
+        stroke-width: 2.09px;
+      }
+
+      .cls-70 {
+        fill: #b4b4b4;
+        stroke-width: 2.07px;
+      }
+
+      .cls-71 {
+        stroke-width: 2.01px;
+      }
+
+      .cls-71, .cls-72 {
+        fill: #c2c2c2;
+      }
+
+      .cls-72 {
+        stroke-width: 2.01px;
+      }
+
+      .cls-73, .cls-78 {
+        stroke-width: 2.11px;
+      }
+
+      .cls-75 {
+        fill: #cfcfcf;
+        stroke-width: 1.95px;
+      }
+
+      .cls-76 {
+        fill: #b0b0b0;
+        stroke-width: 2.09px;
+      }
+
+      .cls-77 {
+        fill: #bfbfbf;
+        stroke-width: 2.03px;
+      }
+    </style>
+    <linearGradient id="_名称未設定グラデーション_9" data-name="名称未設定グラデーション 9" x1="105.45" y1="126.34" x2="113.12" y2="126.34" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#a8a8a8"/>
+      <stop offset="1" stop-color="#929292"/>
+    </linearGradient>
+    <linearGradient id="_名称未設定グラデーション_9-2" data-name="名称未設定グラデーション 9" x1="104" y1="112.98" x2="114.14" y2="112.98" xlink:href="#_名称未設定グラデーション_9"/>
+    <linearGradient id="_名称未設定グラデーション_9-3" data-name="名称未設定グラデーション 9" x1="230.41" y1="-987.07" x2="238.08" y2="-987.07" gradientTransform="translate(-910.33 -116.56) rotate(90)" xlink:href="#_名称未設定グラデーション_9"/>
+    <linearGradient id="_名称未設定グラデーション_9-4" data-name="名称未設定グラデーション 9" x1="228.96" y1="-1000.44" x2="239.1" y2="-1000.44" gradientTransform="translate(-653.91 821.49) rotate(32.72)" xlink:href="#_名称未設定グラデーション_9"/>
+    <linearGradient id="_名称未設定グラデーション_9-5" data-name="名称未設定グラデーション 9" x1="218.67" y1="-254.93" x2="226.34" y2="-254.93" gradientTransform="translate(-159.06 -95.99) rotate(90)" xlink:href="#_名称未設定グラデーション_9"/>
+    <linearGradient id="_名称未設定グラデーション_9-6" data-name="名称未設定グラデーション 9" x1="217.22" y1="-268.3" x2="227.36" y2="-268.3" gradientTransform="translate(-172.59 332.5) rotate(11.39)" xlink:href="#_名称未設定グラデーション_9"/>
+  </defs>
+  <g>
+    <polygon class="cls-1" points="224.27 272.71 27.75 272.71 6.75 213.97 197.95 213.96 224.27 272.71"/>
+    <polygon class="cls-37" points="224.11 272.41 28.05 272.41 7.02 213.76 197.86 213.76 224.11 272.41"/>
+    <polygon class="cls-27" points="223.96 272.1 28.34 272.1 7.29 213.55 197.76 213.55 223.96 272.1"/>
+    <polygon class="cls-12" points="223.8 271.79 28.63 271.8 7.56 213.34 197.67 213.34 223.8 271.79"/>
+    <polygon class="cls-7" points="223.65 271.49 28.93 271.49 7.83 213.13 197.57 213.13 223.65 271.49"/>
+    <polygon class="cls-56" points="223.49 271.18 29.22 271.18 8.1 212.93 197.48 212.92 223.49 271.18"/>
+    <polygon class="cls-30" points="223.34 270.88 29.52 270.88 8.36 212.72 197.38 212.72 223.34 270.88"/>
+    <polygon class="cls-67" points="223.18 270.57 29.81 270.57 8.63 212.51 197.29 212.51 223.18 270.57"/>
+    <polygon class="cls-58" points="223.03 270.27 30.11 270.27 8.9 212.3 197.19 212.3 223.03 270.27"/>
+    <polygon class="cls-48" points="222.87 269.96 30.4 269.96 9.17 212.09 197.1 212.09 222.87 269.96"/>
+    <polygon class="cls-16" points="222.72 269.66 30.69 269.66 9.44 211.89 197 211.88 222.72 269.66"/>
+    <polygon class="cls-23" points="222.56 269.35 30.99 269.35 9.71 211.68 196.91 211.68 222.56 269.35"/>
+    <polygon class="cls-25" points="222.41 269.04 31.28 269.05 9.98 211.47 196.81 211.47 222.41 269.04"/>
+    <polygon class="cls-76" points="222.25 268.74 31.58 268.74 10.25 211.26 196.72 211.26 222.25 268.74"/>
+    <polygon class="cls-69" points="222.1 268.43 31.87 268.43 10.51 211.05 196.62 211.05 222.1 268.43"/>
+    <polygon class="cls-28" points="221.94 268.13 32.17 268.13 10.78 210.85 196.53 210.84 221.94 268.13"/>
+    <polygon class="cls-51" points="221.79 267.82 32.46 267.82 11.05 210.64 196.43 210.64 221.79 267.82"/>
+    <polygon class="cls-70" points="221.63 267.52 32.76 267.52 11.32 210.43 196.34 210.43 221.63 267.52"/>
+    <polygon class="cls-2" points="221.48 267.21 33.05 267.21 11.59 210.22 196.24 210.22 221.48 267.21"/>
+    <polygon class="cls-36" points="221.32 266.91 33.34 266.91 11.86 210.01 196.15 210.01 221.32 266.91"/>
+    <polygon class="cls-4" points="221.16 266.6 33.64 266.6 12.13 209.81 196.05 209.8 221.16 266.6"/>
+    <polygon class="cls-18" points="221.01 266.29 33.93 266.3 12.4 209.6 195.96 209.6 221.01 266.29"/>
+    <polygon class="cls-10" points="220.85 265.99 34.23 265.99 12.67 209.39 195.86 209.39 220.85 265.99"/>
+    <polygon class="cls-54" points="220.7 265.68 34.52 265.68 12.93 209.18 195.77 209.18 220.7 265.68"/>
+    <polygon class="cls-6" points="220.54 265.38 34.82 265.38 13.2 208.97 195.67 208.97 220.54 265.38"/>
+    <polygon class="cls-43" points="220.39 265.07 35.11 265.07 13.47 208.77 195.58 208.76 220.39 265.07"/>
+    <polygon class="cls-65" points="220.23 264.77 35.4 264.77 13.74 208.56 195.48 208.56 220.23 264.77"/>
+    <polygon class="cls-50" points="220.08 264.46 35.7 264.46 14.01 208.35 195.39 208.35 220.08 264.46"/>
+    <polygon class="cls-77" points="219.92 264.16 35.99 264.16 14.28 208.14 195.29 208.14 219.92 264.16"/>
+    <polygon class="cls-34" points="219.77 263.85 36.29 263.85 14.55 207.93 195.2 207.93 219.77 263.85"/>
+    <polygon class="cls-49" points="219.61 263.54 36.58 263.55 14.82 207.73 195.1 207.72 219.61 263.54"/>
+    <polygon class="cls-71" points="219.46 263.24 36.88 263.24 15.08 207.52 195.01 207.52 219.46 263.24"/>
+    <polygon class="cls-72" points="219.3 262.93 37.17 262.93 15.35 207.31 194.91 207.31 219.3 262.93"/>
+    <polygon class="cls-31" points="219.15 262.63 37.47 262.63 15.62 207.1 194.82 207.1 219.15 262.63"/>
+    <polygon class="cls-3" points="218.99 262.32 37.76 262.32 15.89 206.89 194.72 206.89 218.99 262.32"/>
+    <polygon class="cls-22" points="218.84 262.02 38.05 262.02 16.16 206.69 194.63 206.68 218.84 262.02"/>
+    <polygon class="cls-45" points="218.68 261.71 38.35 261.71 16.43 206.48 194.53 206.48 218.68 261.71"/>
+    <polygon class="cls-32" points="218.53 261.41 38.64 261.41 16.7 206.27 194.44 206.27 218.53 261.41"/>
+    <polygon class="cls-44" points="218.37 261.1 38.94 261.1 16.97 206.06 194.34 206.06 218.37 261.1"/>
+    <polygon class="cls-47" points="218.22 260.79 39.23 260.8 17.24 205.85 194.25 205.85 218.22 260.79"/>
+    <polygon class="cls-5" points="218.06 260.49 39.53 260.49 17.5 205.65 194.15 205.65 218.06 260.49"/>
+    <polygon class="cls-20" points="217.91 260.18 39.82 260.18 17.77 205.44 194.06 205.44 217.91 260.18"/>
+    <polygon class="cls-33" points="217.75 259.88 40.11 259.88 18.04 205.23 193.96 205.23 217.75 259.88"/>
+    <polygon class="cls-40" points="217.59 259.57 40.41 259.57 18.31 205.02 193.87 205.02 217.59 259.57"/>
+    <polygon class="cls-35" points="217.44 259.27 40.7 259.27 18.58 204.81 193.77 204.81 217.44 259.27"/>
+    <polygon class="cls-75" points="217.28 258.96 41 258.96 18.85 204.61 193.68 204.61 217.28 258.96"/>
+    <polygon class="cls-62" points="217.13 258.66 41.29 258.66 19.12 204.4 193.58 204.4 217.13 258.66"/>
+    <polygon class="cls-29" points="216.97 258.35 41.59 258.35 19.39 204.19 193.49 204.19 216.97 258.35"/>
+    <polygon class="cls-24" points="216.82 258.04 41.88 258.05 19.66 203.98 193.39 203.98 216.82 258.04"/>
+    <polygon class="cls-66" points="216.66 257.74 42.17 257.74 19.92 203.77 193.3 203.77 216.66 257.74"/>
+    <polygon class="cls-26" points="216.51 257.43 42.47 257.43 20.19 203.57 193.2 203.57 216.51 257.43"/>
+    <polygon class="cls-38" points="216.35 257.13 42.76 257.13 20.46 203.36 193.11 203.36 216.35 257.13"/>
+    <polygon class="cls-52" points="216.2 256.82 43.06 256.82 20.73 203.15 193.01 203.15 216.2 256.82"/>
+    <polygon class="cls-53" points="216.04 256.52 43.35 256.52 21 202.94 192.92 202.94 216.04 256.52"/>
+    <polygon class="cls-17" points="215.89 256.21 43.65 256.21 21.27 202.73 192.82 202.73 215.89 256.21"/>
+    <polygon class="cls-9" points="215.73 255.91 43.94 255.91 21.54 202.53 192.73 202.53 215.73 255.91"/>
+    <polygon class="cls-21" points="215.58 255.6 44.24 255.6 21.81 202.32 192.63 202.32 215.58 255.6"/>
+    <polygon class="cls-8" points="215.42 255.29 44.53 255.3 22.07 202.11 192.54 202.11 215.42 255.29"/>
+    <polygon class="cls-63" points="215.27 254.99 44.82 254.99 22.34 201.9 192.44 201.9 215.27 254.99"/>
+    <polygon class="cls-39" points="215.11 254.68 45.12 254.68 22.61 201.69 192.35 201.69 215.11 254.68"/>
+    <polygon class="cls-11" points="214.96 254.38 45.41 254.38 22.88 201.49 192.25 201.49 214.96 254.38"/>
+    <polygon class="cls-68" points="214.8 254.07 45.71 254.07 23.15 201.28 192.16 201.28 214.8 254.07"/>
+    <polygon class="cls-60" points="214.65 253.77 46 253.77 23.42 201.07 192.06 201.07 214.65 253.77"/>
+  </g>
+  <rect class="cls-74" x="149.97" y="171.7" width="41.01" height="66.79" rx="2.71" ry="2.71"/>
+  <polygon class="cls-74" points="149.97 238.49 135 209.45 135 142.67 149.97 171.7 149.97 238.49"/>
+  <polygon class="cls-74" points="181.52 144.43 157.43 144.43 149.97 171.7 190.98 171.7 181.52 144.43"/>
+  <polygon class="cls-74" points="135 142.67 149.97 171.7 157.43 144.43 147.63 133.38 135 142.67"/>
+  <path class="cls-73" d="M147.98,133.76c11.78-9.33,27.41-24.82,27.41-35.37s-17.62-31.08-37.53-31.08v-13.75c14.14,0,53.12,11.03,53.12,44.01,0,18.04-18.92,36.2-18.92,36.2l-14.63,10.68-9.45-10.68Z"/>
+  <path class="cls-73" d="M157.43,144.43c11.78-10.59,27.59-23.51,27.41-40.16s-25.18-36.05-45.09-36.05v-15.61c14.14,0,60.68,13.29,60.68,50.72,0,20.48-18.92,41.09-18.92,41.09"/>
+  <g>
+    <g>
+      <ellipse class="cls-57" cx="109.28" cy="126.34" rx="3.84" ry="1.38"/>
+      <path class="cls-14" d="M114.14,125.06c-.83.45-2.64,1.29-5.07,1.29s-4.24-.84-5.07-1.29v-25.45h10.14v25.45Z"/>
+    </g>
+    <g>
+      <ellipse class="cls-41" cx="76.74" cy="117.69" rx="1.38" ry="3.84" transform="translate(-63.75 118.63) rotate(-57.28)"/>
+      <path class="cls-13" d="M81.52,119.23c-.94-.07-2.92-.34-4.96-1.66s-3.11-2.99-3.57-3.82c4.59-7.14,9.17-14.27,13.76-21.41l8.53,5.48-13.76,21.41Z"/>
+    </g>
+    <g>
+      <ellipse class="cls-42" cx="95.87" cy="126.52" rx="1.38" ry="3.84" transform="translate(-47.09 195.52) rotate(-78.61)"/>
+      <path class="cls-15" d="M100.88,126.22c-.91.28-2.84.74-5.23.26s-3.99-1.66-4.72-2.26c1.67-8.32,3.35-16.63,5.02-24.95l9.94,2-5.02,24.95Z"/>
+    </g>
+    <path class="cls-46" d="M127.61,95.16c-1.8,6.87-13.71,9.7-26.61,6.32-12.9-3.38-21.89-11.69-20.09-18.55"/>
+    <ellipse class="cls-55" cx="104.8" cy="87.95" rx="4.08" ry="24.12" transform="translate(-6.83 167.04) rotate(-75.32)"/>
+  </g>
+  <g>
+    <path class="cls-19" d="M131.02,191.62c-1.48-.37-15.03-3.63-31.37-2.39-6.96.53-11.7,1.66-14.25,2.39v36.65s0,0,0,0h0c0,3.12,10.21,5.64,22.81,5.64s22.81-2.53,22.81-5.64c0,0,0,0,0,0v-36.65Z"/>
+    <ellipse class="cls-19" cx="108.21" cy="194.09" rx="22.81" ry="5.64"/>
+    <ellipse class="cls-59" cx="108.21" cy="194.09" rx="11.41" ry="2.82"/>
+  </g>
+  <g>
+    <path class="cls-78" d="M161.84,9.71l-35.77,30.21,10.83,12.82,35.77-30.21c0-.72-.02-7.22-5.11-10.79-2.16-1.52-4.4-1.92-5.72-2.03Z"/>
+    <path class="cls-64" d="M151.39,18.53l-25.32,21.39,10.83,12.82,25.32-21.39c-.1-.63-1.06-6.34-5.79-10.21-2.01-1.65-3.92-2.32-5.03-2.61Z"/>
+  </g>
+  <g>
+    <path class="cls-74" d="M86.28,58.28v21.86c0,3.87,11.97,7,26.74,7s26.74-3.14,26.74-7v-21.86h-53.48Z"/>
+    <path class="cls-74" d="M139.76,58.28c0-9.23-8.46-20.9-15.61-24.66h-22.26c-7.15,3.76-15.61,15.43-15.61,24.66h0c0,3.87,11.97,7,26.74,7s26.74-3.14,26.74-7h0Z"/>
+    <ellipse class="cls-74" cx="113.02" cy="34.8" rx="12.06" ry="3.04"/>
+  </g>
+  <g>
+    <path class="cls-61" d="M151.92,180.21h-72.07c-1.04,0-2.01-.53-2.56-1.41l-19.92-31.47c-1.28-2.02.17-4.66,2.56-4.66h72.07c1.04,0,2.01.53,2.56,1.41l19.92,31.47c1.28,2.02-.17,4.66-2.56,4.66Z"/>
+    <path class="cls-61" d="M151.92,179.49h-72.07c-1.04,0-2.01-.53-2.56-1.41l-19.92-31.47c-1.28-2.02.17-4.66,2.56-4.66h72.07c1.04,0,2.01.53,2.56,1.41l19.92,31.47c1.28,2.02-.17,4.66-2.56,4.66Z"/>
+    <path class="cls-61" d="M151.92,178.78h-72.07c-1.04,0-2.01-.53-2.56-1.41l-19.92-31.47c-1.28-2.02.17-4.66,2.56-4.66h72.07c1.04,0,2.01.53,2.56,1.41l19.92,31.47c1.28,2.02-.17,4.66-2.56,4.66Z"/>
+    <path class="cls-61" d="M151.92,178.07h-72.07c-1.04,0-2.01-.53-2.56-1.41l-19.92-31.47c-1.28-2.02.17-4.66,2.56-4.66h72.07c1.04,0,2.01.53,2.56,1.41l19.92,31.47c1.28,2.02-.17,4.66-2.56,4.66Z"/>
+    <path class="cls-61" d="M151.92,177.36h-72.07c-1.04,0-2.01-.53-2.56-1.41l-19.92-31.47c-1.28-2.02.17-4.66,2.56-4.66h72.07c1.04,0,2.01.53,2.56,1.41l19.92,31.47c1.28,2.02-.17,4.66-2.56,4.66Z"/>
+    <path class="cls-61" d="M151.92,176.65h-72.07c-1.04,0-2.01-.53-2.56-1.41l-19.92-31.47c-1.28-2.02.17-4.66,2.56-4.66h72.07c1.04,0,2.01.53,2.56,1.41l19.92,31.47c1.28,2.02-.17,4.66-2.56,4.66Z"/>
+    <path class="cls-61" d="M151.92,175.93h-72.07c-1.04,0-2.01-.53-2.56-1.41l-19.92-31.47c-1.28-2.02.17-4.66,2.56-4.66h72.07c1.04,0,2.01.53,2.56,1.41l19.92,31.47c1.28,2.02-.17,4.66-2.56,4.66Z"/>
+    <path class="cls-61" d="M151.92,175.22h-72.07c-1.04,0-2.01-.53-2.56-1.41l-19.92-31.47c-1.28-2.02.17-4.66,2.56-4.66h72.07c1.04,0,2.01.53,2.56,1.41l19.92,31.47c1.28,2.02-.17,4.66-2.56,4.66Z"/>
+    <path class="cls-61" d="M151.92,174.51h-72.07c-1.04,0-2.01-.53-2.56-1.41l-19.92-31.47c-1.28-2.02.17-4.66,2.56-4.66h72.07c1.04,0,2.01.53,2.56,1.41l19.92,31.47c1.28,2.02-.17,4.66-2.56,4.66Z"/>
+  </g>
+  <ellipse class="cls-59" cx="107.14" cy="152.54" rx="11.41" ry="2.82"/>
+</svg>
