@@ -93,7 +93,10 @@ function pickDecorations(tank: KuwagataShelfTank): { file: string; widthPct: num
 // （roadmap-room.tsxの部屋背景と同じ、背景レイヤーを重ねる方式）。
 function tankBgStyle(isAquarium: boolean): CSSProperties {
   const url = isAquarium ? "/roadmap/tank/tank_bg_aquarium.png" : "/roadmap/tank/tank_bg_terrarium.png";
-  const fallback = isAquarium ? "linear-gradient(to bottom, #a5f3fc, #0ea5e9)" : "#e0f2fe";
+  // background-imageのレイヤーには単色(#hexなど)を指定できない(CSS的に無効な値になり、
+  // レイヤーリスト全体が無効化されて1枚目のurl()ごと効かなくなる)ため、フォールバックは
+  // 単色ではなく必ずグラデーションにする(room_bg.pngと同じ考え方)。
+  const fallback = isAquarium ? "linear-gradient(to bottom, #a5f3fc, #0ea5e9)" : "linear-gradient(to bottom, #e0f2fe, #ffffff)";
   return { backgroundImage: `url(${url}), ${fallback}` };
 }
 
