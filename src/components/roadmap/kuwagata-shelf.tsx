@@ -210,7 +210,7 @@ function useWander(
         const facing: Facing = Math.abs(dy) >= Math.abs(dx) ? (dy >= 0 ? "front" : "back") : dx <= 0 ? "front" : "back";
         return { spot: nextSpot, facing };
       });
-      timer = setTimeout(goToNextSpot, 4600 + Math.random() * 3000);
+      timer = setTimeout(goToNextSpot, 9000 + Math.random() * 6000);
     };
 
     // 個体ごとに最初の移動タイミングをズラす(同期して動くのを防ぐ)
@@ -256,7 +256,7 @@ function WanderingCreature({
         top: `${pt.top}%`,
         width: `${widthPct}%`,
         aspectRatio: hasArt ? "1 / 1" : undefined,
-        transition: "left 4s ease-in-out, top 4s ease-in-out",
+        transition: "left 7s ease-in-out, top 7s ease-in-out",
         // 実アートは左右反転しない(反転すると脚の左右が逆になってしまうため)。
         // Bugアイコンのフォールバックのみ、個体ごとに左右反転して向きにバリエーションを出す。
         transform: mirror ? "translateX(-50%) translateY(-100%) scaleX(-1)" : "translateX(-50%) translateY(-100%)",
