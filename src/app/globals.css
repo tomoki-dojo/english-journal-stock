@@ -131,3 +131,25 @@ body {
     animation: none;
   }
 }
+
+/* クワたんの脚の歩行アニメーション。transform-originは脚ごとにinline styleで
+   個別に指定し、ここでは角度の往復だけを定義する(全パーツ共通)。 */
+@keyframes kuwagata-leg-sway {
+  0%,
+  100% {
+    transform: rotate(-9deg);
+  }
+  50% {
+    transform: rotate(9deg);
+  }
+}
+
+.animate-kuwagata-leg {
+  animation: kuwagata-leg-sway 1.1s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-kuwagata-leg {
+    animation: none;
+  }
+}

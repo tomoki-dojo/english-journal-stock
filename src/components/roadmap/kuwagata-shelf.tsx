@@ -31,12 +31,79 @@ function formatDate(iso: string): string {
   return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
 }
 
-function TankOccupant({ color, sizeScale }: { color: string; sizeScale: number }) {
+// 既知種の実アート(パーツ分解済みSVG)。brand/kuwagata-asset-spec.mdの命名規則どおり
+// public/roadmap/kuwagata/配下に置くだけで反映される。まだエークワたん(KW-0001)の
+// 正面向きしかないため、ここに無い種・向きはTankOccupantのフォールバック(Bugアイコン)になる。
+// originXPct/originYPctは各パーツの回転基準点(本体との付け根)を112×112のキャンバスに
+// 対する%で指定したもの。歩行アニメはCSSのtransform-origin+animate-kuwagata-legで実現する。
+const KUWAGATA_ART_DIR = "/roadmap/kuwagata";
+
+type CreaturePartArt = { src: string; originXPct: number; originYPct: number; delay: string };
+
+type KnownCreatureArt = {
+  body: string;
+  mandible: string;
+  legsL: CreaturePartArt[];
+  legR: CreaturePartArt;
+};
+
+const KNOWN_CREATURE_ART: Partial<Record<string, KnownCreatureArt>> = {
+  "KW-0001": {
+    body: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_body.svg`,
+    mandible: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_mandible_01.svg`,
+    legsL: [
+      { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_leg_L1.svg`, originXPct: 59.5, originYPct: 69.6, delay: "0s" },
+      { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_leg_L2.svg`, originXPct: 67.9, originYPct: 65.9, delay: "-0.15s" },
+      { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_leg_L3.svg`, originXPct: 74.7, originYPct: 62.1, delay: "-0.3s" },
+    ],
+    legR: { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_leg_R1.svg`, originXPct: 17.1, originYPct: 64.1, delay: "-0.55s" },
+  },
+};
+
+// 実アートがある種だけ、パーツを重ねた正方形スプライトを描画する(無ければnullを返し、
+// 呼び出し側がBugアイコンにフォールバックする)。描画順は奥から「脚→本体→大顎」。
+// 脚は本体の下に回り込む形で接合点が隠れるようにし、大顎は一番手前に重ねる。
+function KnownCreatureSprite({ code }: { code: string }) {
+  const art = KNOWN_CREATURE_ART[code];
+  if (!art) return null;
+
+  return (
+    <div className="relative h-full w-full">
+      {art.legsL.map((leg, i) => (
+        <img
+          key={`l${i}`}
+          src={leg.src}
+          alt=""
+          className="absolute inset-0 h-full w-full animate-kuwagata-leg"
+          style={{ transformOrigin: `${leg.originXPct}% ${leg.originYPct}%`, animationDelay: leg.delay }}
+        />
+      ))}
+      <img
+        src={art.legR.src}
+        alt=""
+        className="absolute inset-0 h-full w-full animate-kuwagata-leg"
+        style={{ transformOrigin: `${art.legR.originXPct}% ${art.legR.originYPct}%`, animationDelay: art.legR.delay }}
+      />
+      <img src={art.body} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />
+      <img src={art.mandible} alt="" className="absolute inset-0 h-full w-full" />
+    </div>
+  );
+}
+
+function TankOccupant({ color, sizeScale, speciesCode }: { color: string; sizeScale: number; speciesCode?: string }) {
   const basePx = 28;
+  const px = basePx * sizeScale;
+  if (speciesCode && KNOWN_CREATURE_ART[speciesCode]) {
+    return (
+      <div style={{ width: px, height: px }}>
+        <KnownCreatureSprite code={speciesCode} />
+      </div>
+    );
+  }
   return (
     <Bug
       className="drop-shadow-sm"
-      style={{ color, width: basePx * sizeScale, height: basePx * sizeScale }}
+      style={{ color, width: px, height: px }}
       strokeWidth={1.75}
     />
   );
@@ -178,6 +245,7 @@ function EnlargedTankVisual({ tank, color }: { tank: KuwagataShelfTank; color: s
         const spot = CREATURE_SPOTS[index % CREATURE_SPOTS.length];
         const pt = surfacePoint(spot.u, spot.v);
         const widthPct = creatureWidthPct(individual.sizeScale);
+        const hasArt = Boolean(KNOWN_CREATURE_ART[individual.speciesCode]);
         return (
           <div
             key={individual.id}
@@ -186,10 +254,17 @@ function EnlargedTankVisual({ tank, color }: { tank: KuwagataShelfTank; color: s
               left: `${pt.left}%`,
               top: `${pt.top}%`,
               width: `${widthPct}%`,
-              transform: index % 2 === 1 ? "translateX(-50%) translateY(-100%) scaleX(-1)" : "translateX(-50%) translateY(-100%)",
+              aspectRatio: hasArt ? "1 / 1" : undefined,
+              // 実アートは正面向き固定(反転すると脚の左右が逆になってしまうため)。
+              // Bugアイコンのフォールバックのみ、個体ごとに左右反転して向きにバリエーションを出す。
+              transform: !hasArt && index % 2 === 1 ? "translateX(-50%) translateY(-100%) scaleX(-1)" : "translateX(-50%) translateY(-100%)",
             }}
           >
-            <Bug className="block w-full h-auto drop-shadow-sm" style={{ color }} strokeWidth={1.75} />
+            {hasArt ? (
+              <KnownCreatureSprite code={individual.speciesCode} />
+            ) : (
+              <Bug className="block w-full h-auto drop-shadow-sm" style={{ color }} strokeWidth={1.75} />
+            )}
           </div>
         );
       })}
@@ -229,7 +304,12 @@ export function KuwagataShelf({
         >
           <div className="flex -space-x-2">
             {knownShowcase.individuals.slice(0, 5).map((individual) => (
-              <TankOccupant key={individual.id} color={KNOWN_SPECIES_COLOR} sizeScale={individual.sizeScale * 0.8} />
+              <TankOccupant
+                key={individual.id}
+                color={KNOWN_SPECIES_COLOR}
+                sizeScale={individual.sizeScale * 0.8}
+                speciesCode={individual.speciesCode}
+              />
             ))}
           </div>
           <div className="flex flex-col">
@@ -256,7 +336,7 @@ export function KuwagataShelf({
               }`}
             >
               <span className="text-[10px] font-medium text-zinc-400">棚{tank.tankNumber}</span>
-              <TankOccupant color={color} sizeScale={representative.sizeScale} />
+              <TankOccupant color={color} sizeScale={representative.sizeScale} speciesCode={representative.speciesCode} />
               <span className="text-xs font-semibold text-zinc-700">{tank.speciesName}</span>
               <span className="text-[10px] text-zinc-400">
                 {tank.individuals.length > 1 ? `${tank.individuals.length}匹` : GROWTH_STAGE_LABEL[representative.growthStage]}
@@ -299,7 +379,11 @@ export function KuwagataShelf({
                   key={individual.id}
                   className="flex items-center gap-3 rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2"
                 >
-                  <TankOccupant color={tankColor(selectedTank)} sizeScale={individual.sizeScale} />
+                  <TankOccupant
+                    color={tankColor(selectedTank)}
+                    sizeScale={individual.sizeScale}
+                    speciesCode={individual.speciesCode}
+                  />
                   <div className="flex flex-col text-xs text-zinc-600">
                     <span className="font-semibold text-zinc-800">
                       {selectedTank.speciesKind === "known"

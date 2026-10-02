@@ -54,6 +54,7 @@ export type KuwagataSpecies = {
 export type KuwagataIndividual = {
   id: string;
   speciesId: string;
+  speciesCode: string;
   speciesName: string;
   speciesKind: "known" | "new";
   speciesRarity: KuwagataRarity;
@@ -224,7 +225,7 @@ export async function getUserKuwagataIndividuals(userId: string): Promise<Kuwaga
   const { data, error } = await supabaseAdmin
     .from("kuwagata_individuals")
     .select(
-      "id, species_id, obtained_via, obtained_at, size_scale, mandible_variant, hatched_at, kuwagata_species(name, kind, rarity, area_code)"
+      "id, species_id, obtained_via, obtained_at, size_scale, mandible_variant, hatched_at, kuwagata_species(code, name, kind, rarity, area_code)"
     )
     .eq("user_id", userId)
     .order("obtained_at", { ascending: true });
@@ -235,6 +236,7 @@ export async function getUserKuwagataIndividuals(userId: string): Promise<Kuwaga
 
   return (data ?? []).map((row) => {
     const species = row.kuwagata_species as unknown as {
+      code: string;
       name: string;
       kind: string;
       rarity: string;
@@ -243,6 +245,7 @@ export async function getUserKuwagataIndividuals(userId: string): Promise<Kuwaga
     return {
       id: row.id as string,
       speciesId: row.species_id as string,
+      speciesCode: species?.code ?? "",
       speciesName: species?.name ?? "不明な種",
       speciesKind: (species?.kind as KuwagataIndividual["speciesKind"]) ?? "new",
       speciesRarity: (species?.rarity as KuwagataRarity) ?? "コモン",
