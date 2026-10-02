@@ -81,11 +81,13 @@
 | 状態 | 必要な絵 | 制作解像度 |
 | --- | --- | --- |
 | 卵 | 静止画1枚（向き・脚なし） | 112px角 |
-| 幼虫 | 前向き/後ろ向き2枚（脚6本、歩行アニメーション対象） | 112px角 |
+| 幼虫 | 体節3パーツ（頭・胴体前半・胴体後半）、向きは1種類のみ。くねりアニメーション対象 | 112px角 |
 | 蛹 | 静止画1枚（向き・脚なし） | 112px角 |
 | 成虫 | 既存の既知種パーツ構成どおり（本体・大顎・脚6本・前後向き） | 112px角 |
 
-ファイル名：`kuwagata_[code]_egg.svg` / `kuwagata_[code]_larva_[front|back].svg` / `kuwagata_[code]_pupa.svg`（`[code]`はKW-0001などの種コード）。幼虫の脚アンカー基準は下記「脚・羽根のアンカー基準」に準拠。
+ファイル名：`kuwagata_[code]_egg.svg` / `kuwagata_[code]_larva_head.svg` / `kuwagata_[code]_larva_body_front.svg` / `kuwagata_[code]_larva_body_rear.svg` / `kuwagata_[code]_pupa.svg`（`[code]`はKW-0001などの種コード）。
+
+幼虫は見た目上、前向き/後ろ向きの描き分けがほぼ不可能なため1方向のみ（成虫のような`facing`切り替えはしない）。一方で「このアプリ内では幼虫も地上に出ている」という世界観に合わせ、成虫と同じくセーフティゾーン内をゆっくり歩き回らせる（`WanderingCreature`/`useWander`をそのまま再利用し、脚の代わりに体節を動かす想定）。脚のように歩行で前後移動させるのではなく、頭→胴体前半→胴体後半の順に少しずつ位相をずらして回転させる「くねり」アニメーションで表現する（脚の`kuwagata-leg-sway`と同じ仕組みを体節に転用）。
 
 テッペンクワたんはStage5解放時に卵で入手→卒業時に強制的に成虫へ羽化する特別演出があるが、絵の必要数は他の既知種と同じ4状態（卒業前に蛹の状態を経由して見せるかはUI実装側の判断、タスク#261でまとめて対応）。
 
@@ -99,6 +101,7 @@
   - 歩行時は左脚3本と右脚1本を逆位相（片方が前に出ている間、もう片方は後ろ）で角度を振り、左脚3本の間にも少しタイミングをずらして自然さを出す想定
 - **羽根**：同様に、本体との付け根を羽根レイヤーの回転基準点に合わせる。羽ばたきは開閉（角度を往復）で表現する想定
 - **大顎（既知種のみ）**：個体差バリエーションとしてパーツ単位で複数パターン用意し、丸ごと差し替える方式（アニメーションの対象ではない）
+- **幼虫の体節**：頭・胴体前半・胴体後半の3パーツに分け、それぞれの付け根（隣の体節との境目）を回転基準点にする。脚と同じく個別の`<img>`として重ね、頭→前半→後半の順にタイミングをずらして回転させることで「くねり」を表現する
 
 ## ファイル命名規則（案）
 
@@ -108,6 +111,12 @@ kuwagata_[code]_[front|back]_mandible_[n].svg  例: kuwagata_KW-0001_front_mandi
 kuwagata_[code]_[front|back]_leg_L[1-3].svg    左脚3本(それぞれ別ファイル)
 kuwagata_[code]_[front|back]_leg_R.svg         右脚(見えている1本のみ)
 kuwagata_[code]_[front|back]_wing_[L|R].svg    （飛ぶ系の新種のみ）
+
+kuwagata_[code]_egg.svg                         卵（既知種のみ、静止画）
+kuwagata_[code]_larva_head.svg                  幼虫・頭（既知種のみ、向き1種類）
+kuwagata_[code]_larva_body_front.svg            幼虫・胴体前半
+kuwagata_[code]_larva_body_rear.svg             幼虫・胴体後半
+kuwagata_[code]_pupa.svg                        蛹（既知種のみ、静止画）
 
 room_bg.png                                     部屋の背景（道具を載せる床・机面を含む）
 room_item_[search|container|spraycan|thermometer|pipette|microscope].svg   Stage0〜5の道具（散らばる小物として1個ずつ）
