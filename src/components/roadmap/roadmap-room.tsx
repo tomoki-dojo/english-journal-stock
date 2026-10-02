@@ -80,14 +80,14 @@ const STAGE_NUMBERS: StageNumber[] = [1, 2, 3, 4, 5];
 type ItemPlacement = { left: number; top: number; rotate: number; widthPct: number };
 
 const ITEM_PLACEMENT: Record<string, ItemPlacement> = {
-  stage0: { left: 12, top: 14, rotate: -8, widthPct: 11 },
-  stage1: { left: 52, top: 10, rotate: 6, widthPct: 18 },
-  stage2: { left: 85, top: 26, rotate: -5, widthPct: 7 },
-  stage3: { left: 18, top: 46, rotate: 7, widthPct: 8 },
-  stage4: { left: 50, top: 52, rotate: -9, widthPct: 7 },
-  stage5: { left: 82, top: 58, rotate: 4, widthPct: 11 },
-  board: { left: 22, top: 80, rotate: -4, widthPct: 30 },
-  shelf: { left: 68, top: 84, rotate: 5, widthPct: 16 },
+  stage0: { left: 22, top: 82, rotate: -8, widthPct: 11 },
+  stage1: { left: 64, top: 79, rotate: 6, widthPct: 18 },
+  stage2: { left: 20, top: 57, rotate: -5, widthPct: 7 },
+  stage3: { left: 62, top: 22, rotate: 7, widthPct: 8 },
+  stage4: { left: 39, top: 70, rotate: -9, widthPct: 7 },
+  stage5: { left: 53, top: 52, rotate: 4, widthPct: 11 },
+  board: { left: 25, top: 23, rotate: -4, widthPct: 30 },
+  shelf: { left: 90, top: 57, rotate: 5, widthPct: 16 },
 };
 
 type RoadmapRoomProps = {
