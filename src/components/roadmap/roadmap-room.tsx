@@ -77,19 +77,28 @@ const STAGE_NUMBERS: StageNumber[] = [1, 2, 3, 4, 5];
 // 追従（object-contain）するので、widthPctだけ合わせればよい。
 // 値はユーザーが描いた部屋背景の下書きから実測した比率を初期値にしている
 // （実イラスト差し替え時に微調整する前提。ロック中は従来通り固定48px丸バッジ表示のまま）。
-type ItemPlacement = { left: number; top: number; rotate: number; widthPct: number };
+// labelPositionは"below"（デフォルト、画像の下端に少し重ねる）か
+// "center"（画像の中央に完全に重ねる。棚のような縦長アイテム向け）。
+type ItemPlacement = {
+  left: number;
+  top: number;
+  rotate: number;
+  widthPct: number;
+  labelPosition?: "below" | "center";
+};
 
 const ITEM_PLACEMENT: Record<string, ItemPlacement> = {
-  stage0: { left: 22, top: 82, rotate: 0, widthPct: 11 },
-  stage1: { left: 64, top: 79, rotate: 0, widthPct: 18 },
-  stage2: { left: 20, top: 57, rotate: 0, widthPct: 10 },
-  stage3: { left: 62, top: 22, rotate: 0, widthPct: 11 },
-  stage4: { left: 39, top: 70, rotate: 0, widthPct: 10 },
-  stage5: { left: 53, top: 52, rotate: 0, widthPct: 11 },
-  board: { left: 25, top: 23, rotate: 0, widthPct: 33 },
-  // 棚は一回り大きくして右下ギリギリに寄せる。縦長の原画（widthPct基準で高さが
-  // 部屋の高さの8割近くになる）なので、topは中心ではなく「床に接地する」位置を逆算している。
-  shelf: { left: 92, top: 59, rotate: 0, widthPct: 20 },
+  stage0: { left: 22, top: 82, rotate: 0, widthPct: 13 },
+  stage1: { left: 64, top: 79, rotate: 0, widthPct: 21 },
+  stage2: { left: 20, top: 57, rotate: 0, widthPct: 12 },
+  stage3: { left: 62, top: 22, rotate: 0, widthPct: 13 },
+  stage4: { left: 39, top: 70, rotate: 0, widthPct: 12 },
+  // 机面に接地して見えるよう、widthPct拡大に合わせてtopも下げて調整
+  stage5: { left: 53, top: 56, rotate: 0, widthPct: 13 },
+  board: { left: 25, top: 23, rotate: 0, widthPct: 36 },
+  // 棚は一回り大きくして、画像自体をほぼ床に接地するまで下げる。
+  // ラベルは画像下端ではなく中央に完全に重ねる表示にする。
+  shelf: { left: 92, top: 64, rotate: 0, widthPct: 22, labelPosition: "center" },
 };
 
 type RoadmapRoomProps = {
@@ -133,23 +142,39 @@ function StageCase({
   // アート未制作でlucideアイコンのまま）は、従来通り固定48pxの丸バッジ表示。
   const showRealArt = !locked && imageSrc;
 
-  const content = showRealArt ? (
-    <div className="flex flex-col items-center">
-      <div
-        style={{ transform: `rotate(${placement.rotate}deg)`, width: "100%" }}
-        className="transition-transform hover:scale-105 active:scale-95"
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element -- 任意形状・任意サイズの自前アートなのでnext/imageの固定枠は使わない */}
-        <img src={imageSrc} alt="" className="block w-full object-contain drop-shadow-md" />
-      </div>
-      {/* ラベルをアイテムに少し重ねつつ、どんな背景の上でも読めるよう白地の「座布団」を敷く */}
-      <span
-        className="-mt-2 whitespace-nowrap rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-semibold shadow-sm"
-        style={{ color }}
-      >
-        {label}
-      </span>
+  // ラベルは半透明の白ピル（「座布団」）を敷いて、どんな背景の上でも読めるようにする。
+  // 画像より手前（DOM順で後＝視覚的に上）に重ねるが、座布団自体は透かして背景の絵を感じられる程度の濃さにする。
+  const labelEl = (
+    <span
+      className="whitespace-nowrap rounded-full bg-white/50 px-2 py-0.5 text-[10px] font-semibold shadow-sm backdrop-blur-[1px]"
+      style={{ color }}
+    >
+      {label}
+    </span>
+  );
+
+  const itemImage = (
+    <div
+      style={{ transform: `rotate(${placement.rotate}deg)`, width: "100%" }}
+      className="transition-transform hover:scale-105 active:scale-95"
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element -- 任意形状・任意サイズの自前アートなのでnext/imageの固定枠は使わない */}
+      <img src={imageSrc ?? undefined} alt="" className="block w-full object-contain drop-shadow-md" />
     </div>
+  );
+
+  const content = showRealArt ? (
+    placement.labelPosition === "center" ? (
+      <div className="relative" style={{ width: "100%" }}>
+        {itemImage}
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">{labelEl}</div>
+      </div>
+    ) : (
+      <div className="flex flex-col items-center">
+        {itemImage}
+        <div className="-mt-3">{labelEl}</div>
+      </div>
+    )
   ) : (
     <div className="flex flex-col items-center gap-1">
       <div
