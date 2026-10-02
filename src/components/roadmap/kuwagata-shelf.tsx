@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { Bug, X } from "lucide-react";
 import type { KuwagataShelfTank } from "@/lib/supabase/kuwagata";
 
@@ -151,6 +151,84 @@ const CREATURE_SPOTS: { u: number; v: number }[] = [
   { u: 0.66, v: 0.64 },
 ];
 
+// セーフティゾーン内(u,v = 0.28〜0.72)をランダムに歩き回らせるためのフック。
+// 一定間隔で次の目的地(u,v)を決め、CSSのtransition(left/top)でそこへなめらかに
+// 移動させる。個体ごとにinitial delayをズラしているので、同じ水槽内の複数匹が
+// 同時に動き出さず自然に見える。
+function useWander(seedKey: string, initial: { u: number; v: number }): { u: number; v: number } {
+  const [spot, setSpot] = useState(initial);
+
+  useEffect(() => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+
+    const goToNextSpot = () => {
+      if (cancelled) return;
+      setSpot({
+        u: 0.28 + Math.random() * 0.44,
+        v: 0.28 + Math.random() * 0.44,
+      });
+      timer = setTimeout(goToNextSpot, 2600 + Math.random() * 2400);
+    };
+
+    // 個体ごとに最初の移動タイミングをズラす(同期して動くのを防ぐ)
+    const firstDelay = 400 + (hashHue(seedKey) % 2200);
+    timer = setTimeout(goToNextSpot, firstDelay);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [seedKey]);
+
+  return spot;
+}
+
+// 実際に歩き回るクワたん1匹分。位置(u,v)はuseWanderで時間とともに変化し、
+// 見た目(脚・本体のアニメ)はKnownCreatureSprite/Bugアイコン側が担当する。
+function WanderingCreature({
+  seedKey,
+  initialSpot,
+  widthPct,
+  hasArt,
+  speciesCode,
+  color,
+  mirror,
+}: {
+  seedKey: string;
+  initialSpot: { u: number; v: number };
+  widthPct: number;
+  hasArt: boolean;
+  speciesCode: string;
+  color: string;
+  mirror: boolean;
+}) {
+  const spot = useWander(seedKey, initialSpot);
+  const pt = surfacePoint(spot.u, spot.v);
+
+  return (
+    <div
+      className="absolute -translate-y-full"
+      style={{
+        left: `${pt.left}%`,
+        top: `${pt.top}%`,
+        width: `${widthPct}%`,
+        aspectRatio: hasArt ? "1 / 1" : undefined,
+        transition: "left 2.4s ease-in-out, top 2.4s ease-in-out",
+        // 実アートは正面向き固定(反転すると脚の左右が逆になってしまうため)。
+        // Bugアイコンのフォールバックのみ、個体ごとに左右反転して向きにバリエーションを出す。
+        transform: mirror ? "translateX(-50%) translateY(-100%) scaleX(-1)" : "translateX(-50%) translateY(-100%)",
+      }}
+    >
+      {hasArt ? (
+        <KnownCreatureSprite code={speciesCode} />
+      ) : (
+        <Bug className="block w-full h-auto drop-shadow-sm" style={{ color }} strokeWidth={1.75} />
+      )}
+    </div>
+  );
+}
+
 const DECORATION_SPOTS: { u: number; v: number }[] = [
   { u: 0.3, v: 0.68 },
   { u: 0.7, v: 0.3 },
@@ -246,30 +324,20 @@ function EnlargedTankVisual({ tank, color }: { tank: KuwagataShelfTank; color: s
             </div>
           );
         }
-        const spot = CREATURE_SPOTS[index % CREATURE_SPOTS.length];
-        const pt = surfacePoint(spot.u, spot.v);
+        const initialSpot = CREATURE_SPOTS[index % CREATURE_SPOTS.length];
         const widthPct = creatureWidthPct(individual.sizeScale);
         const hasArt = Boolean(KNOWN_CREATURE_ART[individual.speciesCode]);
         return (
-          <div
+          <WanderingCreature
             key={individual.id}
-            className="absolute -translate-y-full"
-            style={{
-              left: `${pt.left}%`,
-              top: `${pt.top}%`,
-              width: `${widthPct}%`,
-              aspectRatio: hasArt ? "1 / 1" : undefined,
-              // 実アートは正面向き固定(反転すると脚の左右が逆になってしまうため)。
-              // Bugアイコンのフォールバックのみ、個体ごとに左右反転して向きにバリエーションを出す。
-              transform: !hasArt && index % 2 === 1 ? "translateX(-50%) translateY(-100%) scaleX(-1)" : "translateX(-50%) translateY(-100%)",
-            }}
-          >
-            {hasArt ? (
-              <KnownCreatureSprite code={individual.speciesCode} />
-            ) : (
-              <Bug className="block w-full h-auto drop-shadow-sm" style={{ color }} strokeWidth={1.75} />
-            )}
-          </div>
+            seedKey={individual.id}
+            initialSpot={initialSpot}
+            widthPct={widthPct}
+            hasArt={hasArt}
+            speciesCode={individual.speciesCode}
+            color={color}
+            mirror={!hasArt && index % 2 === 1}
+          />
         );
       })}
     </div>
