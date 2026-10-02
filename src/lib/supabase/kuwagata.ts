@@ -28,7 +28,7 @@ const KNOWN_SHOWCASE_SPECIES_ID = "known-showcase";
 const SIZE_SCALE_MIN = 0.8;
 const SIZE_SCALE_MAX = 1.3;
 
-const MANDIBLE_VARIANT_COUNT = 1;
+const MANDIBLE_VARIANT_COUNT = 3;
 
 export type KuwagataRarity = "コモン" | "レア" | "激レア";
 

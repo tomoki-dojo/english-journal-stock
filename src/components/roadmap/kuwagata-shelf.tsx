@@ -45,8 +45,9 @@ type CreaturePartArt = { src: string; delay: string };
 
 type KnownCreatureArt = {
   body: string;
-  // 背面からは構造上ほぼ見えないはずのパーツだが、素材があれば使う(無ければ省略可)
-  mandible?: string;
+  // 背面からは構造上ほぼ見えないはずのパーツだが、素材があれば使う(無ければ省略可)。
+  // 個体ごとのmandible_variant(DBのsmallint列、1始まり)をキーにした差分バリエーション。
+  mandibles: Partial<Record<number, string>>;
   legsBehindBody: CreaturePartArt[];
   legsInFrontOfBody: CreaturePartArt[];
 };
@@ -57,7 +58,11 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0001": {
     front: {
       body: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_body.svg`,
-      mandible: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_mandible_01.svg`,
+      mandibles: {
+        1: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_mandible_01.svg`,
+        2: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_mandible_02.svg`,
+        3: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_mandible_03.svg`,
+      },
       // 奥脚(見えているのは1本のみ、他2本は本体の陰に隠れる想定で未作成)
       legsBehindBody: [{ src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_leg_R1.svg`, delay: "-0.55s" }],
       // 手前脚3本。配列の末尾(L1)が一番手前に重なる
@@ -69,7 +74,11 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
     },
     back: {
       body: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_back_body.svg`,
-      mandible: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_back_mandible_01.svg`,
+      mandibles: {
+        1: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_back_mandible_01.svg`,
+        2: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_back_mandible_02.svg`,
+        3: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_back_mandible_03.svg`,
+      },
       // 背面は3本とも本体の奥(後ろ)に重なる。配列の並び順=DOM描画順(先に描いたものほど
       // 奥)なので、一番手前に見せたいR1を配列の最後に置く(R3→R2→R1の順で描画される)
       legsBehindBody: [
@@ -88,11 +97,13 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
 // 一番外側のdivにもanimate-kuwagata-bodyを付け、脚の動きに合わせて本体全体も
 // わずかに上下するようにして「その場で歩いている」感を出す。
 // facingは歩く方向(下/左→正面、上/右→背面)から決まるが、backアートが無い種は
-// 自動でfrontにフォールバックする。
-function KnownCreatureSprite({ code, facing }: { code: string; facing: Facing }) {
+// 自動でfrontにフォールバックする。mandibleVariantは個体のmandible_variant列
+// (1始まり)で、対応するバリエーションが無ければ1番にフォールバックする。
+function KnownCreatureSprite({ code, facing, mandibleVariant }: { code: string; facing: Facing; mandibleVariant: number }) {
   const artSet = KNOWN_CREATURE_ART[code];
   const art = artSet?.[facing] ?? artSet?.front;
   if (!art) return null;
+  const mandible = art.mandibles[mandibleVariant] ?? art.mandibles[1];
 
   return (
     <div className="relative h-full w-full animate-kuwagata-body">
@@ -115,18 +126,28 @@ function KnownCreatureSprite({ code, facing }: { code: string; facing: Facing })
           style={{ animationDelay: leg.delay }}
         />
       ))}
-      {art.mandible && <img src={art.mandible} alt="" className="absolute inset-0 h-full w-full" />}
+      {mandible && <img src={mandible} alt="" className="absolute inset-0 h-full w-full" />}
     </div>
   );
 }
 
-function TankOccupant({ color, sizeScale, speciesCode }: { color: string; sizeScale: number; speciesCode?: string }) {
+function TankOccupant({
+  color,
+  sizeScale,
+  speciesCode,
+  mandibleVariant = 1,
+}: {
+  color: string;
+  sizeScale: number;
+  speciesCode?: string;
+  mandibleVariant?: number;
+}) {
   const basePx = 28;
   const px = basePx * sizeScale;
   if (speciesCode && KNOWN_CREATURE_ART[speciesCode]) {
     return (
       <div style={{ width: px, height: px }}>
-        <KnownCreatureSprite code={speciesCode} facing="front" />
+        <KnownCreatureSprite code={speciesCode} facing="front" mandibleVariant={mandibleVariant} />
       </div>
     );
   }
@@ -234,6 +255,7 @@ function WanderingCreature({
   widthPct,
   hasArt,
   speciesCode,
+  mandibleVariant,
   color,
   mirror,
 }: {
@@ -242,6 +264,7 @@ function WanderingCreature({
   widthPct: number;
   hasArt: boolean;
   speciesCode: string;
+  mandibleVariant: number;
   color: string;
   mirror: boolean;
 }) {
@@ -263,7 +286,7 @@ function WanderingCreature({
       }}
     >
       {hasArt ? (
-        <KnownCreatureSprite code={speciesCode} facing={facing} />
+        <KnownCreatureSprite code={speciesCode} facing={facing} mandibleVariant={mandibleVariant} />
       ) : (
         <Bug className="block w-full h-auto drop-shadow-sm" style={{ color }} strokeWidth={1.75} />
       )}
@@ -377,6 +400,7 @@ function EnlargedTankVisual({ tank, color }: { tank: KuwagataShelfTank; color: s
             widthPct={widthPct}
             hasArt={hasArt}
             speciesCode={individual.speciesCode}
+            mandibleVariant={individual.mandibleVariant}
             color={color}
             mirror={!hasArt && index % 2 === 1}
           />
@@ -423,6 +447,7 @@ export function KuwagataShelf({
                 color={KNOWN_SPECIES_COLOR}
                 sizeScale={individual.sizeScale * 0.8}
                 speciesCode={individual.speciesCode}
+                mandibleVariant={individual.mandibleVariant}
               />
             ))}
           </div>
@@ -450,7 +475,12 @@ export function KuwagataShelf({
               }`}
             >
               <span className="text-[10px] font-medium text-zinc-400">棚{tank.tankNumber}</span>
-              <TankOccupant color={color} sizeScale={representative.sizeScale} speciesCode={representative.speciesCode} />
+              <TankOccupant
+                color={color}
+                sizeScale={representative.sizeScale}
+                speciesCode={representative.speciesCode}
+                mandibleVariant={representative.mandibleVariant}
+              />
               <span className="text-xs font-semibold text-zinc-700">{tank.speciesName}</span>
               <span className="text-[10px] text-zinc-400">
                 {tank.individuals.length > 1 ? `${tank.individuals.length}匹` : GROWTH_STAGE_LABEL[representative.growthStage]}
@@ -497,6 +527,7 @@ export function KuwagataShelf({
                     color={tankColor(selectedTank)}
                     sizeScale={individual.sizeScale}
                     speciesCode={individual.speciesCode}
+                    mandibleVariant={individual.mandibleVariant}
                   />
                   <div className="flex flex-col text-xs text-zinc-600">
                     <span className="font-semibold text-zinc-800">
