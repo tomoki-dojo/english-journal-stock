@@ -214,7 +214,7 @@ function spriteRadius(widthPct: number): number {
   return widthPct * SPRITE_RADIUS_FACTOR;
 }
 
-const SPOT_PICK_ATTEMPTS = 20;
+const SPOT_PICK_ATTEMPTS = 30;
 
 // セーフティゾーン内(u,v = 0.28〜0.72)をランダムに歩き回らせるためのフック。
 // 一定間隔で次の目的地(u,v)を決め、CSSのtransition(left/top)でそこへゆっくり
@@ -223,9 +223,12 @@ const SPOT_PICK_ATTEMPTS = 20;
 // facing(正面/背面)も決める: 縦横どちらの移動量が大きいかで軸を選び、
 // 下 or 左に動くときは正面、上 or 右に動くときは背面。
 // decorationSpots(水槽内の置物)とpositionsRef(同じ水槽内の他個体の現在地、
-// 親コンポーネントが持つ共有ref)を避けるよう、候補地を複数回抽出して一番条件に
-// 合うものを選ぶ(best-effortの反発抽選。何回試しても避けられない場合は最後の
-// 候補をそのまま使う=固まって動けなくなることはない)。
+// 親コンポーネントが持つ共有ref)を避けるよう、候補地を複数回抽出する。
+// 「衝突しない候補が見つかったら即採用」ではなく、毎回全候補のスコア(一番近い
+// 相手との余裕=距離-必要距離の最小値)を計算し、その余裕が一番大きい=一番
+// マシな候補を採用する方式(best-of-N)。セーフティゾーンが狭く理想的な間隔を
+// 確保できない組み合わせでも、できる範囲で一番離れた場所を選ぶので「衝突しない
+// 候補が1つも無いときだけ無条件のハズレ候補になる」という弱点が出ない。
 function useWander(
   seedKey: string,
   initial: { u: number; v: number },
@@ -254,18 +257,28 @@ function useWander(
     const decorationPts = decorationSpots.map((spot) => ({ pt: surfacePoint(spot.u, spot.v), radius: spriteRadius(spot.widthPct) }));
 
     const pickNextSpot = () => {
-      let candidate = { u: 0.28 + Math.random() * 0.44, v: 0.28 + Math.random() * 0.44 };
+      const others = Object.entries(positionsRef.current).filter(([id]) => id !== seedKey);
+      let best = { u: 0.28 + Math.random() * 0.44, v: 0.28 + Math.random() * 0.44 };
+      let bestSlack = -Infinity;
       for (let attempt = 0; attempt < SPOT_PICK_ATTEMPTS; attempt++) {
-        candidate = { u: 0.28 + Math.random() * 0.44, v: 0.28 + Math.random() * 0.44 };
+        const candidate = { u: 0.28 + Math.random() * 0.44, v: 0.28 + Math.random() * 0.44 };
         const pt = surfacePoint(candidate.u, candidate.v);
-        const hitsDecoration = decorationPts.some((d) => surfaceDistancePct(pt, d.pt) < ownRadius + d.radius);
-        const hitsOther = Object.entries(positionsRef.current).some(([id, other]) => {
-          if (id === seedKey) return false;
-          return surfaceDistancePct(pt, surfacePoint(other.u, other.v)) < ownRadius + spriteRadius(other.widthPct);
-        });
-        if (!hitsDecoration && !hitsOther) break;
+        // スコア=一番近い障害物との余裕(距離-必要距離)の最小値。プラスなら衝突なし、
+        // マイナスでも値が大きい(=0に近い)ほど「まだマシな重なり方」として優先される。
+        let slack = Infinity;
+        for (const d of decorationPts) {
+          slack = Math.min(slack, surfaceDistancePct(pt, d.pt) - (ownRadius + d.radius));
+        }
+        for (const [, other] of others) {
+          slack = Math.min(slack, surfaceDistancePct(pt, surfacePoint(other.u, other.v)) - (ownRadius + spriteRadius(other.widthPct)));
+        }
+        if (slack > bestSlack) {
+          bestSlack = slack;
+          best = candidate;
+        }
+        if (bestSlack >= 0) break; // 完全に衝突しない候補が見つかったので十分
       }
-      return candidate;
+      return best;
     };
 
     const goToNextSpot = () => {
