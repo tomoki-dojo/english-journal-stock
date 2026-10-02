@@ -42,6 +42,15 @@ function TankOccupant({ color, sizeScale }: { color: string; sizeScale: number }
   );
 }
 
+// 拡大水槽表示の中だけは、他の表示箇所(棚のグリッド・リストなど)と違って固定pxではなく
+// コンテナ幅に対する%でサイズを決める(デコレーションと同じ考え方)。ポップアップの大きさが
+// 変わっても常に水槽とバランスが取れた大きさになる。individual.sizeScaleは0.8〜1.3
+// (kuwagata.tsのSIZE_SCALE_MIN/MAX)なので、それを10%〜16%の表示幅にマッピングする。
+function creatureWidthPct(sizeScale: number): number {
+  const t = (sizeScale - 0.8) / (1.3 - 0.8);
+  return 10 + t * 6;
+}
+
 // テラリウム背景（tank_bg_terrarium.png）の「土の天面」の実測座標（コンテナに対する%）。
 // 画像をピクセル解析し、天面（明るい土色）の連結領域から4頂点を抽出して算出した
 // 平行四辺形（奥=back・右=right・手前=front・左=left）。側面（土の側面・濃い色）や
@@ -168,6 +177,7 @@ function EnlargedTankVisual({ tank, color }: { tank: KuwagataShelfTank; color: s
         }
         const spot = CREATURE_SPOTS[index % CREATURE_SPOTS.length];
         const pt = surfacePoint(spot.u, spot.v);
+        const widthPct = creatureWidthPct(individual.sizeScale);
         return (
           <div
             key={individual.id}
@@ -175,10 +185,11 @@ function EnlargedTankVisual({ tank, color }: { tank: KuwagataShelfTank; color: s
             style={{
               left: `${pt.left}%`,
               top: `${pt.top}%`,
+              width: `${widthPct}%`,
               transform: index % 2 === 1 ? "translateX(-50%) translateY(-100%) scaleX(-1)" : "translateX(-50%) translateY(-100%)",
             }}
           >
-            <TankOccupant color={color} sizeScale={individual.sizeScale * 1.4} />
+            <Bug className="block w-full h-auto drop-shadow-sm" style={{ color }} strokeWidth={1.75} />
           </div>
         );
       })}
