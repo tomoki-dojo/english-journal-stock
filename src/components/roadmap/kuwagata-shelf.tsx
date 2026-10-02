@@ -198,16 +198,23 @@ const CREATURE_SPOTS: { u: number; v: number }[] = [
   { u: 0.66, v: 0.64 },
 ];
 
-// 衝突回避の判定は見た目(画面上のleft/top%)の距離で行う。u,v空間ではなく
-// surfacePoint後の座標で見るのは、天面が平行四辺形でu/v軸の実距離が歪んでいるため
-// (そのままu,vの差で判定すると、見た目の距離感とズレる)。
-function distancePct(a: { left: number; top: number }, b: { left: number; top: number }): number {
-  return Math.hypot(a.left - b.left, a.top - b.top);
+// 衝突回避の判定は見た目(画面上の距離)で行う。left/topはそれぞれコンテナの
+// 横幅/縦幅に対する%なので、そのままhypotすると単位が揃わない(水槽コンテナは
+// aspect-[4/3]=縦が横の75%しかないため、top側の%は同じ数値でもleft側より実際の
+// 距離が小さい)。topに0.75を掛けて「横幅%相当」に正規化してから距離を測る。
+function surfaceDistancePct(a: { left: number; top: number }, b: { left: number; top: number }): number {
+  return Math.hypot(a.left - b.left, (a.top - b.top) * 0.75);
 }
 
-const MIN_DIST_FROM_DECORATION_PCT = 8;
-const MIN_DIST_FROM_OTHERS_PCT = 9;
-const SPOT_PICK_ATTEMPTS = 12;
+// スプライトはwidthPct(コンテナ横幅に対する%)の正方形で、アンカー(left/top)は
+// その下端中央。見た目の半径はwidthPctの半分よりやや余裕を持たせた値とし、
+// 2者の半径の和より中心間距離が小さければ「ぶつかっている」とみなす。
+const SPRITE_RADIUS_FACTOR = 0.6;
+function spriteRadius(widthPct: number): number {
+  return widthPct * SPRITE_RADIUS_FACTOR;
+}
+
+const SPOT_PICK_ATTEMPTS = 20;
 
 // セーフティゾーン内(u,v = 0.28〜0.72)をランダムに歩き回らせるためのフック。
 // 一定間隔で次の目的地(u,v)を決め、CSSのtransition(left/top)でそこへゆっくり
@@ -222,8 +229,9 @@ const SPOT_PICK_ATTEMPTS = 12;
 function useWander(
   seedKey: string,
   initial: { u: number; v: number },
-  decorationSpots: { u: number; v: number }[],
-  positionsRef: { current: Record<string, { u: number; v: number }> },
+  widthPct: number,
+  decorationSpots: { u: number; v: number; widthPct: number }[],
+  positionsRef: { current: Record<string, { u: number; v: number; widthPct: number }> },
 ): { spot: { u: number; v: number }; facing: Facing } {
   const [state, setState] = useState<{ spot: { u: number; v: number }; facing: Facing }>({
     spot: initial,
@@ -232,27 +240,28 @@ function useWander(
 
   useEffect(() => {
     const positions = positionsRef.current;
-    positions[seedKey] = initial;
+    positions[seedKey] = { ...initial, widthPct };
     return () => {
       delete positions[seedKey];
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seedKey]);
+  }, [seedKey, widthPct]);
 
   useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
-    const decorationPts = decorationSpots.map((spot) => surfacePoint(spot.u, spot.v));
+    const ownRadius = spriteRadius(widthPct);
+    const decorationPts = decorationSpots.map((spot) => ({ pt: surfacePoint(spot.u, spot.v), radius: spriteRadius(spot.widthPct) }));
 
     const pickNextSpot = () => {
       let candidate = { u: 0.28 + Math.random() * 0.44, v: 0.28 + Math.random() * 0.44 };
       for (let attempt = 0; attempt < SPOT_PICK_ATTEMPTS; attempt++) {
         candidate = { u: 0.28 + Math.random() * 0.44, v: 0.28 + Math.random() * 0.44 };
         const pt = surfacePoint(candidate.u, candidate.v);
-        const hitsDecoration = decorationPts.some((d) => distancePct(pt, d) < MIN_DIST_FROM_DECORATION_PCT);
-        const hitsOther = Object.entries(positionsRef.current).some(([id, otherSpot]) => {
+        const hitsDecoration = decorationPts.some((d) => surfaceDistancePct(pt, d.pt) < ownRadius + d.radius);
+        const hitsOther = Object.entries(positionsRef.current).some(([id, other]) => {
           if (id === seedKey) return false;
-          return distancePct(pt, surfacePoint(otherSpot.u, otherSpot.v)) < MIN_DIST_FROM_OTHERS_PCT;
+          return surfaceDistancePct(pt, surfacePoint(other.u, other.v)) < ownRadius + spriteRadius(other.widthPct);
         });
         if (!hitsDecoration && !hitsOther) break;
       }
@@ -263,7 +272,7 @@ function useWander(
       if (cancelled) return;
       setState((prev) => {
         const nextSpot = pickNextSpot();
-        positionsRef.current[seedKey] = nextSpot;
+        positionsRef.current[seedKey] = { ...nextSpot, widthPct };
         const prevPt = surfacePoint(prev.spot.u, prev.spot.v);
         const nextPt = surfacePoint(nextSpot.u, nextSpot.v);
         const dx = nextPt.left - prevPt.left;
@@ -282,7 +291,7 @@ function useWander(
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [seedKey, decorationSpots, positionsRef]);
+  }, [seedKey, widthPct, decorationSpots, positionsRef]);
 
   return state;
 }
@@ -309,10 +318,10 @@ function WanderingCreature({
   mandibleVariant: number;
   color: string;
   mirror: boolean;
-  decorationSpots: { u: number; v: number }[];
-  positionsRef: { current: Record<string, { u: number; v: number }> };
+  decorationSpots: { u: number; v: number; widthPct: number }[];
+  positionsRef: { current: Record<string, { u: number; v: number; widthPct: number }> };
 }) {
-  const { spot, facing } = useWander(seedKey, initialSpot, decorationSpots, positionsRef);
+  const { spot, facing } = useWander(seedKey, initialSpot, widthPct, decorationSpots, positionsRef);
   const pt = surfacePoint(spot.u, spot.v);
 
   return (
@@ -395,11 +404,15 @@ function EnlargedTankVisual({ tank, color }: { tank: KuwagataShelfTank; color: s
   // するためのref(Reactのstateにはしない=位置が変わってもこの水槽全体が再レンダー
   // されない)。モーダルを閉じるとEnlargedTankVisual自体がアンマウントされるので、
   // 次に開いたときは自動的に空の状態から始まる。
-  const positionsRef = useRef<Record<string, { u: number; v: number }>>({});
+  const positionsRef = useRef<Record<string, { u: number; v: number; widthPct: number }>>({});
   // デコレーションは水槽(speciesId)ごとに決定的なので、個体の衝突回避にも
   // そのまま使い回す(描画用の配置情報と衝突回避用の座標リストを二重管理しない)。
+  // widthPctも一緒に持たせ、衝突判定側でアイテムごとの実際の大きさを加味できるようにする。
   const decorations = useMemo(() => (isAquarium ? [] : pickDecorations(tank)), [tank, isAquarium]);
-  const decorationSpots = useMemo(() => decorations.map((d) => d.spot), [decorations]);
+  const decorationSpots = useMemo(
+    () => decorations.map((d) => ({ u: d.spot.u, v: d.spot.v, widthPct: d.widthPct })),
+    [decorations],
+  );
 
   return (
     <div
