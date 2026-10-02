@@ -32,8 +32,11 @@ function formatDate(iso: string): string {
 }
 
 // 既知種の実アート(パーツ分解済みSVG)。brand/kuwagata-asset-spec.mdの命名規則どおり
-// public/roadmap/kuwagata/配下に置くだけで反映される。まだエークワたん(KW-0001)の
-// 正面向きしかないため、ここに無い種・向きはTankOccupantのフォールバック(Bugアイコン)になる。
+// public/roadmap/kuwagata/配下に置くだけで反映される。種ごとにfront(正面)/back(背面)を
+// 持てる形にしているが、まだエークワたん(KW-0001)のfrontしか無いため、backが未着手の
+// 種・向きはKnownCreatureSprite側でfrontにフォールバックする(見た目が変わらないだけで、
+// 下方向/歩行方向の判定ロジック自体は先に組んでおく)。ここに無い種はTankOccupantの
+// フォールバック(Bugアイコン)になる。
 // originXPct/originYPctは各パーツの付け根位置を112×112のキャンバスに対する%で記録した
 // ものだが、現状の歩行アニメ(前後にスライドするtranslateX)では未使用。将来、脚ごとに
 // 振れ幅や向きを個別調整する際の参考値として残している。
@@ -48,16 +51,22 @@ type KnownCreatureArt = {
   legR: CreaturePartArt;
 };
 
-const KNOWN_CREATURE_ART: Partial<Record<string, KnownCreatureArt>> = {
+type Facing = "front" | "back";
+
+const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCreatureArt>>>> = {
   "KW-0001": {
-    body: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_body.svg`,
-    mandible: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_mandible_01.svg`,
-    legsL: [
-      { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_leg_L1.svg`, originXPct: 59.5, originYPct: 69.6, delay: "0s" },
-      { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_leg_L2.svg`, originXPct: 67.9, originYPct: 65.9, delay: "-0.15s" },
-      { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_leg_L3.svg`, originXPct: 74.7, originYPct: 62.1, delay: "-0.3s" },
-    ],
-    legR: { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_leg_R1.svg`, originXPct: 17.1, originYPct: 64.1, delay: "-0.55s" },
+    front: {
+      body: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_body.svg`,
+      mandible: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_mandible_01.svg`,
+      legsL: [
+        { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_leg_L1.svg`, originXPct: 59.5, originYPct: 69.6, delay: "0s" },
+        { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_leg_L2.svg`, originXPct: 67.9, originYPct: 65.9, delay: "-0.15s" },
+        { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_leg_L3.svg`, originXPct: 74.7, originYPct: 62.1, delay: "-0.3s" },
+      ],
+      legR: { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_leg_R1.svg`, originXPct: 17.1, originYPct: 64.1, delay: "-0.55s" },
+    },
+    // back: 背面アートは未着手。描けたらここに追加するだけで、下に動くと正面・
+    // 上に動くと背面に自動で切り替わるようになる。
   },
 };
 
@@ -67,8 +76,11 @@ const KNOWN_CREATURE_ART: Partial<Record<string, KnownCreatureArt>> = {
 // 体の陰に隠れず歩いているのが見えるようにする。奥脚は本体の下に隠れて先端だけ覗く。
 // 一番外側のdivにもanimate-kuwagata-bodyを付け、脚の動きに合わせて本体全体も
 // わずかに上下するようにして「その場で歩いている」感を出す。
-function KnownCreatureSprite({ code }: { code: string }) {
-  const art = KNOWN_CREATURE_ART[code];
+// facingは歩く方向(下/左→正面、上/右→背面)から決まるが、backアートが無い種は
+// 自動でfrontにフォールバックする。
+function KnownCreatureSprite({ code, facing }: { code: string; facing: Facing }) {
+  const artSet = KNOWN_CREATURE_ART[code];
+  const art = artSet?.[facing] ?? artSet?.front;
   if (!art) return null;
 
   return (
@@ -100,7 +112,7 @@ function TankOccupant({ color, sizeScale, speciesCode }: { color: string; sizeSc
   if (speciesCode && KNOWN_CREATURE_ART[speciesCode]) {
     return (
       <div style={{ width: px, height: px }}>
-        <KnownCreatureSprite code={speciesCode} />
+        <KnownCreatureSprite code={speciesCode} facing="front" />
       </div>
     );
   }
@@ -152,11 +164,19 @@ const CREATURE_SPOTS: { u: number; v: number }[] = [
 ];
 
 // セーフティゾーン内(u,v = 0.28〜0.72)をランダムに歩き回らせるためのフック。
-// 一定間隔で次の目的地(u,v)を決め、CSSのtransition(left/top)でそこへなめらかに
+// 一定間隔で次の目的地(u,v)を決め、CSSのtransition(left/top)でそこへゆっくり
 // 移動させる。個体ごとにinitial delayをズラしているので、同じ水槽内の複数匹が
-// 同時に動き出さず自然に見える。
-function useWander(seedKey: string, initial: { u: number; v: number }): { u: number; v: number } {
-  const [spot, setSpot] = useState(initial);
+// 同時に動き出さず自然に見える。移動のたびに前回位置との差分(dx/dy)から
+// facing(正面/背面)も決める: 縦横どちらの移動量が大きいかで軸を選び、
+// 下 or 左に動くときは正面、上 or 右に動くときは背面。
+function useWander(
+  seedKey: string,
+  initial: { u: number; v: number },
+): { spot: { u: number; v: number }; facing: Facing } {
+  const [state, setState] = useState<{ spot: { u: number; v: number }; facing: Facing }>({
+    spot: initial,
+    facing: "front",
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -164,11 +184,19 @@ function useWander(seedKey: string, initial: { u: number; v: number }): { u: num
 
     const goToNextSpot = () => {
       if (cancelled) return;
-      setSpot({
-        u: 0.28 + Math.random() * 0.44,
-        v: 0.28 + Math.random() * 0.44,
+      setState((prev) => {
+        const nextSpot = {
+          u: 0.28 + Math.random() * 0.44,
+          v: 0.28 + Math.random() * 0.44,
+        };
+        const prevPt = surfacePoint(prev.spot.u, prev.spot.v);
+        const nextPt = surfacePoint(nextSpot.u, nextSpot.v);
+        const dx = nextPt.left - prevPt.left;
+        const dy = nextPt.top - prevPt.top;
+        const facing: Facing = Math.abs(dy) >= Math.abs(dx) ? (dy >= 0 ? "front" : "back") : dx <= 0 ? "front" : "back";
+        return { spot: nextSpot, facing };
       });
-      timer = setTimeout(goToNextSpot, 2600 + Math.random() * 2400);
+      timer = setTimeout(goToNextSpot, 4600 + Math.random() * 3000);
     };
 
     // 個体ごとに最初の移動タイミングをズラす(同期して動くのを防ぐ)
@@ -181,11 +209,11 @@ function useWander(seedKey: string, initial: { u: number; v: number }): { u: num
     };
   }, [seedKey]);
 
-  return spot;
+  return state;
 }
 
-// 実際に歩き回るクワたん1匹分。位置(u,v)はuseWanderで時間とともに変化し、
-// 見た目(脚・本体のアニメ)はKnownCreatureSprite/Bugアイコン側が担当する。
+// 実際に歩き回るクワたん1匹分。位置(u,v)・向き(facing)はuseWanderで時間とともに
+// 変化し、見た目(脚・本体のアニメ)はKnownCreatureSprite/Bugアイコン側が担当する。
 function WanderingCreature({
   seedKey,
   initialSpot,
@@ -203,7 +231,7 @@ function WanderingCreature({
   color: string;
   mirror: boolean;
 }) {
-  const spot = useWander(seedKey, initialSpot);
+  const { spot, facing } = useWander(seedKey, initialSpot);
   const pt = surfacePoint(spot.u, spot.v);
 
   return (
@@ -214,14 +242,14 @@ function WanderingCreature({
         top: `${pt.top}%`,
         width: `${widthPct}%`,
         aspectRatio: hasArt ? "1 / 1" : undefined,
-        transition: "left 2.4s ease-in-out, top 2.4s ease-in-out",
-        // 実アートは正面向き固定(反転すると脚の左右が逆になってしまうため)。
+        transition: "left 4s ease-in-out, top 4s ease-in-out",
+        // 実アートは左右反転しない(反転すると脚の左右が逆になってしまうため)。
         // Bugアイコンのフォールバックのみ、個体ごとに左右反転して向きにバリエーションを出す。
         transform: mirror ? "translateX(-50%) translateY(-100%) scaleX(-1)" : "translateX(-50%) translateY(-100%)",
       }}
     >
       {hasArt ? (
-        <KnownCreatureSprite code={speciesCode} />
+        <KnownCreatureSprite code={speciesCode} facing={facing} />
       ) : (
         <Bug className="block w-full h-auto drop-shadow-sm" style={{ color }} strokeWidth={1.75} />
       )}
