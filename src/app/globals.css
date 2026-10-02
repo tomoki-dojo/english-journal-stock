@@ -138,10 +138,10 @@ body {
 @keyframes kuwagata-leg-sway {
   0%,
   100% {
-    transform: translateX(-3%);
+    transform: translateX(-1.2%);
   }
   50% {
-    transform: translateX(3%);
+    transform: translateX(1.2%);
   }
 }
 
@@ -151,6 +151,28 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .animate-kuwagata-leg {
+    animation: none;
+  }
+}
+
+/* 本体全体のわずかな上下ゆれ。脚のスライドと同じ周期にして、その場で
+   歩いているように見せる(脚だけ動くと体が静止していて不自然なため)。 */
+@keyframes kuwagata-body-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1.5%);
+  }
+}
+
+.animate-kuwagata-body {
+  animation: kuwagata-body-bob 1.1s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-kuwagata-body {
     animation: none;
   }
 }

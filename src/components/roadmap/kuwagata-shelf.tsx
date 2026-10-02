@@ -63,14 +63,16 @@ const KNOWN_CREATURE_ART: Partial<Record<string, KnownCreatureArt>> = {
 
 // 実アートがある種だけ、パーツを重ねた正方形スプライトを描画する(無ければnullを返し、
 // 呼び出し側がBugアイコンにフォールバックする)。描画順は奥から
-// 「奥脚(R、1本のみ)→本体→手前脚(L1〜L3)→大顎」。手前の3本は本体より手前(上)に重ねて、
+// 「奥脚(R、1本のみ)→本体→手前脚(L3→L2→L1)→大顎」。手前の3本は本体より手前(上)に重ねて、
 // 体の陰に隠れず歩いているのが見えるようにする。奥脚は本体の下に隠れて先端だけ覗く。
+// 一番外側のdivにもanimate-kuwagata-bodyを付け、脚の動きに合わせて本体全体も
+// わずかに上下するようにして「その場で歩いている」感を出す。
 function KnownCreatureSprite({ code }: { code: string }) {
   const art = KNOWN_CREATURE_ART[code];
   if (!art) return null;
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full animate-kuwagata-body">
       <img
         src={art.legR.src}
         alt=""
@@ -78,7 +80,7 @@ function KnownCreatureSprite({ code }: { code: string }) {
         style={{ animationDelay: art.legR.delay }}
       />
       <img src={art.body} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />
-      {art.legsL.map((leg, i) => (
+      {[...art.legsL].reverse().map((leg, i) => (
         <img
           key={`l${i}`}
           src={leg.src}
