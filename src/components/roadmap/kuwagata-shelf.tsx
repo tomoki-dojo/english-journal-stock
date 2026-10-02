@@ -57,6 +57,36 @@ const AQUARIUM_BUBBLES: { left: string; bottom: number; size: number }[] = [
   { left: "85%", bottom: 90, size: 3 },
 ];
 
+// 水槽内デコレーション（置物）。brand/kuwagata-asset-spec.mdの方針どおり、
+// Free=2種・Pro=+3〜4種を想定しているが、現状はFree分の2種（石・エサ）のみ制作済みのため
+// 全ユーザーに同じプールを出している。Pro分の素材が揃ったらDECORATION_POOLに追加し、
+// plan（Free/Pro）に応じてプールを出し分ける形に拡張する。
+const DECORATION_POOL: { id: string; file: string; widthPct: number }[] = [
+  { id: "stone", file: "/roadmap/tank/tank_item_stone.svg", widthPct: 20 },
+  { id: "food", file: "/roadmap/tank/tank_item_food.svg", widthPct: 16 },
+];
+
+const DECORATION_SLOTS: { left: string; bottom: number }[] = [
+  { left: "14%", bottom: 8 },
+  { left: "84%", bottom: 10 },
+  { left: "50%", bottom: 6 },
+];
+
+// 水槽（speciesId）ごとに固定された組み合わせになるよう、開くたびに変わらないシード付き
+// 乱数で選ぶ（hashHueと同じ考え方）。クワたん本体より先にDOMへ描画することで、本体が
+// 手前に重なって見えるようにしている（z-indexは使わず描画順だけで奥行きを表現）。
+function pickDecorations(tank: KuwagataShelfTank): { file: string; widthPct: number; slot: { left: string; bottom: number } }[] {
+  const seed = hashHue(tank.speciesId);
+  const count = 1 + (seed % 2);
+  const picks: { file: string; widthPct: number; slot: { left: string; bottom: number } }[] = [];
+  for (let i = 0; i < count; i++) {
+    const item = DECORATION_POOL[(seed + i * 7) % DECORATION_POOL.length];
+    const slot = DECORATION_SLOTS[(seed + i) % DECORATION_SLOTS.length];
+    picks.push({ file: item.file, widthPct: item.widthPct, slot });
+  }
+  return picks;
+}
+
 // 水槽背景の実アート配置先。brand/kuwagata-asset-spec.mdの命名規則どおり
 // public/roadmap/tank/tank_bg_terrarium.png・tank_bg_aquarium.pngを置くだけで反映される。
 // ファイルが無い間は404になるが、2枚目のCSSグラデーションが代わりに表示されるので崩れない
@@ -72,7 +102,7 @@ function EnlargedTankVisual({ tank, color }: { tank: KuwagataShelfTank; color: s
 
   return (
     <div
-      className="relative mb-3.5 h-40 overflow-hidden rounded-lg border border-zinc-200 bg-cover bg-center"
+      className="relative mb-3.5 aspect-[4/3] w-full overflow-hidden rounded-lg border border-zinc-200 bg-cover bg-center"
       style={tankBgStyle(isAquarium)}
     >
       {isAquarium ? (
@@ -86,6 +116,18 @@ function EnlargedTankVisual({ tank, color }: { tank: KuwagataShelfTank; color: s
       ) : (
         <div className="absolute inset-x-0 bottom-0 h-[18px] bg-amber-100" />
       )}
+      {pickDecorations(tank).map((deco, index) => {
+        const bottom = isAquarium ? deco.slot.bottom + 10 : deco.slot.bottom;
+        return (
+          <div
+            key={index}
+            className="absolute -translate-x-1/2"
+            style={{ left: deco.slot.left, bottom, width: `${deco.widthPct}%` }}
+          >
+            <img src={deco.file} alt="" className="block w-full object-contain drop-shadow-sm" />
+          </div>
+        );
+      })}
       {tank.individuals.map((individual, index) => {
         const slot = TANK_VISUAL_SLOTS[index % TANK_VISUAL_SLOTS.length];
         const bottom = isAquarium ? slot.bottom + 30 : slot.bottom;
