@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Bug, X } from "lucide-react";
 import type { KuwagataShelfTank } from "@/lib/supabase/kuwagata";
 
@@ -198,15 +198,32 @@ const CREATURE_SPOTS: { u: number; v: number }[] = [
   { u: 0.66, v: 0.64 },
 ];
 
+// 衝突回避の判定は見た目(画面上のleft/top%)の距離で行う。u,v空間ではなく
+// surfacePoint後の座標で見るのは、天面が平行四辺形でu/v軸の実距離が歪んでいるため
+// (そのままu,vの差で判定すると、見た目の距離感とズレる)。
+function distancePct(a: { left: number; top: number }, b: { left: number; top: number }): number {
+  return Math.hypot(a.left - b.left, a.top - b.top);
+}
+
+const MIN_DIST_FROM_DECORATION_PCT = 8;
+const MIN_DIST_FROM_OTHERS_PCT = 9;
+const SPOT_PICK_ATTEMPTS = 12;
+
 // セーフティゾーン内(u,v = 0.28〜0.72)をランダムに歩き回らせるためのフック。
 // 一定間隔で次の目的地(u,v)を決め、CSSのtransition(left/top)でそこへゆっくり
 // 移動させる。個体ごとにinitial delayをズラしているので、同じ水槽内の複数匹が
 // 同時に動き出さず自然に見える。移動のたびに前回位置との差分(dx/dy)から
 // facing(正面/背面)も決める: 縦横どちらの移動量が大きいかで軸を選び、
 // 下 or 左に動くときは正面、上 or 右に動くときは背面。
+// decorationSpots(水槽内の置物)とpositionsRef(同じ水槽内の他個体の現在地、
+// 親コンポーネントが持つ共有ref)を避けるよう、候補地を複数回抽出して一番条件に
+// 合うものを選ぶ(best-effortの反発抽選。何回試しても避けられない場合は最後の
+// 候補をそのまま使う=固まって動けなくなることはない)。
 function useWander(
   seedKey: string,
   initial: { u: number; v: number },
+  decorationSpots: { u: number; v: number }[],
+  positionsRef: { current: Record<string, { u: number; v: number }> },
 ): { spot: { u: number; v: number }; facing: Facing } {
   const [state, setState] = useState<{ spot: { u: number; v: number }; facing: Facing }>({
     spot: initial,
@@ -214,16 +231,39 @@ function useWander(
   });
 
   useEffect(() => {
+    const positions = positionsRef.current;
+    positions[seedKey] = initial;
+    return () => {
+      delete positions[seedKey];
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seedKey]);
+
+  useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
+    const decorationPts = decorationSpots.map((spot) => surfacePoint(spot.u, spot.v));
+
+    const pickNextSpot = () => {
+      let candidate = { u: 0.28 + Math.random() * 0.44, v: 0.28 + Math.random() * 0.44 };
+      for (let attempt = 0; attempt < SPOT_PICK_ATTEMPTS; attempt++) {
+        candidate = { u: 0.28 + Math.random() * 0.44, v: 0.28 + Math.random() * 0.44 };
+        const pt = surfacePoint(candidate.u, candidate.v);
+        const hitsDecoration = decorationPts.some((d) => distancePct(pt, d) < MIN_DIST_FROM_DECORATION_PCT);
+        const hitsOther = Object.entries(positionsRef.current).some(([id, otherSpot]) => {
+          if (id === seedKey) return false;
+          return distancePct(pt, surfacePoint(otherSpot.u, otherSpot.v)) < MIN_DIST_FROM_OTHERS_PCT;
+        });
+        if (!hitsDecoration && !hitsOther) break;
+      }
+      return candidate;
+    };
 
     const goToNextSpot = () => {
       if (cancelled) return;
       setState((prev) => {
-        const nextSpot = {
-          u: 0.28 + Math.random() * 0.44,
-          v: 0.28 + Math.random() * 0.44,
-        };
+        const nextSpot = pickNextSpot();
+        positionsRef.current[seedKey] = nextSpot;
         const prevPt = surfacePoint(prev.spot.u, prev.spot.v);
         const nextPt = surfacePoint(nextSpot.u, nextSpot.v);
         const dx = nextPt.left - prevPt.left;
@@ -242,7 +282,7 @@ function useWander(
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [seedKey]);
+  }, [seedKey, decorationSpots, positionsRef]);
 
   return state;
 }
@@ -258,6 +298,8 @@ function WanderingCreature({
   mandibleVariant,
   color,
   mirror,
+  decorationSpots,
+  positionsRef,
 }: {
   seedKey: string;
   initialSpot: { u: number; v: number };
@@ -267,8 +309,10 @@ function WanderingCreature({
   mandibleVariant: number;
   color: string;
   mirror: boolean;
+  decorationSpots: { u: number; v: number }[];
+  positionsRef: { current: Record<string, { u: number; v: number }> };
 }) {
-  const { spot, facing } = useWander(seedKey, initialSpot);
+  const { spot, facing } = useWander(seedKey, initialSpot, decorationSpots, positionsRef);
   const pt = surfacePoint(spot.u, spot.v);
 
   return (
@@ -347,6 +391,15 @@ function tankBgStyle(isAquarium: boolean): CSSProperties {
 
 function EnlargedTankVisual({ tank, color }: { tank: KuwagataShelfTank; color: string }) {
   const isAquarium = tank.speciesAreaCode === "aquarium";
+  // 水槽内の「現在、他の個体がどこにいるか」を各WanderingCreatureが共有で読み書き
+  // するためのref(Reactのstateにはしない=位置が変わってもこの水槽全体が再レンダー
+  // されない)。モーダルを閉じるとEnlargedTankVisual自体がアンマウントされるので、
+  // 次に開いたときは自動的に空の状態から始まる。
+  const positionsRef = useRef<Record<string, { u: number; v: number }>>({});
+  // デコレーションは水槽(speciesId)ごとに決定的なので、個体の衝突回避にも
+  // そのまま使い回す(描画用の配置情報と衝突回避用の座標リストを二重管理しない)。
+  const decorations = useMemo(() => (isAquarium ? [] : pickDecorations(tank)), [tank, isAquarium]);
+  const decorationSpots = useMemo(() => decorations.map((d) => d.spot), [decorations]);
 
   return (
     <div
@@ -362,7 +415,7 @@ function EnlargedTankVisual({ tank, color }: { tank: KuwagataShelfTank; color: s
           />
         ))}
       {!isAquarium &&
-        pickDecorations(tank).map((deco, index) => {
+        decorations.map((deco, index) => {
           const pt = surfacePoint(deco.spot.u, deco.spot.v);
           return (
             <div
@@ -403,6 +456,8 @@ function EnlargedTankVisual({ tank, color }: { tank: KuwagataShelfTank; color: s
             mandibleVariant={individual.mandibleVariant}
             color={color}
             mirror={!hasArt && index % 2 === 1}
+            decorationSpots={decorationSpots}
+            positionsRef={positionsRef}
           />
         );
       })}
