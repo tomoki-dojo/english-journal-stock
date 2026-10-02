@@ -105,7 +105,7 @@ const ITEM_PLACEMENT: Record<string, ItemPlacement> = {
   stage4: { left: 39, top: 70, rotate: 0, widthPct: 12 },
   // 机面に接地して見えるよう、widthPct拡大に合わせてtopも下げて調整
   stage5: { left: 53, top: 56, rotate: 0, widthPct: 13 },
-  board: { left: 25, top: 23, rotate: 0, widthPct: 40, labelOverlapPx: 34 },
+  board: { left: 25, top: 23, rotate: 0, widthPct: 40, labelOverlapPx: 50 },
   // 棚は一回り大きくして、画像自体をほぼ床に接地するまで下げる。
   // ラベルは画像下端ではなく中央に完全に重ねる表示にする。
   shelf: { left: 92, top: 64, rotate: 0, widthPct: 22, labelPosition: "center" },
