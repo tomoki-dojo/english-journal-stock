@@ -132,15 +132,16 @@ body {
   }
 }
 
-/* クワたんの脚の歩行アニメーション。transform-originは脚ごとにinline styleで
-   個別に指定し、ここでは角度の往復だけを定義する(全パーツ共通)。 */
+/* クワたんの脚の歩行アニメーション。回転(上下に振れる動き)だと不自然なため、
+   脚全体を左右(=前後)にわずかにスライドさせることで歩いているように見せる。
+   個体差はinline styleのanimation-delay(脚ごとの位相ずれ)だけで出す。 */
 @keyframes kuwagata-leg-sway {
   0%,
   100% {
-    transform: rotate(-9deg);
+    transform: translateX(-3%);
   }
   50% {
-    transform: rotate(9deg);
+    transform: translateX(3%);
   }
 }
 

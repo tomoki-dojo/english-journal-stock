@@ -34,8 +34,9 @@ function formatDate(iso: string): string {
 // 既知種の実アート(パーツ分解済みSVG)。brand/kuwagata-asset-spec.mdの命名規則どおり
 // public/roadmap/kuwagata/配下に置くだけで反映される。まだエークワたん(KW-0001)の
 // 正面向きしかないため、ここに無い種・向きはTankOccupantのフォールバック(Bugアイコン)になる。
-// originXPct/originYPctは各パーツの回転基準点(本体との付け根)を112×112のキャンバスに
-// 対する%で指定したもの。歩行アニメはCSSのtransform-origin+animate-kuwagata-legで実現する。
+// originXPct/originYPctは各パーツの付け根位置を112×112のキャンバスに対する%で記録した
+// ものだが、現状の歩行アニメ(前後にスライドするtranslateX)では未使用。将来、脚ごとに
+// 振れ幅や向きを個別調整する際の参考値として残している。
 const KUWAGATA_ART_DIR = "/roadmap/kuwagata";
 
 type CreaturePartArt = { src: string; originXPct: number; originYPct: number; delay: string };
@@ -61,30 +62,31 @@ const KNOWN_CREATURE_ART: Partial<Record<string, KnownCreatureArt>> = {
 };
 
 // 実アートがある種だけ、パーツを重ねた正方形スプライトを描画する(無ければnullを返し、
-// 呼び出し側がBugアイコンにフォールバックする)。描画順は奥から「脚→本体→大顎」。
-// 脚は本体の下に回り込む形で接合点が隠れるようにし、大顎は一番手前に重ねる。
+// 呼び出し側がBugアイコンにフォールバックする)。描画順は奥から
+// 「奥脚(R、1本のみ)→本体→手前脚(L1〜L3)→大顎」。手前の3本は本体より手前(上)に重ねて、
+// 体の陰に隠れず歩いているのが見えるようにする。奥脚は本体の下に隠れて先端だけ覗く。
 function KnownCreatureSprite({ code }: { code: string }) {
   const art = KNOWN_CREATURE_ART[code];
   if (!art) return null;
 
   return (
     <div className="relative h-full w-full">
+      <img
+        src={art.legR.src}
+        alt=""
+        className="absolute inset-0 h-full w-full animate-kuwagata-leg"
+        style={{ animationDelay: art.legR.delay }}
+      />
+      <img src={art.body} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />
       {art.legsL.map((leg, i) => (
         <img
           key={`l${i}`}
           src={leg.src}
           alt=""
           className="absolute inset-0 h-full w-full animate-kuwagata-leg"
-          style={{ transformOrigin: `${leg.originXPct}% ${leg.originYPct}%`, animationDelay: leg.delay }}
+          style={{ animationDelay: leg.delay }}
         />
       ))}
-      <img
-        src={art.legR.src}
-        alt=""
-        className="absolute inset-0 h-full w-full animate-kuwagata-leg"
-        style={{ transformOrigin: `${art.legR.originXPct}% ${art.legR.originYPct}%`, animationDelay: art.legR.delay }}
-      />
-      <img src={art.body} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />
       <img src={art.mandible} alt="" className="absolute inset-0 h-full w-full" />
     </div>
   );
