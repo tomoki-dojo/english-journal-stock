@@ -82,12 +82,14 @@ type ItemPlacement = { left: number; top: number; rotate: number; widthPct: numb
 const ITEM_PLACEMENT: Record<string, ItemPlacement> = {
   stage0: { left: 22, top: 82, rotate: 0, widthPct: 11 },
   stage1: { left: 64, top: 79, rotate: 0, widthPct: 18 },
-  stage2: { left: 20, top: 57, rotate: 0, widthPct: 7 },
-  stage3: { left: 62, top: 22, rotate: 0, widthPct: 8 },
-  stage4: { left: 39, top: 70, rotate: 0, widthPct: 7 },
+  stage2: { left: 20, top: 57, rotate: 0, widthPct: 10 },
+  stage3: { left: 62, top: 22, rotate: 0, widthPct: 11 },
+  stage4: { left: 39, top: 70, rotate: 0, widthPct: 10 },
   stage5: { left: 53, top: 52, rotate: 0, widthPct: 11 },
-  board: { left: 25, top: 23, rotate: 0, widthPct: 30 },
-  shelf: { left: 90, top: 57, rotate: 0, widthPct: 16 },
+  board: { left: 25, top: 23, rotate: 0, widthPct: 33 },
+  // 棚は一回り大きくして右下ギリギリに寄せる。縦長の原画（widthPct基準で高さが
+  // 部屋の高さの8割近くになる）なので、topは中心ではなく「床に接地する」位置を逆算している。
+  shelf: { left: 92, top: 59, rotate: 0, widthPct: 20 },
 };
 
 type RoadmapRoomProps = {
@@ -132,7 +134,7 @@ function StageCase({
   const showRealArt = !locked && imageSrc;
 
   const content = showRealArt ? (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center">
       <div
         style={{ transform: `rotate(${placement.rotate}deg)`, width: "100%" }}
         className="transition-transform hover:scale-105 active:scale-95"
@@ -140,7 +142,11 @@ function StageCase({
         {/* eslint-disable-next-line @next/next/no-img-element -- 任意形状・任意サイズの自前アートなのでnext/imageの固定枠は使わない */}
         <img src={imageSrc} alt="" className="block w-full object-contain drop-shadow-md" />
       </div>
-      <span className="text-[10px] font-semibold" style={{ color }}>
+      {/* ラベルをアイテムに少し重ねつつ、どんな背景の上でも読めるよう白地の「座布団」を敷く */}
+      <span
+        className="-mt-2 whitespace-nowrap rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-semibold shadow-sm"
+        style={{ color }}
+      >
         {label}
       </span>
     </div>
@@ -295,7 +301,7 @@ export function RoadmapRoom({
           color={BOARD_COLOR}
           icon={StickyNote}
           imageSrc={roomItemImageSrc("corkboard")}
-          label="コルクボード"
+          label="表現一覧"
           caption="表現一覧"
           href="/roadmap/board"
           locked={false}
@@ -306,7 +312,7 @@ export function RoadmapRoom({
           color={SHELF_COLOR}
           icon={Bug}
           imageSrc={roomItemImageSrc("shelf")}
-          label="棚"
+          label="飼育棚"
           caption="クワたん一覧"
           href="/roadmap/shelf"
           locked={false}
