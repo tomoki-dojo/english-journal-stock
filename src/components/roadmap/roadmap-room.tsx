@@ -67,6 +67,13 @@ const STAGE_META: Record<
 
 const STAGE_NUMBERS: StageNumber[] = [1, 2, 3, 4, 5];
 
+// STAGE_COLORSのStage2（ライムグリーン #84cc16）はアイコン・バッジの発色としてはいいが、
+// 白座布団の上のラベル文字としては明度が高すぎて読みにくいため、ラベル表示専用に
+// 暗めの同系色（lime-800相当）へ差し替える。他のStageは特に問題ないのでcolorをそのまま使う。
+const LABEL_COLOR_OVERRIDE: Partial<Record<StageNumber, string>> = {
+  2: "#4d7c0f",
+};
+
 // 部屋に「転がっている」感じを出すため、グリッド整列ではなく各アイテムに
 // 個別の座標（%）と傾きを持たせて散らした配置にする。実イラスト差し替え時は
 // ここの座標を実際の部屋イラストに合わせて手動で再調整する前提
@@ -90,7 +97,7 @@ type ItemPlacement = {
 const ITEM_PLACEMENT: Record<string, ItemPlacement> = {
   stage0: { left: 22, top: 82, rotate: 0, widthPct: 13 },
   stage1: { left: 64, top: 79, rotate: 0, widthPct: 21 },
-  stage2: { left: 20, top: 57, rotate: 0, widthPct: 12 },
+  stage2: { left: 20, top: 57, rotate: 0, widthPct: 14 },
   stage3: { left: 62, top: 22, rotate: 0, widthPct: 13 },
   stage4: { left: 39, top: 70, rotate: 0, widthPct: 12 },
   // 机面に接地して見えるよう、widthPct拡大に合わせてtopも下げて調整
@@ -118,6 +125,7 @@ type RoadmapRoomProps = {
 
 function StageCase({
   color,
+  labelColor,
   icon: Icon,
   imageSrc,
   label,
@@ -128,6 +136,9 @@ function StageCase({
   placement,
 }: {
   color: string;
+  // ラベル文字色だけを上書きしたい場合（例：Stage2のライムグリーンは白座布団の上だと
+  // 明度が高すぎて読みにくいので、ラベルだけ暗めの色にする）。省略時はcolorを使う。
+  labelColor?: string;
   icon: LucideIcon;
   imageSrc: string | null;
   label: string;
@@ -147,7 +158,7 @@ function StageCase({
   const labelEl = (
     <span
       className="whitespace-nowrap rounded-full bg-white/50 px-2 py-0.5 text-[10px] font-semibold shadow-sm backdrop-blur-[1px]"
-      style={{ color }}
+      style={{ color: labelColor ?? color }}
     >
       {label}
     </span>
@@ -311,6 +322,7 @@ export function RoadmapRoom({
             <StageCase
               key={stage}
               color={STAGE_COLORS[stage]}
+              labelColor={LABEL_COLOR_OVERRIDE[stage]}
               icon={meta.icon}
               imageSrc={roomItemImageSrc(meta.imageBase)}
               label={meta.label}
