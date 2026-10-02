@@ -70,11 +70,12 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
     back: {
       body: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_back_body.svg`,
       mandible: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_back_mandible_01.svg`,
-      // 背面は3本とも本体の奥(後ろ)に重なる。描画順はR1→R2→R3→本体の指定どおり
+      // 背面は3本とも本体の奥(後ろ)に重なる。配列の並び順=DOM描画順(先に描いたものほど
+      // 奥)なので、一番手前に見せたいR1を配列の最後に置く(R3→R2→R1の順で描画される)
       legsBehindBody: [
-        { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_back_leg_R1.svg`, delay: "0s" },
-        { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_back_leg_R2.svg`, delay: "-0.15s" },
         { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_back_leg_R3.svg`, delay: "-0.3s" },
+        { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_back_leg_R2.svg`, delay: "-0.15s" },
+        { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_back_leg_R1.svg`, delay: "0s" },
       ],
       legsInFrontOfBody: [],
     },
