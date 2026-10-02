@@ -61,20 +61,20 @@ function surfacePoint(u: number, v: number): { left: number; top: number } {
   return { left, top };
 }
 
-// クワたん・デコレーションの置き場所(u,v)。0.15〜0.85の範囲に収め、天面の縁ギリギリに
-// スプライトがはみ出さないようにしている(=座標のセーフティゾーン)。
+// クワたん・デコレーションの置き場所(u,v)。0.28〜0.72程度に収め、天面の縁から
+// もう一回り内側に余白を持たせている(=座標のセーフティゾーン)。
 const CREATURE_SPOTS: { u: number; v: number }[] = [
   { u: 0.5, v: 0.45 },
-  { u: 0.25, v: 0.25 },
-  { u: 0.78, v: 0.3 },
-  { u: 0.3, v: 0.72 },
-  { u: 0.75, v: 0.75 },
+  { u: 0.32, v: 0.32 },
+  { u: 0.68, v: 0.35 },
+  { u: 0.36, v: 0.62 },
+  { u: 0.66, v: 0.64 },
 ];
 
 const DECORATION_SPOTS: { u: number; v: number }[] = [
-  { u: 0.18, v: 0.82 },
-  { u: 0.82, v: 0.18 },
-  { u: 0.55, v: 0.85 },
+  { u: 0.3, v: 0.68 },
+  { u: 0.7, v: 0.3 },
+  { u: 0.5, v: 0.7 },
 ];
 
 // アクアリウムはまだ実アート未着手のため、天面の実測座標がない。既存の簡易な泡配置だけ残す。
@@ -90,8 +90,8 @@ const AQUARIUM_BUBBLES: { left: string; bottom: number; size: number }[] = [
 // 全ユーザーに同じプールを出している。Pro分の素材が揃ったらDECORATION_POOLに追加し、
 // plan（Free/Pro）に応じてプールを出し分ける形に拡張する。
 const DECORATION_POOL: { id: string; file: string; widthPct: number }[] = [
-  { id: "stone", file: "/roadmap/tank/tank_item_stone.svg", widthPct: 20 },
-  { id: "food", file: "/roadmap/tank/tank_item_food.svg", widthPct: 16 },
+  { id: "stone", file: "/roadmap/tank/tank_item_stone.svg", widthPct: 11 },
+  { id: "food", file: "/roadmap/tank/tank_item_food.svg", widthPct: 9 },
 ];
 
 // 水槽（speciesId）ごとに固定された組み合わせになるよう、開くたびに変わらないシード付き
@@ -130,17 +130,14 @@ function EnlargedTankVisual({ tank, color }: { tank: KuwagataShelfTank; color: s
       className="relative mb-3.5 aspect-[4/3] w-full overflow-hidden rounded-lg border border-zinc-200 bg-cover bg-center"
       style={tankBgStyle(isAquarium)}
     >
-      {isAquarium ? (
+      {isAquarium &&
         AQUARIUM_BUBBLES.map((bubble, i) => (
           <div
             key={i}
             className="absolute rounded-full bg-white/50"
             style={{ left: bubble.left, bottom: bubble.bottom, width: bubble.size, height: bubble.size }}
           />
-        ))
-      ) : (
-        <div className="absolute inset-x-0 bottom-0 h-[18px] bg-amber-100" />
-      )}
+        ))}
       {!isAquarium &&
         pickDecorations(tank).map((deco, index) => {
           const pt = surfacePoint(deco.spot.u, deco.spot.v);
