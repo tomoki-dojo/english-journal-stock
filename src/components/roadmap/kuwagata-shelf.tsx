@@ -546,11 +546,12 @@ function WanderingCreature({
       )}
       {nickname && (
         // 名前ラベル。スプライトの頭上に出し、歩き回るのに合わせてラベルも一緒に動く。
+        // 幅は名前の最大10文字(+左右の余白)が省略されずに入る広さ。最長の種類名は「テッペンクワたん」(8文字)。
         // 実アートの正方形キャンバスは上に透明な余白があるため、その分だけ下げて本体の
         // すぐ上に付ける(Bugアイコンは余白が無いので枠の上端)。
         // 左右反転するBugフォールバックでは、文字が鏡文字にならないよう反転を打ち消す。
         <span
-          className="pointer-events-none absolute left-1/2 z-10 max-w-[7em] truncate whitespace-nowrap rounded-full bg-white/85 px-1.5 py-px text-[9px] font-semibold leading-tight text-zinc-700 shadow-sm"
+          className="pointer-events-none absolute left-1/2 z-10 max-w-[11em] truncate whitespace-nowrap rounded-full bg-white/85 px-1.5 py-px text-[9px] font-semibold leading-tight text-zinc-700 shadow-sm"
           style={{
             top: hasArt ? "24%" : 0,
             transform: `translateX(-50%) translateY(-100%)${mirror ? " scaleX(-1)" : ""}`,
