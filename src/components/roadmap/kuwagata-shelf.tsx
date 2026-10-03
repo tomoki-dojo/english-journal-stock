@@ -146,20 +146,38 @@ function KnownCreatureSprite({
   mandibleVariant,
   growthStage = "成虫",
   heading = "left",
+  phaseSeed = "",
 }: {
   code: string;
   facing: Facing;
   mandibleVariant: number;
   growthStage?: KuwagataGrowthStage;
   heading?: Heading;
+  phaseSeed?: string;
 }) {
   const stageArt = KNOWN_STAGE_ART[code];
 
+  // 卵・蛹は歩かないが、ときどきピクピク震える。個体ごとに位相をずらして同期させない。
+  const twitchDelay = `-${((hashHue(phaseSeed) % 30) / 10).toFixed(1)}s`;
   if (growthStage === "卵" && stageArt?.egg) {
-    return <img src={stageArt.egg} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />;
+    return (
+      <img
+        src={stageArt.egg}
+        alt=""
+        className="absolute inset-0 h-full w-full animate-kuwagata-egg drop-shadow-sm"
+        style={{ animationDelay: twitchDelay }}
+      />
+    );
   }
   if (growthStage === "蛹" && stageArt?.pupa) {
-    return <img src={stageArt.pupa} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />;
+    return (
+      <img
+        src={stageArt.pupa}
+        alt=""
+        className="absolute inset-0 h-full w-full animate-kuwagata-pupa drop-shadow-sm"
+        style={{ animationDelay: twitchDelay }}
+      />
+    );
   }
   if (growthStage === "幼虫" && stageArt?.larva) {
     return (
@@ -499,6 +517,7 @@ function WanderingCreature({
           mandibleVariant={mandibleVariant}
           growthStage={growthStage}
           heading={heading}
+          phaseSeed={seedKey}
         />
       ) : (
         <Bug className="block w-full h-auto drop-shadow-sm" style={{ color }} strokeWidth={1.75} />
