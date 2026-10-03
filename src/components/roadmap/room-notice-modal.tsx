@@ -11,7 +11,7 @@ import {
   type RoadmapAnnouncement,
 } from "@/lib/roadmap-notices";
 
-type Item = { kind: "intro" } | { kind: "advice" } | { kind: "announcement"; announcement: RoadmapAnnouncement };
+type Item = { kind: "intro" } | { kind: "advice" } | { kind: "egg" } | { kind: "announcement"; announcement: RoadmapAnnouncement };
 
 // 部屋に入ったときのポップアップ。初回はエークワ博士のアドバイス、以降は未読のお知らせを1件ずつ順に出す。
 // 閉じるたびに既読をサーバーへ保存する（保存に失敗しても表示は先へ進める）。
@@ -23,7 +23,7 @@ export function RoomNoticeModal({
   announcements: RoadmapAnnouncement[];
 }) {
   const [queue, setQueue] = useState<Item[]>(() => [
-    ...(showAdvice ? ([{ kind: "intro" }, { kind: "advice" }] as Item[]) : []),
+    ...(showAdvice ? ([{ kind: "intro" }, { kind: "advice" }, { kind: "egg" }] as Item[]) : []),
     ...announcements.map((announcement) => ({ kind: "announcement" as const, announcement })),
   ]);
 
@@ -50,6 +50,27 @@ export function RoomNoticeModal({
         </p>
         <span className="text-2xl text-white/70">▼</span>
       </button>
+    );
+  }
+
+  if (current.kind === "egg") {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-black/70 px-8 text-center">
+        {/* eslint-disable-next-line @next/next/no-img-element -- 自前SVGアート */}
+        <img
+          src="/roadmap/kuwagata/kuwagata_KW-0001_egg.svg"
+          alt=""
+          className="animate-kuwagata-egg h-32 w-32 object-contain drop-shadow-lg"
+        />
+        <p className="text-lg font-bold leading-relaxed text-white">エークワたんのタマゴを手に入れた！</p>
+        <button
+          type="button"
+          onClick={() => setQueue((q) => q.slice(1))}
+          className="w-full max-w-xs rounded-full bg-amber-500 py-2.5 text-sm font-bold text-white transition-transform active:scale-95"
+        >
+          OK
+        </button>
+      </div>
     );
   }
 
