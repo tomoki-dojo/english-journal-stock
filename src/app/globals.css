@@ -176,3 +176,26 @@ body {
     animation: none;
   }
 }
+
+/* 幼虫のくねりアニメーション。脚のスライドと同じく、体節ごとに別<img>へ
+   この動きを当て、inline styleのtransform-origin(体節の付け根)・--wiggle-deg
+   (振れ幅)・animation-delay(位相ずれ)で頭→胴体前半→胴体後半の順にずらす。 */
+@keyframes kuwagata-larva-wriggle {
+  0%,
+  100% {
+    transform: rotate(calc(var(--wiggle-deg, 3deg) * -1));
+  }
+  50% {
+    transform: rotate(var(--wiggle-deg, 3deg));
+  }
+}
+
+.animate-kuwagata-larva {
+  animation: kuwagata-larva-wriggle 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-kuwagata-larva {
+    animation: none;
+  }
+}

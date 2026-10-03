@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Bug, X } from "lucide-react";
-import type { KuwagataShelfTank } from "@/lib/supabase/kuwagata";
+import type { KuwagataGrowthStage, KuwagataShelfTank } from "@/lib/supabase/kuwagata";
 
 const GROWTH_STAGE_LABEL: Record<string, string> = {
   卵: "卵",
@@ -54,6 +54,10 @@ type KnownCreatureArt = {
 
 type Facing = "front" | "back";
 
+// 実際に進んでいる左右方向。成虫はfacing(正面/背面)で絵を切り替えるが、左向き1方向の
+// 絵しかない幼虫は、右へ進むときだけ左右反転して「後ろ向きに進む」不自然さを避ける。
+type Heading = "left" | "right";
+
 const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCreatureArt>>>> = {
   "KW-0001": {
     front: {
@@ -91,6 +95,40 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   },
 };
 
+// 成長段階(卵・幼虫・蛹)のアート。成虫のKNOWN_CREATURE_ARTとは別に持ち、ここに無い
+// 種・段階は成虫のアートにフォールバックする。卵と蛹は静止画1枚(動かない)、幼虫は
+// 体節3パーツ(描画順=配列順、奥→手前)をそれぞれくねらせて、成虫と同じく水槽内を
+// 歩き回る。originX/Y%は各体節の回転基準点(隣の体節との付け根)、wiggleDegは振れ幅、
+// delayは位相ずれ(頭→胴体前半→胴体後半の順に少しずつ遅らせて「くねり」にする)。
+// 幼虫の絵は左向き1方向のみ。右へ進むときはKnownCreatureSprite側で左右反転する。
+type LarvaPartArt = { src: string; originXPct: number; originYPct: number; wiggleDeg: number; delay: string };
+
+type KnownStageArt = {
+  egg?: string;
+  larva?: LarvaPartArt[];
+  pupa?: string;
+};
+
+const KNOWN_STAGE_ART: Partial<Record<string, KnownStageArt>> = {
+  "KW-0001": {
+    egg: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_egg.svg`,
+    larva: [
+      { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_larva_body_rear.svg`, originXPct: 49, originYPct: 55, wiggleDeg: 4, delay: "-0.6s" },
+      { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_larva_body_front.svg`, originXPct: 31, originYPct: 54, wiggleDeg: 2.5, delay: "-0.3s" },
+      { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_larva_head.svg`, originXPct: 40, originYPct: 59, wiggleDeg: 3, delay: "0s" },
+    ],
+    pupa: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_pupa.svg`,
+  },
+};
+
+// 卵・蛹は動かない(その場に置いたまま)。幼虫・成虫(と、実アートが無い種のBugアイコン)は歩き回る。
+function isStationaryStage(code: string, growthStage: KuwagataGrowthStage): boolean {
+  const stageArt = KNOWN_STAGE_ART[code];
+  if (growthStage === "卵") return Boolean(stageArt?.egg);
+  if (growthStage === "蛹") return Boolean(stageArt?.pupa);
+  return false;
+}
+
 // 実アートがある種だけ、パーツを重ねた正方形スプライトを描画する(無ければnullを返し、
 // 呼び出し側がBugアイコンにフォールバックする)。描画順は奥から
 // 「legsBehindBody→本体→legsInFrontOfBody→大顎(あれば)」。
@@ -99,7 +137,52 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
 // facingは歩く方向(下/左→正面、上/右→背面)から決まるが、backアートが無い種は
 // 自動でfrontにフォールバックする。mandibleVariantは個体のmandible_variant列
 // (1始まり)で、対応するバリエーションが無ければ1番にフォールバックする。
-function KnownCreatureSprite({ code, facing, mandibleVariant }: { code: string; facing: Facing; mandibleVariant: number }) {
+// growthStageが卵・幼虫・蛹で、その種にKNOWN_STAGE_ARTがあれば成虫のアートの代わりに
+// 成長段階のアートを描画する(無ければ成虫のアートにフォールバック)。
+// headingは幼虫専用(左向き1方向のみの絵なので、右へ進むときだけ左右反転する)。
+function KnownCreatureSprite({
+  code,
+  facing,
+  mandibleVariant,
+  growthStage = "成虫",
+  heading = "left",
+}: {
+  code: string;
+  facing: Facing;
+  mandibleVariant: number;
+  growthStage?: KuwagataGrowthStage;
+  heading?: Heading;
+}) {
+  const stageArt = KNOWN_STAGE_ART[code];
+
+  if (growthStage === "卵" && stageArt?.egg) {
+    return <img src={stageArt.egg} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />;
+  }
+  if (growthStage === "蛹" && stageArt?.pupa) {
+    return <img src={stageArt.pupa} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />;
+  }
+  if (growthStage === "幼虫" && stageArt?.larva) {
+    return (
+      <div className="relative h-full w-full" style={{ transform: heading === "right" ? "scaleX(-1)" : undefined }}>
+        {stageArt.larva.map((part, i) => (
+          <img
+            key={i}
+            src={part.src}
+            alt=""
+            className="absolute inset-0 h-full w-full animate-kuwagata-larva"
+            style={
+              {
+                transformOrigin: `${part.originXPct}% ${part.originYPct}%`,
+                animationDelay: part.delay,
+                "--wiggle-deg": `${part.wiggleDeg}deg`,
+              } as CSSProperties
+            }
+          />
+        ))}
+      </div>
+    );
+  }
+
   const artSet = KNOWN_CREATURE_ART[code];
   const art = artSet?.[facing] ?? artSet?.front;
   if (!art) return null;
@@ -136,18 +219,20 @@ function TankOccupant({
   sizeScale,
   speciesCode,
   mandibleVariant = 1,
+  growthStage = "成虫",
 }: {
   color: string;
   sizeScale: number;
   speciesCode?: string;
   mandibleVariant?: number;
+  growthStage?: KuwagataGrowthStage;
 }) {
   const basePx = 28;
   const px = basePx * sizeScale;
   if (speciesCode && KNOWN_CREATURE_ART[speciesCode]) {
     return (
-      <div style={{ width: px, height: px }}>
-        <KnownCreatureSprite code={speciesCode} facing="front" mandibleVariant={mandibleVariant} />
+      <div className="relative" style={{ width: px, height: px }}>
+        <KnownCreatureSprite code={speciesCode} facing="front" mandibleVariant={mandibleVariant} growthStage={growthStage} />
       </div>
     );
   }
@@ -229,16 +314,21 @@ const SPOT_PICK_ATTEMPTS = 30;
 // マシな候補を採用する方式(best-of-N)。セーフティゾーンが狭く理想的な間隔を
 // 確保できない組み合わせでも、できる範囲で一番離れた場所を選ぶので「衝突しない
 // 候補が1つも無いときだけ無条件のハズレ候補になる」という弱点が出ない。
+// movesがfalse(卵・蛹)のときは歩き回らず、initialの位置に置いたまま(他の個体が避けられるよう
+// 位置の登録だけは行う)。headingは直近の移動の左右方向で、左向き1方向の絵しかない幼虫の
+// 左右反転に使う。
 function useWander(
   seedKey: string,
   initial: { u: number; v: number },
   widthPct: number,
+  moves: boolean,
   decorationSpots: { u: number; v: number; widthPct: number }[],
   positionsRef: { current: Record<string, { u: number; v: number; widthPct: number }> },
-): { spot: { u: number; v: number }; facing: Facing } {
-  const [state, setState] = useState<{ spot: { u: number; v: number }; facing: Facing }>({
+): { spot: { u: number; v: number }; facing: Facing; heading: Heading } {
+  const [state, setState] = useState<{ spot: { u: number; v: number }; facing: Facing; heading: Heading }>({
     spot: initial,
     facing: "front",
+    heading: "left",
   });
 
   useEffect(() => {
@@ -251,6 +341,7 @@ function useWander(
   }, [seedKey, widthPct]);
 
   useEffect(() => {
+    if (!moves) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
     const ownRadius = spriteRadius(widthPct);
@@ -291,7 +382,8 @@ function useWander(
         const dx = nextPt.left - prevPt.left;
         const dy = nextPt.top - prevPt.top;
         const facing: Facing = Math.abs(dy) >= Math.abs(dx) ? (dy >= 0 ? "front" : "back") : dx <= 0 ? "front" : "back";
-        return { spot: nextSpot, facing };
+        const heading: Heading = dx === 0 ? prev.heading : dx < 0 ? "left" : "right";
+        return { spot: nextSpot, facing, heading };
       });
       timer = setTimeout(goToNextSpot, 9000 + Math.random() * 6000);
     };
@@ -304,9 +396,55 @@ function useWander(
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [seedKey, widthPct, decorationSpots, positionsRef]);
+  }, [seedKey, widthPct, moves, decorationSpots, positionsRef]);
 
   return state;
+}
+
+// 卵・蛹のように動かない個体の置き場所。固定のCREATURE_SPOTSだと置物とぶつかる位置に
+// なることがあるため、useWanderと同じ「一番余裕のある候補を採用」(best-of-N)で1回だけ決める。
+// 開くたびに位置が変わらないよう、乱数はseedKey(個体id)から作る決定的なもの。
+// takenには既に置いた他の動かない個体も渡し、重ならないようにする。
+function seededRandom(seed: string): () => number {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return () => {
+    h += 0x6d2b79f5;
+    let t = h;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function pickStationarySpot(
+  seedKey: string,
+  widthPct: number,
+  decorationSpots: { u: number; v: number; widthPct: number }[],
+  taken: { u: number; v: number; widthPct: number }[],
+): { u: number; v: number } {
+  const random = seededRandom(seedKey);
+  const ownRadius = spriteRadius(widthPct);
+  const obstacles = [...decorationSpots, ...taken].map((o) => ({ pt: surfacePoint(o.u, o.v), radius: spriteRadius(o.widthPct) }));
+  let best = { u: 0.5, v: 0.5 };
+  let bestSlack = -Infinity;
+  for (let attempt = 0; attempt < SPOT_PICK_ATTEMPTS * 2; attempt++) {
+    const candidate = { u: 0.28 + random() * 0.44, v: 0.28 + random() * 0.44 };
+    const pt = surfacePoint(candidate.u, candidate.v);
+    let slack = Infinity;
+    for (const o of obstacles) {
+      slack = Math.min(slack, surfaceDistancePct(pt, o.pt) - (ownRadius + o.radius));
+    }
+    if (slack > bestSlack) {
+      bestSlack = slack;
+      best = candidate;
+    }
+    if (bestSlack >= 0) break;
+  }
+  return best;
 }
 
 // 実際に歩き回るクワたん1匹分。位置(u,v)・向き(facing)はuseWanderで時間とともに
@@ -318,6 +456,7 @@ function WanderingCreature({
   hasArt,
   speciesCode,
   mandibleVariant,
+  growthStage,
   color,
   mirror,
   decorationSpots,
@@ -329,12 +468,14 @@ function WanderingCreature({
   hasArt: boolean;
   speciesCode: string;
   mandibleVariant: number;
+  growthStage: KuwagataGrowthStage;
   color: string;
   mirror: boolean;
   decorationSpots: { u: number; v: number; widthPct: number }[];
   positionsRef: { current: Record<string, { u: number; v: number; widthPct: number }> };
 }) {
-  const { spot, facing } = useWander(seedKey, initialSpot, widthPct, decorationSpots, positionsRef);
+  const moves = !isStationaryStage(speciesCode, growthStage);
+  const { spot, facing, heading } = useWander(seedKey, initialSpot, widthPct, moves, decorationSpots, positionsRef);
   const pt = surfacePoint(spot.u, spot.v);
 
   return (
@@ -352,7 +493,13 @@ function WanderingCreature({
       }}
     >
       {hasArt ? (
-        <KnownCreatureSprite code={speciesCode} facing={facing} mandibleVariant={mandibleVariant} />
+        <KnownCreatureSprite
+          code={speciesCode}
+          facing={facing}
+          mandibleVariant={mandibleVariant}
+          growthStage={growthStage}
+          heading={heading}
+        />
       ) : (
         <Bug className="block w-full h-auto drop-shadow-sm" style={{ color }} strokeWidth={1.75} />
       )}
@@ -426,6 +573,19 @@ function EnlargedTankVisual({ tank, color }: { tank: KuwagataShelfTank; color: s
     () => decorations.map((d) => ({ u: d.spot.u, v: d.spot.v, widthPct: d.widthPct })),
     [decorations],
   );
+  // 卵・蛹(動かない個体)の置き場所。置物や、先に置いた他の動かない個体を避けて1回だけ決める。
+  const stationarySpots = useMemo(() => {
+    const spots: Record<string, { u: number; v: number }> = {};
+    const taken: { u: number; v: number; widthPct: number }[] = [];
+    for (const individual of tank.individuals) {
+      if (!isStationaryStage(individual.speciesCode, individual.growthStage)) continue;
+      const widthPct = creatureWidthPct(individual.sizeScale);
+      const spot = pickStationarySpot(individual.id, widthPct, decorationSpots, taken);
+      spots[individual.id] = spot;
+      taken.push({ ...spot, widthPct });
+    }
+    return spots;
+  }, [tank, decorationSpots]);
 
   return (
     <div
@@ -468,7 +628,7 @@ function EnlargedTankVisual({ tank, color }: { tank: KuwagataShelfTank; color: s
             </div>
           );
         }
-        const initialSpot = CREATURE_SPOTS[index % CREATURE_SPOTS.length];
+        const initialSpot = stationarySpots[individual.id] ?? CREATURE_SPOTS[index % CREATURE_SPOTS.length];
         const widthPct = creatureWidthPct(individual.sizeScale);
         const hasArt = Boolean(KNOWN_CREATURE_ART[individual.speciesCode]);
         return (
@@ -480,6 +640,7 @@ function EnlargedTankVisual({ tank, color }: { tank: KuwagataShelfTank; color: s
             hasArt={hasArt}
             speciesCode={individual.speciesCode}
             mandibleVariant={individual.mandibleVariant}
+            growthStage={individual.growthStage}
             color={color}
             mirror={!hasArt && index % 2 === 1}
             decorationSpots={decorationSpots}
@@ -531,6 +692,7 @@ export function KuwagataShelf({
                   sizeScale={representative.sizeScale}
                   speciesCode={representative.speciesCode}
                   mandibleVariant={representative.mandibleVariant}
+                  growthStage={representative.growthStage}
                 />
                 <span className="text-xs font-semibold text-amber-800">{tank.speciesName}</span>
                 <span className="text-[10px] text-amber-600">
@@ -564,6 +726,7 @@ export function KuwagataShelf({
                 sizeScale={representative.sizeScale}
                 speciesCode={representative.speciesCode}
                 mandibleVariant={representative.mandibleVariant}
+                growthStage={representative.growthStage}
               />
               <span className="text-xs font-semibold text-zinc-700">{tank.speciesName}</span>
               <span className="text-[10px] text-zinc-400">
@@ -612,6 +775,7 @@ export function KuwagataShelf({
                     sizeScale={individual.sizeScale}
                     speciesCode={individual.speciesCode}
                     mandibleVariant={individual.mandibleVariant}
+                    growthStage={individual.growthStage}
                   />
                   <div className="flex flex-col text-xs text-zinc-600">
                     <span className="font-semibold text-zinc-800">
