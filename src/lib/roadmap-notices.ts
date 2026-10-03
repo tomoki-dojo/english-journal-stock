@@ -8,7 +8,13 @@ export const ANNOUNCEMENTS: RoadmapAnnouncement[] = [];
 
 export const LATEST_ANNOUNCEMENT_ID = ANNOUNCEMENTS.reduce((max, a) => Math.max(max, a.id), 0);
 
-// 初回ログイン時の「エークワ博士からの育成アドバイス」
+// 初回ログイン時の導入（世界観）。1行ずつ画面いっぱいに出して、タップで進める。
+export const INTRO_LINES: string[] = [
+  "この世界には、英語を聞かせると大きく育つ「エークワたん」がいる",
+  "アーサーと一緒に沢山英語を喋って「エークワたん」を育てよう！",
+];
+
+// 導入のあとに出る「エークワ博士からの育成アドバイス」
 export const ADVICE_SPEAKER = "エークワ博士";
 export const ADVICE_TITLE = "育成アドバイス";
 export const ADVICE_LINES: string[] = [

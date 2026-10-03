@@ -2,14 +2,16 @@
 
 import { useState } from "react";
 import { Bug } from "lucide-react";
+import { ArthurAvatar } from "./arthur";
 import {
   ADVICE_LINES,
   ADVICE_SPEAKER,
   ADVICE_TITLE,
+  INTRO_LINES,
   type RoadmapAnnouncement,
 } from "@/lib/roadmap-notices";
 
-type Item = { kind: "advice" } | { kind: "announcement"; announcement: RoadmapAnnouncement };
+type Item = { kind: "intro" } | { kind: "advice" } | { kind: "announcement"; announcement: RoadmapAnnouncement };
 
 // 部屋に入ったときのポップアップ。初回はエークワ博士のアドバイス、以降は未読のお知らせを1件ずつ順に出す。
 // 閉じるたびに既読をサーバーへ保存する（保存に失敗しても表示は先へ進める）。
@@ -21,12 +23,35 @@ export function RoomNoticeModal({
   announcements: RoadmapAnnouncement[];
 }) {
   const [queue, setQueue] = useState<Item[]>(() => [
-    ...(showAdvice ? ([{ kind: "advice" }] as Item[]) : []),
+    ...(showAdvice ? ([{ kind: "intro" }, { kind: "advice" }] as Item[]) : []),
     ...announcements.map((announcement) => ({ kind: "announcement" as const, announcement })),
   ]);
 
+  const [introPage, setIntroPage] = useState(0);
+
   const current = queue[0];
   if (!current) return null;
+
+  if (current.kind === "intro") {
+    const isLast = introPage >= INTRO_LINES.length - 1;
+    const advance = () => {
+      if (isLast) setQueue((q) => q.slice(1));
+      else setIntroPage((p) => p + 1);
+    };
+    return (
+      <button
+        type="button"
+        onClick={advance}
+        className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-8 bg-zinc-900/90 px-8 text-center"
+      >
+        <ArthurAvatar size={128} animated className="shadow-lg" />
+        <p key={introPage} className="max-w-xs animate-question-card-enter text-lg font-bold leading-relaxed text-white">
+          {INTRO_LINES[introPage]}
+        </p>
+        <span className="text-2xl text-white/70">▼</span>
+      </button>
+    );
+  }
 
   const close = () => {
     const body =
