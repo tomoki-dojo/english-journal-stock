@@ -852,10 +852,7 @@ export function KuwagataShelf({
                     <span className="font-semibold text-zinc-800">
                       {individualOffset + index + 1}匹目・{GROWTH_STAGE_LABEL[individual.growthStage]}
                     </span>
-                    <span className="text-zinc-400">
-                      {individual.obtainedVia === "stage_clear" ? "確定入手" : "野生採集"}・
-                      {formatDate(individual.obtainedAt)}
-                    </span>
+                    <span className="text-zinc-400">{formatDate(individual.obtainedAt)}</span>
                   </div>
                 </li>
               ))}
