@@ -154,7 +154,7 @@ function StageCase({
   // 解放済み＋実アート有りの場合だけ、アイテムごとのwidthPctで実寸表示する
   // （丸バッジを外し、縦横比はobject-containで画像任せ）。それ以外（未解放／
   // アート未制作でlucideアイコンのまま）は、従来通り固定48pxの丸バッジ表示。
-  const showRealArt = !locked && imageSrc;
+  const showRealArt = !!imageSrc;
 
   // ラベルは半透明の白ピル（「座布団」）を敷いて、どんな背景の上でも読めるようにする。
   // 画像より手前（DOM順で後＝視覚的に上）に重ねるが、座布団自体は透かして背景の絵を感じられる程度の濃さにする。
@@ -167,13 +167,25 @@ function StageCase({
     </span>
   );
 
+  // 未解放はアートをグレーアウトして中央に鍵を重ねる（リンクなし・hover演出なし）。
   const itemImage = (
     <div
       style={{ transform: `rotate(${placement.rotate}deg)`, width: "100%" }}
-      className="transition-transform hover:scale-105 active:scale-95"
+      className={`relative ${locked ? "" : "transition-transform hover:scale-105 active:scale-95"}`}
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- 任意形状・任意サイズの自前アートなのでnext/imageの固定枠は使わない */}
-      <img src={imageSrc ?? undefined} alt="" className="block w-full object-contain drop-shadow-md" />
+      <img
+        src={imageSrc ?? undefined}
+        alt=""
+        className={`block w-full object-contain drop-shadow-md ${locked ? "opacity-50 grayscale" : ""}`}
+      />
+      {locked && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/80 shadow-sm">
+            <Lock className="h-4 w-4 text-zinc-500" strokeWidth={2} />
+          </span>
+        </div>
+      )}
     </div>
   );
 
@@ -206,7 +218,7 @@ function StageCase({
       <span className={`text-[10px] font-semibold ${locked ? "text-zinc-400" : ""}`} style={locked ? undefined : { color }}>
         {label}
       </span>
-      <span className="text-[9px] text-zinc-400">{locked ? "未解放" : caption}</span>
+      {!locked && <span className="text-[9px] text-zinc-400">{caption}</span>}
     </div>
   );
 
