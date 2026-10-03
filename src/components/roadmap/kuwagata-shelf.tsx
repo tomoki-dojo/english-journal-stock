@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { Bug, X } from "lucide-react";
+import { Bug, ChevronLeft, ChevronRight, X } from "lucide-react";
 import type { KuwagataGrowthStage, KuwagataShelfTank } from "@/lib/supabase/kuwagata";
 
 const GROWTH_STAGE_LABEL: Record<string, string> = {
@@ -21,9 +21,20 @@ function hashHue(seed: string): number {
   return hash;
 }
 
-// 水槽の表示名。同じ種類が複数水槽に分かれているときだけ「エークワたん 1」のように番号を付ける。
-function tankLabel(tank: KuwagataShelfTank): string {
-  return tank.partNumber === null ? tank.speciesName : `${tank.speciesName} ${tank.partNumber}`;
+// 同じ種類が複数の水槽(1水槽6匹まで)に分かれているときも、棚の一覧では1種類につき1枚の
+// カードにまとめる(水槽の切り替えは拡大表示の中のページャで行う)。並び順は元のまま。
+function groupBySpecies(tanks: KuwagataShelfTank[]): KuwagataShelfTank[][] {
+  const groups = new Map<string, KuwagataShelfTank[]>();
+  for (const tank of tanks) {
+    const group = groups.get(tank.speciesId);
+    if (group) group.push(tank);
+    else groups.set(tank.speciesId, [tank]);
+  }
+  return Array.from(groups.values());
+}
+
+function pickRepresentative(group: KuwagataShelfTank[]) {
+  return group.flatMap((t) => t.individuals).reduce((a, b) => (b.sizeScale > a.sizeScale ? b : a));
 }
 
 function tankColor(tank: KuwagataShelfTank): string {
@@ -686,6 +697,12 @@ export function KuwagataShelf({
   const [selectedTankId, setSelectedTankId] = useState<string | null>(null);
   const lookupTanks = [...knownTanks, ...tanks];
   const selectedTank = lookupTanks.find((t) => t.tankId === selectedTankId) ?? null;
+  const knownGroups = groupBySpecies(knownTanks);
+  const newGroups = groupBySpecies(tanks);
+  // 選択中の水槽と同じ種類の水槽(ページャ用)と、その中での位置・それより前の水槽の匹数(「N匹目」の通し番号用)
+  const siblingTanks = selectedTank ? lookupTanks.filter((t) => t.speciesId === selectedTank.speciesId) : [];
+  const siblingIndex = selectedTank ? siblingTanks.findIndex((t) => t.tankId === selectedTank.tankId) : 0;
+  const individualOffset = siblingTanks.slice(0, siblingIndex).reduce((sum, t) => sum + t.individuals.length, 0);
 
   if (tanks.length === 0 && knownTanks.length === 0) {
     return (
@@ -702,11 +719,13 @@ export function KuwagataShelf({
     <div>
       {knownTanks.length > 0 && (
         <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {knownTanks.map((tank) => {
-            const representative = tank.individuals.reduce((a, b) => (b.sizeScale > a.sizeScale ? b : a));
+          {knownGroups.map((group) => {
+            const tank = group[0];
+            const representative = pickRepresentative(group);
+            const count = group.reduce((sum, t) => sum + t.individuals.length, 0);
             return (
               <button
-                key={tank.tankId}
+                key={tank.speciesId}
                 type="button"
                 onClick={() => setSelectedTankId(tank.tankId)}
                 className="flex flex-col items-center gap-1.5 rounded-xl border border-amber-300 bg-gradient-to-b from-amber-50 to-white px-2 py-4 shadow-sm transition-transform hover:scale-[1.03] hover:shadow-md active:scale-95"
@@ -718,9 +737,9 @@ export function KuwagataShelf({
                   mandibleVariant={representative.mandibleVariant}
                   growthStage={representative.growthStage}
                 />
-                <span className="text-xs font-semibold text-amber-800">{tankLabel(tank)}</span>
+                <span className="text-xs font-semibold text-amber-800">{tank.speciesName}</span>
                 <span className="text-[10px] text-amber-600">
-                  {tank.individuals.length > 1 ? `${tank.individuals.length}匹` : GROWTH_STAGE_LABEL[representative.growthStage]}
+                  {count > 1 ? `${count}匹` : GROWTH_STAGE_LABEL[representative.growthStage]}
                 </span>
               </button>
             );
@@ -729,13 +748,15 @@ export function KuwagataShelf({
       )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {tanks.map((tank) => {
+        {newGroups.map((group) => {
+          const tank = group[0];
           const color = tankColor(tank);
-          const representative = tank.individuals.reduce((a, b) => (b.sizeScale > a.sizeScale ? b : a));
+          const representative = pickRepresentative(group);
+          const count = group.reduce((sum, t) => sum + t.individuals.length, 0);
 
           return (
             <button
-              key={tank.tankId}
+              key={tank.speciesId}
               type="button"
               onClick={() => setSelectedTankId(tank.tankId)}
               className={`flex flex-col items-center gap-1.5 rounded-xl border px-2 py-4 shadow-sm transition-transform hover:scale-[1.03] hover:shadow-md active:scale-95 ${
@@ -752,9 +773,9 @@ export function KuwagataShelf({
                 mandibleVariant={representative.mandibleVariant}
                 growthStage={representative.growthStage}
               />
-              <span className="text-xs font-semibold text-zinc-700">{tankLabel(tank)}</span>
+              <span className="text-xs font-semibold text-zinc-700">{tank.speciesName}</span>
               <span className="text-[10px] text-zinc-400">
-                {tank.individuals.length > 1 ? `${tank.individuals.length}匹` : GROWTH_STAGE_LABEL[representative.growthStage]}
+                {count > 1 ? `${count}匹` : GROWTH_STAGE_LABEL[representative.growthStage]}
               </span>
             </button>
           );
@@ -773,8 +794,8 @@ export function KuwagataShelf({
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-base font-bold text-zinc-800 sm:text-lg">
                 {selectedTank.speciesKind === "known"
-                  ? tankLabel(selectedTank)
-                  : `棚${selectedTank.tankNumber}・${tankLabel(selectedTank)}`}
+                  ? selectedTank.speciesName
+                  : `棚${selectedTank.tankNumber}・${selectedTank.speciesName}`}
               </h2>
               <button
                 type="button"
@@ -786,7 +807,33 @@ export function KuwagataShelf({
               </button>
             </div>
 
-            <EnlargedTankVisual tank={selectedTank} color={tankColor(selectedTank)} />
+            {siblingTanks.length > 1 && (
+              <div className="mb-2 flex items-center justify-center gap-3">
+                <button
+                  type="button"
+                  disabled={siblingIndex === 0}
+                  onClick={() => setSelectedTankId(siblingTanks[siblingIndex - 1].tankId)}
+                  className="rounded-full p-1 text-zinc-500 hover:bg-zinc-100 disabled:opacity-30 disabled:hover:bg-transparent"
+                  aria-label="前の水槽"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span className="text-xs font-semibold tabular-nums text-zinc-600">
+                  {siblingIndex + 1} / {siblingTanks.length}
+                </span>
+                <button
+                  type="button"
+                  disabled={siblingIndex === siblingTanks.length - 1}
+                  onClick={() => setSelectedTankId(siblingTanks[siblingIndex + 1].tankId)}
+                  className="rounded-full p-1 text-zinc-500 hover:bg-zinc-100 disabled:opacity-30 disabled:hover:bg-transparent"
+                  aria-label="次の水槽"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
+            <EnlargedTankVisual key={selectedTank.tankId} tank={selectedTank} color={tankColor(selectedTank)} />
 
             <ul className="flex flex-col gap-2">
               {selectedTank.individuals.map((individual, index) => (
@@ -803,7 +850,7 @@ export function KuwagataShelf({
                   />
                   <div className="flex flex-col text-xs text-zinc-600">
                     <span className="font-semibold text-zinc-800">
-                      {index + 1}匹目・{GROWTH_STAGE_LABEL[individual.growthStage]}
+                      {individualOffset + index + 1}匹目・{GROWTH_STAGE_LABEL[individual.growthStage]}
                     </span>
                     <span className="text-zinc-400">
                       {individual.obtainedVia === "stage_clear" ? "確定入手" : "野生採集"}・

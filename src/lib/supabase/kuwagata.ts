@@ -106,8 +106,7 @@ export type KuwagataShelfTank = {
   speciesKind: "known" | "new";
   speciesAreaCode: KuwagataAreaCode | null;
   tankNumber: number;
-  // 同じ種類が複数水槽に分かれたときの「エークワたん 1」「エークワたん 2」の番号。
-  // 1水槽に収まっている種類はnull(番号を付けない)。
+  // 同じ種類が複数水槽に分かれたときの水槽の番号(1始まり)。1水槽に収まる種類はnull。
   partNumber: number | null;
   individuals: KuwagataShelfIndividual[];
 };
@@ -125,10 +124,10 @@ export type KuwagataShelfResult = {
 
 // 棚UI用：ユーザーの個体を種類ごとにグルーピングし、「棚」単位に組み立てる。
 // 既知種・新種とも「1種類=1水槽」(例: エークワたんだけの水槽、シャベクワたんだけの水槽)が基本で、
-// 1水槽はKUWAGATA_TANK_CAPACITY匹まで。超えたら捕まえた順に「エークワたん 1」「エークワたん 2」…
-// と水槽を分ける。棚番号＝水槽の並び順（種類を初めて採集した順→同じ種類内は捕まえた順。
-// getUserKuwagataIndividualsがobtained_at昇順のため、Map挿入順がそのまま初回採集順になる）。
-// 既知種・新種で別々に採番する。
+// 1水槽はKUWAGATA_TANK_CAPACITY匹まで。超えたら捕まえた順に次の水槽(partNumber 1,2,…)へ
+// 分ける(棚のUIでは1種類1枚のカードにまとめ、拡大表示の中で水槽を切り替える)。
+// 棚番号＝種類を初めて採集した順（getUserKuwagataIndividualsがobtained_at昇順のため、
+// Map挿入順がそのまま初回採集順になる）。既知種・新種で別々に採番する。
 // Free会員は新種の「種類」だけFREE_SHELF_NEW_SPECIES_TANK_CAP件までに絞る（分割後の水槽数では
 // 数えない。既知種は対象外で常に全部表示する）。採集ロールの対象プール自体は絞らない
 // ——あくまで棚の「見せ方」の上限。
@@ -167,7 +166,7 @@ export async function getKuwagataShelfTanks(userId: string): Promise<KuwagataShe
     const visibleEntries = speciesLimit === undefined ? entries : entries.slice(0, speciesLimit);
     const tanks: KuwagataShelfTank[] = [];
 
-    for (const [speciesId, speciesIndividuals] of visibleEntries) {
+    for (const [speciesIndex, [speciesId, speciesIndividuals]] of visibleEntries.entries()) {
       const info = speciesInfo.get(speciesId)!;
       const partCount = Math.ceil(speciesIndividuals.length / KUWAGATA_TANK_CAPACITY);
       for (let part = 0; part < partCount; part++) {
@@ -175,7 +174,8 @@ export async function getKuwagataShelfTanks(userId: string): Promise<KuwagataShe
           tankId: partCount === 1 ? speciesId : `${speciesId}#${part + 1}`,
           speciesId,
           ...info,
-          tankNumber: tanks.length + 1,
+          // 棚番号は「種類」の並び順(同じ種類の水槽はすべて同じ番号)。棚の一覧は1種類1枚のカード
+          tankNumber: speciesIndex + 1,
           partNumber: partCount === 1 ? null : part + 1,
           individuals: speciesIndividuals.slice(part * KUWAGATA_TANK_CAPACITY, (part + 1) * KUWAGATA_TANK_CAPACITY),
         });
