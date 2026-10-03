@@ -78,41 +78,51 @@ type Facing = "front" | "back";
 // 絵しかない幼虫は、右へ進むときだけ左右反転して「後ろ向きに進む」不自然さを避ける。
 type Heading = "left" | "right";
 
-const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCreatureArt>>>> = {
-  "KW-0001": {
+// 既知種の成虫アートは、全種で同じパーツ構成(前向き=本体・大顎3種・奥脚1本・手前脚3本、
+// 後ろ向き=本体・大顎3種・脚3本)。ファイル名はkuwagata_{コード}_{パーツ}.svgで揃えてあるので、
+// コードを渡して組み立てる(パーツの意味・描画順の注意は下のコメント参照)。
+function buildKnownCreatureArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
+  const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
+  return {
     front: {
-      body: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_body.svg`,
+      body: file("front_body"),
       mandibles: {
-        1: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_mandible_01.svg`,
-        2: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_mandible_02.svg`,
-        3: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_mandible_03.svg`,
+        1: file("front_mandible_01"),
+        2: file("front_mandible_02"),
+        3: file("front_mandible_03"),
       },
       // 奥脚(見えているのは1本のみ、他2本は本体の陰に隠れる想定で未作成)
-      legsBehindBody: [{ src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_leg_R1.svg`, delay: "-0.55s" }],
+      legsBehindBody: [{ src: file("front_leg_R1"), delay: "-0.55s" }],
       // 手前脚3本。配列の末尾(L1)が一番手前に重なる
       legsInFrontOfBody: [
-        { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_leg_L3.svg`, delay: "-0.3s" },
-        { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_leg_L2.svg`, delay: "-0.15s" },
-        { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_front_leg_L1.svg`, delay: "0s" },
+        { src: file("front_leg_L3"), delay: "-0.3s" },
+        { src: file("front_leg_L2"), delay: "-0.15s" },
+        { src: file("front_leg_L1"), delay: "0s" },
       ],
     },
     back: {
-      body: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_back_body.svg`,
+      body: file("back_body"),
       mandibles: {
-        1: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_back_mandible_01.svg`,
-        2: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_back_mandible_02.svg`,
-        3: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_back_mandible_03.svg`,
+        1: file("back_mandible_01"),
+        2: file("back_mandible_02"),
+        3: file("back_mandible_03"),
       },
       // 背面は3本とも本体の奥(後ろ)に重なる。配列の並び順=DOM描画順(先に描いたものほど
       // 奥)なので、一番手前に見せたいR1を配列の最後に置く(R3→R2→R1の順で描画される)
       legsBehindBody: [
-        { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_back_leg_R3.svg`, delay: "-0.3s" },
-        { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_back_leg_R2.svg`, delay: "-0.15s" },
-        { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_back_leg_R1.svg`, delay: "0s" },
+        { src: file("back_leg_R3"), delay: "-0.3s" },
+        { src: file("back_leg_R2"), delay: "-0.15s" },
+        { src: file("back_leg_R1"), delay: "0s" },
       ],
       legsInFrontOfBody: [],
     },
-  },
+  };
+}
+
+const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCreatureArt>>>> = {
+  "KW-0001": buildKnownCreatureArt("KW-0001"),
+  // ヒビクワたん(成虫のみ。卵・幼虫・蛹の絵は未制作なのでKNOWN_STAGE_ARTに無く、成虫の絵で代用される)
+  "KW-0002": buildKnownCreatureArt("KW-0002"),
 };
 
 // 成長段階(卵・幼虫・蛹)のアート。成虫のKNOWN_CREATURE_ARTとは別に持ち、ここに無い
