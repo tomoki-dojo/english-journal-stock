@@ -295,13 +295,20 @@ body {
   }
 }
 
-@keyframes egg-burst {
+/* クラッカーの紙吹雪。打ち上がって（ease-out）、ひらひら落ちる（ease-in）。 */
+@keyframes egg-confetti {
   0% {
-    transform: translate(0, 0) scale(0.4) rotate(0deg);
+    transform: translate(0, 0) rotate(0deg) scale(0.3);
     opacity: 1;
+    animation-timing-function: cubic-bezier(0.1, 0.7, 0.3, 1);
+  }
+  35% {
+    transform: translate(calc(var(--cx, 0px) * 0.75), var(--cy-peak, -200px)) rotate(calc(var(--rot, 0deg) * 0.4)) scale(1);
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.9, 0.6);
   }
   100% {
-    transform: translate(var(--burst-x, 0), var(--burst-y, 0)) scale(1.1) rotate(180deg);
+    transform: translate(var(--cx, 0px), var(--cy-end, 100px)) rotate(var(--rot, 0deg)) scale(1);
     opacity: 0;
   }
 }
@@ -326,8 +333,8 @@ body {
   animation: egg-glow-pulse 2.4s ease-in-out infinite;
 }
 
-.animate-egg-burst {
-  animation: egg-burst 1.2s ease-out both;
+.animate-egg-confetti {
+  animation: egg-confetti 2s linear both;
 }
 
 .animate-egg-twinkle {
@@ -337,11 +344,11 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .animate-egg-reveal,
   .animate-egg-glow,
-  .animate-egg-burst,
+  .animate-egg-confetti,
   .animate-egg-twinkle {
     animation: none;
   }
-  .animate-egg-burst {
+  .animate-egg-confetti {
     opacity: 0;
   }
 }
