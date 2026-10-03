@@ -1,26 +1,43 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { ANNOUNCEMENTS, LATEST_ANNOUNCEMENT_ID, type RoadmapAnnouncement } from "@/lib/roadmap-notices";
+import {
+  ANNOUNCEMENTS,
+  LATEST_ANNOUNCEMENT_ID,
+  type RoadmapAnnouncement,
+  type RoadmapNewEgg,
+} from "@/lib/roadmap-notices";
+import { getUncelebratedEggs } from "@/lib/supabase/kuwagata";
 
 export type RoadmapNotices = {
   showAdvice: boolean;
   announcements: RoadmapAnnouncement[];
+  // まだ「手に入れた！」演出を見せていない新しいタマゴ（Stage解放・サインアップ時の確定入手）
+  newEggs: RoadmapNewEgg[];
 };
 
 // 部屋に入ったときに出すポップアップ（初回アドバイス・未読のお知らせ）を決める。
 // 初回ユーザーにはアドバイスだけを出し、過去のお知らせは見せない（アドバイスを閉じた時点で最新まで既読にする）。
-export async function getRoadmapNotices(userId: string): Promise<RoadmapNotices> {
+export async function getRoadmapNotices(
+  userId: string,
+): Promise<RoadmapNotices> {
   const { data } = await supabaseAdmin
     .from("profiles")
     .select("roadmap_advice_seen_at, roadmap_last_seen_announcement_id")
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (!data) return { showAdvice: false, announcements: [] };
+  if (!data) return { showAdvice: false, announcements: [], newEggs: [] };
 
-  if (!data.roadmap_advice_seen_at) return { showAdvice: true, announcements: [] };
+  const newEggs = await getUncelebratedEggs(userId);
+
+  if (!data.roadmap_advice_seen_at)
+    return { showAdvice: true, announcements: [], newEggs };
 
   const lastSeen = data.roadmap_last_seen_announcement_id ?? 0;
-  return { showAdvice: false, announcements: ANNOUNCEMENTS.filter((a) => a.id > lastSeen) };
+  return {
+    showAdvice: false,
+    announcements: ANNOUNCEMENTS.filter((a) => a.id > lastSeen),
+    newEggs,
+  };
 }
 
 export async function markAdviceSeen(userId: string): Promise<boolean> {
@@ -32,11 +49,15 @@ export async function markAdviceSeen(userId: string): Promise<boolean> {
     })
     .eq("user_id", userId)
     .select("user_id");
-  if (error) throw new Error(`アドバイスの既読保存に失敗しました: ${error.message}`);
+  if (error)
+    throw new Error(`アドバイスの既読保存に失敗しました: ${error.message}`);
   return (data?.length ?? 0) > 0;
 }
 
-export async function markAnnouncementSeen(userId: string, announcementId: number): Promise<boolean> {
+export async function markAnnouncementSeen(
+  userId: string,
+  announcementId: number,
+): Promise<boolean> {
   const { data: current } = await supabaseAdmin
     .from("profiles")
     .select("roadmap_last_seen_announcement_id")
@@ -44,11 +65,15 @@ export async function markAnnouncementSeen(userId: string, announcementId: numbe
     .maybeSingle();
   if (!current) return false;
 
-  const next = Math.max(current.roadmap_last_seen_announcement_id ?? 0, announcementId);
+  const next = Math.max(
+    current.roadmap_last_seen_announcement_id ?? 0,
+    announcementId,
+  );
   const { error } = await supabaseAdmin
     .from("profiles")
     .update({ roadmap_last_seen_announcement_id: next })
     .eq("user_id", userId);
-  if (error) throw new Error(`お知らせの既読保存に失敗しました: ${error.message}`);
+  if (error)
+    throw new Error(`お知らせの既読保存に失敗しました: ${error.message}`);
   return true;
 }

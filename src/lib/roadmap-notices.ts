@@ -4,6 +4,8 @@
 
 export type RoadmapAnnouncement = { id: number; title: string; body: string };
 
+export type RoadmapNewEgg = { id: string; speciesCode: string; speciesName: string };
+
 export const ANNOUNCEMENTS: RoadmapAnnouncement[] = [];
 
 export const LATEST_ANNOUNCEMENT_ID = ANNOUNCEMENTS.reduce((max, a) => Math.max(max, a.id), 0);

@@ -33,6 +33,7 @@ export default async function RoadmapPage() {
   const notices = await getRoadmapNotices(user.id).catch(() => ({
     showAdvice: false,
     announcements: [],
+    newEggs: [],
   }));
 
   return (
@@ -40,6 +41,7 @@ export default async function RoadmapPage() {
       <RoomNoticeModal
         showAdvice={notices.showAdvice}
         announcements={notices.announcements}
+        newEggs={notices.newEggs}
       />
       <RoadmapRoom
         stageReadiness={stageReadiness}

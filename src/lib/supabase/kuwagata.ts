@@ -414,6 +414,41 @@ function randomBetween(min: number, max: number): number {
   return Math.round((min + Math.random() * (max - min)) * 100) / 100;
 }
 
+// 「手に入れた！」演出をまだ見せていない確定入手のタマゴ（Stage解放・サインアップ時）。部屋に入ったときに出す。
+export async function getUncelebratedEggs(
+  userId: string
+): Promise<{ id: string; speciesCode: string; speciesName: string }[]> {
+  const { data, error } = await supabaseAdmin
+    .from("kuwagata_individuals")
+    .select("id, kuwagata_species(code, name)")
+    .eq("user_id", userId)
+    .eq("obtained_via", "stage_clear")
+    .is("celebrated_at", null)
+    .order("obtained_at", { ascending: true });
+
+  if (error) {
+    throw new Error(`未演出のタマゴの取得に失敗しました: ${error.message}`);
+  }
+
+  return (data ?? []).flatMap((row) => {
+    const species = Array.isArray(row.kuwagata_species) ? row.kuwagata_species[0] : row.kuwagata_species;
+    return species ? [{ id: row.id as string, speciesCode: species.code as string, speciesName: species.name as string }] : [];
+  });
+}
+
+export async function markIndividualCelebrated(userId: string, individualId: string): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from("kuwagata_individuals")
+    .update({ celebrated_at: new Date().toISOString() })
+    .eq("id", individualId)
+    .eq("user_id", userId)
+    .is("celebrated_at", null);
+
+  if (error) {
+    throw new Error(`タマゴ演出の既読保存に失敗しました: ${error.message}`);
+  }
+}
+
 export async function recordStageClearCatch(userId: string, stageJustCleared: number): Promise<void> {
   const { data: speciesRows, error: speciesError } = await supabaseAdmin
     .from("kuwagata_species")
@@ -518,6 +553,8 @@ export async function goCatchInArea(
     size_scale: randomBetween(SIZE_SCALE_MIN, SIZE_SCALE_MAX),
     mandible_variant: Math.floor(Math.random() * MANDIBLE_VARIANT_COUNT) + 1,
     hatched_at: new Date().toISOString(),
+    // 採集結果はその場で演出を見せるため、部屋でのタマゴ演出の対象にはしない。
+    celebrated_at: new Date().toISOString(),
   });
 
   if (insertError) {

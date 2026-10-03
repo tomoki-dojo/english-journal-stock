@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Sparkles, Bug, X, ArrowRight } from "lucide-react";
+import { Sparkles, ArrowRight } from "lucide-react";
+import { CelebrationOverlay } from "./celebration-overlay";
 import type { KuwagataAreaCode } from "@/lib/supabase/kuwagata";
 
 const AREA_LABEL: Record<KuwagataAreaCode, string> = {
@@ -22,10 +23,13 @@ type CatchResponse = {
   flavorTextJa: string | null;
 };
 
-const RARITY_STYLE: Record<CatchResponse["rarity"], { border: string; text: string; label: string }> = {
-  コモン: { border: "border-zinc-200", text: "text-zinc-700", label: "" },
-  レア: { border: "border-sky-300", text: "text-sky-700", label: "レア" },
-  激レア: { border: "border-amber-400", text: "text-amber-700", label: "激レア" },
+const RARITY_STYLE: Record<
+  CatchResponse["rarity"],
+  { celebrateText: string; label: string }
+> = {
+  コモン: { celebrateText: "text-amber-300", label: "" },
+  レア: { celebrateText: "text-sky-300", label: "レア" },
+  激レア: { celebrateText: "text-pink-300", label: "激レア" },
 };
 
 export function KuwagataCatchExpedition({
@@ -57,7 +61,9 @@ export function KuwagataCatchExpedition({
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(typeof json.error === "string" ? json.error : "採集に失敗しました");
+        setError(
+          typeof json.error === "string" ? json.error : "採集に失敗しました",
+        );
         return;
       }
       setResult(json as CatchResponse);
@@ -99,7 +105,9 @@ export function KuwagataCatchExpedition({
 
       {picking && (
         <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3">
-          <p className="mb-2 text-xs font-semibold text-amber-800">どのエリアで採集する？</p>
+          <p className="mb-2 text-xs font-semibold text-amber-800">
+            どのエリアで採集する？
+          </p>
           <div className="flex flex-wrap gap-1.5">
             {initialUnlockedAreas.map((areaCode) => (
               <button
@@ -126,50 +134,31 @@ export function KuwagataCatchExpedition({
       {error && <p className="mt-2 text-xs text-red-500">{error}</p>}
 
       {result && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          onClick={closeResult}
+        <CelebrationOverlay
+          accentClassName={RARITY_STYLE[result.rarity].celebrateText}
+          eyebrow={
+            RARITY_STYLE[result.rarity].label
+              ? `${RARITY_STYLE[result.rarity].label}が出た！`
+              : undefined
+          }
+          message={`${result.speciesName}をゲットした！`}
+          description={result.flavorTextJa}
         >
-          <div
-            className={`relative w-full max-w-xs rounded-2xl border-2 bg-white p-6 text-center shadow-xl ${RARITY_STYLE[result.rarity].border}`}
-            onClick={(e) => e.stopPropagation()}
+          <button
+            type="button"
+            onClick={closeResult}
+            className="w-full rounded-full bg-amber-500 py-2.5 text-sm font-bold text-white transition-transform active:scale-95"
           >
-            <button
-              type="button"
-              onClick={closeResult}
-              className="absolute right-3 top-3 rounded-full p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"
-              aria-label="閉じる"
-            >
-              <X className="h-4 w-4" />
-            </button>
-
-            {RARITY_STYLE[result.rarity].label && (
-              <p className={`mb-1 text-xs font-bold ${RARITY_STYLE[result.rarity].text}`}>
-                {RARITY_STYLE[result.rarity].label}が出た！
-              </p>
-            )}
-            <Bug className={`mx-auto mb-2 h-12 w-12 ${RARITY_STYLE[result.rarity].text}`} strokeWidth={1.5} />
-            <p className="text-sm font-bold text-zinc-800">{result.speciesName}をゲットした！</p>
-            {result.flavorTextJa && <p className="mt-2 text-xs text-zinc-500">{result.flavorTextJa}</p>}
-
-            <div className="mt-4 flex items-center justify-center gap-2">
-              <button
-                type="button"
-                onClick={closeResult}
-                className="rounded-full border border-zinc-300 px-4 py-1.5 text-xs font-semibold text-zinc-600 hover:bg-zinc-50"
-              >
-                棚を見る
-              </button>
-              <Link
-                href="/roadmap"
-                className="flex items-center gap-1 rounded-full bg-zinc-800 px-4 py-1.5 text-xs font-semibold text-white hover:bg-zinc-700"
-              >
-                つづきを練習する
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-          </div>
-        </div>
+            棚を見る
+          </button>
+          <Link
+            href="/roadmap"
+            className="flex items-center gap-1 rounded-full px-4 py-1.5 text-xs font-semibold text-white/80 hover:text-white"
+          >
+            つづきを練習する
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </CelebrationOverlay>
       )}
     </div>
   );
