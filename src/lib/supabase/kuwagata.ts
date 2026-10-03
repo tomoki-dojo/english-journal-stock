@@ -94,12 +94,21 @@ export function getIndividualGrowthStage(individual: {
 
 export type KuwagataShelfIndividual = KuwagataIndividual & { growthStage: KuwagataGrowthStage };
 
+// 1つの水槽に入れる最大匹数。拡大表示で歩き回るのが気持ちよく収まる数(置物と衝突回避を
+// 考えると5〜6匹が限界)。同じ種類がこれを超えたら、捕まえた順に次の水槽へ繰り上げる。
+export const KUWAGATA_TANK_CAPACITY = 6;
+
 export type KuwagataShelfTank = {
+  // 水槽ごとに一意なID(選択状態・React keyに使う)。同じ種類が複数水槽に分かれても被らない。
+  tankId: string;
   speciesId: string;
   speciesName: string;
   speciesKind: "known" | "new";
   speciesAreaCode: KuwagataAreaCode | null;
   tankNumber: number;
+  // 同じ種類が複数水槽に分かれたときの「エークワたん 1」「エークワたん 2」の番号。
+  // 1水槽に収まっている種類はnull(番号を付けない)。
+  partNumber: number | null;
   individuals: KuwagataShelfIndividual[];
 };
 
@@ -115,16 +124,20 @@ export type KuwagataShelfResult = {
 };
 
 // 棚UI用：ユーザーの個体を種類ごとにグルーピングし、「棚」単位に組み立てる。
-// 既知種・新種とも「1種類=1水槽」(例: エークワたんだけの水槽、シャベクワたんだけの水槽)。
-// 棚番号＝その種類を初めて採集した順（getUserKuwagataIndividualsがobtained_at昇順のため、
-// Map挿入順＝初回採集順がそのまま棚番号の順序になる）。既知種・新種で別々に採番する。
-// Free会員は新種の棚だけFREE_SHELF_NEW_SPECIES_TANK_CAP件までに絞る（既知種は対象外、
-// 常に全部表示する）。採集ロールの対象プール自体は絞らない——あくまで棚の「見せ方」の上限。
+// 既知種・新種とも「1種類=1水槽」(例: エークワたんだけの水槽、シャベクワたんだけの水槽)が基本で、
+// 1水槽はKUWAGATA_TANK_CAPACITY匹まで。超えたら捕まえた順に「エークワたん 1」「エークワたん 2」…
+// と水槽を分ける。棚番号＝水槽の並び順（種類を初めて採集した順→同じ種類内は捕まえた順。
+// getUserKuwagataIndividualsがobtained_at昇順のため、Map挿入順がそのまま初回採集順になる）。
+// 既知種・新種で別々に採番する。
+// Free会員は新種の「種類」だけFREE_SHELF_NEW_SPECIES_TANK_CAP件までに絞る（分割後の水槽数では
+// 数えない。既知種は対象外で常に全部表示する）。採集ロールの対象プール自体は絞らない
+// ——あくまで棚の「見せ方」の上限。
 export async function getKuwagataShelfTanks(userId: string): Promise<KuwagataShelfResult> {
   const [individuals, plan] = await Promise.all([getUserKuwagataIndividuals(userId), getPlan(userId)]);
 
-  const byKnownSpecies = new Map<string, KuwagataShelfTank>();
-  const byNewSpecies = new Map<string, KuwagataShelfTank>();
+  const byKnownSpecies = new Map<string, KuwagataShelfIndividual[]>();
+  const byNewSpecies = new Map<string, KuwagataShelfIndividual[]>();
+  const speciesInfo = new Map<string, Pick<KuwagataShelfTank, "speciesName" | "speciesKind" | "speciesAreaCode">>();
 
   for (const individual of individuals) {
     const shelfIndividual: KuwagataShelfIndividual = {
@@ -135,31 +148,51 @@ export async function getKuwagataShelfTanks(userId: string): Promise<KuwagataShe
     const bucket = individual.speciesKind === "known" ? byKnownSpecies : byNewSpecies;
     const existing = bucket.get(individual.speciesId);
     if (existing) {
-      existing.individuals.push(shelfIndividual);
+      existing.push(shelfIndividual);
       continue;
     }
 
-    bucket.set(individual.speciesId, {
-      speciesId: individual.speciesId,
+    bucket.set(individual.speciesId, [shelfIndividual]);
+    speciesInfo.set(individual.speciesId, {
       speciesName: individual.speciesName,
       speciesKind: individual.speciesKind,
       speciesAreaCode: individual.speciesAreaCode,
-      tankNumber: bucket.size + 1,
-      individuals: [shelfIndividual],
     });
   }
 
-  const knownTanks = Array.from(byKnownSpecies.values());
-  const allNewTanks = Array.from(byNewSpecies.values());
+  // 種類ごとの個体リストを、KUWAGATA_TANK_CAPACITY匹ずつの水槽に分ける。
+  // speciesLimitがあれば、種類の数がそれを超えた分は丸ごと除外する(Freeの新種表示枠)。
+  const buildTanks = (bucket: Map<string, KuwagataShelfIndividual[]>, speciesLimit?: number) => {
+    const entries = Array.from(bucket.entries());
+    const visibleEntries = speciesLimit === undefined ? entries : entries.slice(0, speciesLimit);
+    const tanks: KuwagataShelfTank[] = [];
+
+    for (const [speciesId, speciesIndividuals] of visibleEntries) {
+      const info = speciesInfo.get(speciesId)!;
+      const partCount = Math.ceil(speciesIndividuals.length / KUWAGATA_TANK_CAPACITY);
+      for (let part = 0; part < partCount; part++) {
+        tanks.push({
+          tankId: partCount === 1 ? speciesId : `${speciesId}#${part + 1}`,
+          speciesId,
+          ...info,
+          tankNumber: tanks.length + 1,
+          partNumber: partCount === 1 ? null : part + 1,
+          individuals: speciesIndividuals.slice(part * KUWAGATA_TANK_CAPACITY, (part + 1) * KUWAGATA_TANK_CAPACITY),
+        });
+      }
+    }
+
+    return { tanks, hiddenSpeciesCount: entries.length - visibleEntries.length };
+  };
+
+  const knownTanks = buildTanks(byKnownSpecies).tanks;
 
   if (plan !== "free") {
-    return { knownTanks, tanks: allNewTanks, hiddenNewSpeciesTankCount: 0 };
+    return { knownTanks, tanks: buildTanks(byNewSpecies).tanks, hiddenNewSpeciesTankCount: 0 };
   }
 
-  const visibleNewOnes = allNewTanks.slice(0, FREE_SHELF_NEW_SPECIES_TANK_CAP);
-  const hiddenNewSpeciesTankCount = allNewTanks.length - visibleNewOnes.length;
-
-  return { knownTanks, tanks: visibleNewOnes, hiddenNewSpeciesTankCount };
+  const { tanks, hiddenSpeciesCount } = buildTanks(byNewSpecies, FREE_SHELF_NEW_SPECIES_TANK_CAP);
+  return { knownTanks, tanks, hiddenNewSpeciesTankCount: hiddenSpeciesCount };
 }
 
 type DbSpeciesRow = {
