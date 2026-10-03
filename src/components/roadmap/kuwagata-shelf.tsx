@@ -546,10 +546,15 @@ function WanderingCreature({
       )}
       {nickname && (
         // 名前ラベル。スプライトの頭上に出し、歩き回るのに合わせてラベルも一緒に動く。
+        // 実アートの正方形キャンバスは上に透明な余白があるため、その分だけ下げて本体の
+        // すぐ上に付ける(Bugアイコンは余白が無いので枠の上端)。
         // 左右反転するBugフォールバックでは、文字が鏡文字にならないよう反転を打ち消す。
         <span
-          className="pointer-events-none absolute left-1/2 top-0 z-10 max-w-[7em] -translate-y-full truncate whitespace-nowrap rounded-full bg-white/85 px-1.5 py-px text-[9px] font-semibold leading-tight text-zinc-700 shadow-sm"
-          style={{ transform: `translateX(-50%) translateY(-100%)${mirror ? " scaleX(-1)" : ""}` }}
+          className="pointer-events-none absolute left-1/2 z-10 max-w-[7em] truncate whitespace-nowrap rounded-full bg-white/85 px-1.5 py-px text-[9px] font-semibold leading-tight text-zinc-700 shadow-sm"
+          style={{
+            top: hasArt ? "24%" : 0,
+            transform: `translateX(-50%) translateY(-100%)${mirror ? " scaleX(-1)" : ""}`,
+          }}
         >
           {nickname}
         </span>
@@ -700,7 +705,7 @@ function EnlargedTankVisual({
             speciesCode={individual.speciesCode}
             mandibleVariant={individual.mandibleVariant}
             growthStage={individual.growthStage}
-            nickname={nicknameOf(individual)}
+            nickname={nicknameOf(individual) ?? individual.speciesName}
             color={color}
             mirror={!hasArt && index % 2 === 1}
             decorationSpots={decorationSpots}
@@ -762,10 +767,9 @@ export function KuwagataShelf({
   const selectedTank = lookupTanks.find((t) => t.tankId === selectedTankId) ?? null;
   const knownGroups = groupBySpecies(knownTanks);
   const newGroups = groupBySpecies(tanks);
-  // 選択中の水槽と同じ種類の水槽(ページャ用)と、その中での位置・それより前の水槽の匹数(「N匹目」の通し番号用)
+  // 選択中の水槽と同じ種類の水槽(ページャ用)と、その中での位置
   const siblingTanks = selectedTank ? lookupTanks.filter((t) => t.speciesId === selectedTank.speciesId) : [];
   const siblingIndex = selectedTank ? siblingTanks.findIndex((t) => t.tankId === selectedTank.tankId) : 0;
-  const individualOffset = siblingTanks.slice(0, siblingIndex).reduce((sum, t) => sum + t.individuals.length, 0);
 
   if (tanks.length === 0 && knownTanks.length === 0) {
     return (
@@ -899,7 +903,7 @@ export function KuwagataShelf({
             <EnlargedTankVisual key={selectedTank.tankId} tank={selectedTank} color={tankColor(selectedTank)} nicknameOf={nicknameOf} />
 
             <ul className="flex flex-col gap-2">
-              {selectedTank.individuals.map((individual, index) => (
+              {selectedTank.individuals.map((individual) => (
                 <li
                   key={individual.id}
                   className="flex items-center gap-3 rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2"
@@ -928,7 +932,7 @@ export function KuwagataShelf({
                           onKeyDown={(e) => {
                             if (e.key === "Escape") setEditingId(null);
                           }}
-                          placeholder={`${individualOffset + index + 1}匹目`}
+                          placeholder={individual.speciesName}
                           className="min-w-0 flex-1 rounded border border-zinc-300 bg-white px-1.5 py-0.5 text-xs text-zinc-800 outline-none focus:border-amber-400"
                         />
                         <button
@@ -942,7 +946,7 @@ export function KuwagataShelf({
                       </form>
                     ) : (
                       <span className="flex items-center gap-1 font-semibold text-zinc-800">
-                        {nicknameOf(individual) ?? `${individualOffset + index + 1}匹目`}・
+                        {nicknameOf(individual) ?? individual.speciesName}・
                         {GROWTH_STAGE_LABEL[individual.growthStage]}
                         <button
                           type="button"
