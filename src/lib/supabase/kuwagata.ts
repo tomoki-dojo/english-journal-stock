@@ -62,6 +62,8 @@ export type KuwagataIndividual = {
   sizeScale: number;
   mandibleVariant: number;
   hatchedAt: string | null;
+  // ユーザーが付けた名前(未命名はnull)。
+  nickname: string | null;
 };
 
 export type KuwagataAreaProgress = {
@@ -243,7 +245,7 @@ export async function getUserKuwagataIndividuals(userId: string): Promise<Kuwaga
   const { data, error } = await supabaseAdmin
     .from("kuwagata_individuals")
     .select(
-      "id, species_id, obtained_via, obtained_at, size_scale, mandible_variant, hatched_at, kuwagata_species(code, name, kind, rarity, area_code)"
+      "id, species_id, obtained_via, obtained_at, size_scale, mandible_variant, hatched_at, nickname, kuwagata_species(code, name, kind, rarity, area_code)"
     )
     .eq("user_id", userId)
     .order("obtained_at", { ascending: true });
@@ -272,9 +274,33 @@ export async function getUserKuwagataIndividuals(userId: string): Promise<Kuwaga
       obtainedAt: row.obtained_at as string,
       sizeScale: Number(row.size_scale),
       mandibleVariant: row.mandible_variant as number,
+      nickname: (row.nickname as string | null) ?? null,
       hatchedAt: (row.hatched_at as string | null) ?? null,
     };
   });
+}
+
+export const KUWAGATA_NICKNAME_MAX_LENGTH = 10;
+
+// 個体に名前を付ける(nullまたは空文字で名前を外す)。本人の個体だけ更新できるよう
+// user_idでも絞る。更新対象が無ければfalseを返す。
+export async function setIndividualNickname(
+  userId: string,
+  individualId: string,
+  nickname: string | null,
+): Promise<boolean> {
+  const { data, error } = await supabaseAdmin
+    .from("kuwagata_individuals")
+    .update({ nickname })
+    .eq("id", individualId)
+    .eq("user_id", userId)
+    .select("id");
+
+  if (error) {
+    throw new Error(`名前の保存に失敗しました: ${error.message}`);
+  }
+
+  return (data ?? []).length > 0;
 }
 
 export async function getUnlockedAreas(userId: string): Promise<KuwagataAreaCode[]> {

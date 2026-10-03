@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { Bug, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { Bug, Check, ChevronLeft, ChevronRight, Pencil, X } from "lucide-react";
 import type { KuwagataGrowthStage, KuwagataShelfTank } from "@/lib/supabase/kuwagata";
 
 const GROWTH_STAGE_LABEL: Record<string, string> = {
@@ -10,6 +10,10 @@ const GROWTH_STAGE_LABEL: Record<string, string> = {
   蛹: "蛹",
   成虫: "成虫",
 };
+
+// 名前の最大文字数。サーバー側(kuwagata.tsのKUWAGATA_NICKNAME_MAX_LENGTH・DBのCHECK制約)と揃える。
+// kuwagata.tsはサーバー専用モジュールなのでクライアントからは値をimportできず、ここに別定義している。
+const NICKNAME_MAX_LENGTH = 10;
 
 const KNOWN_SPECIES_COLOR = "#92400e";
 
@@ -491,6 +495,7 @@ function WanderingCreature({
   speciesCode,
   mandibleVariant,
   growthStage,
+  nickname,
   color,
   mirror,
   decorationSpots,
@@ -503,6 +508,7 @@ function WanderingCreature({
   speciesCode: string;
   mandibleVariant: number;
   growthStage: KuwagataGrowthStage;
+  nickname: string | null;
   color: string;
   mirror: boolean;
   decorationSpots: { u: number; v: number; widthPct: number }[];
@@ -537,6 +543,16 @@ function WanderingCreature({
         />
       ) : (
         <Bug className="block w-full h-auto drop-shadow-sm" style={{ color }} strokeWidth={1.75} />
+      )}
+      {nickname && (
+        // 名前ラベル。スプライトの頭上に出し、歩き回るのに合わせてラベルも一緒に動く。
+        // 左右反転するBugフォールバックでは、文字が鏡文字にならないよう反転を打ち消す。
+        <span
+          className="pointer-events-none absolute left-1/2 top-0 z-10 max-w-[7em] -translate-y-full truncate whitespace-nowrap rounded-full bg-white/85 px-1.5 py-px text-[9px] font-semibold leading-tight text-zinc-700 shadow-sm"
+          style={{ transform: `translateX(-50%) translateY(-100%)${mirror ? " scaleX(-1)" : ""}` }}
+        >
+          {nickname}
+        </span>
       )}
     </div>
   );
@@ -593,7 +609,15 @@ function tankBgStyle(isAquarium: boolean): CSSProperties {
   return { backgroundImage: `url(${url}), ${fallback}` };
 }
 
-function EnlargedTankVisual({ tank, color }: { tank: KuwagataShelfTank; color: string }) {
+function EnlargedTankVisual({
+  tank,
+  color,
+  nicknameOf,
+}: {
+  tank: KuwagataShelfTank;
+  color: string;
+  nicknameOf: (individual: { id: string; nickname: string | null }) => string | null;
+}) {
   const isAquarium = tank.speciesAreaCode === "aquarium";
   // 水槽内の「現在、他の個体がどこにいるか」を各WanderingCreatureが共有で読み書き
   // するためのref(Reactのstateにはしない=位置が変わってもこの水槽全体が再レンダー
@@ -676,6 +700,7 @@ function EnlargedTankVisual({ tank, color }: { tank: KuwagataShelfTank; color: s
             speciesCode={individual.speciesCode}
             mandibleVariant={individual.mandibleVariant}
             growthStage={individual.growthStage}
+            nickname={nicknameOf(individual)}
             color={color}
             mirror={!hasArt && index % 2 === 1}
             decorationSpots={decorationSpots}
@@ -695,6 +720,44 @@ export function KuwagataShelf({
   knownTanks: KuwagataShelfTank[];
 }) {
   const [selectedTankId, setSelectedTankId] = useState<string | null>(null);
+  // 名前の編集。保存に成功した分はサーバー(props)の再取得を待たず、ここで上書きして即反映する。
+  const [nicknameOverrides, setNicknameOverrides] = useState<Record<string, string | null>>({});
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draftNickname, setDraftNickname] = useState("");
+  const [savingNickname, setSavingNickname] = useState(false);
+  const [nicknameError, setNicknameError] = useState<string | null>(null);
+  const nicknameOf = (individual: { id: string; nickname: string | null }): string | null =>
+    individual.id in nicknameOverrides ? nicknameOverrides[individual.id] : individual.nickname;
+
+  const startEditingNickname = (individual: { id: string; nickname: string | null }) => {
+    setEditingId(individual.id);
+    setDraftNickname(nicknameOf(individual) ?? "");
+    setNicknameError(null);
+  };
+
+  const saveNickname = async (individualId: string) => {
+    setSavingNickname(true);
+    setNicknameError(null);
+    try {
+      const res = await fetch("/api/roadmap/kuwagata/nickname", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ individualId, nickname: draftNickname.trim() || null }),
+      });
+      const json = (await res.json()) as { ok?: boolean; nickname?: string | null; error?: string };
+      if (!res.ok || !json.ok) {
+        setNicknameError(json.error ?? "保存に失敗しました");
+        return;
+      }
+      setNicknameOverrides((prev) => ({ ...prev, [individualId]: json.nickname ?? null }));
+      setEditingId(null);
+    } catch {
+      setNicknameError("保存に失敗しました");
+    } finally {
+      setSavingNickname(false);
+    }
+  };
+
   const lookupTanks = [...knownTanks, ...tanks];
   const selectedTank = lookupTanks.find((t) => t.tankId === selectedTankId) ?? null;
   const knownGroups = groupBySpecies(knownTanks);
@@ -833,7 +896,7 @@ export function KuwagataShelf({
               </div>
             )}
 
-            <EnlargedTankVisual key={selectedTank.tankId} tank={selectedTank} color={tankColor(selectedTank)} />
+            <EnlargedTankVisual key={selectedTank.tankId} tank={selectedTank} color={tankColor(selectedTank)} nicknameOf={nicknameOf} />
 
             <ul className="flex flex-col gap-2">
               {selectedTank.individuals.map((individual, index) => (
@@ -848,11 +911,51 @@ export function KuwagataShelf({
                     mandibleVariant={individual.mandibleVariant}
                     growthStage={individual.growthStage}
                   />
-                  <div className="flex flex-col text-xs text-zinc-600">
-                    <span className="font-semibold text-zinc-800">
-                      {individualOffset + index + 1}匹目・{GROWTH_STAGE_LABEL[individual.growthStage]}
-                    </span>
+                  <div className="flex min-w-0 flex-1 flex-col text-xs text-zinc-600">
+                    {editingId === individual.id ? (
+                      <form
+                        className="flex items-center gap-1"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          void saveNickname(individual.id);
+                        }}
+                      >
+                        <input
+                          autoFocus
+                          value={draftNickname}
+                          maxLength={NICKNAME_MAX_LENGTH}
+                          onChange={(e) => setDraftNickname(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Escape") setEditingId(null);
+                          }}
+                          placeholder={`${individualOffset + index + 1}匹目`}
+                          className="min-w-0 flex-1 rounded border border-zinc-300 bg-white px-1.5 py-0.5 text-xs text-zinc-800 outline-none focus:border-amber-400"
+                        />
+                        <button
+                          type="submit"
+                          disabled={savingNickname}
+                          className="rounded-full p-1 text-amber-700 hover:bg-amber-100 disabled:opacity-40"
+                          aria-label="保存"
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                        </button>
+                      </form>
+                    ) : (
+                      <span className="flex items-center gap-1 font-semibold text-zinc-800">
+                        {nicknameOf(individual) ?? `${individualOffset + index + 1}匹目`}・
+                        {GROWTH_STAGE_LABEL[individual.growthStage]}
+                        <button
+                          type="button"
+                          onClick={() => startEditingNickname(individual)}
+                          className="rounded-full p-1 text-zinc-400 hover:bg-zinc-200 hover:text-zinc-600"
+                          aria-label="名前を変更"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </button>
+                      </span>
+                    )}
                     <span className="text-zinc-400">{formatDate(individual.obtainedAt)}</span>
+                    {editingId === individual.id && nicknameError && <span className="text-red-500">{nicknameError}</span>}
                   </div>
                 </li>
               ))}
