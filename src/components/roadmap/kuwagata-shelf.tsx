@@ -121,7 +121,7 @@ function buildKnownCreatureArt(code: string): Partial<Record<Facing, KnownCreatu
 
 const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCreatureArt>>>> = {
   "KW-0001": buildKnownCreatureArt("KW-0001"),
-  // ヒビクワたん(成虫のみ。卵・幼虫・蛹の絵は未制作なのでKNOWN_STAGE_ARTに無く、成虫の絵で代用される)
+  // ヒビクワたん(背中に波紋模様)
   "KW-0002": buildKnownCreatureArt("KW-0002"),
 };
 
@@ -139,16 +139,25 @@ type KnownStageArt = {
   pupa?: string;
 };
 
-const KNOWN_STAGE_ART: Partial<Record<string, KnownStageArt>> = {
-  "KW-0001": {
-    egg: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_egg.svg`,
+// 既知種共通の幼虫の体節構成。エークワたん・ヒビクワたんは体節の形・位置が同じなので
+// 回転基準点・振れ幅も共通(頭の色など塗りだけが種ごとに違う)。形が違う種を足すときは
+// この値を種ごとに持たせる。
+function buildKnownStageArt(code: string): KnownStageArt {
+  const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
+  return {
+    egg: file("egg"),
     larva: [
-      { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_larva_body_rear.svg`, originXPct: 49, originYPct: 55, wiggleDeg: 4, delay: "-0.6s" },
-      { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_larva_body_front.svg`, originXPct: 31, originYPct: 54, wiggleDeg: 2.5, delay: "-0.3s" },
-      { src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_larva_head.svg`, originXPct: 40, originYPct: 59, wiggleDeg: 3, delay: "0s" },
+      { src: file("larva_body_rear"), originXPct: 49, originYPct: 55, wiggleDeg: 4, delay: "-0.6s" },
+      { src: file("larva_body_front"), originXPct: 31, originYPct: 54, wiggleDeg: 2.5, delay: "-0.3s" },
+      { src: file("larva_head"), originXPct: 40, originYPct: 59, wiggleDeg: 3, delay: "0s" },
     ],
-    pupa: `${KUWAGATA_ART_DIR}/kuwagata_KW-0001_pupa.svg`,
-  },
+    pupa: file("pupa"),
+  };
+}
+
+const KNOWN_STAGE_ART: Partial<Record<string, KnownStageArt>> = {
+  "KW-0001": buildKnownStageArt("KW-0001"),
+  "KW-0002": buildKnownStageArt("KW-0002"),
 };
 
 // 卵・蛹は動かない(その場に置いたまま)。幼虫・成虫(と、実アートが無い種のBugアイコン)は歩き回る。
