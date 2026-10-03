@@ -1,0 +1,18 @@
+// 部屋に入ったときに出すポップアップの中身。
+// 新しいお知らせは ANNOUNCEMENTS の末尾に、idを増やして追加する（ユーザーごとに「最後に見たid」より
+// 大きいものだけが、部屋に入ったときに順に表示される）。
+
+export type RoadmapAnnouncement = { id: number; title: string; body: string };
+
+export const ANNOUNCEMENTS: RoadmapAnnouncement[] = [];
+
+export const LATEST_ANNOUNCEMENT_ID = ANNOUNCEMENTS.reduce((max, a) => Math.max(max, a.id), 0);
+
+// 初回ログイン時の「エークワ博士からの育成アドバイス」
+export const ADVICE_SPEAKER = "エークワ博士";
+export const ADVICE_TITLE = "育成アドバイス";
+export const ADVICE_LINES: string[] = [
+  "英語は知識じゃなくて技術！（知識の面もあるけど）とにかく声に出せ！",
+  "rやthを発音するのが恥ずかしい？英語喋る人は誰もそんなこと思ってねぇ！舌を巻け！歯に挟め！カッコよく発音しろ！",
+  "間違えて当たり前だ！幸いこのアプリはAIがあなたの相手をしてくれる！存分に間違えながら喋ろ！",
+];

@@ -1,0 +1,82 @@
+"use client";
+
+import { useState } from "react";
+import { Bug } from "lucide-react";
+import {
+  ADVICE_LINES,
+  ADVICE_SPEAKER,
+  ADVICE_TITLE,
+  type RoadmapAnnouncement,
+} from "@/lib/roadmap-notices";
+
+type Item = { kind: "advice" } | { kind: "announcement"; announcement: RoadmapAnnouncement };
+
+// 部屋に入ったときのポップアップ。初回はエークワ博士のアドバイス、以降は未読のお知らせを1件ずつ順に出す。
+// 閉じるたびに既読をサーバーへ保存する（保存に失敗しても表示は先へ進める）。
+export function RoomNoticeModal({
+  showAdvice,
+  announcements,
+}: {
+  showAdvice: boolean;
+  announcements: RoadmapAnnouncement[];
+}) {
+  const [queue, setQueue] = useState<Item[]>(() => [
+    ...(showAdvice ? ([{ kind: "advice" }] as Item[]) : []),
+    ...announcements.map((announcement) => ({ kind: "announcement" as const, announcement })),
+  ]);
+
+  const current = queue[0];
+  if (!current) return null;
+
+  const close = () => {
+    const body =
+      current.kind === "advice"
+        ? { kind: "advice" }
+        : { kind: "announcement", id: current.announcement.id };
+    void fetch("/api/roadmap/notices/seen", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).catch(() => {});
+    setQueue((q) => q.slice(1));
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-5">
+      <div className="max-h-[85dvh] w-full max-w-sm overflow-y-auto rounded-2xl bg-white p-5 shadow-xl">
+        {current.kind === "advice" ? (
+          <>
+            <div className="mb-4 flex items-center gap-2">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 ring-1 ring-amber-200">
+                <Bug className="h-5 w-5 text-amber-700" />
+              </span>
+              <div className="leading-tight">
+                <p className="text-sm font-bold text-zinc-800">{ADVICE_SPEAKER}</p>
+                <p className="text-[11px] text-zinc-500">{ADVICE_TITLE}</p>
+              </div>
+            </div>
+            <ul className="flex flex-col gap-2.5">
+              {ADVICE_LINES.map((line) => (
+                <li key={line} className="rounded-xl bg-amber-50 px-3.5 py-2.5 text-sm font-medium leading-relaxed text-zinc-800">
+                  {line}
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <>
+            <p className="mb-2 text-base font-bold text-zinc-800">{current.announcement.title}</p>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-700">{current.announcement.body}</p>
+          </>
+        )}
+        <button
+          type="button"
+          onClick={close}
+          className="mt-5 w-full rounded-full bg-amber-500 py-2.5 text-sm font-bold text-white transition-transform active:scale-95"
+        >
+          {current.kind === "advice" ? "はじめる" : "OK"}
+        </button>
+      </div>
+    </div>
+  );
+}

@@ -26,6 +26,8 @@ type LoginFormProps = {
   // ログイン後に戻る先。未指定ならダッシュボード（"/"）。
   // "/"始まりの内部パス以外（外部URL等）は無視してオープンリダイレクトを防ぐ。
   next?: string;
+  // 初期表示のログイン方法。サインアップ導線（メールだけで始められるマジックリンク）から来た場合に "magic"。
+  mode?: Mode;
 };
 
 function sanitizeNext(next: string | undefined): string {
@@ -33,10 +35,10 @@ function sanitizeNext(next: string | undefined): string {
   return next;
 }
 
-export function LoginForm({ reason, next }: LoginFormProps) {
+export function LoginForm({ reason, next, mode: initialMode }: LoginFormProps) {
   const redirectTo = sanitizeNext(next);
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>("password");
+  const [mode, setMode] = useState<Mode>(initialMode ?? "password");
 
   // マジックリンク用
   const [email, setEmail] = useState("");

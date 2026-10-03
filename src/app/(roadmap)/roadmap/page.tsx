@@ -1,9 +1,15 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
 import { getPlan } from "@/lib/supabase/profile";
-import { getStreakStats, getRoadmapStageReadiness, getUserRoadmapState } from "@/lib/supabase/speaking-roadmap";
+import {
+  getStreakStats,
+  getRoadmapStageReadiness,
+  getUserRoadmapState,
+} from "@/lib/supabase/speaking-roadmap";
 import { OnboardingQuiz } from "@/components/roadmap/onboarding-quiz";
 import { RoadmapRoom } from "@/components/roadmap/roadmap-room";
+import { RoomNoticeModal } from "@/components/roadmap/room-notice-modal";
+import { getRoadmapNotices } from "@/lib/supabase/roadmap-notices";
 
 // スピーキング・ロードマップのホーム（「アーサーの飼育部屋」）。
 // アイソメ都市マップ（RoadmapMap）は2026-10-01廃止し、探索不要の固定グリッドである
@@ -24,15 +30,25 @@ export default async function RoadmapPage() {
   const streakStats = await getStreakStats(user.id);
   const stageReadiness = await getRoadmapStageReadiness(user.id);
   const plan = await getPlan(user.id);
+  const notices = await getRoadmapNotices(user.id).catch(() => ({
+    showAdvice: false,
+    announcements: [],
+  }));
 
   return (
-    <RoadmapRoom
-      stageReadiness={stageReadiness}
-      proSkipStartStage={state.proSkipStartStage}
-      plan={plan}
-      proSkipEnabled={state.proSkipEnabled}
-      totalMasteredCount={state.totalMasteredCount}
-      streakStats={streakStats}
-    />
+    <>
+      <RoomNoticeModal
+        showAdvice={notices.showAdvice}
+        announcements={notices.announcements}
+      />
+      <RoadmapRoom
+        stageReadiness={stageReadiness}
+        proSkipStartStage={state.proSkipStartStage}
+        plan={plan}
+        proSkipEnabled={state.proSkipEnabled}
+        totalMasteredCount={state.totalMasteredCount}
+        streakStats={streakStats}
+      />
+    </>
   );
 }
