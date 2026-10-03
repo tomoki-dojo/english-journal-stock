@@ -529,7 +529,7 @@ export async function reportStage1Result(
   // ちょうど満たした瞬間かどうかを調べる（そうでなければ無駄なクエリを避ける）。
   const stage2JustUnlocked = graduated ? await checkStage2JustUnlocked(userId, expressionId) : false;
 
-  // クワガタ育成機能：Stage2解放＝ホエクワタンの確定採集タイミング
+  // クワガタ育成機能：Stage2解放＝ヒビクワたんの確定採集タイミング
   // （エークワタンはサインアップ時点で確定済み。handle_new_userトリガー参照）。
   if (stage2JustUnlocked) {
     await recordStageClearCatch(userId, 2);
