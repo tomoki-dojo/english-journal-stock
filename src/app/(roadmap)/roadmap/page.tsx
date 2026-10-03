@@ -22,16 +22,7 @@ export default async function RoadmapPage() {
   }
 
   const streakStats = await getStreakStats(user.id);
-  // TODO: 一時的に全Stage解放の表示にして、部屋アイテムの見た目を確認している。
-  // 実際の進捗データ(DB)は変更していない。確認が終わったら下のoverride行を削除して元に戻すこと。
-  const stageReadiness = {
-    ...(await getRoadmapStageReadiness(user.id)),
-    stage2Ready: true,
-    stage3Ready: true,
-    stage4Ready: true,
-    stage5DailyReady: true,
-    stage5BusinessReady: true,
-  };
+  const stageReadiness = await getRoadmapStageReadiness(user.id);
   const plan = await getPlan(user.id);
 
   return (
