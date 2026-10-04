@@ -613,15 +613,17 @@ function WanderingCreature({
         <Bug className="block w-full h-auto drop-shadow-sm" style={{ color }} strokeWidth={1.75} />
       )}
       {chatting && (
-        // 喋っている間だけ出る吹き出し(頭上の右寄り)。「…」が順に点滅する。
+        // 喋っている間だけ出る丸い吹き出し。名前ラベルより手前(z-20)・さらに上に出して、ラベルに被らない。
+        // 左下の小さな角が体のほうを指す。中の「…」が順に点滅する。
         <span
-          className="animate-question-card-enter pointer-events-none absolute z-10 flex items-center gap-0.5 rounded-full bg-white px-1.5 py-0.5 shadow-sm"
-          style={{ left: "72%", top: "20%", transform: "translateY(-100%)" }}
+          className="animate-question-card-enter pointer-events-none absolute z-20 flex h-6 w-6 items-center justify-center gap-0.5 rounded-full bg-white shadow-sm"
+          style={{ left: "62%", top: "2%", transform: "translateY(-100%)" }}
         >
+          <span className="absolute -bottom-0.5 left-1 h-2 w-2 rotate-45 bg-white" />
           {[0, 1, 2].map((dot) => (
             <span
               key={dot}
-              className="animate-kuwagata-chat-dot h-1 w-1 rounded-full bg-zinc-500"
+              className="animate-kuwagata-chat-dot relative h-1 w-1 rounded-full bg-zinc-500"
               style={{ animationDelay: `${dot * 0.2}s` }}
             />
           ))}
