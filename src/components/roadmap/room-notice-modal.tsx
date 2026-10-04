@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Bug } from "lucide-react";
 import { ArthurAvatar } from "./arthur";
 import { CelebrationOverlay } from "./celebration-overlay";
+import { StageUnlockOverlay } from "./stage-unlock-overlay";
 import {
   ADVICE_LINES,
   ADVICE_SPEAKER,
@@ -16,6 +17,7 @@ import {
 type Item =
   | { kind: "intro" }
   | { kind: "advice" }
+  | { kind: "stageUnlock"; stage: 2 | 3 | 4 | 5; key: string }
   | { kind: "egg"; egg: RoadmapNewEgg }
   | { kind: "announcement"; announcement: RoadmapAnnouncement };
 
@@ -32,7 +34,17 @@ export function RoomNoticeModal({
 }) {
   const [queue, setQueue] = useState<Item[]>(() => [
     ...(showAdvice ? ([{ kind: "intro" }, { kind: "advice" }] as Item[]) : []),
-    ...newEggs.map((egg) => ({ kind: "egg" as const, egg })),
+    // Stage解放で配られたタマゴは、タマゴ入手の演出の前に「Stage◯が解放された！」を挟む
+    ...newEggs.flatMap((egg): Item[] => {
+      const stage = egg.stageTrigger;
+      const eggItem: Item = { kind: "egg", egg };
+      return stage !== null && stage >= 2 && stage <= 5
+        ? [
+            { kind: "stageUnlock", stage: stage as 2 | 3 | 4 | 5, key: egg.id },
+            eggItem,
+          ]
+        : [eggItem];
+    }),
     ...announcements.map((announcement) => ({
       kind: "announcement" as const,
       announcement,
@@ -65,6 +77,16 @@ export function RoomNoticeModal({
         </p>
         <span className="text-2xl text-white/70">▼</span>
       </button>
+    );
+  }
+
+  if (current.kind === "stageUnlock") {
+    return (
+      <StageUnlockOverlay
+        key={`unlock-${current.key}`}
+        stage={current.stage}
+        onClose={() => setQueue((q) => q.slice(1))}
+      />
     );
   }
 

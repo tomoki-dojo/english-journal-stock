@@ -4,7 +4,13 @@
 
 export type RoadmapAnnouncement = { id: number; title: string; body: string };
 
-export type RoadmapNewEgg = { id: string; speciesCode: string; speciesName: string };
+// stageTrigger: そのタマゴを配る契機になったStage番号（2〜5＝そのStageの解放。1はサインアップ時で解放演出なし）
+export type RoadmapNewEgg = {
+  id: string;
+  speciesCode: string;
+  speciesName: string;
+  stageTrigger: number | null;
+};
 
 export const ANNOUNCEMENTS: RoadmapAnnouncement[] = [];
 

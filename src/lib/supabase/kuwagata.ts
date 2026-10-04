@@ -417,10 +417,10 @@ function randomBetween(min: number, max: number): number {
 // 「手に入れた！」演出をまだ見せていない確定入手のタマゴ（Stage解放・サインアップ時）。部屋に入ったときに出す。
 export async function getUncelebratedEggs(
   userId: string
-): Promise<{ id: string; speciesCode: string; speciesName: string }[]> {
+): Promise<{ id: string; speciesCode: string; speciesName: string; stageTrigger: number | null }[]> {
   const { data, error } = await supabaseAdmin
     .from("kuwagata_individuals")
-    .select("id, kuwagata_species(code, name)")
+    .select("id, kuwagata_species(code, name, stage_trigger)")
     .eq("user_id", userId)
     .eq("obtained_via", "stage_clear")
     .is("celebrated_at", null)
@@ -432,7 +432,16 @@ export async function getUncelebratedEggs(
 
   return (data ?? []).flatMap((row) => {
     const species = Array.isArray(row.kuwagata_species) ? row.kuwagata_species[0] : row.kuwagata_species;
-    return species ? [{ id: row.id as string, speciesCode: species.code as string, speciesName: species.name as string }] : [];
+    return species
+      ? [
+          {
+            id: row.id as string,
+            speciesCode: species.code as string,
+            speciesName: species.name as string,
+            stageTrigger: (species.stage_trigger as number | null) ?? null,
+          },
+        ]
+      : [];
   });
 }
 
