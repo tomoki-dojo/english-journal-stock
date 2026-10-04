@@ -17,6 +17,8 @@ const BGM_SRC = "/roadmap/sound/bgm_room.mp3";
 const TAP_SRC = "/roadmap/sound/se_tap.mp3";
 const BGM_VOLUME = 0.3;
 const TAP_VOLUME = 0.05;
+const PAGE_SRC = "/roadmap/sound/se_page.mp3";
+const PAGE_VOLUME = 0.2;
 const STORAGE_KEY = "roadmap_sound_enabled";
 
 // BGMを流す画面（部屋・棚・図鑑）。Stageの練習画面などでは止める。
@@ -26,7 +28,11 @@ const BGM_PATHS = new Set([
   "/roadmap/encyclopedia",
 ]);
 
-type SoundContextValue = { enabled: boolean; toggle: () => void };
+type SoundContextValue = {
+  enabled: boolean;
+  toggle: () => void;
+  playPage: () => void;
+};
 const SoundContext = createContext<SoundContextValue | null>(null);
 
 export function RoadmapSoundProvider({
@@ -75,7 +81,7 @@ export function RoadmapSoundProvider({
       if (!enabledRef.current || tapMissing.current) return;
       const target = e.target as Element | null;
       if (!target?.closest("button, a, [role='button']")) return;
-      if (target.closest("[data-sound-toggle]")) return;
+      if (target.closest("[data-sound-toggle], [data-sound-silent]")) return;
 
       if (!tapRef.current) {
         const audio = new Audio(TAP_SRC);
@@ -91,6 +97,19 @@ export function RoadmapSoundProvider({
     document.addEventListener("pointerdown", onPointerDown, true);
     return () =>
       document.removeEventListener("pointerdown", onPointerDown, true);
+  }, []);
+
+  // 図鑑のページをめくる音
+  const pageRef = useRef<HTMLAudioElement | null>(null);
+  const playPage = useCallback(() => {
+    if (!enabledRef.current) return;
+    if (!pageRef.current) {
+      const audio = new Audio(PAGE_SRC);
+      audio.volume = PAGE_VOLUME;
+      pageRef.current = audio;
+    }
+    pageRef.current.currentTime = 0;
+    void pageRef.current.play().catch(() => {});
   }, []);
 
   // BGM：部屋・棚・図鑑でだけ、ONかつ最初のタップ後に流す。ページ移動をまたいでも途切れない。
@@ -120,10 +139,14 @@ export function RoadmapSoundProvider({
   }, []);
 
   return (
-    <SoundContext.Provider value={{ enabled, toggle }}>
+    <SoundContext.Provider value={{ enabled, toggle, playPage }}>
       {children}
     </SoundContext.Provider>
   );
+}
+
+export function usePagePlayer() {
+  return useContext(SoundContext)?.playPage ?? (() => {});
 }
 
 // 画面上部に置く、ワンタップのON/OFFボタン（アイコンのみ）。

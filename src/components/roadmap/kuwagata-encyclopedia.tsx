@@ -8,6 +8,7 @@ import type {
   KuwagataEncyclopediaEntry,
 } from "@/lib/supabase/kuwagata";
 import { TankOccupant } from "@/components/roadmap/kuwagata-shelf";
+import { usePagePlayer } from "@/components/roadmap/roadmap-sound";
 
 const AREA_LABEL: Record<KuwagataAreaCode, string> = {
   area1: "エリア1・庭・裏庭",
@@ -149,6 +150,7 @@ export function KuwagataEncyclopediaView({ encyclopedia }: { encyclopedia: Kuwag
   // ページをめくっている最中の状態(めくる向きと、めくり終わったあとの見開き番号)
   const [flip, setFlip] = useState<{ dir: "next" | "prev"; to: number } | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const playPage = usePagePlayer();
 
   useEffect(
     () => () => {
@@ -176,6 +178,7 @@ export function KuwagataEncyclopediaView({ encyclopedia }: { encyclopedia: Kuwag
     if (flip) return;
     const to = dir === "next" ? safeSpread + 1 : safeSpread - 1;
     if (to < 0 || to > spreadCount - 1) return;
+    playPage();
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setSpread(to);
       return;
@@ -267,6 +270,7 @@ export function KuwagataEncyclopediaView({ encyclopedia }: { encyclopedia: Kuwag
       <div className="mt-3 flex items-center justify-center gap-4">
         <button
           type="button"
+          data-sound-silent
           onClick={() => turn("prev")}
           disabled={safeSpread === 0 || flip !== null}
           aria-label="前のページ"
@@ -279,6 +283,7 @@ export function KuwagataEncyclopediaView({ encyclopedia }: { encyclopedia: Kuwag
         </span>
         <button
           type="button"
+          data-sound-silent
           onClick={() => turn("next")}
           disabled={safeSpread >= spreadCount - 1 || flip !== null}
           aria-label="次のページ"
