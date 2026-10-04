@@ -104,7 +104,7 @@ function BookPage({
         </span>
       </div>
 
-      <div className="relative mx-auto mb-4 flex aspect-square w-full max-w-[170px] items-center justify-center rounded-md border-2 border-amber-900/30 bg-white/70 p-1 shadow-inner">
+      <div className="relative mx-auto mb-3 flex aspect-square w-full max-w-[110px] sm:mb-4 sm:max-w-[170px] items-center justify-center rounded-md border-2 border-amber-900/30 bg-white/70 p-1 shadow-inner">
         <div className="absolute inset-1 rounded-[3px] border border-amber-900/15" />
         {proLocked ? (
           <Crown className="h-9 w-9 text-amber-400" strokeWidth={1.5} />
@@ -201,7 +201,7 @@ export function KuwagataEncyclopediaView({ encyclopedia }: { encyclopedia: Kuwag
   ];
 
   return (
-    <div className="mx-auto max-w-md">
+    <div className="mx-auto max-w-md sm:max-w-2xl">
       <div className="mb-2 flex flex-wrap gap-1.5">
         {chapters.map((c) => (
           <button
@@ -223,7 +223,7 @@ export function KuwagataEncyclopediaView({ encyclopedia }: { encyclopedia: Kuwag
       </div>
 
       <div className="rounded-xl rounded-tl-none bg-amber-900 p-2 shadow-md sm:p-3">
-        <div className="relative aspect-[9/10] w-full" style={{ perspective: "2400px" }}>
+        <div className="relative aspect-square w-full sm:aspect-[7/5]" style={{ perspective: "2400px" }}>
           <div className="absolute inset-0 flex rounded-md" style={{ backgroundColor: PAPER }}>
             <div className="h-full w-1/2">{pageAt(staticLeft, 0)}</div>
             <div className="h-full w-1/2">{pageAt(staticRight, 1)}</div>
