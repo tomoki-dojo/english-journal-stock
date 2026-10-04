@@ -145,7 +145,10 @@ tank_bg_aquarium.png                             水中アクアリウムの水�
 
 既知種の実ファイル（`public/roadmap/kuwagata/`）と同じ規則に揃える。新種は大顎・卵・幼虫・蛹が無く、成虫のパーツだけ。
 
+新種は**動きの種類（A〜F）ごとにパーツ構成が違う**。種ごとの分類は下の「新種の動きの種類」を参照。
+
 ```
+【A 歩く（6脚）】既知種と同じ構成・9枚（大顎なし）
 kuwagata_[code]_front_body.svg        正面の本体
 kuwagata_[code]_front_leg_L1.svg      正面・手前脚（L1が一番手前、L2、L3）
 kuwagata_[code]_front_leg_L2.svg
@@ -155,16 +158,47 @@ kuwagata_[code]_back_body.svg         背面の本体
 kuwagata_[code]_back_leg_R1.svg       背面・脚3本（R1が一番手前、R2、R3）
 kuwagata_[code]_back_leg_R2.svg
 kuwagata_[code]_back_leg_R3.svg
-kuwagata_[code]_front_wing_L.svg      羽根（飛ぶ系のみ。front/back それぞれ、L/R）
-kuwagata_[code]_front_wing_R.svg
-kuwagata_[code]_back_wing_L.svg
-kuwagata_[code]_back_wing_R.svg
+
+【B 歩く（8脚）】Aの脚を4本に増やした構成（ハサミ・尾は本体に含める）
+kuwagata_[code]_front_leg_L1〜L4.svg / front_leg_R1.svg
+kuwagata_[code]_back_leg_R1〜R4.svg
+（front_body / back_body はAと同じ）
+
+【C 飛ぶ】本体＋羽根のみ（脚は本体に含める）・6枚
+kuwagata_[code]_front_body.svg / front_wing_L.svg / front_wing_R.svg
+kuwagata_[code]_back_body.svg  / back_wing_L.svg  / back_wing_R.svg
+
+【D 擬態・待機（カマキリ系）】本体＋カマ＋脚4本
+kuwagata_[code]_front_body.svg / front_scythe.svg / front_leg_1〜4.svg
+kuwagata_[code]_back_body.svg  / back_scythe.svg  / back_leg_1〜4.svg
+
+【E ぶらぶら（ミノムシ）】本体1枚（正面・背面の区別なし）
+kuwagata_KW-0013_body.svg
+
+【F 泳ぐ】横向き（右向きは反転して使う。正面・背面の区別なし）
+ゲンたん: kuwagata_KW-0039_body.svg（本体1枚）
+タツたん: kuwagata_KW-0042_head.svg / body.svg / tail.svg（頭・カラダ・尻尾の3パーツ）
 ```
 
 - `[code]`はDBの`kuwagata_species.code`（例: カナたん＝`KW-0005`、ホタたん＝`KW-0023`、アワたん＝`KW-0043`）。ハイフン付き・大文字・ゼロ埋め4桁
 - 拡張子は`.svg`、フォルダは`public/roadmap/kuwagata/`直下（サブフォルダは作らない）
-- 1種あたり最大8枚（通常）／12枚（飛ぶ系）。既知種のL1〜L3・R1の付け方と同じ
-- 注意：新種の描画コード（`kuwagata-shelf.tsx`の`KNOWN_CREATURE_ART`相当）は未実装。ファイルを置いても、種コードを登録するまで画面には出ない（大顎なしの構成にする対応と合わせて実装する）
+- 枚数の目安：A=9枚、B=約11枚、C=6枚、D=約13枚（正面・背面で本体・カマ・脚4本×2）、E=1枚、F=1〜3枚
+- 注意：新種の描画コード（`kuwagata-shelf.tsx`の`KNOWN_CREATURE_ART`相当）は未実装。ファイルを置いても、種コードを登録するまで画面には出ない（大顎なしの構成、飛ぶ・ぶらぶら・泳ぐの動きと合わせて実装する）
+
+### 新種の動きの種類
+
+| 種類 | 動き | 該当（種数） |
+| --- | --- | --- |
+| A 歩く（6脚） | 既存の歩行アニメ | カナ、テントウ、カミキリ、タマムシ、ゾウ、ハンミョウ、ホタル、カブ、ヘラ、コー、ニシキ、モン、ルリ、ツノゼミ、ダンゴ、グンタイアリ、グソク、ウパ、バッタ（暫定）、ナナフシ（暫定・ゆっくり歩く）（20） |
+| B 歩く（8脚） | 既存の歩行アニメ（脚が4本） | クモ、タラン、アワ、サソリ、サワガニ（5） |
+| C 飛ぶ | 水槽内を漂い羽根をパタパタ（新規） | チョウ、アオ、ミツ、トン、ハグロ、オニ、セミ、スズメバチ（8） |
+| D 擬態・待機 | ほぼ止まって揺れる、カマを振る（新規） | カマキリ、ハナカマキリ（2） |
+| E ぶらぶら | 本体がプラプラ揺れる（新規） | ミノムシ（1） |
+| F 泳ぐ | 水中をスイスイ（新規）。タツは尻尾を揺らす | ゲンゴロウ、タツノオトシゴ（2） |
+
+- カナブン・テントウムシ・タマムシ・ホタルは本来飛べるが、羽根パーツは作らず歩くだけにする（暫定）
+- バッタは専用の跳ねる動きを作らず、Aの歩きで代用する（暫定）
+- ナナフシは指示が無かったのでAに入れた（細長い体で歩く）。擬態らしくゆっくり歩かせる想定
 
 ### 新種の元ネタ（描くときの参照用）
 
