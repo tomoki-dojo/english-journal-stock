@@ -49,7 +49,6 @@ export function Stage1Practice() {
   const [questions, setQuestions] = useState<Stage1RoundQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [results, setResults] = useState<QuestionResult[]>([]);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioLoading, setAudioLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +59,6 @@ export function Stage1Practice() {
     setState("loading");
     setCurrentIndex(0);
     setResults([]);
-    setAudioUrl(null);
     setError(null);
 
     try {
@@ -96,7 +94,6 @@ export function Stage1Practice() {
       );
       if (!res.ok) throw new Error("音声の取得に失敗しました");
       const json = await res.json();
-      setAudioUrl(json.url);
       new Audio(json.url).play().catch(() => {});
     } catch {
       // 音声取得に失敗しても練習自体は続行できる
@@ -132,7 +129,6 @@ export function Stage1Practice() {
           stage2JustUnlocked: Boolean(json.result?.stage2JustUnlocked),
         },
       ]);
-      setAudioUrl(null);
 
       if (currentIndex + 1 < questions.length) {
         setCurrentIndex((i) => i + 1);
