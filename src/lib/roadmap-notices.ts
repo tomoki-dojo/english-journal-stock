@@ -12,6 +12,14 @@ export type RoadmapNewEgg = {
   stageTrigger: number | null;
 };
 
+// Stage5卒業で成虫になった（羽化した）テッペンクワたん。羽化の演出を出すために使う。
+export type RoadmapNewHatch = {
+  id: string;
+  speciesCode: string;
+  speciesName: string;
+  mandibleVariant: number;
+};
+
 export const ANNOUNCEMENTS: RoadmapAnnouncement[] = [];
 
 export const LATEST_ANNOUNCEMENT_ID = ANNOUNCEMENTS.reduce((max, a) => Math.max(max, a.id), 0);

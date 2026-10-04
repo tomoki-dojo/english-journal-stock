@@ -4,14 +4,17 @@ import {
   LATEST_ANNOUNCEMENT_ID,
   type RoadmapAnnouncement,
   type RoadmapNewEgg,
+  type RoadmapNewHatch,
 } from "@/lib/roadmap-notices";
-import { getUncelebratedEggs } from "@/lib/supabase/kuwagata";
+import { getUncelebratedEggs, getUncelebratedHatches } from "@/lib/supabase/kuwagata";
 
 export type RoadmapNotices = {
   showAdvice: boolean;
   announcements: RoadmapAnnouncement[];
   // まだ「手に入れた！」演出を見せていない新しいタマゴ（Stage解放・サインアップ時の確定入手）
   newEggs: RoadmapNewEgg[];
+  // まだ「羽化した！」演出を見せていない個体（Stage5卒業）
+  newHatches: RoadmapNewHatch[];
 };
 
 // 部屋に入ったときに出すポップアップ（初回アドバイス・未読のお知らせ）を決める。
@@ -25,18 +28,22 @@ export async function getRoadmapNotices(
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (!data) return { showAdvice: false, announcements: [], newEggs: [] };
+  if (!data) return { showAdvice: false, announcements: [], newEggs: [], newHatches: [] };
 
-  const newEggs = await getUncelebratedEggs(userId);
+  const [newEggs, newHatches] = await Promise.all([
+    getUncelebratedEggs(userId),
+    getUncelebratedHatches(userId),
+  ]);
 
   if (!data.roadmap_advice_seen_at)
-    return { showAdvice: true, announcements: [], newEggs };
+    return { showAdvice: true, announcements: [], newEggs, newHatches };
 
   const lastSeen = data.roadmap_last_seen_announcement_id ?? 0;
   return {
     showAdvice: false,
     announcements: ANNOUNCEMENTS.filter((a) => a.id > lastSeen),
     newEggs,
+    newHatches,
   };
 }
 

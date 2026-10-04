@@ -76,6 +76,7 @@ const TWINKLES = [
 // 絵（artSrc）が無い／読み込めないときはBugアイコンで代用する。
 export function CelebrationOverlay({
   artSrc,
+  art,
   artClassName,
   accentClassName = "text-amber-300",
   eyebrow,
@@ -84,6 +85,8 @@ export function CelebrationOverlay({
   children,
 }: {
   artSrc?: string;
+  // 単一の画像ではなく、パーツを組み合わせた絵（成虫のクワたんなど）を出したいとき。artSrcより優先。
+  art?: ReactNode;
   artClassName?: string;
   accentClassName?: string;
   eyebrow?: string;
@@ -143,7 +146,9 @@ export function CelebrationOverlay({
             ✦
           </span>
         ))}
-        {showArt ? (
+        {art ? (
+          <div className={`animate-egg-reveal relative drop-shadow-lg ${artClassName ?? ""}`}>{art}</div>
+        ) : showArt ? (
           // eslint-disable-next-line @next/next/no-img-element -- 自前SVGアート
           <img
             src={artSrc}

@@ -94,7 +94,11 @@ export const KUWAGATA_GRADUATION_BOOST_DAYS: Record<0 | 1 | 2 | 3 | 4, number> =
   4: 0.4,
 };
 
-type GrowthInput = { obtainedAt: string; hatchedAt: string | null; boostDays: number };
+// テッペンクワたんは、日数がたっても蛹で止まる。成虫になるのはStage5を卒業して羽化したとき
+// （hatched_atが立つとき）だけ。
+export const TEPPEN_SPECIES_CODE = "KW-0004";
+
+type GrowthInput = { obtainedAt: string; hatchedAt: string | null; boostDays: number; speciesCode: string };
 
 function getElapsedDays(individual: GrowthInput): number {
   return Math.max(0, (Date.now() - new Date(individual.obtainedAt).getTime()) / (1000 * 60 * 60 * 24));
@@ -107,11 +111,11 @@ export function getIndividualGrowthStage(individual: GrowthInput): KuwagataGrowt
   for (const { stage, end } of GROWTH_STAGE_RANGES) {
     if (effectiveDays < end) return stage;
   }
-  return "成虫";
+  return individual.speciesCode === TEPPEN_SPECIES_CODE ? "蛹" : "成虫";
 }
 
 // 次の段階へ進むゲージ。経過日数で進んだ分とブーストで進んだ分を、それぞれ0〜1の割合で返す
-// （合計は1以下）。成虫はゲージなし(null)。
+// （合計は1以下）。成虫はゲージなし(null)。蛹で止まるテッペンクワたんは、満タンのまま残る。
 export type KuwagataGrowthGauge = { elapsedRatio: number; boostRatio: number };
 
 export function getIndividualGrowthGauge(individual: GrowthInput): KuwagataGrowthGauge | null {
@@ -119,11 +123,12 @@ export function getIndividualGrowthGauge(individual: GrowthInput): KuwagataGrowt
 
   const elapsed = getElapsedDays(individual);
   const effective = elapsed + individual.boostDays;
-  const range = GROWTH_STAGE_RANGES.find(({ end }) => effective < end);
+  const held = individual.speciesCode === TEPPEN_SPECIES_CODE;
+  const range = GROWTH_STAGE_RANGES.find(({ end }) => effective < end) ?? (held ? GROWTH_STAGE_RANGES[2] : null);
   if (!range) return null;
 
   const span = range.end - range.start;
-  const total = (effective - range.start) / span;
+  const total = Math.min((effective - range.start) / span, 1);
   const elapsedRatio = Math.min(Math.max((elapsed - range.start) / span, 0), total);
   return { elapsedRatio, boostRatio: Math.max(total - elapsedRatio, 0) };
 }
@@ -490,6 +495,51 @@ export async function getUncelebratedEggs(
         ]
       : [];
   });
+}
+
+// 「羽化した！」演出をまだ見せていない個体（Stage5卒業でテッペンクワたんが成虫になったとき）。
+export async function getUncelebratedHatches(
+  userId: string
+): Promise<{ id: string; speciesCode: string; speciesName: string; mandibleVariant: number }[]> {
+  const { data, error } = await supabaseAdmin
+    .from("kuwagata_individuals")
+    .select("id, mandible_variant, kuwagata_species!inner(code, name, stage_trigger)")
+    .eq("user_id", userId)
+    .eq("kuwagata_species.stage_trigger", 5)
+    .not("hatched_at", "is", null)
+    .is("hatch_celebrated_at", null)
+    .order("hatched_at", { ascending: true });
+
+  if (error) {
+    throw new Error(`未演出の羽化の取得に失敗しました: ${error.message}`);
+  }
+
+  return (data ?? []).flatMap((row) => {
+    const species = Array.isArray(row.kuwagata_species) ? row.kuwagata_species[0] : row.kuwagata_species;
+    return species
+      ? [
+          {
+            id: row.id as string,
+            speciesCode: species.code as string,
+            speciesName: species.name as string,
+            mandibleVariant: row.mandible_variant as number,
+          },
+        ]
+      : [];
+  });
+}
+
+export async function markHatchCelebrated(userId: string, individualId: string): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from("kuwagata_individuals")
+    .update({ hatch_celebrated_at: new Date().toISOString() })
+    .eq("id", individualId)
+    .eq("user_id", userId)
+    .is("hatch_celebrated_at", null);
+
+  if (error) {
+    throw new Error(`羽化演出の既読保存に失敗しました: ${error.message}`);
+  }
 }
 
 export async function markIndividualCelebrated(userId: string, individualId: string): Promise<void> {

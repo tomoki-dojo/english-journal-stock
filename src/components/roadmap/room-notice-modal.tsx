@@ -12,13 +12,16 @@ import {
   INTRO_LINES,
   type RoadmapAnnouncement,
   type RoadmapNewEgg,
+  type RoadmapNewHatch,
 } from "@/lib/roadmap-notices";
+import { TankOccupant } from "./kuwagata-shelf";
 
 type Item =
   | { kind: "intro" }
   | { kind: "advice" }
   | { kind: "stageUnlock"; stage: 2 | 3 | 4 | 5; key: string }
   | { kind: "egg"; egg: RoadmapNewEgg }
+  | { kind: "hatch"; hatch: RoadmapNewHatch }
   | { kind: "announcement"; announcement: RoadmapAnnouncement };
 
 // 部屋に入ったときのポップアップ。初回はエークワ博士のアドバイス、以降は未読のお知らせを1件ずつ順に出す。
@@ -27,10 +30,12 @@ export function RoomNoticeModal({
   showAdvice,
   announcements,
   newEggs,
+  newHatches = [],
 }: {
   showAdvice: boolean;
   announcements: RoadmapAnnouncement[];
   newEggs: RoadmapNewEgg[];
+  newHatches?: RoadmapNewHatch[];
 }) {
   const [queue, setQueue] = useState<Item[]>(() => [
     ...(showAdvice ? ([{ kind: "intro" }, { kind: "advice" }] as Item[]) : []),
@@ -45,6 +50,7 @@ export function RoomNoticeModal({
           ]
         : [eggItem];
     }),
+    ...newHatches.map((hatch) => ({ kind: "hatch" as const, hatch })),
     ...announcements.map((announcement) => ({
       kind: "announcement" as const,
       announcement,
@@ -110,6 +116,41 @@ export function RoomNoticeModal({
         <button
           type="button"
           onClick={closeEgg}
+          className="w-full rounded-full bg-amber-500 py-2.5 text-sm font-bold text-white transition-transform active:scale-95"
+        >
+          OK
+        </button>
+      </CelebrationOverlay>
+    );
+  }
+
+  if (current.kind === "hatch") {
+    const { hatch } = current;
+    const closeHatch = () => {
+      void fetch("/api/roadmap/notices/seen", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "hatch", id: hatch.id }),
+      }).catch(() => {});
+      setQueue((q) => q.slice(1));
+    };
+    return (
+      <CelebrationOverlay
+        key={`hatch-${hatch.id}`}
+        art={
+          <TankOccupant
+            color="#f59e0b"
+            sizeScale={4}
+            speciesCode={hatch.speciesCode}
+            mandibleVariant={hatch.mandibleVariant}
+            growthStage="成虫"
+          />
+        }
+        message={`${hatch.speciesName}が羽化した！`}
+      >
+        <button
+          type="button"
+          onClick={closeHatch}
           className="w-full rounded-full bg-amber-500 py-2.5 text-sm font-bold text-white transition-transform active:scale-95"
         >
           OK
