@@ -6,6 +6,7 @@ import { Check, Hourglass, Mic, PartyPopper, RotateCcw, Square, X } from "lucide
 import { cn } from "@/lib/utils";
 import { RoundHeader } from "./round-header";
 import { GrowthBadge } from "./growth-badge";
+import { GrowingKuwagataPanel } from "./growing-kuwagata-panel";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
 import { useSpeechRecognition } from "@/lib/use-speech-recognition";
 import type { Stage3JudgeResult, Stage3Question, Stage3SessionResponse, Stage3UsageInfo } from "./types";
@@ -328,6 +329,7 @@ export function Stage3Practice() {
                 この表現、Stage3を卒業しました
               </div>
             )}
+            {result.graduated && <GrowingKuwagataPanel />}
 
             <button
               type="button"

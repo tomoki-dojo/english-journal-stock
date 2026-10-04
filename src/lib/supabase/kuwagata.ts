@@ -141,6 +141,34 @@ export async function addGrowthBoost(userId: string, days: number): Promise<void
   }
 }
 
+export type KuwagataGrowingIndividual = {
+  id: string;
+  speciesCode: string;
+  speciesName: string;
+  mandibleVariant: number;
+  growthStage: KuwagataGrowthStage;
+  growthGauge: KuwagataGrowthGauge;
+};
+
+// 結果画面用：育成中（成虫になる前）の個体と、その成長ゲージ。
+export async function getGrowingKuwagata(userId: string): Promise<KuwagataGrowingIndividual[]> {
+  const individuals = await getUserKuwagataIndividuals(userId);
+  const growing: KuwagataGrowingIndividual[] = [];
+  for (const individual of individuals) {
+    const growthGauge = getIndividualGrowthGauge(individual);
+    if (!growthGauge) continue;
+    growing.push({
+      id: individual.id,
+      speciesCode: individual.speciesCode,
+      speciesName: individual.speciesName,
+      mandibleVariant: individual.mandibleVariant,
+      growthStage: getIndividualGrowthStage(individual),
+      growthGauge,
+    });
+  }
+  return growing;
+}
+
 export type KuwagataShelfIndividual = KuwagataIndividual & {
   growthStage: KuwagataGrowthStage;
   growthGauge: KuwagataGrowthGauge | null;

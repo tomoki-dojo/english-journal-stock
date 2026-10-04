@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/supabase/server-auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { ArthurAvatar } from "@/components/roadmap/arthur";
 import { ROADMAP_TITLE_PATH, sanitizeRoadmapNext } from "@/lib/roadmap-title";
+import { APP_VERSION } from "@/lib/app-version";
 
 type TitlePageProps = {
   searchParams: Promise<{ next?: string }>;
@@ -31,7 +32,7 @@ export default async function RoadmapTitlePage({ searchParams }: TitlePageProps)
   const signupHref = `${loginHref}&mode=magic`;
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center bg-gradient-to-b from-amber-50 via-white to-sky-50 px-6">
+    <div className="relative flex min-h-dvh flex-col items-center justify-center bg-gradient-to-b from-amber-50 via-white to-sky-50 px-6">
       <ArthurAvatar size={176} animated className="shadow-md" />
       <h1 className="mt-6 text-2xl font-bold tracking-wide text-zinc-800">アーサーの飼育部屋</h1>
 
@@ -63,6 +64,13 @@ export default async function RoadmapTitlePage({ searchParams }: TitlePageProps)
           </>
         )}
       </div>
+
+      <Link
+        href={`${ROADMAP_TITLE_PATH}/version`}
+        className="absolute bottom-4 right-5 text-xs text-zinc-400 transition-colors hover:text-zinc-600"
+      >
+        v{APP_VERSION}
+      </Link>
     </div>
   );
 }

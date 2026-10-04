@@ -6,6 +6,7 @@ import { Check, PartyPopper, PenLine, Volume2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RoundHeader } from "./round-header";
 import { GrowthBadge } from "./growth-badge";
+import { GrowingKuwagataPanel } from "./growing-kuwagata-panel";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
 import type { Stage1RoundQuestion, Stage1RoundResponse, WarmthLevel } from "./types";
 
@@ -207,6 +208,8 @@ export function Stage1Practice() {
             </ul>
           </div>
         )}
+
+        {graduated.length > 0 && <GrowingKuwagataPanel />}
 
         {stage2JustUnlocked && (
           // Stage2の解放条件（アクティブセットが7件に届く）を、このラウンドでちょうど満たした瞬間。

@@ -6,6 +6,7 @@ import { Check, Lightbulb, PartyPopper, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RoundHeader } from "./round-header";
 import { GrowthBadge } from "./growth-badge";
+import { GrowingKuwagataPanel } from "./growing-kuwagata-panel";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
 import type { Stage0RoundQuestion, Stage0RoundResponse, WarmthLevel } from "./types";
 
@@ -280,6 +281,8 @@ export function Stage0Practice({ availableErrorTags }: Stage0PracticeProps) {
               </ul>
             </div>
           )}
+
+          {graduated.length > 0 && <GrowingKuwagataPanel />}
 
           <div className="relative mt-6 flex gap-3">
             <button
