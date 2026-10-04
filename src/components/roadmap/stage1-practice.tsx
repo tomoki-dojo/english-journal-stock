@@ -212,7 +212,7 @@ export function Stage1Practice() {
           </div>
         )}
 
-        {stage2JustUnlocked ? (
+        {stage2JustUnlocked && (
           // Stage2の解放条件（アクティブセットが7件に届く）を、このラウンドでちょうど満たした瞬間。
           // 箱庭ビジュアル実装（#150）までは簡易なバナーとして示す。
           <div
@@ -224,11 +224,6 @@ export function Stage1Practice() {
               Stage2が解放されました！
             </div>
             <p className="mt-1 text-xs text-zinc-600">瞬間英作文で、覚えたフレーズを今度は自分から引き出す練習に進めます。</p>
-          </div>
-        ) : (
-          // 箱庭ビジュアル実装後、ここに増築・小物パーツなどの街の変化を表示する予定
-          <div className="mt-4 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-3 text-xs text-zinc-400">
-            （街の変化はここに表示予定です）
           </div>
         )}
 
@@ -277,9 +272,11 @@ export function Stage1Practice() {
             : undefined
         }
       >
-        <p className="mb-3 text-xs text-zinc-400">
-          音声を真似して声に出す→一緒に言う→少し遅れて言う、と徐々にレベルを上げてみましょう。
-        </p>
+        {currentQuestion.hasAudio && (
+          <p className="mb-3 text-xs text-zinc-400">
+            音声を真似して声に出す→一緒に言う→少し遅れて言う、と徐々にレベルを上げてみましょう。
+          </p>
+        )}
 
         <div className="mb-1 flex items-center gap-2">
           <GrowthBadge stage={1} warmth={currentQuestion.warmth} />
@@ -324,10 +321,6 @@ export function Stage1Practice() {
         </div>
         {error && <p className="mt-3 text-xs text-red-600">{error}</p>}
       </div>
-
-      {audioUrl === null && !currentQuestion.hasAudio && (
-        <p className="mt-3 text-xs text-zinc-400">このフレーズには音声がまだありません。テキストで練習してください。</p>
-      )}
     </div>
   );
 }

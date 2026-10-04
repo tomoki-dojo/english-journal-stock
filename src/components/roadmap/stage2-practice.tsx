@@ -221,10 +221,6 @@ export function Stage2Practice() {
           </div>
         )}
 
-        <div className="relative mt-4 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-3 text-xs text-zinc-400">
-          （街の変化はここに表示予定です）
-        </div>
-
         <div className="relative mt-6 flex gap-3">
           <button
             type="button"
