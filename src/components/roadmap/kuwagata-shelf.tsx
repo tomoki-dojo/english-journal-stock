@@ -514,8 +514,33 @@ const CHATTER_CYCLE_MS = 15000;
 const CHATTER_DURATION_MS = 3000;
 const CHATTER_SPECIES_CODE = "KW-0003";
 
-function useChatter(enabled: boolean, seedKey: string): boolean {
-  const [chatting, setChatting] = useState(false);
+// 吹き出しの中身。「…」(点滅する3つの点)40%・「♪」「♡」「？」20%ずつの重み付きで、喋るたびに選び直す。
+type ChatterBubble = "dots" | "♪" | "♡" | "？";
+const CHATTER_BUBBLES: { bubble: ChatterBubble; weight: number }[] = [
+  { bubble: "dots", weight: 40 },
+  { bubble: "♪", weight: 20 },
+  { bubble: "♡", weight: 20 },
+  { bubble: "？", weight: 20 },
+];
+const CHATTER_SYMBOL_COLOR: Record<Exclude<ChatterBubble, "dots">, string> = {
+  "♪": "#d97706",
+  "♡": "#ec4899",
+  "？": "#0284c7",
+};
+
+function pickChatterBubble(): ChatterBubble {
+  const total = CHATTER_BUBBLES.reduce((sum, b) => sum + b.weight, 0);
+  let roll = Math.random() * total;
+  for (const { bubble, weight } of CHATTER_BUBBLES) {
+    roll -= weight;
+    if (roll < 0) return bubble;
+  }
+  return "dots";
+}
+
+// 喋っている間は吹き出しの種類を返し、それ以外はnull。
+function useChatter(enabled: boolean, seedKey: string): ChatterBubble | null {
+  const [bubble, setBubble] = useState<ChatterBubble | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
@@ -527,10 +552,10 @@ function useChatter(enabled: boolean, seedKey: string): boolean {
 
     const startChat = () => {
       if (cancelled) return;
-      setChatting(true);
+      setBubble(pickChatterBubble());
       timer = setTimeout(() => {
         if (cancelled) return;
-        setChatting(false);
+        setBubble(null);
         timer = setTimeout(startChat, CHATTER_CYCLE_MS - CHATTER_DURATION_MS);
       }, CHATTER_DURATION_MS);
     };
@@ -539,11 +564,11 @@ function useChatter(enabled: boolean, seedKey: string): boolean {
     return () => {
       cancelled = true;
       clearTimeout(timer);
-      setChatting(false);
+      setBubble(null);
     };
   }, [enabled, seedKey]);
 
-  return chatting;
+  return bubble;
 }
 
 function WanderingCreature({
@@ -576,10 +601,11 @@ function WanderingCreature({
   // 同じ水槽に自分以外の個体がいるか(シャベクワたんの「喋る仕草」の条件)
   hasCompanions: boolean;
 }) {
-  const chatting = useChatter(
+  const chatterBubble = useChatter(
     hasCompanions && speciesCode === CHATTER_SPECIES_CODE && growthStage === "成虫" && hasArt,
     seedKey
   );
+  const chatting = chatterBubble !== null;
   const moves = !isStationaryStage(speciesCode, growthStage);
   const { spot, facing, heading } = useWander(seedKey, initialSpot, widthPct, moves, decorationSpots, positionsRef);
   const pt = surfacePoint(spot.u, spot.v);
@@ -612,21 +638,42 @@ function WanderingCreature({
       ) : (
         <Bug className="block w-full h-auto drop-shadow-sm" style={{ color }} strokeWidth={1.75} />
       )}
-      {chatting && (
+      {chatterBubble && (
         // 喋っている間だけ出る丸い吹き出し。名前ラベルより手前(z-20)・さらに上に出して、ラベルに被らない。
-        // 左下の小さな角が体のほうを指す。中の「…」が順に点滅する。
+        // 左下の三角の角が体のほうを指す。中身は「…」(順に点滅)・「♪」「♡」「？」のどれか。
         <span
           className="animate-question-card-enter pointer-events-none absolute z-20 flex h-6 w-6 items-center justify-center gap-0.5 rounded-full bg-white shadow-sm"
           style={{ left: "62%", top: "2%", transform: "translateY(-100%)" }}
         >
-          <span className="absolute -bottom-0.5 left-1 h-2 w-2 rotate-45 bg-white" />
-          {[0, 1, 2].map((dot) => (
+          <span
+            className="absolute"
+            style={{
+              left: 3,
+              bottom: -4,
+              width: 0,
+              height: 0,
+              borderLeft: "4px solid transparent",
+              borderRight: "4px solid transparent",
+              borderTop: "6px solid #fff",
+              transform: "rotate(20deg)",
+            }}
+          />
+          {chatterBubble === "dots" ? (
+            [0, 1, 2].map((dot) => (
+              <span
+                key={dot}
+                className="animate-kuwagata-chat-dot relative h-1 w-1 rounded-full bg-zinc-500"
+                style={{ animationDelay: `${dot * 0.2}s` }}
+              />
+            ))
+          ) : (
             <span
-              key={dot}
-              className="animate-kuwagata-chat-dot relative h-1 w-1 rounded-full bg-zinc-500"
-              style={{ animationDelay: `${dot * 0.2}s` }}
-            />
-          ))}
+              className="relative text-[13px] font-bold leading-none"
+              style={{ color: CHATTER_SYMBOL_COLOR[chatterBubble] }}
+            >
+              {chatterBubble}
+            </span>
+          )}
         </span>
       )}
       {nickname && (
