@@ -592,34 +592,41 @@ const FIGHT_CYCLE_MS = 12000;
 const FIGHT_DURATION_MS = 3000;
 const FIGHT_SPECIES_CODE = "KW-0008";
 
-function useFighting(enabled: boolean, seedKey: string): boolean {
-  const [fighting, setFighting] = useState(false);
+// テッペンクワたん(KW-0004)の「てっぺんポーズ」。14秒に1回・3秒間、すっと背伸びして胸を張り、
+// 頭上できらきらが瞬く。名前のとおり「てっぺんに立つ」堂々とした仕草。
+const PROUD_CYCLE_MS = 14000;
+const PROUD_DURATION_MS = 3000;
+const PROUD_SPECIES_CODE = "KW-0004";
+
+// 一定周期で短時間だけtrueになる仕草用のフック。開始は個体ごとにずらす。
+function useTimedGesture(enabled: boolean, seedKey: string, cycleMs: number, durationMs: number): boolean {
+  const [active, setActive] = useState(false);
 
   useEffect(() => {
     if (!enabled) return;
     let timer: ReturnType<typeof setTimeout>;
     let cancelled = false;
-    const firstDelay = seededRandom(seedKey + ":fight")() * (FIGHT_CYCLE_MS - FIGHT_DURATION_MS);
+    const firstDelay = seededRandom(seedKey + ":gesture")() * (cycleMs - durationMs);
 
     const start = () => {
       if (cancelled) return;
-      setFighting(true);
+      setActive(true);
       timer = setTimeout(() => {
         if (cancelled) return;
-        setFighting(false);
-        timer = setTimeout(start, FIGHT_CYCLE_MS - FIGHT_DURATION_MS);
-      }, FIGHT_DURATION_MS);
+        setActive(false);
+        timer = setTimeout(start, cycleMs - durationMs);
+      }, durationMs);
     };
 
     timer = setTimeout(start, firstDelay);
     return () => {
       cancelled = true;
       clearTimeout(timer);
-      setFighting(false);
+      setActive(false);
     };
-  }, [enabled, seedKey]);
+  }, [enabled, seedKey, cycleMs, durationMs]);
 
-  return fighting;
+  return active;
 }
 
 function WanderingCreature({
@@ -657,7 +664,18 @@ function WanderingCreature({
     seedKey
   );
   const chatting = chatterBubble !== null;
-  const fighting = useFighting(speciesCode === FIGHT_SPECIES_CODE && growthStage === "成虫" && hasArt, seedKey);
+  const fighting = useTimedGesture(
+    speciesCode === FIGHT_SPECIES_CODE && growthStage === "成虫" && hasArt,
+    seedKey + ":fight",
+    FIGHT_CYCLE_MS,
+    FIGHT_DURATION_MS
+  );
+  const proud = useTimedGesture(
+    speciesCode === PROUD_SPECIES_CODE && growthStage === "成虫" && hasArt,
+    seedKey + ":proud",
+    PROUD_CYCLE_MS,
+    PROUD_DURATION_MS
+  );
   const moves = !isStationaryStage(speciesCode, growthStage);
   const { spot, facing, heading } = useWander(seedKey, initialSpot, widthPct, moves, decorationSpots, positionsRef);
   const pt = surfacePoint(spot.u, spot.v);
@@ -678,7 +696,7 @@ function WanderingCreature({
     >
       {hasArt ? (
         <div
-          className={`h-full w-full ${chatting ? "animate-kuwagata-chat" : ""} ${fighting ? "animate-kuwagata-fight" : ""}`}
+          className={`h-full w-full ${chatting ? "animate-kuwagata-chat" : ""} ${fighting ? "animate-kuwagata-fight" : ""} ${proud ? "animate-kuwagata-proud" : ""}`}
         >
           <KnownCreatureSprite
             fighting={fighting}
@@ -731,6 +749,21 @@ function WanderingCreature({
           )}
         </span>
       )}
+      {proud &&
+        // てっぺんポーズ中だけ頭上で瞬くきらきら(位置・タイミングを少しずつずらした3つ)
+        [
+          { left: "28%", top: "8%", delay: "0s" },
+          { left: "52%", top: "0%", delay: "0.5s" },
+          { left: "72%", top: "10%", delay: "1s" },
+        ].map((s, i) => (
+          <span
+            key={i}
+            className="animate-egg-twinkle pointer-events-none absolute z-10 text-[11px] leading-none text-amber-400"
+            style={{ left: s.left, top: s.top, animationDelay: s.delay }}
+          >
+            ✦
+          </span>
+        ))}
       {nickname && (
         // 名前ラベル。スプライトの頭上に出し、歩き回るのに合わせてラベルも一緒に動く。
         // 幅は名前の最大10文字(+左右の余白)が省略されずに入る広さ。最長の種類名は「テッペンクワたん」(8文字)。
@@ -740,7 +773,7 @@ function WanderingCreature({
         <span
           className="pointer-events-none absolute left-1/2 z-10 max-w-[11em] truncate whitespace-nowrap rounded-full bg-white/85 px-1.5 py-px text-[9px] font-semibold leading-tight text-zinc-700 shadow-sm"
           style={{
-            top: hasArt ? "24%" : 0,
+            top: hasArt ? "16%" : 0,
             transform: `translateX(-50%) translateY(-100%)${mirror ? " scaleX(-1)" : ""}`,
           }}
         >

@@ -421,7 +421,30 @@ body {
   animation: kuwagata-fight-jaw 0.35s ease-in-out infinite;
 }
 
+/* テッペンクワたんの「てっぺんポーズ」。すっと背伸びして胸を張り、ゆったり上下に揺れる。 */
+@keyframes kuwagata-proud {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  15%,
+  85% {
+    transform: translateY(-8%) scale(1.1);
+  }
+  50% {
+    transform: translateY(-10%) scale(1.12);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-kuwagata-proud {
+  transform-origin: 50% 100%;
+  animation: kuwagata-proud 3s ease-in-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .animate-kuwagata-proud,
   .animate-kuwagata-chat,
   .animate-kuwagata-chat-dot,
   .animate-kuwagata-fight,
