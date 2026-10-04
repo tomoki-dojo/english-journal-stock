@@ -14,7 +14,7 @@ import {
   type RoadmapNewEgg,
   type RoadmapNewHatch,
 } from "@/lib/roadmap-notices";
-import { TankOccupant } from "./kuwagata-shelf";
+import { HatchOverlay } from "./hatch-overlay";
 
 type Item =
   | { kind: "intro" }
@@ -135,18 +135,12 @@ export function RoomNoticeModal({
       setQueue((q) => q.slice(1));
     };
     return (
-      <CelebrationOverlay
+      <HatchOverlay
         key={`hatch-${hatch.id}`}
-        art={
-          <TankOccupant
-            color="#f59e0b"
-            sizeScale={4}
-            speciesCode={hatch.speciesCode}
-            mandibleVariant={hatch.mandibleVariant}
-            growthStage="成虫"
-          />
-        }
-        message={`${hatch.speciesName}が羽化した！`}
+        speciesCode={hatch.speciesCode}
+        speciesName={hatch.speciesName}
+        mandibleVariant={hatch.mandibleVariant}
+        hatchedFrom={hatch.hatchedFrom}
       >
         <button
           type="button"
@@ -155,7 +149,7 @@ export function RoomNoticeModal({
         >
           OK
         </button>
-      </CelebrationOverlay>
+      </HatchOverlay>
     );
   }
 

@@ -500,10 +500,12 @@ export async function getUncelebratedEggs(
 // 「羽化した！」演出をまだ見せていない個体（Stage5卒業でテッペンクワたんが成虫になったとき）。
 export async function getUncelebratedHatches(
   userId: string
-): Promise<{ id: string; speciesCode: string; speciesName: string; mandibleVariant: number }[]> {
+): Promise<
+  { id: string; speciesCode: string; speciesName: string; mandibleVariant: number; hatchedFrom: string | null }[]
+> {
   const { data, error } = await supabaseAdmin
     .from("kuwagata_individuals")
-    .select("id, mandible_variant, kuwagata_species!inner(code, name, stage_trigger)")
+    .select("id, mandible_variant, hatched_from, kuwagata_species!inner(code, name, stage_trigger)")
     .eq("user_id", userId)
     .eq("kuwagata_species.stage_trigger", 5)
     .not("hatched_at", "is", null)
@@ -523,6 +525,7 @@ export async function getUncelebratedHatches(
             speciesCode: species.code as string,
             speciesName: species.name as string,
             mandibleVariant: row.mandible_variant as number,
+            hatchedFrom: (row.hatched_from as string | null) ?? null,
           },
         ]
       : [];
@@ -790,7 +793,7 @@ export async function forceHatchTeppenToAdult(userId: string): Promise<void> {
 
   const { data: individual, error: individualError } = await supabaseAdmin
     .from("kuwagata_individuals")
-    .select("id, hatched_at")
+    .select("id, hatched_at, obtained_at, boost_days")
     .eq("user_id", userId)
     .eq("species_id", species.id)
     .eq("obtained_via", "stage_clear")
@@ -802,9 +805,17 @@ export async function forceHatchTeppenToAdult(userId: string): Promise<void> {
   if (!individual) return; // 卵がまだ配布されていない（Stage5解放前）。
   if (individual.hatched_at) return; // 既に羽化済み（べき等）。
 
+  // 羽化の演出で「◯◯から成長して」と出すため、羽化する直前の成長段階を覚えておく。
+  const stageBefore = getIndividualGrowthStage({
+    obtainedAt: individual.obtained_at as string,
+    hatchedAt: null,
+    boostDays: Number(individual.boost_days ?? 0),
+    speciesCode: TEPPEN_SPECIES_CODE,
+  });
+
   const { error: updateError } = await supabaseAdmin
     .from("kuwagata_individuals")
-    .update({ hatched_at: new Date().toISOString() })
+    .update({ hatched_at: new Date().toISOString(), hatched_from: stageBefore })
     .eq("id", individual.id);
 
   if (updateError) {

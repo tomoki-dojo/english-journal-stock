@@ -313,6 +313,73 @@ body {
   }
 }
 
+/* Stage5卒業の羽化演出。羽化前の姿が震えながら光り、白い閃光のあと、成虫が光線の中に現れる。 */
+@keyframes hatch-shake {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg) scale(1);
+  }
+  15% {
+    transform: translateX(-4px) rotate(-5deg) scale(1.04);
+  }
+  30% {
+    transform: translateX(4px) rotate(5deg) scale(1.08);
+  }
+  45% {
+    transform: translateX(-5px) rotate(-6deg) scale(1.12);
+  }
+  60% {
+    transform: translateX(5px) rotate(6deg) scale(1.16);
+  }
+  80% {
+    transform: translateX(-3px) rotate(-3deg) scale(1.22);
+  }
+}
+
+@keyframes hatch-flash {
+  0% {
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes hatch-rays-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-hatch-shake {
+  animation: hatch-shake 0.5s ease-in-out infinite;
+}
+
+.animate-hatch-flash {
+  animation: hatch-flash 0.7s ease-out both;
+}
+
+.animate-hatch-rays {
+  animation: hatch-rays-spin 12s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-hatch-shake,
+  .animate-hatch-rays {
+    animation: none;
+  }
+  .animate-hatch-flash {
+    animation: none;
+    opacity: 0;
+  }
+}
+
 @keyframes egg-twinkle {
   0%,
   100% {

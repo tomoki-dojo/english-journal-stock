@@ -18,6 +18,8 @@ export type RoadmapNewHatch = {
   speciesCode: string;
   speciesName: string;
   mandibleVariant: number;
+  // 羽化する直前の成長段階（卵・幼虫・蛹）。不明ならnull。
+  hatchedFrom: string | null;
 };
 
 export const ANNOUNCEMENTS: RoadmapAnnouncement[] = [];
