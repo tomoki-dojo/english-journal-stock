@@ -8,12 +8,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 // このファイル内だけで最小限の型を定義する（他ファイルへの汚染を避ける）。
 
 type SpeechRecognitionResultLike = { transcript: string };
-type SpeechRecognitionAlternativeList = { 0: SpeechRecognitionResultLike };
+type SpeechRecognitionAlternativeList = { 0: SpeechRecognitionResultLike; isFinal?: boolean };
 type SpeechRecognitionEventLike = { results: ArrayLike<SpeechRecognitionAlternativeList> };
 type SpeechRecognitionErrorEventLike = { error: string };
 
 type SpeechRecognitionLike = {
   lang: string;
+  continuous: boolean;
   interimResults: boolean;
   maxAlternatives: number;
   start: () => void;
@@ -40,16 +41,28 @@ export type SpeechRecognitionStatus = "idle" | "listening" | "unsupported" | "er
 export type UseSpeechRecognitionResult = {
   status: SpeechRecognitionStatus;
   transcript: string;
+  // continuous時の聞き取り中の途中経過（終了後はtranscriptに確定される）
+  liveText: string;
   start: () => void;
   stop: () => void;
   reset: () => void;
   errorMessage: string | null;
 };
 
-export function useSpeechRecognition(lang = "en-US"): UseSpeechRecognitionResult {
+export type UseSpeechRecognitionOptions = {
+  lang?: string;
+  // true: 途中で言葉に詰まっても止まらず、ユーザーが停止をタップするまで聞き続ける（Stage4/5の会話用）。
+  // 停止後にまとめてtranscriptへ反映する。falseは従来どおり1フレーズで自動終了。
+  continuous?: boolean;
+};
+
+export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}): UseSpeechRecognitionResult {
+  const { lang = "en-US", continuous = false } = options;
   const [status, setStatus] = useState<SpeechRecognitionStatus>("idle");
   const [transcript, setTranscript] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [liveText, setLiveText] = useState("");
+  const liveTextRef = useRef("");
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   useEffect(() => {
@@ -61,14 +74,22 @@ export function useSpeechRecognition(lang = "en-US"): UseSpeechRecognitionResult
 
     const recognition = new Ctor();
     recognition.lang = lang;
-    recognition.interimResults = false;
+    recognition.continuous = continuous;
+    recognition.interimResults = continuous;
     recognition.maxAlternatives = 1;
 
     recognition.onresult = (event) => {
       const text = Array.from(event.results)
         .map((result) => result[0]?.transcript ?? "")
         .join(" ")
+        .replace(/\s+/g, " ")
         .trim();
+      if (continuous) {
+        // 聞き取り中は途中経過を保持するだけ。画面への反映は終了(onend)で行う。
+        liveTextRef.current = text;
+        setLiveText(text);
+        return;
+      }
       setTranscript(text);
       setStatus("idle");
     };
@@ -90,6 +111,9 @@ export function useSpeechRecognition(lang = "en-US"): UseSpeechRecognitionResult
     };
 
     recognition.onend = () => {
+      if (continuous && liveTextRef.current) {
+        setTranscript(liveTextRef.current);
+      }
       setStatus((s) => (s === "listening" ? "idle" : s));
     };
 
@@ -101,12 +125,14 @@ export function useSpeechRecognition(lang = "en-US"): UseSpeechRecognitionResult
       recognition.onend = null;
       recognition.abort();
     };
-  }, [lang]);
+  }, [lang, continuous]);
 
   const start = useCallback(() => {
     if (!recognitionRef.current) return;
     setErrorMessage(null);
     setTranscript("");
+    liveTextRef.current = "";
+    setLiveText("");
     setStatus("listening");
     try {
       recognitionRef.current.start();
@@ -121,8 +147,10 @@ export function useSpeechRecognition(lang = "en-US"): UseSpeechRecognitionResult
 
   const reset = useCallback(() => {
     setTranscript("");
+    liveTextRef.current = "";
+    setLiveText("");
     setErrorMessage(null);
   }, []);
 
-  return { status, transcript, start, stop, reset, errorMessage };
+  return { status, transcript, liveText, start, stop, reset, errorMessage };
 }

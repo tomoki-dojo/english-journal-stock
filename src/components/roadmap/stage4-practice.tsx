@@ -43,7 +43,7 @@ export function Stage4Practice() {
   const [manualText, setManualText] = useState("");
   const [sessionResult, setSessionResult] = useState<Stage4TurnResult | null>(null);
 
-  const speech = useSpeechRecognition();
+  const speech = useSpeechRecognition({ continuous: true });
 
   async function loadScenarios() {
     setState("loading");
@@ -232,7 +232,7 @@ export function Stage4Practice() {
           <p className="text-sm font-medium text-zinc-800">
             {sessionResult.overallPass ? "会話を通じてゴールを達成できました" : "もう少しでゴール達成です"}
           </p>
-          <p className="mt-2 text-sm text-zinc-600">{sessionResult.feedbackJa}</p>
+          <p className="mt-2 whitespace-pre-line text-left text-sm text-zinc-600">{sessionResult.feedbackJa}</p>
 
           {sessionResult.graduated && (
             <div className="mt-4 flex items-center justify-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
@@ -347,6 +347,9 @@ export function Stage4Practice() {
             <p className="mt-3 text-xs text-zinc-400">
               {speech.status === "listening" ? "聞き取り中...もう一度タップで終了" : "タップして声に出す"}
             </p>
+            {speech.status === "listening" && speech.liveText && (
+              <p className="mt-3 rounded-lg bg-white px-3 py-2 text-left text-sm text-zinc-700">{speech.liveText}</p>
+            )}
             {speech.errorMessage && <p className="mt-2 text-xs text-red-600">{speech.errorMessage}</p>}
           </div>
         )}

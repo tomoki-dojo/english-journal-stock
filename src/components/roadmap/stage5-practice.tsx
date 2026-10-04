@@ -46,7 +46,7 @@ export function Stage5Practice({ track }: Stage5PracticeProps) {
   const [manualText, setManualText] = useState("");
   const [sessionResult, setSessionResult] = useState<Stage5TurnResult | null>(null);
 
-  const speech = useSpeechRecognition();
+  const speech = useSpeechRecognition({ continuous: true });
   const trackLabel = track === "daily" ? "日常編" : "ビジネス編";
 
   async function loadScenarios() {
@@ -370,6 +370,9 @@ export function Stage5Practice({ track }: Stage5PracticeProps) {
             <p className="mt-3 text-xs text-zinc-400">
               {speech.status === "listening" ? "聞き取り中...もう一度タップで終了" : "タップして声に出す"}
             </p>
+            {speech.status === "listening" && speech.liveText && (
+              <p className="mt-3 rounded-lg bg-white px-3 py-2 text-left text-sm text-zinc-700">{speech.liveText}</p>
+            )}
             {speech.errorMessage && <p className="mt-2 text-xs text-red-600">{speech.errorMessage}</p>}
           </div>
         )}
