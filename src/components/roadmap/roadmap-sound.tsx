@@ -16,7 +16,7 @@ import { Volume2, VolumeX } from "lucide-react";
 const BGM_SRC = "/roadmap/sound/bgm_room.mp3";
 const TAP_SRC = "/roadmap/sound/se_tap.mp3";
 const BGM_VOLUME = 0.3;
-const TAP_VOLUME = 0.6;
+const TAP_VOLUME = 0.3;
 const STORAGE_KEY = "roadmap_sound_enabled";
 
 // BGMを流す画面（部屋・棚・図鑑）。Stageの練習画面などでは止める。
