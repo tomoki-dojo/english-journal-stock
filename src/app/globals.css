@@ -390,9 +390,42 @@ body {
   animation: kuwagata-chat-dot 0.9s ease-in-out infinite;
 }
 
+/* フルクワたんの「ファイティングポーズ」。体を前にかがめて小刻みに構え、大顎をガチガチ開閉する。 */
+@keyframes kuwagata-fight-pose {
+  0%,
+  100% {
+    transform: rotate(-5deg) scale(1.06) translateY(2%);
+  }
+  50% {
+    transform: rotate(-3deg) scale(1.08) translateY(1%);
+  }
+}
+
+@keyframes kuwagata-fight-jaw {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08) translateY(-3%);
+  }
+}
+
+.animate-kuwagata-fight {
+  transform-origin: 50% 100%;
+  animation: kuwagata-fight-pose 0.3s ease-in-out infinite;
+}
+
+.animate-kuwagata-fight-jaw {
+  transform-origin: 50% 45%;
+  animation: kuwagata-fight-jaw 0.35s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-kuwagata-chat,
-  .animate-kuwagata-chat-dot {
+  .animate-kuwagata-chat-dot,
+  .animate-kuwagata-fight,
+  .animate-kuwagata-fight-jaw {
     animation: none;
   }
 }

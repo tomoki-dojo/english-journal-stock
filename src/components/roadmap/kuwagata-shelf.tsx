@@ -192,6 +192,7 @@ function KnownCreatureSprite({
   growthStage = "成虫",
   heading = "left",
   phaseSeed = "",
+  fighting = false,
 }: {
   code: string;
   facing: Facing;
@@ -199,6 +200,7 @@ function KnownCreatureSprite({
   growthStage?: KuwagataGrowthStage;
   heading?: Heading;
   phaseSeed?: string;
+  fighting?: boolean;
 }) {
   const stageArt = KNOWN_STAGE_ART[code];
 
@@ -272,7 +274,13 @@ function KnownCreatureSprite({
           style={{ animationDelay: leg.delay }}
         />
       ))}
-      {mandible && <img src={mandible} alt="" className="absolute inset-0 h-full w-full" />}
+      {mandible && (
+        <img
+          src={mandible}
+          alt=""
+          className={`absolute inset-0 h-full w-full ${fighting ? "animate-kuwagata-fight-jaw" : ""}`}
+        />
+      )}
     </div>
   );
 }
@@ -575,6 +583,42 @@ function useChatter(enabled: boolean, seedKey: string): ChatterBubble | null {
   return bubble;
 }
 
+// フルクワたん(KW-0008)の「ファイティングポーズ」。本番に強い実践派らしく、12秒に1回・3秒間、
+// 体を前にかがめて小刻みに構え、大顎をガチガチ開閉する。個体ごとに開始をずらして一斉には構えない。
+const FIGHT_CYCLE_MS = 12000;
+const FIGHT_DURATION_MS = 3000;
+const FIGHT_SPECIES_CODE = "KW-0008";
+
+function useFighting(enabled: boolean, seedKey: string): boolean {
+  const [fighting, setFighting] = useState(false);
+
+  useEffect(() => {
+    if (!enabled) return;
+    let timer: ReturnType<typeof setTimeout>;
+    let cancelled = false;
+    const firstDelay = seededRandom(seedKey + ":fight")() * (FIGHT_CYCLE_MS - FIGHT_DURATION_MS);
+
+    const start = () => {
+      if (cancelled) return;
+      setFighting(true);
+      timer = setTimeout(() => {
+        if (cancelled) return;
+        setFighting(false);
+        timer = setTimeout(start, FIGHT_CYCLE_MS - FIGHT_DURATION_MS);
+      }, FIGHT_DURATION_MS);
+    };
+
+    timer = setTimeout(start, firstDelay);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      setFighting(false);
+    };
+  }, [enabled, seedKey]);
+
+  return fighting;
+}
+
 function WanderingCreature({
   seedKey,
   initialSpot,
@@ -610,6 +654,7 @@ function WanderingCreature({
     seedKey
   );
   const chatting = chatterBubble !== null;
+  const fighting = useFighting(speciesCode === FIGHT_SPECIES_CODE && growthStage === "成虫" && hasArt, seedKey);
   const moves = !isStationaryStage(speciesCode, growthStage);
   const { spot, facing, heading } = useWander(seedKey, initialSpot, widthPct, moves, decorationSpots, positionsRef);
   const pt = surfacePoint(spot.u, spot.v);
@@ -629,8 +674,11 @@ function WanderingCreature({
       }}
     >
       {hasArt ? (
-        <div className={`h-full w-full ${chatting ? "animate-kuwagata-chat" : ""}`}>
+        <div
+          className={`h-full w-full ${chatting ? "animate-kuwagata-chat" : ""} ${fighting ? "animate-kuwagata-fight" : ""}`}
+        >
           <KnownCreatureSprite
+            fighting={fighting}
             code={speciesCode}
             facing={facing}
             mandibleVariant={mandibleVariant}
