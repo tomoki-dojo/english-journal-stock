@@ -79,19 +79,19 @@ export type KuwagataGrowthStage = "卵" | "幼虫" | "蛹" | "成虫";
 
 // 各段階の日数の範囲（経過日数＋ブースト日数がこの範囲にある間、その段階）。
 const GROWTH_STAGE_RANGES: { stage: KuwagataGrowthStage; start: number; end: number }[] = [
-  { stage: "卵", start: 0, end: 3 },
-  { stage: "幼虫", start: 3, end: 10 },
-  { stage: "蛹", start: 10, end: 14 },
+  { stage: "卵", start: 0, end: 1 },
+  { stage: "幼虫", start: 1, end: 4 },
+  { stage: "蛹", start: 4, end: 7 },
 ];
 
 // 習得済み（卒業）1回あたりのブースト日数。Freeの1日の上限（Stage3は8回、Stage4は3回）でも
 // 1日に卒業できる数が限られるため、難しいStageほど大きくする。Stage5は卒業で即成虫なので対象外。
 export const KUWAGATA_GRADUATION_BOOST_DAYS: Record<0 | 1 | 2 | 3 | 4, number> = {
-  0: 0.1,
-  1: 0.1,
-  2: 0.2,
-  3: 0.4,
-  4: 0.8,
+  0: 0.05,
+  1: 0.05,
+  2: 0.1,
+  3: 0.2,
+  4: 0.4,
 };
 
 type GrowthInput = { obtainedAt: string; hatchedAt: string | null; boostDays: number };
