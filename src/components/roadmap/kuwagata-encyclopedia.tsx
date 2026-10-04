@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Bug, Lock, Crown } from "lucide-react";
+import { ChevronLeft, ChevronRight, Crown, Lock } from "lucide-react";
 import type {
   KuwagataAreaCode,
   KuwagataEncyclopedia,
   KuwagataEncyclopediaEntry,
 } from "@/lib/supabase/kuwagata";
+import { TankOccupant } from "@/components/roadmap/kuwagata-shelf";
 
 const AREA_LABEL: Record<KuwagataAreaCode, string> = {
   area1: "エリア1・庭・裏庭",
@@ -52,108 +53,173 @@ function formatDate(iso: string): string {
   return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
 }
 
-function EntryCard({ entry, areaLocked }: { entry: KuwagataEncyclopediaEntry; areaLocked?: boolean }) {
-  const isKnown = entry.species.kind === "known";
+// 図鑑番号。種類コード(KW-0001)の数字部分をそのまま使う。
+function entryNumber(entry: KuwagataEncyclopediaEntry): string {
+  return `No.${entry.species.code.replace(/^KW-/, "")}`;
+}
 
-  if (entry.proLocked) {
-    return (
-      <div className="flex flex-col items-center gap-1.5 rounded-xl border border-dashed border-amber-200 bg-amber-50/60 px-2 py-4">
-        <Crown className="h-6 w-6 text-amber-400" strokeWidth={1.75} />
-        <span className="text-xs font-semibold text-amber-600">Pro限定</span>
-        <span className="text-center text-[10px] leading-tight text-amber-600/80">
-          Proにすると出会える1匹
-        </span>
-      </div>
-    );
+// 図鑑の1ページ分。絵の枠・名前・解説・入手の記録を、ページ紙の上に並べる。
+function BookPage({
+  entry,
+  areaLocked,
+  pageNumber,
+}: {
+  entry?: KuwagataEncyclopediaEntry;
+  areaLocked?: boolean;
+  pageNumber: number;
+}) {
+  if (!entry) {
+    return <div className="flex min-h-[320px] flex-1 flex-col px-3 py-3 sm:px-5" />;
   }
 
-  const locked = areaLocked || !entry.discovered;
+  const isKnown = entry.species.kind === "known";
+  const proLocked = entry.proLocked;
+  const locked = proLocked || areaLocked || !entry.discovered;
+  const color = entryColor(entry);
 
-  if (locked) {
-    const hint = isKnown
+  let name = entry.species.name;
+  let body: string | null = entry.species.flavorTextJa;
+  let footnote = "";
+  if (proLocked) {
+    name = "Pro限定";
+    body = "Proにすると出会える1匹";
+  } else if (locked) {
+    name = "？？？";
+    body = isKnown
       ? KNOWN_LOCKED_HINT[entry.species.stageTrigger ?? 0]
       : areaLocked
         ? "エリア解放後に出会えるかもしれない"
         : "このエリアのどこかにいるらしい";
-
-    return (
-      <div className="flex flex-col items-center gap-1.5 rounded-xl border border-dashed border-zinc-200 bg-zinc-50 px-2 py-4">
-        <Lock className="h-6 w-6 text-zinc-300" strokeWidth={1.75} />
-        <span className="text-xs font-semibold text-zinc-400">？？？</span>
-        <span className="text-center text-[10px] leading-tight text-zinc-400">{hint}</span>
-      </div>
-    );
+  } else {
+    footnote = isKnown
+      ? KNOWN_ACQUISITION_TEXT[entry.species.stageTrigger ?? 0]
+      : `野生で発見・${entry.firstObtainedAt ? formatDate(entry.firstObtainedAt) : ""}`;
   }
 
-  const color = entryColor(entry);
-  const acquisitionText = isKnown
-    ? KNOWN_ACQUISITION_TEXT[entry.species.stageTrigger ?? 0]
-    : `野生で発見・${entry.firstObtainedAt ? formatDate(entry.firstObtainedAt) : ""}`;
-
   return (
-    <div className="flex flex-col items-center gap-1.5 rounded-xl border border-zinc-200 bg-gradient-to-b from-sky-50 to-white px-2 py-4 shadow-sm">
-      <Bug className="h-7 w-7" style={{ color }} strokeWidth={1.75} />
-      <span className="text-xs font-semibold text-zinc-700">{entry.species.name}</span>
-      {entry.species.flavorTextJa && (
-        <p className="text-center text-[10px] leading-tight text-zinc-500">{entry.species.flavorTextJa}</p>
+    <div className="flex min-h-[320px] flex-1 flex-col px-3 py-3 sm:px-5">
+      <div className="mb-2 flex items-baseline justify-between border-b border-amber-900/20 pb-1">
+        <span className="font-serif text-[11px] font-bold tracking-wider text-amber-900/70">
+          {entryNumber(entry)}
+        </span>
+      </div>
+
+      <div className="relative mx-auto mb-3 flex aspect-square w-full max-w-[150px] items-center justify-center rounded-md border-2 border-amber-900/30 bg-white/70 p-1 shadow-inner">
+        <div className="absolute inset-1 rounded-[3px] border border-amber-900/15" />
+        {proLocked ? (
+          <Crown className="h-9 w-9 text-amber-400" strokeWidth={1.5} />
+        ) : locked && !isKnown ? (
+          <Lock className="h-8 w-8 text-zinc-300" strokeWidth={1.5} />
+        ) : (
+          <div style={locked ? { filter: "brightness(0)", opacity: 0.15 } : undefined}>
+            <TankOccupant
+              color={color}
+              sizeScale={3.2}
+              speciesCode={entry.species.code}
+              growthStage="成虫"
+            />
+          </div>
+        )}
+      </div>
+
+      <h3
+        className={`mb-1 text-center font-serif text-sm font-bold ${locked ? "text-zinc-400" : "text-amber-950"}`}
+      >
+        {name}
+      </h3>
+      {body && (
+        <p className={`text-center text-[11px] leading-snug ${locked ? "text-zinc-400" : "text-zinc-600"}`}>{body}</p>
       )}
-      <span className="text-[10px] text-zinc-400">{acquisitionText}</span>
+      {footnote && (
+        <p className="mt-auto pt-3 text-center text-[10px] text-amber-900/60">{footnote}</p>
+      )}
+      <span className="mt-auto pt-2 text-center font-serif text-[10px] text-amber-900/40">{pageNumber}</span>
     </div>
   );
 }
 
+type ChapterKey = "known" | KuwagataAreaCode;
+
 export function KuwagataEncyclopediaView({ encyclopedia }: { encyclopedia: KuwagataEncyclopedia }) {
-  const [selectedArea, setSelectedArea] = useState<KuwagataAreaCode>("area1");
-  const currentArea = encyclopedia.areas.find((a) => a.areaCode === selectedArea) ?? encyclopedia.areas[0];
+  const [chapter, setChapter] = useState<ChapterKey>("known");
+  const [spread, setSpread] = useState(0);
+
+  const currentArea = chapter === "known" ? null : encyclopedia.areas.find((a) => a.areaCode === chapter) ?? null;
+  const entries = chapter === "known" ? encyclopedia.known : (currentArea?.entries ?? []);
+  const areaLocked = currentArea ? !currentArea.unlocked : false;
+
+  const spreadCount = Math.max(1, Math.ceil(entries.length / 2));
+  const safeSpread = Math.min(spread, spreadCount - 1);
+  const left = entries[safeSpread * 2];
+  const right = entries[safeSpread * 2 + 1];
+
+  const chapters: { key: ChapterKey; label: string; badge?: string }[] = [
+    { key: "known", label: "クワたんシリーズ" },
+    ...encyclopedia.areas.map((area) => ({
+      key: area.areaCode as ChapterKey,
+      label: AREA_LABEL[area.areaCode],
+      badge: area.unlocked ? `${area.discoveredCount}/${area.totalCount}` : undefined,
+    })),
+  ];
 
   return (
     <div>
-      <section className="mb-6">
-        <h2 className="mb-2 text-xs font-bold text-zinc-500">クワたんシリーズ</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {encyclopedia.known.map((entry) => (
-            <EntryCard key={entry.species.id} entry={entry} />
-          ))}
-        </div>
-      </section>
+      <div className="mb-2 flex flex-wrap gap-1.5">
+        {chapters.map((c) => (
+          <button
+            key={c.key}
+            type="button"
+            onClick={() => {
+              setChapter(c.key);
+              setSpread(0);
+            }}
+            className={`rounded-t-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+              c.key === chapter ? "bg-amber-900 text-amber-50" : "bg-amber-100 text-amber-800 hover:bg-amber-200"
+            }`}
+          >
+            {c.label}
+            {c.badge && <span className="ml-1 opacity-70">{c.badge}</span>}
+          </button>
+        ))}
+      </div>
 
-      <section>
-        <div className="mb-3 flex flex-wrap gap-1.5">
-          {encyclopedia.areas.map((area) => (
-            <button
-              key={area.areaCode}
-              type="button"
-              onClick={() => setSelectedArea(area.areaCode)}
-              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-                area.areaCode === selectedArea
-                  ? "bg-zinc-800 text-white"
-                  : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
-              }`}
-            >
-              {AREA_LABEL[area.areaCode]}
-              {area.unlocked && (
-                <span className="ml-1 opacity-70">
-                  {area.discoveredCount}/{area.totalCount}
-                </span>
-              )}
-            </button>
-          ))}
+      <div className="rounded-xl rounded-tl-none bg-amber-900 p-2 shadow-md sm:p-3">
+        <div className="flex overflow-hidden rounded-md bg-[#fbf6e9]">
+          <BookPage entry={left} areaLocked={areaLocked} pageNumber={safeSpread * 2 + 1} />
+          <div
+            className="w-4 shrink-0"
+            style={{
+              backgroundImage:
+                "linear-gradient(90deg, rgba(120,53,15,0.05), rgba(120,53,15,0.35) 50%, rgba(120,53,15,0.05))",
+            }}
+          />
+          <BookPage entry={right} areaLocked={areaLocked} pageNumber={safeSpread * 2 + 2} />
         </div>
+      </div>
 
-        {!currentArea.unlocked && (
-          <p className="mb-3 text-xs text-zinc-400">
-            {currentArea.areaCode === "aquarium"
-              ? "Proにすると解放される特別なエリア。水中アクアリウム表示でいきものを飼える。"
-              : "前のエリアの新種をすべて発見するとこのエリアが解放されます。"}
-          </p>
-        )}
-
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {currentArea.entries.map((entry) => (
-            <EntryCard key={entry.species.id} entry={entry} areaLocked={!currentArea.unlocked} />
-          ))}
-        </div>
-      </section>
+      <div className="mt-3 flex items-center justify-center gap-4">
+        <button
+          type="button"
+          onClick={() => setSpread(Math.max(0, safeSpread - 1))}
+          disabled={safeSpread === 0}
+          aria-label="前のページ"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-900 text-amber-50 transition-opacity disabled:opacity-25"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <span className="font-serif text-xs text-amber-900/70">
+          {safeSpread + 1} / {spreadCount}
+        </span>
+        <button
+          type="button"
+          onClick={() => setSpread(Math.min(spreadCount - 1, safeSpread + 1))}
+          disabled={safeSpread >= spreadCount - 1}
+          aria-label="次のページ"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-900 text-amber-50 transition-opacity disabled:opacity-25"
+        >
+          <ChevronRight className="h-5 w-5" />
+        </button>
+      </div>
     </div>
   );
 }
