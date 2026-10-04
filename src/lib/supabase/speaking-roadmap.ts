@@ -10,6 +10,8 @@ import { judgeStage5Turn, checkStage5Usage } from "@/lib/stage5-ai";
 import { getOrGenerateBlankChoiceReasons } from "@/lib/stage2-choice-reasons";
 import { getOrGenerateStage3HintBlank } from "@/lib/stage3-hint-blank";
 import {
+  addGrowthBoost,
+  KUWAGATA_GRADUATION_BOOST_DAYS,
   recordStageClearCatch,
   stockCatchChanceOnMasteredCountUpdate,
   forceHatchTeppenToAdult,
@@ -467,7 +469,7 @@ async function reportStageStreakResult(
 ): Promise<{ streak: number; graduated: boolean }> {
   const { data: existing, error: fetchError } = await supabaseAdmin
     .from("speaking_stage_progress")
-    .select("correct_streak")
+    .select("correct_streak, status")
     .eq("user_id", userId)
     .eq("phrase_id", expressionId)
     .eq("phrase_source", phraseSource)
@@ -478,6 +480,7 @@ async function reportStageStreakResult(
     throw new Error(`Stage${stage}進捗の取得に失敗しました: ${fetchError.message}`);
   }
 
+  const wasGraduated = existing?.status === "習得済み";
   const currentStreak = existing?.correct_streak ?? 0;
   const newStreak = correct ? Math.min(currentStreak + 1, graduateStreak) : currentStreak;
   const graduated = newStreak >= graduateStreak;
@@ -506,6 +509,18 @@ async function reportStageStreakResult(
 
   if (graduated) {
     await incrementTotalMasteredCount(userId);
+  }
+
+  // クワガタ育成機能：初めて習得済みになった回だけ、育成中の個体の成長をブーストする
+  // （同じ項目を再挑戦して稼げないよう、既に習得済みだった場合は対象外）。
+  // Stage5は卒業でテッペンクワたんが即成虫になるため、ブースト対象外。
+  if (graduated && !wasGraduated && stage <= 4) {
+    try {
+      await addGrowthBoost(userId, KUWAGATA_GRADUATION_BOOST_DAYS[stage as 0 | 1 | 2 | 3 | 4]);
+    } catch (err) {
+      // ご褒美の加算に失敗しても、練習の記録自体は成功扱いにする。
+      console.error(err);
+    }
   }
 
   return { streak: newStreak, graduated };

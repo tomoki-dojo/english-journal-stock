@@ -62,6 +62,8 @@ export type KuwagataIndividual = {
   sizeScale: number;
   mandibleVariant: number;
   hatchedAt: string | null;
+  // 練習のご褒美で加算された成長日数（経過日数に足して成長段階を決める）。
+  boostDays: number;
   // ユーザーが付けた名前(未命名はnull)。
   nickname: string | null;
 };
@@ -75,26 +77,69 @@ export type KuwagataAreaProgress = {
 
 export type KuwagataGrowthStage = "卵" | "幼虫" | "蛹" | "成虫";
 
-const GROWTH_STAGE_DAY_THRESHOLDS: { stage: KuwagataGrowthStage; maxDays: number }[] = [
-  { stage: "卵", maxDays: 3 },
-  { stage: "幼虫", maxDays: 10 },
-  { stage: "蛹", maxDays: 14 },
+// 各段階の日数の範囲（経過日数＋ブースト日数がこの範囲にある間、その段階）。
+const GROWTH_STAGE_RANGES: { stage: KuwagataGrowthStage; start: number; end: number }[] = [
+  { stage: "卵", start: 0, end: 3 },
+  { stage: "幼虫", start: 3, end: 10 },
+  { stage: "蛹", start: 10, end: 14 },
 ];
 
-export function getIndividualGrowthStage(individual: {
-  obtainedAt: string;
-  hatchedAt: string | null;
-}): KuwagataGrowthStage {
+// 習得済み（卒業）1回あたりのブースト日数。Freeの1日の上限（Stage3は8回、Stage4は3回）でも
+// 1日に卒業できる数が限られるため、難しいStageほど大きくする。Stage5は卒業で即成虫なので対象外。
+export const KUWAGATA_GRADUATION_BOOST_DAYS: Record<0 | 1 | 2 | 3 | 4, number> = {
+  0: 0.1,
+  1: 0.1,
+  2: 0.2,
+  3: 0.4,
+  4: 0.8,
+};
+
+type GrowthInput = { obtainedAt: string; hatchedAt: string | null; boostDays: number };
+
+function getElapsedDays(individual: GrowthInput): number {
+  return Math.max(0, (Date.now() - new Date(individual.obtainedAt).getTime()) / (1000 * 60 * 60 * 24));
+}
+
+export function getIndividualGrowthStage(individual: GrowthInput): KuwagataGrowthStage {
   if (individual.hatchedAt) return "成虫";
 
-  const elapsedDays = (Date.now() - new Date(individual.obtainedAt).getTime()) / (1000 * 60 * 60 * 24);
-  for (const { stage, maxDays } of GROWTH_STAGE_DAY_THRESHOLDS) {
-    if (elapsedDays < maxDays) return stage;
+  const effectiveDays = getElapsedDays(individual) + individual.boostDays;
+  for (const { stage, end } of GROWTH_STAGE_RANGES) {
+    if (effectiveDays < end) return stage;
   }
   return "成虫";
 }
 
-export type KuwagataShelfIndividual = KuwagataIndividual & { growthStage: KuwagataGrowthStage };
+// 次の段階へ進むゲージ。経過日数で進んだ分とブーストで進んだ分を、それぞれ0〜1の割合で返す
+// （合計は1以下）。成虫はゲージなし(null)。
+export type KuwagataGrowthGauge = { elapsedRatio: number; boostRatio: number };
+
+export function getIndividualGrowthGauge(individual: GrowthInput): KuwagataGrowthGauge | null {
+  if (individual.hatchedAt) return null;
+
+  const elapsed = getElapsedDays(individual);
+  const effective = elapsed + individual.boostDays;
+  const range = GROWTH_STAGE_RANGES.find(({ end }) => effective < end);
+  if (!range) return null;
+
+  const span = range.end - range.start;
+  const total = (effective - range.start) / span;
+  const elapsedRatio = Math.min(Math.max((elapsed - range.start) / span, 0), total);
+  return { elapsedRatio, boostRatio: Math.max(total - elapsedRatio, 0) };
+}
+
+// 育成中（成虫になる前）の全個体に、習得済みのご褒美として成長日数を加える。
+export async function addGrowthBoost(userId: string, days: number): Promise<void> {
+  const { error } = await supabaseAdmin.rpc("add_kuwagata_boost", { p_user_id: userId, p_days: days });
+  if (error) {
+    throw new Error(`成長ブーストの加算に失敗しました: ${error.message}`);
+  }
+}
+
+export type KuwagataShelfIndividual = KuwagataIndividual & {
+  growthStage: KuwagataGrowthStage;
+  growthGauge: KuwagataGrowthGauge | null;
+};
 
 // 1つの水槽に入れる最大匹数。拡大表示で歩き回るのが気持ちよく収まる数(置物と衝突回避を
 // 考えると5〜6匹が限界)。同じ種類がこれを超えたら、捕まえた順に次の水槽へ繰り上げる。
@@ -144,6 +189,7 @@ export async function getKuwagataShelfTanks(userId: string): Promise<KuwagataShe
     const shelfIndividual: KuwagataShelfIndividual = {
       ...individual,
       growthStage: getIndividualGrowthStage(individual),
+      growthGauge: getIndividualGrowthGauge(individual),
     };
 
     const bucket = individual.speciesKind === "known" ? byKnownSpecies : byNewSpecies;
@@ -245,7 +291,7 @@ export async function getUserKuwagataIndividuals(userId: string): Promise<Kuwaga
   const { data, error } = await supabaseAdmin
     .from("kuwagata_individuals")
     .select(
-      "id, species_id, obtained_via, obtained_at, size_scale, mandible_variant, hatched_at, nickname, kuwagata_species(code, name, kind, rarity, area_code)"
+      "id, species_id, obtained_via, obtained_at, size_scale, mandible_variant, hatched_at, boost_days, nickname, kuwagata_species(code, name, kind, rarity, area_code)"
     )
     .eq("user_id", userId)
     .order("obtained_at", { ascending: true });
@@ -276,6 +322,7 @@ export async function getUserKuwagataIndividuals(userId: string): Promise<Kuwaga
       mandibleVariant: row.mandible_variant as number,
       nickname: (row.nickname as string | null) ?? null,
       hatchedAt: (row.hatched_at as string | null) ?? null,
+      boostDays: Number(row.boost_days ?? 0),
     };
   });
 }

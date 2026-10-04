@@ -319,6 +319,26 @@ export function TankOccupant({
   );
 }
 
+// 次の段階へ進むゲージ(卵・幼虫・蛹のとき)。1本のゲージを、経過日数で進んだ分(アンバー)と
+// 練習のご褒美(ブースト)で進んだ分(ティール)の2色で積み上げる。角丸で縁取り付き。
+function GrowthGauge({ gauge }: { gauge: { elapsedRatio: number; boostRatio: number } }) {
+  const elapsedPct = Math.round(gauge.elapsedRatio * 100);
+  const boostPct = Math.round(gauge.boostRatio * 100);
+  return (
+    <div
+      role="progressbar"
+      aria-label="次の段階までの成長"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={elapsedPct + boostPct}
+      className="flex h-2 w-9 overflow-hidden rounded-full border border-zinc-400 bg-white"
+    >
+      <div className="h-full bg-amber-400" style={{ width: `${elapsedPct}%` }} />
+      <div className="h-full bg-sky-600" style={{ width: `${boostPct}%` }} />
+    </div>
+  );
+}
+
 // 拡大水槽表示の中だけは、他の表示箇所(棚のグリッド・リストなど)と違って固定pxではなく
 // コンテナ幅に対する%でサイズを決める(デコレーションと同じ考え方)。ポップアップの大きさが
 // 変わっても常に水槽とバランスが取れた大きさになる。individual.sizeScaleは0.8〜1.3
@@ -1246,13 +1266,16 @@ export function KuwagataShelf({
                   key={individual.id}
                   className="flex items-center gap-3 rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2"
                 >
-                  <TankOccupant
-                    color={tankColor(selectedTank)}
-                    sizeScale={individual.sizeScale}
-                    speciesCode={individual.speciesCode}
-                    mandibleVariant={individual.mandibleVariant}
-                    growthStage={individual.growthStage}
-                  />
+                  <div className="flex w-10 shrink-0 flex-col items-center gap-1">
+                    <TankOccupant
+                      color={tankColor(selectedTank)}
+                      sizeScale={individual.sizeScale}
+                      speciesCode={individual.speciesCode}
+                      mandibleVariant={individual.mandibleVariant}
+                      growthStage={individual.growthStage}
+                    />
+                    {individual.growthGauge && <GrowthGauge gauge={individual.growthGauge} />}
+                  </div>
                   <div className="flex min-w-0 flex-1 flex-col text-xs text-zinc-600">
                     {editingId === individual.id ? (
                       <form
