@@ -141,6 +141,31 @@ tank_bg_aquarium.png                             水中アクアリウムの水�
 
 `[code]`は`KW-0001`のような種コード（DBの`kuwagata_species.code`と一致させる）。
 
+### 新種（KW-0005〜0007・KW-0009〜0043の38種（KW-0008は既知種））のファイル命名規則
+
+既知種の実ファイル（`public/roadmap/kuwagata/`）と同じ規則に揃える。新種は大顎・卵・幼虫・蛹が無く、成虫のパーツだけ。
+
+```
+kuwagata_[code]_front_body.svg        正面の本体
+kuwagata_[code]_front_leg_L1.svg      正面・手前脚（L1が一番手前、L2、L3）
+kuwagata_[code]_front_leg_L2.svg
+kuwagata_[code]_front_leg_L3.svg
+kuwagata_[code]_front_leg_R1.svg      正面・奥脚（見えている1本のみ）
+kuwagata_[code]_back_body.svg         背面の本体
+kuwagata_[code]_back_leg_R1.svg       背面・脚3本（R1が一番手前、R2、R3）
+kuwagata_[code]_back_leg_R2.svg
+kuwagata_[code]_back_leg_R3.svg
+kuwagata_[code]_front_wing_L.svg      羽根（飛ぶ系のみ。front/back それぞれ、L/R）
+kuwagata_[code]_front_wing_R.svg
+kuwagata_[code]_back_wing_L.svg
+kuwagata_[code]_back_wing_R.svg
+```
+
+- `[code]`はDBの`kuwagata_species.code`（例: カナたん＝`KW-0005`、ホタたん＝`KW-0023`、アワたん＝`KW-0043`）。ハイフン付き・大文字・ゼロ埋め4桁
+- 拡張子は`.svg`、フォルダは`public/roadmap/kuwagata/`直下（サブフォルダは作らない）
+- 1種あたり最大8枚（通常）／12枚（飛ぶ系）。既知種のL1〜L3・R1の付け方と同じ
+- 注意：新種の描画コード（`kuwagata-shelf.tsx`の`KNOWN_CREATURE_ART`相当）は未実装。ファイルを置いても、種コードを登録するまで画面には出ない（大顎なしの構成にする対応と合わせて実装する）
+
 ### 配置先（実装側で読み込み済み）
 
 以下のパスに置くだけで、コード変更なしに画面に反映される（実装は`roadmap-room.tsx`・`kuwagata-shelf.tsx`で対応済み）。
