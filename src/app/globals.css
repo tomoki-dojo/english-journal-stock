@@ -421,6 +421,40 @@ body {
   animation: kuwagata-fight-jaw 0.35s ease-in-out infinite;
 }
 
+/* 図鑑のページめくり。綴じ目を軸に、紙が半回転して反対側のページになる。 */
+@keyframes book-flip-next {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(-180deg);
+  }
+}
+
+@keyframes book-flip-prev {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(180deg);
+  }
+}
+
+.animate-book-flip-next {
+  animation: book-flip-next 0.65s ease-in-out forwards;
+}
+
+.animate-book-flip-prev {
+  animation: book-flip-prev 0.65s ease-in-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-book-flip-next,
+  .animate-book-flip-prev {
+    animation: none;
+  }
+}
+
 /* テッペンクワたんの「てっぺんポーズ」。すっと背伸びして胸を張り、ゆったり上下に揺れる。 */
 @keyframes kuwagata-proud {
   0% {

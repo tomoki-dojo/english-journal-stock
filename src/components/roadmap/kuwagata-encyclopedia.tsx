@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Crown, Lock } from "lucide-react";
 import type {
   KuwagataAreaCode,
@@ -69,7 +69,7 @@ function BookPage({
   pageNumber: number;
 }) {
   if (!entry) {
-    return <div className="flex min-h-[320px] flex-1 flex-col px-3 py-3 sm:px-5" />;
+    return <div className="h-full w-full" />;
   }
 
   const isKnown = entry.species.kind === "known";
@@ -97,14 +97,14 @@ function BookPage({
   }
 
   return (
-    <div className="flex min-h-[320px] flex-1 flex-col px-3 py-3 sm:px-5">
-      <div className="mb-2 flex items-baseline justify-between border-b border-amber-900/20 pb-1">
+    <div className="flex h-full w-full flex-col px-3 pb-2 pt-4 sm:px-5">
+      <div className="mb-3 flex items-baseline justify-between border-b border-amber-900/20 pb-1">
         <span className="font-serif text-[11px] font-bold tracking-wider text-amber-900/70">
           {entryNumber(entry)}
         </span>
       </div>
 
-      <div className="relative mx-auto mb-3 flex aspect-square w-full max-w-[150px] items-center justify-center rounded-md border-2 border-amber-900/30 bg-white/70 p-1 shadow-inner">
+      <div className="relative mx-auto mb-4 flex aspect-square w-full max-w-[170px] items-center justify-center rounded-md border-2 border-amber-900/30 bg-white/70 p-1 shadow-inner">
         <div className="absolute inset-1 rounded-[3px] border border-amber-900/15" />
         {proLocked ? (
           <Crown className="h-9 w-9 text-amber-400" strokeWidth={1.5} />
@@ -140,9 +140,22 @@ function BookPage({
 
 type ChapterKey = "known" | KuwagataAreaCode;
 
+const FLIP_MS = 650;
+const PAPER = "#fbf6e9";
+
 export function KuwagataEncyclopediaView({ encyclopedia }: { encyclopedia: KuwagataEncyclopedia }) {
   const [chapter, setChapter] = useState<ChapterKey>("known");
   const [spread, setSpread] = useState(0);
+  // ページをめくっている最中の状態(めくる向きと、めくり終わったあとの見開き番号)
+  const [flip, setFlip] = useState<{ dir: "next" | "prev"; to: number } | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    },
+    []
+  );
 
   const currentArea = chapter === "known" ? null : encyclopedia.areas.find((a) => a.areaCode === chapter) ?? null;
   const entries = chapter === "known" ? encyclopedia.known : (currentArea?.entries ?? []);
@@ -150,8 +163,33 @@ export function KuwagataEncyclopediaView({ encyclopedia }: { encyclopedia: Kuwag
 
   const spreadCount = Math.max(1, Math.ceil(entries.length / 2));
   const safeSpread = Math.min(spread, spreadCount - 1);
-  const left = entries[safeSpread * 2];
-  const right = entries[safeSpread * 2 + 1];
+
+  const pageAt = (spreadIndex: number, side: 0 | 1) => (
+    <BookPage
+      entry={entries[spreadIndex * 2 + side]}
+      areaLocked={areaLocked}
+      pageNumber={spreadIndex * 2 + side + 1}
+    />
+  );
+
+  const turn = (dir: "next" | "prev") => {
+    if (flip) return;
+    const to = dir === "next" ? safeSpread + 1 : safeSpread - 1;
+    if (to < 0 || to > spreadCount - 1) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setSpread(to);
+      return;
+    }
+    setFlip({ dir, to });
+    timerRef.current = setTimeout(() => {
+      setSpread(to);
+      setFlip(null);
+    }, FLIP_MS);
+  };
+
+  // めくっている間の土台。めくる側のページは、紙が上に乗って隠れる。
+  const staticLeft = flip?.dir === "prev" ? flip.to : safeSpread;
+  const staticRight = flip?.dir === "next" ? flip.to : safeSpread;
 
   const chapters: { key: ChapterKey; label: string; badge?: string }[] = [
     { key: "known", label: "クワたんシリーズ" },
@@ -163,13 +201,14 @@ export function KuwagataEncyclopediaView({ encyclopedia }: { encyclopedia: Kuwag
   ];
 
   return (
-    <div>
+    <div className="mx-auto max-w-md">
       <div className="mb-2 flex flex-wrap gap-1.5">
         {chapters.map((c) => (
           <button
             key={c.key}
             type="button"
             onClick={() => {
+              if (flip) return;
               setChapter(c.key);
               setSpread(0);
             }}
@@ -184,24 +223,52 @@ export function KuwagataEncyclopediaView({ encyclopedia }: { encyclopedia: Kuwag
       </div>
 
       <div className="rounded-xl rounded-tl-none bg-amber-900 p-2 shadow-md sm:p-3">
-        <div className="flex overflow-hidden rounded-md bg-[#fbf6e9]">
-          <BookPage entry={left} areaLocked={areaLocked} pageNumber={safeSpread * 2 + 1} />
+        <div className="relative aspect-[4/5] w-full" style={{ perspective: "2400px" }}>
+          <div className="absolute inset-0 flex rounded-md" style={{ backgroundColor: PAPER }}>
+            <div className="h-full w-1/2">{pageAt(staticLeft, 0)}</div>
+            <div className="h-full w-1/2">{pageAt(staticRight, 1)}</div>
+          </div>
+
+          {flip && (
+            <div
+              className={`absolute bottom-0 top-0 w-1/2 ${
+                flip.dir === "next" ? "right-0 animate-book-flip-next" : "left-0 animate-book-flip-prev"
+              }`}
+              style={{
+                transformOrigin: flip.dir === "next" ? "left center" : "right center",
+                transformStyle: "preserve-3d",
+              }}
+            >
+              <div
+                className="absolute inset-0 shadow-md"
+                style={{ backgroundColor: PAPER, backfaceVisibility: "hidden" }}
+              >
+                {flip.dir === "next" ? pageAt(safeSpread, 1) : pageAt(safeSpread, 0)}
+              </div>
+              <div
+                className="absolute inset-0"
+                style={{ backgroundColor: "#f6efdc", backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+              >
+                {flip.dir === "next" ? pageAt(flip.to, 0) : pageAt(flip.to, 1)}
+              </div>
+            </div>
+          )}
+
           <div
-            className="w-4 shrink-0"
+            className="pointer-events-none absolute bottom-0 left-1/2 top-0 w-4 -translate-x-1/2"
             style={{
               backgroundImage:
-                "linear-gradient(90deg, rgba(120,53,15,0.05), rgba(120,53,15,0.35) 50%, rgba(120,53,15,0.05))",
+                "linear-gradient(90deg, rgba(120,53,15,0.04), rgba(120,53,15,0.3) 50%, rgba(120,53,15,0.04))",
             }}
           />
-          <BookPage entry={right} areaLocked={areaLocked} pageNumber={safeSpread * 2 + 2} />
         </div>
       </div>
 
       <div className="mt-3 flex items-center justify-center gap-4">
         <button
           type="button"
-          onClick={() => setSpread(Math.max(0, safeSpread - 1))}
-          disabled={safeSpread === 0}
+          onClick={() => turn("prev")}
+          disabled={safeSpread === 0 || flip !== null}
           aria-label="前のページ"
           className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-900 text-amber-50 transition-opacity disabled:opacity-25"
         >
@@ -212,8 +279,8 @@ export function KuwagataEncyclopediaView({ encyclopedia }: { encyclopedia: Kuwag
         </span>
         <button
           type="button"
-          onClick={() => setSpread(Math.min(spreadCount - 1, safeSpread + 1))}
-          disabled={safeSpread >= spreadCount - 1}
+          onClick={() => turn("next")}
+          disabled={safeSpread >= spreadCount - 1 || flip !== null}
           aria-label="次のページ"
           className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-900 text-amber-50 transition-opacity disabled:opacity-25"
         >
