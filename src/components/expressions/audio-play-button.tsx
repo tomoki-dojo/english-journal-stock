@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { Loader2, Lock, Volume2, VolumeX } from "lucide-react";
+import { Loader2, Lock, Volume2 } from "lucide-react";
 import type { AudioField } from "./types";
 import type { Plan } from "@/lib/plan";
 import { cn } from "@/lib/utils";
@@ -56,15 +56,7 @@ export function AudioPlayButton({
   }
 
   if (!hasAudio) {
-    return (
-      <span
-        aria-label="音声は準備中です"
-        title="音声は準備中です"
-        className="inline-flex items-center justify-center rounded-md p-1.5 text-zinc-300"
-      >
-        <VolumeX className="h-3.5 w-3.5" />
-      </span>
-    );
+    return null;
   }
 
   async function handleClick() {

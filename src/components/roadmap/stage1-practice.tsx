@@ -156,7 +156,6 @@ export function Stage1Practice() {
       <div className="rounded-xl border border-zinc-200 bg-zinc-100/50 px-6 py-10 text-center">
         <PartyPopper className="mx-auto mb-3 h-6 w-6" style={{ color: STAGE_COLOR }} />
         <p className="text-sm text-zinc-700">Stage1（音読・シャドーイング）は全て卒業しました。</p>
-        <p className="mt-1 text-xs text-zinc-400">Stage2は準備中です。もうしばらくお待ちください。</p>
         <Link
           href="/roadmap"
           className="mt-4 inline-flex items-center gap-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
@@ -222,7 +221,6 @@ export function Stage1Practice() {
               <PenLine className="h-4 w-4" />
               Stage2が解放されました！
             </div>
-            <p className="mt-1 text-xs text-zinc-600">瞬間英作文で、覚えたフレーズを今度は自分から引き出す練習に進めます。</p>
           </div>
         )}
 
