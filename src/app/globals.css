@@ -352,3 +352,47 @@ body {
     opacity: 0;
   }
 }
+
+/* シャベクワたんの「喋る仕草」。体を小さく左右に揺らしながら、ぴょこっと弾む。
+   吹き出しの「…」は順に点滅する。 */
+@keyframes kuwagata-chat-wobble {
+  0%,
+  100% {
+    transform: rotate(-3deg) translateY(0);
+  }
+  25% {
+    transform: rotate(2deg) translateY(-3%);
+  }
+  50% {
+    transform: rotate(-2deg) translateY(0);
+  }
+  75% {
+    transform: rotate(3deg) translateY(-3%);
+  }
+}
+
+@keyframes kuwagata-chat-dot {
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-kuwagata-chat {
+  transform-origin: 50% 100%;
+  animation: kuwagata-chat-wobble 0.7s ease-in-out infinite;
+}
+
+.animate-kuwagata-chat-dot {
+  animation: kuwagata-chat-dot 0.9s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-kuwagata-chat,
+  .animate-kuwagata-chat-dot {
+    animation: none;
+  }
+}

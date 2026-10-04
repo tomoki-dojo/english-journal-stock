@@ -508,6 +508,44 @@ function pickStationarySpot(
 
 // 実際に歩き回るクワたん1匹分。位置(u,v)・向き(facing)はuseWanderで時間とともに
 // 変化し、見た目(脚・本体のアニメ)はKnownCreatureSprite/Bugアイコン側が担当する。
+// シャベクワたん(KW-0003)の「他の個体とよく喋る仕草」。水槽に他の個体がいるときだけ、15秒に1回、
+// 3秒間だけ体を小さく揺らして頭上に「…」の吹き出しを出す。個体ごとに開始をずらして一斉に喋らない。
+const CHATTER_CYCLE_MS = 15000;
+const CHATTER_DURATION_MS = 3000;
+const CHATTER_SPECIES_CODE = "KW-0003";
+
+function useChatter(enabled: boolean, seedKey: string): boolean {
+  const [chatting, setChatting] = useState(false);
+
+  useEffect(() => {
+    if (!enabled) return;
+    let timer: ReturnType<typeof setTimeout>;
+    let cancelled = false;
+
+    // 最初の1回までの待ち時間を個体ごとに変える(0〜12秒)
+    const firstDelay = seededRandom(seedKey + ":chat")() * (CHATTER_CYCLE_MS - CHATTER_DURATION_MS);
+
+    const startChat = () => {
+      if (cancelled) return;
+      setChatting(true);
+      timer = setTimeout(() => {
+        if (cancelled) return;
+        setChatting(false);
+        timer = setTimeout(startChat, CHATTER_CYCLE_MS - CHATTER_DURATION_MS);
+      }, CHATTER_DURATION_MS);
+    };
+
+    timer = setTimeout(startChat, firstDelay);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      setChatting(false);
+    };
+  }, [enabled, seedKey]);
+
+  return chatting;
+}
+
 function WanderingCreature({
   seedKey,
   initialSpot,
@@ -521,6 +559,7 @@ function WanderingCreature({
   mirror,
   decorationSpots,
   positionsRef,
+  hasCompanions,
 }: {
   seedKey: string;
   initialSpot: { u: number; v: number };
@@ -534,7 +573,13 @@ function WanderingCreature({
   mirror: boolean;
   decorationSpots: { u: number; v: number; widthPct: number }[];
   positionsRef: { current: Record<string, { u: number; v: number; widthPct: number }> };
+  // 同じ水槽に自分以外の個体がいるか(シャベクワたんの「喋る仕草」の条件)
+  hasCompanions: boolean;
 }) {
+  const chatting = useChatter(
+    hasCompanions && speciesCode === CHATTER_SPECIES_CODE && growthStage === "成虫" && hasArt,
+    seedKey
+  );
   const moves = !isStationaryStage(speciesCode, growthStage);
   const { spot, facing, heading } = useWander(seedKey, initialSpot, widthPct, moves, decorationSpots, positionsRef);
   const pt = surfacePoint(spot.u, spot.v);
@@ -554,16 +599,33 @@ function WanderingCreature({
       }}
     >
       {hasArt ? (
-        <KnownCreatureSprite
-          code={speciesCode}
-          facing={facing}
-          mandibleVariant={mandibleVariant}
-          growthStage={growthStage}
-          heading={heading}
-          phaseSeed={seedKey}
-        />
+        <div className={`h-full w-full ${chatting ? "animate-kuwagata-chat" : ""}`}>
+          <KnownCreatureSprite
+            code={speciesCode}
+            facing={facing}
+            mandibleVariant={mandibleVariant}
+            growthStage={growthStage}
+            heading={heading}
+            phaseSeed={seedKey}
+          />
+        </div>
       ) : (
         <Bug className="block w-full h-auto drop-shadow-sm" style={{ color }} strokeWidth={1.75} />
+      )}
+      {chatting && (
+        // 喋っている間だけ出る吹き出し(頭上の右寄り)。「…」が順に点滅する。
+        <span
+          className="animate-question-card-enter pointer-events-none absolute z-10 flex items-center gap-0.5 rounded-full bg-white px-1.5 py-0.5 shadow-sm"
+          style={{ left: "72%", top: "20%", transform: "translateY(-100%)" }}
+        >
+          {[0, 1, 2].map((dot) => (
+            <span
+              key={dot}
+              className="animate-kuwagata-chat-dot h-1 w-1 rounded-full bg-zinc-500"
+              style={{ animationDelay: `${dot * 0.2}s` }}
+            />
+          ))}
+        </span>
       )}
       {nickname && (
         // 名前ラベル。スプライトの頭上に出し、歩き回るのに合わせてラベルも一緒に動く。
@@ -732,6 +794,7 @@ function EnlargedTankVisual({
             mirror={!hasArt && index % 2 === 1}
             decorationSpots={decorationSpots}
             positionsRef={positionsRef}
+            hasCompanions={tank.individuals.length > 1}
           />
         );
       })}
