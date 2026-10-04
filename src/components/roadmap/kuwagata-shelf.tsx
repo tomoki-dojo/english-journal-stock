@@ -123,8 +123,10 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0001": buildKnownCreatureArt("KW-0001"),
   // ヒビクワたん(背中に波紋模様)
   "KW-0002": buildKnownCreatureArt("KW-0002"),
-  // シャベクワたん(成虫のみ。卵・幼虫・蛹の絵は未制作なので成虫の絵で代用される)
+  // シャベクワたん
   "KW-0003": buildKnownCreatureArt("KW-0003"),
+  // フルクワたん
+  "KW-0008": buildKnownCreatureArt("KW-0008"),
 };
 
 // 成長段階(卵・幼虫・蛹)のアート。成虫のKNOWN_CREATURE_ARTとは別に持ち、ここに無い
@@ -161,6 +163,7 @@ const KNOWN_STAGE_ART: Partial<Record<string, KnownStageArt>> = {
   "KW-0001": buildKnownStageArt("KW-0001"),
   "KW-0002": buildKnownStageArt("KW-0002"),
   "KW-0003": buildKnownStageArt("KW-0003"),
+  "KW-0008": buildKnownStageArt("KW-0008"),
 };
 
 // 卵・蛹は動かない(その場に置いたまま)。幼虫・成虫(と、実アートが無い種のBugアイコン)は歩き回る。
