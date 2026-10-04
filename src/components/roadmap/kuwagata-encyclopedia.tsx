@@ -223,7 +223,7 @@ export function KuwagataEncyclopediaView({ encyclopedia }: { encyclopedia: Kuwag
       </div>
 
       <div className="rounded-xl rounded-tl-none bg-amber-900 p-2 shadow-md sm:p-3">
-        <div className="relative aspect-[4/5] w-full" style={{ perspective: "2400px" }}>
+        <div className="relative aspect-[6/7] w-full" style={{ perspective: "2400px" }}>
           <div className="absolute inset-0 flex rounded-md" style={{ backgroundColor: PAPER }}>
             <div className="h-full w-1/2">{pageAt(staticLeft, 0)}</div>
             <div className="h-full w-1/2">{pageAt(staticRight, 1)}</div>

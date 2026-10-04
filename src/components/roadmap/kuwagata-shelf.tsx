@@ -944,24 +944,44 @@ function EnlargedTankVisual({
   );
 }
 
-// 金属ラック風の棚。飼育部屋の棚アイテム(グレーの金属フレーム＋網状の天板)に合わせて、
-// 両脇の支柱・網状の天板・段ごとの棚板をCSSで描き、水槽(カード)を棚板の上に載せる。
-const RACK_FRAME_CLASS =
-  "overflow-hidden rounded-t-md border-x-[10px] border-t-[10px] border-zinc-400 bg-gradient-to-b from-zinc-100 to-zinc-50 shadow-sm";
-const RACK_MESH_STYLE: CSSProperties = {
+// 金属ラック風の棚。飼育部屋の棚アイテム(グレーの金属フレーム)に合わせて、
+// 両脇の支柱(等間隔の薄い溝つき)・ひし形を並べた天板と棚板をCSSで描き、水槽を棚板の上に載せる。
+// ひし形は、メタルラックを横から見たときの斜め格子(X字を横に並べた形)。
+const RACK_DIAMOND_URL = `url("data:image/svg+xml,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="12" viewBox="0 0 14 12"><path d="M0 0L14 12M14 0L0 12" stroke="#8d8d96" stroke-width="1.6" fill="none"/></svg>'
+)}")`;
+const RACK_BAR_STYLE: CSSProperties = {
+  backgroundImage: RACK_DIAMOND_URL,
+  backgroundSize: "14px 100%",
+  backgroundColor: "#ececef",
+};
+const RACK_POST_STYLE: CSSProperties = {
+  backgroundImage: "repeating-linear-gradient(180deg, #a1a1aa 0 9px, #6b6b73 9px 10px)",
+};
+const SOIL_STYLE: CSSProperties = {
+  backgroundColor: "#6b4a2f",
   backgroundImage:
-    "repeating-linear-gradient(90deg, #a1a1aa 0 2px, transparent 2px 9px), repeating-linear-gradient(0deg, #a1a1aa 0 2px, #e4e4e7 2px 6px)",
+    "radial-gradient(circle at 20% 35%, #4a3220 1px, transparent 1.6px), radial-gradient(circle at 60% 65%, #94694a 1px, transparent 1.6px), radial-gradient(circle at 82% 28%, #3b281a 1.2px, transparent 1.8px)",
+  backgroundSize: "13px 11px, 10px 9px, 17px 13px",
+  borderTop: "2px solid #4a3220",
 };
-const RACK_SHELF_STYLE: CSSProperties = {
-  backgroundImage: "repeating-linear-gradient(90deg, #a1a1aa 0 2px, #d4d4d8 2px 7px)",
+const SAND_STYLE: CSSProperties = {
+  backgroundColor: "#e6d3a1",
+  backgroundImage:
+    "radial-gradient(circle at 25% 40%, #c9b27a 1px, transparent 1.6px), radial-gradient(circle at 70% 65%, #f4e8c4 1px, transparent 1.6px)",
+  backgroundSize: "11px 9px, 14px 11px",
+  borderTop: "2px solid #c9b27a",
 };
+
+const RACK_CELL_CLASS = "relative px-1.5 pb-5 pt-3";
+const RACK_SHELF_CLASS = "absolute inset-x-0 bottom-0 h-3 border-y border-zinc-400";
 
 // 棚の1マス。下に棚板を描き、水槽はその上に載る。plateを渡すと棚板に番号の小さなプレートが付く。
 function RackCell({ children, plate }: { children?: React.ReactNode; plate?: string }) {
   return (
-    <div className="relative px-1.5 pb-5 pt-3">
+    <div className={RACK_CELL_CLASS}>
       {children}
-      <div className="absolute inset-x-0 bottom-0 h-3 border-t border-zinc-400" style={RACK_SHELF_STYLE} />
+      <div className={RACK_SHELF_CLASS} style={RACK_BAR_STYLE} />
       {plate && (
         <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 rounded-sm bg-zinc-50 px-1.5 text-[9px] font-medium leading-3 text-zinc-500 ring-1 ring-zinc-300">
           {plate}
@@ -975,21 +995,57 @@ function RackCell({ children, plate }: { children?: React.ReactNode; plate?: str
 function RackFillers({ count }: { count: number }) {
   const two = (2 - (count % 2)) % 2;
   const three = (3 - (count % 3)) % 3;
+  const filler = (key: string, cls: string) => (
+    <div key={key} className={`${cls} ${RACK_CELL_CLASS}`}>
+      <div className="h-[108px]" />
+      <div className={RACK_SHELF_CLASS} style={RACK_BAR_STYLE} />
+    </div>
+  );
   return (
     <>
-      {Array.from({ length: two }).map((_, i) => (
-        <div key={`f2-${i}`} className={`sm:hidden ${"relative px-1.5 pb-5 pt-3"}`}>
-          <div className="h-[72px]" />
-          <div className="absolute inset-x-0 bottom-0 h-3 border-t border-zinc-400" style={RACK_SHELF_STYLE} />
-        </div>
-      ))}
-      {Array.from({ length: three }).map((_, i) => (
-        <div key={`f3-${i}`} className={`hidden sm:block ${"relative px-1.5 pb-5 pt-3"}`}>
-          <div className="h-[72px]" />
-          <div className="absolute inset-x-0 bottom-0 h-3 border-t border-zinc-400" style={RACK_SHELF_STYLE} />
-        </div>
-      ))}
+      {Array.from({ length: two }).map((_, i) => filler(`f2-${i}`, "sm:hidden"))}
+      {Array.from({ length: three }).map((_, i) => filler(`f3-${i}`, "hidden sm:block"))}
     </>
+  );
+}
+
+// 棚に載る水槽。ガラスの枠・蓋・土(アクアリウムは砂)・ガラスの照り返しを描き、中に生きものを立たせる。
+function TankButton({
+  onClick,
+  variant,
+  name,
+  sub,
+  children,
+}: {
+  onClick: () => void;
+  variant: "known" | "terrarium" | "aquarium";
+  name: string;
+  sub: string;
+  children: React.ReactNode;
+}) {
+  const aquarium = variant === "aquarium";
+  const frame =
+    variant === "known" ? "border-amber-300" : aquarium ? "border-cyan-200" : "border-white";
+  const air = aquarium ? "from-cyan-100/90 to-cyan-200/80" : "from-sky-50/80 to-white/50";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full flex-col items-center transition-transform hover:scale-[1.03] active:scale-95"
+    >
+      <div
+        className={`relative h-[72px] w-full overflow-hidden rounded-md border-2 bg-gradient-to-b shadow-inner ring-1 ring-zinc-300 ${frame} ${air}`}
+      >
+        <div className="absolute inset-x-0 top-0 h-1 bg-zinc-300/80" />
+        <div className="absolute inset-x-0 bottom-0 h-[30%]" style={aquarium ? SAND_STYLE : SOIL_STYLE} />
+        <div className="absolute inset-x-0 bottom-[22%] flex justify-center">{children}</div>
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/45 via-transparent to-transparent" />
+      </div>
+      <span className={`mt-1 text-xs font-semibold ${variant === "known" ? "text-amber-800" : "text-zinc-700"}`}>
+        {name}
+      </span>
+      <span className={`text-[10px] ${variant === "known" ? "text-amber-600" : "text-zinc-400"}`}>{sub}</span>
+    </button>
   );
 }
 
@@ -1060,74 +1116,68 @@ export function KuwagataShelf({
 
   return (
     <div>
-      <div className={RACK_FRAME_CLASS}>
-        <div className="h-3 border-b border-zinc-400" style={RACK_MESH_STYLE} />
-        {knownTanks.length > 0 && (
+      <div className="relative px-[10px]">
+        <div className="absolute inset-y-0 left-0 w-[10px] rounded-t-sm" style={RACK_POST_STYLE} />
+        <div className="absolute inset-y-0 right-0 w-[10px] rounded-t-sm" style={RACK_POST_STYLE} />
+        <div className="bg-gradient-to-b from-zinc-100 to-zinc-50 shadow-sm">
+          <div className="h-3 border-b border-zinc-400" style={RACK_BAR_STYLE} />
+          {knownTanks.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3">
+              {knownGroups.map((group) => {
+                const tank = group[0];
+                const representative = pickRepresentative(group);
+                const count = group.reduce((sum, t) => sum + t.individuals.length, 0);
+                return (
+                  <RackCell key={tank.speciesId}>
+                    <TankButton
+                      onClick={() => setSelectedTankId(tank.tankId)}
+                      variant="known"
+                      name={tank.speciesName}
+                      sub={count > 1 ? `${count}匹` : GROWTH_STAGE_LABEL[representative.growthStage]}
+                    >
+                      <TankOccupant
+                        color={KNOWN_SPECIES_COLOR}
+                        sizeScale={representative.sizeScale}
+                        speciesCode={representative.speciesCode}
+                        mandibleVariant={representative.mandibleVariant}
+                        growthStage={representative.growthStage}
+                      />
+                    </TankButton>
+                  </RackCell>
+                );
+              })}
+              <RackFillers count={knownGroups.length} />
+            </div>
+          )}
+
           <div className="grid grid-cols-2 sm:grid-cols-3">
-            {knownGroups.map((group) => {
+            {newGroups.map((group) => {
               const tank = group[0];
+              const color = tankColor(tank);
               const representative = pickRepresentative(group);
               const count = group.reduce((sum, t) => sum + t.individuals.length, 0);
+
               return (
-                <RackCell key={tank.speciesId}>
-                  <button
-                    type="button"
+                <RackCell key={tank.speciesId} plate={`棚${tank.tankNumber}`}>
+                  <TankButton
                     onClick={() => setSelectedTankId(tank.tankId)}
-                    className="flex w-full flex-col items-center gap-1.5 rounded-lg border border-amber-300 bg-gradient-to-b from-amber-50/90 to-white/80 px-2 py-3 shadow-inner transition-transform hover:scale-[1.03] active:scale-95"
+                    variant={tank.speciesAreaCode === "aquarium" ? "aquarium" : "terrarium"}
+                    name={tank.speciesName}
+                    sub={count > 1 ? `${count}匹` : GROWTH_STAGE_LABEL[representative.growthStage]}
                   >
                     <TankOccupant
-                      color={KNOWN_SPECIES_COLOR}
+                      color={color}
                       sizeScale={representative.sizeScale}
                       speciesCode={representative.speciesCode}
                       mandibleVariant={representative.mandibleVariant}
                       growthStage={representative.growthStage}
                     />
-                    <span className="text-xs font-semibold text-amber-800">{tank.speciesName}</span>
-                    <span className="text-[10px] text-amber-600">
-                      {count > 1 ? `${count}匹` : GROWTH_STAGE_LABEL[representative.growthStage]}
-                    </span>
-                  </button>
+                  </TankButton>
                 </RackCell>
               );
             })}
-            <RackFillers count={knownGroups.length} />
+            <RackFillers count={newGroups.length} />
           </div>
-        )}
-
-        <div className="grid grid-cols-2 sm:grid-cols-3">
-          {newGroups.map((group) => {
-            const tank = group[0];
-            const color = tankColor(tank);
-            const representative = pickRepresentative(group);
-            const count = group.reduce((sum, t) => sum + t.individuals.length, 0);
-
-            return (
-              <RackCell key={tank.speciesId} plate={`棚${tank.tankNumber}`}>
-                <button
-                  type="button"
-                  onClick={() => setSelectedTankId(tank.tankId)}
-                  className={`flex w-full flex-col items-center gap-1.5 rounded-lg border px-2 py-3 shadow-inner transition-transform hover:scale-[1.03] active:scale-95 ${
-                    tank.speciesAreaCode === "aquarium"
-                      ? "border-cyan-200 bg-gradient-to-b from-cyan-50/90 to-white/80"
-                      : "border-white bg-gradient-to-b from-sky-50/90 to-white/80 ring-1 ring-zinc-200"
-                  }`}
-                >
-                  <TankOccupant
-                    color={color}
-                    sizeScale={representative.sizeScale}
-                    speciesCode={representative.speciesCode}
-                    mandibleVariant={representative.mandibleVariant}
-                    growthStage={representative.growthStage}
-                  />
-                  <span className="text-xs font-semibold text-zinc-700">{tank.speciesName}</span>
-                  <span className="text-[10px] text-zinc-400">
-                    {count > 1 ? `${count}匹` : GROWTH_STAGE_LABEL[representative.growthStage]}
-                  </span>
-                </button>
-              </RackCell>
-            );
-          })}
-          <RackFillers count={newGroups.length} />
         </div>
       </div>
 
