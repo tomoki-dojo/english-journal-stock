@@ -92,8 +92,8 @@ export default async function RoadmapBoardPage() {
         expressions={expressions}
         loadError={loadError}
         plan={plan}
-        title="コルクボード"
-        description="ロードマップで習得した表現だけを集めたトロフィー棚です。キーワードで検索し、いつでも復習できます。"
+        title="表現一覧"
+        description="習得した表現の一覧です。キーワードで検索し、いつでも復習できます。"
         emptyMessage="まだ習得した表現がありません。Stage1〜3で練習を重ねると、ここに表現が並んでいきます。"
         roadmapInfoByExpressionId={roadmapInfoByExpressionId}
       />
