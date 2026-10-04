@@ -15,7 +15,7 @@ import { Volume2, VolumeX } from "lucide-react";
 // （ファイルが無い間は何も鳴らず、エラーも出さない）。ファイル名は brand/kuwagata-asset-spec.md 参照。
 const BGM_SRC = "/roadmap/sound/bgm_room.mp3";
 const TAP_SRC = "/roadmap/sound/se_tap.mp3";
-const BGM_VOLUME = 0.3;
+const BGM_VOLUME = 0.15;
 const TAP_VOLUME = 0.05;
 const PAGE_SRC = "/roadmap/sound/se_page.mp3";
 const PAGE_VOLUME = 0.2;
