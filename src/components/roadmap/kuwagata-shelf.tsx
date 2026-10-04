@@ -973,7 +973,7 @@ const SAND_STYLE: CSSProperties = {
   borderTop: "2px solid #c9b27a",
 };
 
-const RACK_CELL_CLASS = "relative px-1.5 pb-5 pt-3";
+const RACK_CELL_CLASS = "relative px-1.5 pb-3 pt-3";
 const RACK_SHELF_CLASS = "absolute inset-x-0 bottom-0 h-3 border-y border-zinc-400";
 
 // 棚の1マス。下に棚板を描き、水槽はその上に載る。plateを渡すと棚板に番号の小さなプレートが付く。
@@ -997,7 +997,7 @@ function RackFillers({ count }: { count: number }) {
   const three = (3 - (count % 3)) % 3;
   const filler = (key: string, cls: string) => (
     <div key={key} className={`${cls} ${RACK_CELL_CLASS}`}>
-      <div className="h-[108px]" />
+      <div className="h-[112px]" />
       <div className={RACK_SHELF_CLASS} style={RACK_BAR_STYLE} />
     </div>
   );
@@ -1010,6 +1010,7 @@ function RackFillers({ count }: { count: number }) {
 }
 
 // 棚に載る水槽。ガラスの枠・蓋・土(アクアリウムは砂)・ガラスの照り返しを描き、中に生きものを立たせる。
+// 名前と匹数は水槽の下部に敷いた半透明のラベルに載せ、「ラベルまで含めて水槽」として棚板に直接置く。
 function TankButton({
   onClick,
   variant,
@@ -1024,27 +1025,26 @@ function TankButton({
   children: React.ReactNode;
 }) {
   const aquarium = variant === "aquarium";
-  const frame =
-    variant === "known" ? "border-amber-300" : aquarium ? "border-cyan-200" : "border-white";
+  const known = variant === "known";
+  const frame = known ? "border-amber-300" : aquarium ? "border-cyan-200" : "border-white";
   const air = aquarium ? "from-cyan-100/90 to-cyan-200/80" : "from-sky-50/80 to-white/50";
+  const cushion = known ? "bg-amber-50/70" : aquarium ? "bg-cyan-50/65" : "bg-white/60";
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full flex-col items-center transition-transform hover:scale-[1.03] active:scale-95"
+      className={`block w-full overflow-hidden rounded-t-md border-2 border-b-0 bg-gradient-to-b shadow-inner ring-1 ring-zinc-300 transition-transform hover:scale-[1.03] active:scale-95 ${frame} ${air}`}
     >
-      <div
-        className={`relative h-[72px] w-full overflow-hidden rounded-md border-2 bg-gradient-to-b shadow-inner ring-1 ring-zinc-300 ${frame} ${air}`}
-      >
+      <div className="relative h-[72px] w-full">
         <div className="absolute inset-x-0 top-0 h-1 bg-zinc-300/80" />
         <div className="absolute inset-x-0 bottom-0 h-[30%]" style={aquarium ? SAND_STYLE : SOIL_STYLE} />
         <div className="absolute inset-x-0 bottom-[22%] flex justify-center">{children}</div>
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/45 via-transparent to-transparent" />
       </div>
-      <span className={`mt-1 text-xs font-semibold ${variant === "known" ? "text-amber-800" : "text-zinc-700"}`}>
-        {name}
-      </span>
-      <span className={`text-[10px] ${variant === "known" ? "text-amber-600" : "text-zinc-400"}`}>{sub}</span>
+      <div className={`flex flex-col items-center px-2 py-1 backdrop-blur-[1px] ${cushion}`}>
+        <span className={`text-xs font-semibold ${known ? "text-amber-800" : "text-zinc-700"}`}>{name}</span>
+        <span className={`text-[10px] ${known ? "text-amber-600" : "text-zinc-400"}`}>{sub}</span>
+      </div>
     </button>
   );
 }
