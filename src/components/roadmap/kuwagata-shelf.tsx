@@ -752,14 +752,19 @@ function WanderingCreature({
       {proud &&
         // てっぺんポーズ中だけ頭上で瞬くきらきら(位置・タイミングを少しずつずらした3つ)
         [
-          { left: "28%", top: "8%", delay: "0s" },
-          { left: "52%", top: "0%", delay: "0.5s" },
-          { left: "72%", top: "10%", delay: "1s" },
+          { left: "-6%", top: "14%", delay: "0s" },
+          { left: "88%", top: "8%", delay: "0.5s" },
+          { left: "96%", top: "34%", delay: "1s" },
         ].map((s, i) => (
           <span
             key={i}
-            className="animate-egg-twinkle pointer-events-none absolute z-10 text-[11px] leading-none text-amber-400"
-            style={{ left: s.left, top: s.top, animationDelay: s.delay }}
+            className="animate-egg-twinkle pointer-events-none absolute z-20 text-[18px] leading-none text-amber-300"
+            style={{
+              left: s.left,
+              top: s.top,
+              animationDelay: s.delay,
+              textShadow: "0 0 3px #b45309, 0 0 1px #b45309",
+            }}
           >
             ✦
           </span>
