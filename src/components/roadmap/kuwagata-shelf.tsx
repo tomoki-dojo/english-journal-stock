@@ -160,6 +160,7 @@ function buildKnownStageArt(code: string): KnownStageArt {
 const KNOWN_STAGE_ART: Partial<Record<string, KnownStageArt>> = {
   "KW-0001": buildKnownStageArt("KW-0001"),
   "KW-0002": buildKnownStageArt("KW-0002"),
+  "KW-0003": buildKnownStageArt("KW-0003"),
 };
 
 // 卵・蛹は動かない(その場に置いたまま)。幼虫・成虫(と、実アートが無い種のBugアイコン)は歩き回る。
