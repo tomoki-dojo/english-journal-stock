@@ -7,6 +7,7 @@ import {
   type RoadmapNewHatch,
 } from "@/lib/roadmap-notices";
 import { getUncelebratedEggs, getUncelebratedHatches } from "@/lib/supabase/kuwagata";
+import { getTodaysTrivia, type ArthurTrivia } from "@/lib/supabase/arthur-trivia";
 
 export type RoadmapNotices = {
   showAdvice: boolean;
@@ -15,6 +16,8 @@ export type RoadmapNotices = {
   newEggs: RoadmapNewEgg[];
   // まだ「羽化した！」演出を見せていない個体（Stage5卒業）
   newHatches: RoadmapNewHatch[];
+  // 今日まだ見ていない、アーサーの豆知識（お知らせのあとに1日1回）。初回ユーザーには出さない。
+  trivia: ArthurTrivia | null;
 };
 
 // 部屋に入ったときに出すポップアップ（初回アドバイス・未読のお知らせ）を決める。
@@ -28,7 +31,7 @@ export async function getRoadmapNotices(
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (!data) return { showAdvice: false, announcements: [], newEggs: [], newHatches: [] };
+  if (!data) return { showAdvice: false, announcements: [], newEggs: [], newHatches: [], trivia: null };
 
   const [newEggs, newHatches] = await Promise.all([
     getUncelebratedEggs(userId),
@@ -36,14 +39,16 @@ export async function getRoadmapNotices(
   ]);
 
   if (!data.roadmap_advice_seen_at)
-    return { showAdvice: true, announcements: [], newEggs, newHatches };
+    return { showAdvice: true, announcements: [], newEggs, newHatches, trivia: null };
 
   const lastSeen = data.roadmap_last_seen_announcement_id ?? 0;
+  const trivia = await getTodaysTrivia(userId).catch(() => null);
   return {
     showAdvice: false,
     announcements: ANNOUNCEMENTS.filter((a) => a.id > lastSeen),
     newEggs,
     newHatches,
+    trivia,
   };
 }
 

@@ -22,7 +22,8 @@ type Item =
   | { kind: "stageUnlock"; stage: 2 | 3 | 4 | 5; key: string }
   | { kind: "egg"; egg: RoadmapNewEgg }
   | { kind: "hatch"; hatch: RoadmapNewHatch }
-  | { kind: "announcement"; announcement: RoadmapAnnouncement };
+  | { kind: "announcement"; announcement: RoadmapAnnouncement }
+  | { kind: "trivia"; trivia: { id: string; body: string } };
 
 // 部屋に入ったときのポップアップ。初回はエークワ博士のアドバイス、以降は未読のお知らせを1件ずつ順に出す。
 // 閉じるたびに既読をサーバーへ保存する（保存に失敗しても表示は先へ進める）。
@@ -31,11 +32,13 @@ export function RoomNoticeModal({
   announcements,
   newEggs,
   newHatches = [],
+  trivia = null,
 }: {
   showAdvice: boolean;
   announcements: RoadmapAnnouncement[];
   newEggs: RoadmapNewEgg[];
   newHatches?: RoadmapNewHatch[];
+  trivia?: { id: string; body: string } | null;
 }) {
   const [queue, setQueue] = useState<Item[]>(() => [
     ...(showAdvice ? ([{ kind: "intro" }, { kind: "advice" }] as Item[]) : []),
@@ -55,6 +58,8 @@ export function RoomNoticeModal({
       kind: "announcement" as const,
       announcement,
     })),
+    // お知らせのあとに、その日のアーサーの豆知識（1日1回）
+    ...(trivia ? ([{ kind: "trivia", trivia }] as Item[]) : []),
   ]);
 
   const [introPage, setIntroPage] = useState(0);
@@ -80,6 +85,32 @@ export function RoomNoticeModal({
           className="max-w-xs animate-question-card-enter text-lg font-bold leading-relaxed text-white"
         >
           {INTRO_LINES[introPage]}
+        </p>
+        <span className="text-2xl text-white/70">▼</span>
+      </button>
+    );
+  }
+
+  if (current.kind === "trivia") {
+    const { trivia: item } = current;
+    const closeTrivia = () => {
+      void fetch("/api/roadmap/notices/seen", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "trivia", id: item.id }),
+      }).catch(() => {});
+      setQueue((q) => q.slice(1));
+    };
+    return (
+      <button
+        key={`trivia-${item.id}`}
+        type="button"
+        onClick={closeTrivia}
+        className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-8 bg-zinc-900/90 px-8 text-center"
+      >
+        <ArthurAvatar size={128} animated className="shadow-lg" />
+        <p className="max-w-xs animate-question-card-enter text-base font-bold leading-relaxed text-white">
+          {item.body}
         </p>
         <span className="text-2xl text-white/70">▼</span>
       </button>

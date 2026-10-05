@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
 import { markAdviceSeen, markAnnouncementSeen } from "@/lib/supabase/roadmap-notices";
 import { markHatchCelebrated, markIndividualCelebrated } from "@/lib/supabase/kuwagata";
+import { markTriviaSeen } from "@/lib/supabase/arthur-trivia";
 import { ANNOUNCEMENTS } from "@/lib/roadmap-notices";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +39,11 @@ export async function POST(request: Request) {
       await markHatchCelebrated(user.id, body.id);
       return NextResponse.json({ ok: true });
     }
-    return NextResponse.json({ error: "kind（advice / announcement / egg / hatch）が不正です" }, { status: 400 });
+    if (body.kind === "trivia" && typeof body.id === "string") {
+      await markTriviaSeen(user.id, body.id);
+      return NextResponse.json({ ok: true });
+    }
+    return NextResponse.json({ error: "kind（advice / announcement / egg / hatch / trivia）が不正です" }, { status: 400 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "既読の保存に失敗しました";
     return NextResponse.json({ error: message }, { status: 500 });

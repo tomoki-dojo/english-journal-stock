@@ -35,6 +35,7 @@ export default async function RoadmapPage() {
     announcements: [],
     newEggs: [],
     newHatches: [],
+    trivia: null,
   }));
 
   return (
@@ -44,6 +45,7 @@ export default async function RoadmapPage() {
         announcements={notices.announcements}
         newEggs={notices.newEggs}
         newHatches={notices.newHatches}
+        trivia={notices.trivia}
       />
       <RoadmapRoom
         stageReadiness={stageReadiness}

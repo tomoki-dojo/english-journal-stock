@@ -94,6 +94,9 @@ export const KUWAGATA_GRADUATION_BOOST_DAYS: Record<0 | 1 | 2 | 3 | 4, number> =
   4: 0.4,
 };
 
+// 1日1回、ログイン時の豆知識を読んだときのご褒美（練習1回分の半分以下）。
+export const KUWAGATA_LOGIN_BOOST_DAYS = 0.1;
+
 // テッペンクワたんは、日数がたっても蛹で止まる。成虫になるのはStage5を卒業して羽化したとき
 // （hatched_atが立つとき）だけ。
 export const TEPPEN_SPECIES_CODE = "KW-0004";
