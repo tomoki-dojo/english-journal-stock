@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { addGrowthBoost, KUWAGATA_LOGIN_BOOST_DAYS } from "@/lib/supabase/kuwagata";
+import { addLoginGrowthBoost, KUWAGATA_LOGIN_BOOST_DAYS } from "@/lib/supabase/kuwagata";
 
 export type ArthurTrivia = { id: string; body: string };
 
@@ -60,7 +60,7 @@ export async function markTriviaSeen(userId: string, triviaId: string): Promise<
 
   if ((inserted?.length ?? 0) > 0) {
     try {
-      await addGrowthBoost(userId, KUWAGATA_LOGIN_BOOST_DAYS);
+      await addLoginGrowthBoost(userId, KUWAGATA_LOGIN_BOOST_DAYS);
     } catch {
       // ブーストの加算に失敗しても、既読の保存は成功させる
     }

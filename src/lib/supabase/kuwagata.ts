@@ -64,6 +64,8 @@ export type KuwagataIndividual = {
   hatchedAt: string | null;
   // 練習のご褒美で加算された成長日数（経過日数に足して成長段階を決める）。
   boostDays: number;
+  // ログイン時の豆知識のご褒美で加算された成長日数（練習のブーストとは別に持ち、ゲージを色分けする）。
+  loginBoostDays: number;
   // ユーザーが付けた名前(未命名はnull)。
   nickname: string | null;
 };
@@ -101,7 +103,13 @@ export const KUWAGATA_LOGIN_BOOST_DAYS = 0.1;
 // （hatched_atが立つとき）だけ。
 export const TEPPEN_SPECIES_CODE = "KW-0004";
 
-type GrowthInput = { obtainedAt: string; hatchedAt: string | null; boostDays: number; speciesCode: string };
+type GrowthInput = {
+  obtainedAt: string;
+  hatchedAt: string | null;
+  boostDays: number;
+  loginBoostDays: number;
+  speciesCode: string;
+};
 
 function getElapsedDays(individual: GrowthInput): number {
   return Math.max(0, (Date.now() - new Date(individual.obtainedAt).getTime()) / (1000 * 60 * 60 * 24));
@@ -110,22 +118,22 @@ function getElapsedDays(individual: GrowthInput): number {
 export function getIndividualGrowthStage(individual: GrowthInput): KuwagataGrowthStage {
   if (individual.hatchedAt) return "成虫";
 
-  const effectiveDays = getElapsedDays(individual) + individual.boostDays;
+  const effectiveDays = getElapsedDays(individual) + individual.boostDays + individual.loginBoostDays;
   for (const { stage, end } of GROWTH_STAGE_RANGES) {
     if (effectiveDays < end) return stage;
   }
   return individual.speciesCode === TEPPEN_SPECIES_CODE ? "蛹" : "成虫";
 }
 
-// 次の段階へ進むゲージ。経過日数で進んだ分とブーストで進んだ分を、それぞれ0〜1の割合で返す
-// （合計は1以下）。成虫はゲージなし(null)。蛹で止まるテッペンクワたんは、満タンのまま残る。
-export type KuwagataGrowthGauge = { elapsedRatio: number; boostRatio: number };
+// 次の段階へ進むゲージ。経過日数で進んだ分・ログインのご褒美で進んだ分・練習のブーストで進んだ分を、
+// それぞれ0〜1の割合で返す（合計は1以下）。成虫はゲージなし(null)。蛹で止まるテッペンクワたんは、満タンのまま残る。
+export type KuwagataGrowthGauge = { elapsedRatio: number; loginBoostRatio: number; boostRatio: number };
 
 export function getIndividualGrowthGauge(individual: GrowthInput): KuwagataGrowthGauge | null {
   if (individual.hatchedAt) return null;
 
   const elapsed = getElapsedDays(individual);
-  const effective = elapsed + individual.boostDays;
+  const effective = elapsed + individual.boostDays + individual.loginBoostDays;
   const held = individual.speciesCode === TEPPEN_SPECIES_CODE;
   const range = GROWTH_STAGE_RANGES.find(({ end }) => effective < end) ?? (held ? GROWTH_STAGE_RANGES[2] : null);
   if (!range) return null;
@@ -133,7 +141,17 @@ export function getIndividualGrowthGauge(individual: GrowthInput): KuwagataGrowt
   const span = range.end - range.start;
   const total = Math.min((effective - range.start) / span, 1);
   const elapsedRatio = Math.min(Math.max((elapsed - range.start) / span, 0), total);
-  return { elapsedRatio, boostRatio: Math.max(total - elapsedRatio, 0) };
+  const boosted = Math.max(total - elapsedRatio, 0);
+  const loginBoostRatio = Math.min(individual.loginBoostDays / span, boosted);
+  return { elapsedRatio, loginBoostRatio, boostRatio: boosted - loginBoostRatio };
+}
+
+// ログイン時の豆知識のご褒美（練習のブーストとは別の色で表示するため、別の列に加算する）。
+export async function addLoginGrowthBoost(userId: string, days: number): Promise<void> {
+  const { error } = await supabaseAdmin.rpc("add_kuwagata_login_boost", { p_user_id: userId, p_days: days });
+  if (error) {
+    throw new Error(`ログインブーストの加算に失敗しました: ${error.message}`);
+  }
 }
 
 // 育成中（成虫になる前）の全個体に、習得済みのご褒美として成長日数を加える。
@@ -327,7 +345,7 @@ export async function getUserKuwagataIndividuals(userId: string): Promise<Kuwaga
   const { data, error } = await supabaseAdmin
     .from("kuwagata_individuals")
     .select(
-      "id, species_id, obtained_via, obtained_at, size_scale, mandible_variant, hatched_at, boost_days, nickname, kuwagata_species(code, name, kind, rarity, area_code)"
+      "id, species_id, obtained_via, obtained_at, size_scale, mandible_variant, hatched_at, boost_days, login_boost_days, nickname, kuwagata_species(code, name, kind, rarity, area_code)"
     )
     .eq("user_id", userId)
     .order("obtained_at", { ascending: true });
@@ -359,6 +377,7 @@ export async function getUserKuwagataIndividuals(userId: string): Promise<Kuwaga
       nickname: (row.nickname as string | null) ?? null,
       hatchedAt: (row.hatched_at as string | null) ?? null,
       boostDays: Number(row.boost_days ?? 0),
+      loginBoostDays: Number(row.login_boost_days ?? 0),
     };
   });
 }
@@ -824,7 +843,7 @@ export async function forceHatchTeppenToAdult(userId: string): Promise<void> {
 
   const { data: individual, error: individualError } = await supabaseAdmin
     .from("kuwagata_individuals")
-    .select("id, hatched_at, obtained_at, boost_days")
+    .select("id, hatched_at, obtained_at, boost_days, login_boost_days")
     .eq("user_id", userId)
     .eq("species_id", species.id)
     .eq("obtained_via", "stage_clear")
@@ -841,6 +860,7 @@ export async function forceHatchTeppenToAdult(userId: string): Promise<void> {
     obtainedAt: individual.obtained_at as string,
     hatchedAt: null,
     boostDays: Number(individual.boost_days ?? 0),
+    loginBoostDays: Number(individual.login_boost_days ?? 0),
     speciesCode: TEPPEN_SPECIES_CODE,
   });
 

@@ -319,15 +319,15 @@ export function TankOccupant({
   );
 }
 
-// 次の段階へ進むゲージ(卵・幼虫・蛹のとき)。1本のゲージを、経過日数で進んだ分(アンバー)と
-// 練習のご褒美(ブースト)で進んだ分(ティール)の2色で積み上げる。角丸で縁取り付き。
+// 次の段階へ進むゲージ(卵・幼虫・蛹のとき)。1本のゲージを、経過日数で進んだ分(アンバー)・
+// ログインのご褒美で進んだ分(オレンジ)・練習のご褒美で進んだ分(青)の3色で積み上げる。角丸で縁取り付き。
 // animateBoostを付けると、ブースト分(青)が空の状態から伸びていく(練習のご褒美で成長した演出)。
 export function GrowthGauge({
   gauge,
   animateBoost = false,
   className = "w-9",
 }: {
-  gauge: { elapsedRatio: number; boostRatio: number };
+  gauge: { elapsedRatio: number; loginBoostRatio: number; boostRatio: number };
   animateBoost?: boolean;
   className?: string;
 }) {
@@ -339,6 +339,7 @@ export function GrowthGauge({
   }, [animateBoost]);
 
   const elapsedPct = Math.round(gauge.elapsedRatio * 100);
+  const loginPct = Math.round(gauge.loginBoostRatio * 100);
   const boostPct = Math.round(gauge.boostRatio * 100);
   return (
     <div
@@ -346,10 +347,11 @@ export function GrowthGauge({
       aria-label="次の段階までの成長"
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-valuenow={elapsedPct + boostPct}
+      aria-valuenow={elapsedPct + loginPct + boostPct}
       className={`flex h-2 overflow-hidden rounded-full border border-zinc-400 bg-white ${className}`}
     >
       <div className="h-full bg-amber-400" style={{ width: `${elapsedPct}%` }} />
+      <div className="h-full bg-orange-500" style={{ width: `${loginPct}%` }} />
       <div
         className="h-full bg-sky-600 transition-[width] duration-700 ease-out"
         style={{ width: revealed ? `${boostPct}%` : 0 }}
