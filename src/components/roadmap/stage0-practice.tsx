@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, Lightbulb, PartyPopper, X } from "lucide-react";
+import { Check, ChevronDown, Lightbulb, PartyPopper, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RoundHeader } from "./round-header";
 import { GrowthBadge } from "./growth-badge";
@@ -163,38 +163,32 @@ export function Stage0Practice({ availableErrorTags }: Stage0PracticeProps) {
     }
   }
 
-  // カテゴリ選択の横並びピル。「すべて」＋公開済みのerror_tag一覧。1カテゴリしかない間は
-  // 出し分ける意味が薄いので、2件以上あるときだけ表示する。
+  // カテゴリ選択。タグが15種類ほどあり、横並びのピルだとスマホで画面の大半を占めてしまうため、
+  // 1行のセレクトに畳んでいる（「すべて」＋公開済みのerror_tag一覧）。
+  // 1カテゴリしかない間は出し分ける意味が薄いので、2件以上あるときだけ表示する。
   const categorySelector =
     availableErrorTags.length > 1 ? (
-      <div className="mb-4 flex flex-wrap gap-1.5">
-        <button
-          type="button"
-          onClick={() => handleSelectCategory(null)}
-          className="rounded-full px-3 py-1 text-xs font-medium transition-colors"
-          style={
-            selectedErrorTag === null
-              ? { backgroundColor: STAGE_COLOR, color: "#fff" }
-              : { backgroundColor: withAlpha(STAGE_COLOR, "12"), color: STAGE_COLOR }
-          }
-        >
-          すべて
-        </button>
-        {availableErrorTags.map((tag) => (
-          <button
-            key={tag}
-            type="button"
-            onClick={() => handleSelectCategory(tag)}
-            className="rounded-full px-3 py-1 text-xs font-medium transition-colors"
-            style={
-              selectedErrorTag === tag
-                ? { backgroundColor: STAGE_COLOR, color: "#fff" }
-                : { backgroundColor: withAlpha(STAGE_COLOR, "12"), color: STAGE_COLOR }
-            }
+      <div className="mb-4 flex items-center gap-2">
+        <label className="relative inline-flex max-w-full items-center">
+          <span className="sr-only">カテゴリ</span>
+          <select
+            value={selectedErrorTag ?? ""}
+            onChange={(e) => handleSelectCategory(e.target.value === "" ? null : e.target.value)}
+            className="max-w-full appearance-none truncate rounded-full py-1.5 pl-3.5 pr-8 text-xs font-semibold outline-none"
+            style={{ backgroundColor: withAlpha(STAGE_COLOR, "12"), color: STAGE_COLOR }}
           >
-            {tag}
-          </button>
-        ))}
+            <option value="">すべて</option>
+            {availableErrorTags.map((tag) => (
+              <option key={tag} value={tag}>
+                {tag}
+              </option>
+            ))}
+          </select>
+          <ChevronDown
+            className="pointer-events-none absolute right-2.5 h-3.5 w-3.5"
+            style={{ color: STAGE_COLOR }}
+          />
+        </label>
       </div>
     ) : null;
 
