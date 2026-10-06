@@ -22,6 +22,7 @@ type Item =
   | { kind: "intro" }
   | { kind: "advice" }
   | { kind: "stageUnlock"; stage: 2 | 3 | 4 | 5; key: string }
+  | { kind: "eggReason"; reason: string; key: string }
   | { kind: "egg"; egg: RoadmapNewEgg }
   | { kind: "hatch"; hatch: RoadmapNewHatch }
   | { kind: "growth"; stageUps: RoadmapStageUp[] }
@@ -47,10 +48,12 @@ export function RoomNoticeModal({
 }) {
   const [queue, setQueue] = useState<Item[]>(() => [
     ...(showAdvice ? ([{ kind: "intro" }, { kind: "advice" }] as Item[]) : []),
-    // Stage解放で配られたタマゴは、タマゴ入手の演出の前に「Stage◯が解放された！」を挟む
+    // Stage解放で配られたタマゴは、タマゴ入手の演出の前に「Stage◯が解放された！」を挟む。
+    // 節目のイベントで配られたタマゴは、先に「もらえた理由」を見せてからタマゴを渡す。
     ...newEggs.flatMap((egg): Item[] => {
       const stage = egg.stageTrigger;
       const eggItem: Item = { kind: "egg", egg };
+      if (egg.reason) return [{ kind: "eggReason", reason: egg.reason, key: egg.id }, eggItem];
       return stage !== null && stage >= 2 && stage <= 5
         ? [
             { kind: "stageUnlock", stage: stage as 2 | 3 | 4 | 5, key: egg.id },
@@ -135,6 +138,22 @@ export function RoomNoticeModal({
       setQueue((q) => q.slice(1));
     };
     return <GrowthStageOverlay key={`growth-${items[0].id}`} stageUps={items} onClose={closeGrowth} />;
+  }
+
+  if (current.kind === "eggReason") {
+    return (
+      <button
+        key={`egg-reason-${current.key}`}
+        type="button"
+        onClick={() => setQueue((q) => q.slice(1))}
+        className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-8 bg-zinc-900/90 px-8 text-center"
+      >
+        <p className="max-w-xs animate-question-card-enter text-lg font-bold leading-relaxed text-white">
+          {current.reason}
+        </p>
+        <span className="text-2xl text-white/70">▼</span>
+      </button>
+    );
   }
 
   if (current.kind === "stageUnlock") {

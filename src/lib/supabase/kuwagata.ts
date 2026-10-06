@@ -1,7 +1,7 @@
 // クワガタ育成機能（棚・図鑑）のデータアクセス層。
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getPlan } from "@/lib/supabase/profile";
-import type { RoadmapStageUp } from "@/lib/roadmap-notices";
+import { describeEggEvent, type RoadmapStageUp } from "@/lib/roadmap-notices";
 
 export type KuwagataAreaCode = "area1" | "area2" | "area3" | "area4" | "aquarium";
 
@@ -742,7 +742,9 @@ function randomBetween(min: number, max: number): number {
 // 部屋に入ったときに出す。節目のイベントのタマゴは、Stage解放の演出を挟まないようstageTriggerをnullにする。
 export async function getUncelebratedEggs(
   userId: string
-): Promise<{ id: string; speciesCode: string; speciesName: string; stageTrigger: number | null }[]> {
+): Promise<
+  { id: string; speciesCode: string; speciesName: string; stageTrigger: number | null; reason: string | null }[]
+> {
   const { data, error } = await supabaseAdmin
     .from("kuwagata_individuals")
     .select("id, obtained_via, kuwagata_species(code, name, stage_trigger)")
@@ -755,6 +757,20 @@ export async function getUncelebratedEggs(
     throw new Error(`未演出のタマゴの取得に失敗しました: ${error.message}`);
   }
 
+  // 節目のタマゴは、台帳（kuwagata_egg_events）から「もらえた理由」を引く。
+  const eventIds = (data ?? []).filter((row) => row.obtained_via === "event").map((row) => row.id as string);
+  const reasonByIndividual = new Map<string, string | null>();
+  if (eventIds.length > 0) {
+    const { data: events } = await supabaseAdmin
+      .from("kuwagata_egg_events")
+      .select("individual_id, event_key")
+      .eq("user_id", userId)
+      .in("individual_id", eventIds);
+    for (const event of events ?? []) {
+      reasonByIndividual.set(event.individual_id as string, describeEggEvent(event.event_key as string));
+    }
+  }
+
   return (data ?? []).flatMap((row) => {
     const species = Array.isArray(row.kuwagata_species) ? row.kuwagata_species[0] : row.kuwagata_species;
     return species
@@ -764,6 +780,7 @@ export async function getUncelebratedEggs(
             speciesCode: species.code as string,
             speciesName: species.name as string,
             stageTrigger: row.obtained_via === "event" ? null : ((species.stage_trigger as number | null) ?? null),
+            reason: reasonByIndividual.get(row.id as string) ?? null,
           },
         ]
       : [];

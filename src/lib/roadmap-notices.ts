@@ -10,7 +10,19 @@ export type RoadmapNewEgg = {
   speciesCode: string;
   speciesName: string;
   stageTrigger: number | null;
+  // 節目のイベントで配られたタマゴの「もらえた理由」（Stage解放・サインアップ時のタマゴはnull）
+  reason: string | null;
 };
+
+// 節目のタマゴ（kuwagata_egg_events.event_key）の、もらえた理由。「days:7」「mastered:30」の形。
+export function describeEggEvent(eventKey: string): string | null {
+  const [kind, value] = eventKey.split(":");
+  const count = Number(value);
+  if (!Number.isFinite(count)) return null;
+  if (kind === "days") return `練習日数が${count}日になった！`;
+  if (kind === "mastered") return `習得したフレーズが${count}個になった！`;
+  return null;
+}
 
 // Stage5卒業で成虫になった（羽化した）テッペンクワたん。羽化の演出を出すために使う。
 export type RoadmapNewHatch = {
