@@ -153,6 +153,11 @@ export function getIndividualGrowthStage(individual: GrowthInput): KuwagataGrowt
   return individual.speciesCode === TEPPEN_SPECIES_CODE ? "蛹" : "成虫";
 }
 
+// 成虫かどうか。羽化済み(hatched_at)だけでなく、日数がたって成虫になった個体も含む。
+export function isAdultIndividual(individual: GrowthInput): boolean {
+  return getIndividualGrowthStage(individual) === "成虫";
+}
+
 // 次の段階へ進むゲージ。経過日数で進んだ分・ログインのご褒美で進んだ分・練習のブーストで進んだ分を、
 // それぞれ0〜1の割合で返す（合計は1以下）。成虫はゲージなし(null)。蛹で止まるテッペンクワたんは、満タンのまま残る。
 export type KuwagataGrowthGauge = { elapsedRatio: number; loginBoostRatio: number; boostRatio: number };
@@ -232,7 +237,7 @@ export async function getGrowingKuwagata(
   const adultCandidates: (KuwagataAdultGrowth & { points: number })[] = [];
 
   for (const individual of all) {
-    if (individual.hatchedAt) {
+    if (isAdultIndividual(individual)) {
       const level = getSizeLevel(individual.sizeGrowthPoints);
       adultCandidates.push({
         id: individual.id,
@@ -331,12 +336,13 @@ export async function getKuwagataShelfTanks(userId: string): Promise<KuwagataShe
   const speciesInfo = new Map<string, Pick<KuwagataShelfTank, "speciesName" | "speciesKind" | "speciesAreaCode">>();
 
   for (const individual of individuals) {
-    const sizeLevel = individual.hatchedAt ? getSizeLevel(individual.sizeGrowthPoints) : 0;
+    const adult = isAdultIndividual(individual);
+    const sizeLevel = adult ? getSizeLevel(individual.sizeGrowthPoints) : 0;
     const shelfIndividual: KuwagataShelfIndividual = {
       ...individual,
       sizeScale: getDisplaySizeScale(individual.sizeScale, sizeLevel),
       sizeLevel,
-      sizeRatio: individual.hatchedAt ? getSizeLevelRatio(individual.sizeGrowthPoints) : 0,
+      sizeRatio: adult ? getSizeLevelRatio(individual.sizeGrowthPoints) : 0,
       growthStage: getIndividualGrowthStage(individual),
       growthGauge: getIndividualGrowthGauge(individual),
     };

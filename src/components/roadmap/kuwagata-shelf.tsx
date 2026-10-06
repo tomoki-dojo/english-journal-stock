@@ -1339,7 +1339,7 @@ export function KuwagataShelf({
                       growthStage={individual.growthStage}
                     />
                     {individual.growthGauge && <GrowthGauge gauge={individual.growthGauge} />}
-                    {individual.hatchedAt && (
+                    {individual.growthStage === "成虫" && (
                       <SizeGauge level={individual.sizeLevel} ratio={individual.sizeRatio} />
                     )}
                   </div>
