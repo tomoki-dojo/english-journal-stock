@@ -12,8 +12,8 @@ export async function GET() {
   }
 
   try {
-    const { individuals, adults } = await getGrowingKuwagata(user.id);
-    return NextResponse.json({ individuals, adults }, { headers: { "Cache-Control": "no-store, must-revalidate" } });
+    const { individuals, adults, hiddenCount } = await getGrowingKuwagata(user.id);
+    return NextResponse.json({ individuals, adults, hiddenCount }, { headers: { "Cache-Control": "no-store, must-revalidate" } });
   } catch (err) {
     const message = err instanceof Error ? err.message : "育成中のクワたんの取得に失敗しました";
     return NextResponse.json({ error: message }, { status: 500 });

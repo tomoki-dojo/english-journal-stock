@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 import type { KuwagataAdultGrowth, KuwagataGrowingIndividual } from "@/lib/supabase/kuwagata";
 import { GrowthGauge, SizeGauge, TankOccupant } from "./kuwagata-shelf";
 
-type GrowingResponse = { individuals?: KuwagataGrowingIndividual[]; adults?: KuwagataAdultGrowth[] };
+type GrowingResponse = {
+  individuals?: KuwagataGrowingIndividual[];
+  adults?: KuwagataAdultGrowth[];
+  hiddenCount?: number;
+};
 
 // 成虫のサイズレベル1つ分（+10%）を、パネル内の見た目にもそのまま反映する。
 const SIZE_STEP = 0.1;
@@ -14,6 +18,7 @@ const SIZE_STEP = 0.1;
 export function GrowingKuwagataPanel() {
   const [growing, setGrowing] = useState<KuwagataGrowingIndividual[]>([]);
   const [adults, setAdults] = useState<KuwagataAdultGrowth[]>([]);
+  const [hiddenCount, setHiddenCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -23,6 +28,7 @@ export function GrowingKuwagataPanel() {
         if (cancelled || !json) return;
         setGrowing(json.individuals ?? []);
         setAdults(json.adults ?? []);
+        setHiddenCount(json.hiddenCount ?? 0);
       })
       .catch(() => {});
     return () => {
@@ -69,6 +75,11 @@ export function GrowingKuwagataPanel() {
             </span>
           </div>
         ))}
+        {hiddenCount > 0 && (
+          <span className="self-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-700">
+            +{hiddenCount}
+          </span>
+        )}
       </div>
     </div>
   );

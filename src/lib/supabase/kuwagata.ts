@@ -212,6 +212,10 @@ export type KuwagataGrowingIndividual = {
   growthGauge: KuwagataGrowthGauge;
 };
 
+function gaugeTotal(gauge: KuwagataGrowthGauge): number {
+  return gauge.elapsedRatio + gauge.loginBoostRatio + gauge.boostRatio;
+}
+
 export type KuwagataAdultGrowth = {
   id: string;
   speciesCode: string;
@@ -224,14 +228,15 @@ export type KuwagataAdultGrowth = {
   leveledUp: boolean;
 };
 
-// 結果画面に出す表示数の上限（成虫は数が増えるので、レベルアップした個体を先頭に絞る）。
-const RESULT_ADULT_LIMIT = 4;
+// 結果画面に出す総数の上限（育成中＋成虫の合計）。個体が増えても画面が長くならないよう絞る。
+// 優先順位: レベルアップした成虫 → 育成中（次の段階に近い順）→ 残りの成虫（成長ポイントが多い順）。
+const RESULT_DISPLAY_LIMIT = 6;
 
 // 結果画面用：育成中（成虫になる前）の個体とその成長ゲージ、と成虫のサイズレベル。
 // レベルアップを見せた個体は、見せ終えたレベルとして記録する（次回は演出を出さない）。
 export async function getGrowingKuwagata(
   userId: string
-): Promise<{ individuals: KuwagataGrowingIndividual[]; adults: KuwagataAdultGrowth[] }> {
+): Promise<{ individuals: KuwagataGrowingIndividual[]; adults: KuwagataAdultGrowth[]; hiddenCount: number }> {
   const all = await getUserKuwagataIndividuals(userId);
   const growing: KuwagataGrowingIndividual[] = [];
   const adultCandidates: (KuwagataAdultGrowth & { points: number })[] = [];
@@ -275,12 +280,25 @@ export async function getGrowingKuwagata(
     )
   );
 
-  const adults = adultCandidates
-    .sort((a, b) => Number(b.leveledUp) - Number(a.leveledUp) || b.points - a.points)
-    .slice(0, RESULT_ADULT_LIMIT)
-    .map(({ points: _points, ...adult }) => adult);
+  const strip = ({ points: _points, ...adult }: KuwagataAdultGrowth & { points: number }): KuwagataAdultGrowth => adult;
+  const leveledAdults = leveledUp.sort((a, b) => b.points - a.points);
+  const otherAdults = adultCandidates.filter((adult) => !adult.leveledUp).sort((a, b) => b.points - a.points);
+  const growingSorted = [...growing].sort((a, b) => gaugeTotal(b.growthGauge) - gaugeTotal(a.growthGauge));
 
-  return { individuals: growing, adults };
+  const shownLeveled = leveledAdults.slice(0, RESULT_DISPLAY_LIMIT);
+  let slots = RESULT_DISPLAY_LIMIT - shownLeveled.length;
+  const shownGrowing = growingSorted.slice(0, slots);
+  slots -= shownGrowing.length;
+  const shownOthers = otherAdults.slice(0, slots);
+
+  const shownCount = shownLeveled.length + shownGrowing.length + shownOthers.length;
+  const totalCount = growing.length + adultCandidates.length;
+
+  return {
+    individuals: shownGrowing,
+    adults: [...shownLeveled, ...shownOthers].map(strip),
+    hiddenCount: totalCount - shownCount,
+  };
 }
 
 export type KuwagataShelfIndividual = KuwagataIndividual & {
