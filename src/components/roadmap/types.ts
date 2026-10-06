@@ -177,6 +177,9 @@ export type Stage2RoundQuestion =
       // 前者は直訳ヒント(meaningJa)、後者は状況説明文(context_prompt_ja、未入力ならmeaningJaに
       // フォールバック)が入る。両者の違いはコンテンツ側のデータであり、UIのロジックは共通。
       promptJa?: string;
+      // 微改変のときだけ：変え方の見出し（「対象を変えて言う」など）ともとの表現
+      variationLabel?: string;
+      baseExpressionEn?: string;
       // 声に出した後、答え合わせで表示する正解の全文
       answerText: string;
       // 答え合わせ画面でだけ表示する参考リスト（answerTextは含まない）。最大2件に絞る

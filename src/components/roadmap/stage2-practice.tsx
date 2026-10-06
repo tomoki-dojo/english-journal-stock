@@ -277,6 +277,11 @@ export function Stage2Practice() {
       >
         {currentQuestion.kind === "produce" ? (
           <div>
+            {currentQuestion.variationLabel && (
+              <p className="mb-1 text-xs font-semibold" style={{ color: STAGE_COLOR }}>
+                {currentQuestion.variationLabel}
+              </p>
+            )}
             <div className="mb-1 flex items-center gap-2">
               <GrowthBadge stage={2} warmth={currentQuestion.warmth} />
               {currentQuestion.promptEn ? (
@@ -293,6 +298,9 @@ export function Stage2Practice() {
               全文瞬間英作文・文脈からの想起はpromptJa側に既に適切なヒント（直訳／状況説明）が
               入っているため、ここでは重複させない。
             */}
+            {currentQuestion.baseExpressionEn && (
+              <p className="mb-3 text-sm text-zinc-400">もとの表現: {currentQuestion.baseExpressionEn}</p>
+            )}
             {currentQuestion.promptEn && currentQuestion.meaningJa && (
               <p className="mb-3 text-sm text-zinc-500">{currentQuestion.meaningJa}</p>
             )}

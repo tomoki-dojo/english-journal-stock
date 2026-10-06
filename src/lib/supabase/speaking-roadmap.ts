@@ -8,6 +8,8 @@ import { judgeStage3Answer, checkStage3Usage } from "@/lib/stage3-ai";
 import { judgeStage4Turn, checkStage4Usage } from "@/lib/stage4-ai";
 import { judgeStage5Turn, checkStage5Usage } from "@/lib/stage5-ai";
 import { getOrGenerateBlankChoiceReasons } from "@/lib/stage2-choice-reasons";
+import { getOrGenerateStage2Variations } from "@/lib/stage2-variation";
+import { STAGE2_VARIATION_LABEL, type Stage2Variation } from "@/lib/stage2-variation-prompt";
 import { getOrGenerateStage3HintBlank } from "@/lib/stage3-hint-blank";
 import {
   addGrowthBoost,
@@ -623,6 +625,8 @@ type DbStage2ContentRow = {
   // 穴埋め音読の答え合わせで見せる「なぜ不自然か」の理由のキャッシュ。null=未生成
   // （getOrGenerateBlankChoiceReasonsが初回アクセス時に生成してこのカラムに書き戻す）。
   blank_choice_reasons: Stage2ReferenceChoice[] | null;
+  // 微改変の2パターン（初回アクセス時にAI生成して書き戻す）。null=未生成
+  variations: Stage2Variation[] | null;
   expressions: {
     code: string;
     expression_en: string;
@@ -668,7 +672,7 @@ async function listStage2ContentPool(userId: string): Promise<DbStage2ContentRow
   const { data, error } = await supabaseAdmin
     .from("stage2_quiz_content")
     .select(
-      "expression_id, blank_target, blank_choices, sentence_choices, context_prompt_ja, blank_choice_reasons, expressions(code, expression_en, meaning_ja, scene_tags)"
+      "expression_id, blank_target, blank_choices, sentence_choices, context_prompt_ja, blank_choice_reasons, variations, expressions(code, expression_en, meaning_ja, scene_tags)"
     );
 
   if (error) {
@@ -753,6 +757,28 @@ async function buildStage2Question(
   const warmth = computeWarmth(streak, STAGE2_GRADUATE_STREAK);
 
   if (subStep === "微改変") {
+    // 2パターンを連続正解数で切り替える（6回目と7回目で別のパターンが出る）。
+    const variations = await getOrGenerateStage2Variations({
+      expressionId: row.expression_id,
+      cached: row.variations,
+      expressionEn,
+      meaningJa: meaningJa ?? "",
+    });
+    if (variations) {
+      const variation = variations[(streak - 6) % variations.length] ?? variations[0];
+      return {
+        kind: "produce",
+        subStep,
+        expressionId: row.expression_id,
+        promptJa: variation.promptJa,
+        variationLabel: STAGE2_VARIATION_LABEL[variation.kind],
+        baseExpressionEn: expressionEn,
+        answerText: variation.answerEn,
+        referenceChoices: [],
+        warmth,
+      };
+    }
+    // 生成に失敗したときは従来どおり（もとの表現をそのまま見せる自己申告）
     return {
       kind: "free",
       subStep,
