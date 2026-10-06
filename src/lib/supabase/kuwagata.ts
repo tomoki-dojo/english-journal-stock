@@ -24,8 +24,8 @@ export const KUWAGATA_RARE_GUARANTEE_MILESTONE = 50;
 
 export const FREE_SHELF_NEW_SPECIES_TANK_CAP = 10;
 
-const SIZE_SCALE_MIN = 0.8;
-const SIZE_SCALE_MAX = 1.3;
+// 野生で採集した個体のサイズは、種類の基準サイズ（base_size）の±10%でばらつかせる。
+const WILD_SIZE_VARIANCE = 0.1;
 
 const MANDIBLE_VARIANT_COUNT = 3;
 
@@ -48,6 +48,8 @@ export type KuwagataSpecies = {
   sortOrder: number;
   rarity: KuwagataRarity;
   minPlan: "free" | "pro";
+  // 種類ごとの基準サイズ（個体のsize_scaleの元。タマゴから育てた個体はこの値、野生の個体は±10%ばらつく）。
+  baseSize: number;
 };
 
 export type KuwagataIndividual = {
@@ -107,10 +109,10 @@ export const KUWAGATA_GRADUATION_BOOST_DAYS: Record<0 | 1 | 2 | 3 | 4, number> =
 export const KUWAGATA_LOGIN_BOOST_DAYS = 0.1;
 
 // 成虫の成長（大きさ）。成虫になった個体は、卒業のご褒美（成長日数と同じ重み）を成長ポイントとして
-// 貯め、5段階のサイズレベルで大きくなる。レベルごとに+10%（Lv5で+50%）を元のsize_scaleに掛ける
-// （最大 1.3×1.5＝1.95倍）。閾値は初期値で、運用しながら調整する。
+// 貯め、5段階のサイズレベルで大きくなる。レベルごとに+6%（Lv5で+30%）を元のsize_scaleに掛ける
+// （テッペンクワたんの野生の最大個体 1.32×1.3＝約1.72倍が最大）。閾値は初期値で、運用しながら調整する。
 export const SIZE_LEVEL_THRESHOLDS = [1, 3, 6, 10, 15];
-export const SIZE_LEVEL_STEP = 0.1;
+export const SIZE_LEVEL_STEP = 0.06;
 export const SIZE_LEVEL_MAX = SIZE_LEVEL_THRESHOLDS.length;
 
 export function getSizeLevel(points: number): number {
@@ -522,6 +524,7 @@ type DbSpeciesRow = {
   sort_order: number;
   rarity: string;
   min_plan: string;
+  base_size: number | string;
 };
 
 function fromDbSpeciesRow(row: DbSpeciesRow): KuwagataSpecies {
@@ -536,6 +539,7 @@ function fromDbSpeciesRow(row: DbSpeciesRow): KuwagataSpecies {
     sortOrder: row.sort_order,
     rarity: row.rarity as KuwagataRarity,
     minPlan: row.min_plan as KuwagataSpecies["minPlan"],
+    baseSize: Number(row.base_size ?? 1),
   };
 }
 
@@ -543,7 +547,7 @@ function fromDbSpeciesRow(row: DbSpeciesRow): KuwagataSpecies {
 export async function getKuwagataSpeciesList(): Promise<KuwagataSpecies[]> {
   const { data, error } = await supabaseAdmin
     .from("kuwagata_species")
-    .select("id, code, name, kind, area_code, stage_trigger, flavor_text_ja, sort_order, rarity, min_plan")
+    .select("id, code, name, kind, area_code, stage_trigger, flavor_text_ja, sort_order, rarity, min_plan, base_size")
     .eq("publish_status", "公開")
     .order("sort_order", { ascending: true });
 
@@ -828,7 +832,7 @@ export async function markIndividualCelebrated(userId: string, individualId: str
 export async function recordStageClearCatch(userId: string, stageJustCleared: number): Promise<void> {
   const { data: speciesRows, error: speciesError } = await supabaseAdmin
     .from("kuwagata_species")
-    .select("id")
+    .select("id, base_size")
     .eq("kind", "known")
     .eq("stage_trigger", stageJustCleared)
     .eq("publish_status", "公開");
@@ -857,7 +861,7 @@ export async function recordStageClearCatch(userId: string, stageJustCleared: nu
     user_id: userId,
     species_id: species.id,
     obtained_via: "stage_clear",
-    size_scale: 1.0,
+    size_scale: Number(species.base_size ?? 1),
     mandible_variant: 1,
   });
 
@@ -911,6 +915,14 @@ export async function goCatchInArea(
     if (hasFirstIndividual) pool.push(knownSpecies);
   }
 
+  // テッペンクワたんは激レア枠としてarea4に入る（Stage5を解放して、最初のタマゴを持っている人だけ）。
+  if (areaCode === "area4") {
+    const teppen = species.find((s) => s.code === TEPPEN_SPECIES_CODE);
+    if (teppen && individuals.some((i) => i.speciesId === teppen.id && i.obtainedVia === "stage_clear")) {
+      pool.push(teppen);
+    }
+  }
+
   if (pool.length === 0) return null; // このエリアの新種がまだ用意されていない。
 
   // レア以上保障：プールをレア/激レアだけに絞る。該当が無ければ通常プールにフォールバック
@@ -926,7 +938,7 @@ export async function goCatchInArea(
     user_id: userId,
     species_id: picked.id,
     obtained_via: "roll",
-    size_scale: randomBetween(SIZE_SCALE_MIN, SIZE_SCALE_MAX),
+    size_scale: randomBetween(picked.baseSize * (1 - WILD_SIZE_VARIANCE), picked.baseSize * (1 + WILD_SIZE_VARIANCE)),
     mandible_variant: Math.floor(Math.random() * MANDIBLE_VARIANT_COUNT) + 1,
     hatched_at: new Date().toISOString(),
     // 採集結果はその場で演出を見せるため、部屋でのタマゴ演出の対象にはしない。
