@@ -29,7 +29,7 @@ export function buildStage3SystemPrompt(extra: "partnerReply" | "exampleReply" |
   const extraFields =
     extra === "partnerReply"
       ? `,
-  "partnerReplyEn": "学習者の発話に対して、英語話者の相手（同僚アーサー）が自然に返す短い一言（英語、1文、やさしい語彙。質問や確認など、学習者が一言返したくなる内容）",
+  "partnerReplyEn": "学習者の発話に対して、英語話者の相手（同僚アーサー）が自然に返す短い一言（英語、1〜2文、やさしい語彙。必ず学習者への質問（好み・状況・希望などを尋ねる、はい・いいえだけで答えられない質問）で終え、「Thank you」程度では返せないようにする。お礼や案内だけで終わる返答は不可）",
   "partnerReplyJa": "partnerReplyEnの日本語訳"`
       : extra === "exampleReply"
         ? `,
