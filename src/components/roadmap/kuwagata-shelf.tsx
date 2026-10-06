@@ -319,6 +319,47 @@ export function TankOccupant({
   );
 }
 
+// 成虫のサイズレベル。緑系のゲージ(現在のレベル内の進み具合)とレベル表示。
+// 成長日数のゲージ(アンバー・オレンジ・青)とは別の色にしてある。animateを付けると空から伸びる。
+export function SizeGauge({
+  level,
+  ratio,
+  animate = false,
+  className = "w-9",
+}: {
+  level: number;
+  ratio: number;
+  animate?: boolean;
+  className?: string;
+}) {
+  const [revealed, setRevealed] = useState(!animate);
+  useEffect(() => {
+    if (!animate) return;
+    const timer = setTimeout(() => setRevealed(true), 250);
+    return () => clearTimeout(timer);
+  }, [animate]);
+
+  const pct = Math.round(ratio * 100);
+  return (
+    <div className="flex flex-col items-center gap-0.5">
+      <div
+        role="progressbar"
+        aria-label={`サイズLv${level}`}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={pct}
+        className={`flex h-2 overflow-hidden rounded-full border border-zinc-400 bg-white ${className}`}
+      >
+        <div
+          className="h-full bg-emerald-500 transition-[width] duration-700 ease-out"
+          style={{ width: revealed ? `${pct}%` : 0 }}
+        />
+      </div>
+      <span className="text-[9px] font-bold leading-none text-emerald-700">Lv{level}</span>
+    </div>
+  );
+}
+
 // 次の段階へ進むゲージ(卵・幼虫・蛹のとき)。1本のゲージを、経過日数で進んだ分(アンバー)・
 // ログインのご褒美で進んだ分(オレンジ)・練習のご褒美で進んだ分(青)の3色で積み上げる。角丸で縁取り付き。
 // animateBoostを付けると、ブースト分(青)が空の状態から伸びていく(練習のご褒美で成長した演出)。
@@ -362,11 +403,13 @@ export function GrowthGauge({
 
 // 拡大水槽表示の中だけは、他の表示箇所(棚のグリッド・リストなど)と違って固定pxではなく
 // コンテナ幅に対する%でサイズを決める(デコレーションと同じ考え方)。ポップアップの大きさが
-// 変わっても常に水槽とバランスが取れた大きさになる。individual.sizeScaleは0.8〜1.3
-// (kuwagata.tsのSIZE_SCALE_MIN/MAX)なので、それを10%〜16%の表示幅にマッピングする。
+// 変わっても常に水槽とバランスが取れた大きさになる。individual.sizeScaleは、サイズレベル反映後で
+// 0.8〜1.95(元のsize_scale 0.8〜1.3 × 最大+50%)。0.8→10%、1.3→16%の基準の傾きのまま延ばすと
+// 1.95倍で約24%になり、6匹並ぶと窮屈なので、1.3倍を超える分は傾きを半分にして最大約19%に抑える。
 function creatureWidthPct(sizeScale: number): number {
-  const t = (sizeScale - 0.8) / (1.3 - 0.8);
-  return 10 + t * 6;
+  const base = 10 + ((Math.min(sizeScale, 1.3) - 0.8) / (1.3 - 0.8)) * 6;
+  const extra = Math.max(sizeScale - 1.3, 0) * (6 / 0.5) * 0.5;
+  return base + extra;
 }
 
 // テラリウム背景（tank_bg_terrarium.png）の「土の天面」の実測座標（コンテナに対する%）。
@@ -1296,6 +1339,9 @@ export function KuwagataShelf({
                       growthStage={individual.growthStage}
                     />
                     {individual.growthGauge && <GrowthGauge gauge={individual.growthGauge} />}
+                    {individual.hatchedAt && (
+                      <SizeGauge level={individual.sizeLevel} ratio={individual.sizeRatio} />
+                    )}
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col text-xs text-zinc-600">
                     {editingId === individual.id ? (

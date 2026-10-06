@@ -11,6 +11,7 @@ import { getOrGenerateBlankChoiceReasons } from "@/lib/stage2-choice-reasons";
 import { getOrGenerateStage3HintBlank } from "@/lib/stage3-hint-blank";
 import {
   addGrowthBoost,
+  addSizeGrowthPoints,
   KUWAGATA_GRADUATION_BOOST_DAYS,
   recordStageClearCatch,
   stockCatchChanceOnMasteredCountUpdate,
@@ -511,12 +512,14 @@ async function reportStageStreakResult(
     await incrementTotalMasteredCount(userId);
   }
 
-  // クワガタ育成機能：初めて習得済みになった回だけ、育成中の個体の成長をブーストする
+  // クワガタ育成機能：初めて習得済みになった回だけ、育成中の個体の成長をブーストし、成虫の個体を大きくする
   // （同じ項目を再挑戦して稼げないよう、既に習得済みだった場合は対象外）。
   // Stage5は卒業でテッペンクワたんが即成虫になるため、ブースト対象外。
   if (graduated && !wasGraduated && stage <= 4) {
     try {
-      await addGrowthBoost(userId, KUWAGATA_GRADUATION_BOOST_DAYS[stage as 0 | 1 | 2 | 3 | 4]);
+      const reward = KUWAGATA_GRADUATION_BOOST_DAYS[stage as 0 | 1 | 2 | 3 | 4];
+      // 育成中の個体は成長日数、成虫の個体は成長ポイント（サイズレベルの元）として同じ重みで加算する。
+      await Promise.all([addGrowthBoost(userId, reward), addSizeGrowthPoints(userId, reward)]);
     } catch (err) {
       // ご褒美の加算に失敗しても、練習の記録自体は成功扱いにする。
       console.error(err);

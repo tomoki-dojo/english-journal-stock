@@ -66,6 +66,10 @@ export type KuwagataIndividual = {
   boostDays: number;
   // ログイン時の豆知識のご褒美で加算された成長日数（練習のブーストとは別に持ち、ゲージを色分けする）。
   loginBoostDays: number;
+  // 成虫になってから練習で貯めた成長ポイント（サイズレベルの元。成虫のみ加算される）。
+  sizeGrowthPoints: number;
+  // レベルアップを見せ終えた最後のサイズレベル。
+  sizeLevelSeen: number;
   // ユーザーが付けた名前(未命名はnull)。
   nickname: string | null;
 };
@@ -98,6 +102,30 @@ export const KUWAGATA_GRADUATION_BOOST_DAYS: Record<0 | 1 | 2 | 3 | 4, number> =
 
 // 1日1回、ログイン時の豆知識を読んだときのご褒美（練習1回分の半分以下）。
 export const KUWAGATA_LOGIN_BOOST_DAYS = 0.1;
+
+// 成虫の成長（大きさ）。成虫になった個体は、卒業のご褒美（成長日数と同じ重み）を成長ポイントとして
+// 貯め、5段階のサイズレベルで大きくなる。レベルごとに+10%（Lv5で+50%）を元のsize_scaleに掛ける
+// （最大 1.3×1.5＝1.95倍）。閾値は初期値で、運用しながら調整する。
+export const SIZE_LEVEL_THRESHOLDS = [1, 3, 6, 10, 15];
+export const SIZE_LEVEL_STEP = 0.1;
+export const SIZE_LEVEL_MAX = SIZE_LEVEL_THRESHOLDS.length;
+
+export function getSizeLevel(points: number): number {
+  return SIZE_LEVEL_THRESHOLDS.filter((threshold) => points >= threshold).length;
+}
+
+// 現在のレベル内での進み具合（0〜1）。最大レベルは満タン。
+export function getSizeLevelRatio(points: number): number {
+  const level = getSizeLevel(points);
+  if (level >= SIZE_LEVEL_MAX) return 1;
+  const start = level === 0 ? 0 : SIZE_LEVEL_THRESHOLDS[level - 1];
+  const end = SIZE_LEVEL_THRESHOLDS[level];
+  return Math.min(Math.max((points - start) / (end - start), 0), 1);
+}
+
+export function getDisplaySizeScale(sizeScale: number, level: number): number {
+  return sizeScale * (1 + SIZE_LEVEL_STEP * level);
+}
 
 // テッペンクワたんは、日数がたっても蛹で止まる。成虫になるのはStage5を卒業して羽化したとき
 // （hatched_atが立つとき）だけ。
@@ -154,6 +182,14 @@ export async function addLoginGrowthBoost(userId: string, days: number): Promise
   }
 }
 
+// 成虫の全個体に、習得済みのご褒美として成長ポイント（サイズレベルの元）を加える。
+export async function addSizeGrowthPoints(userId: string, points: number): Promise<void> {
+  const { error } = await supabaseAdmin.rpc("add_kuwagata_size_points", { p_user_id: userId, p_points: points });
+  if (error) {
+    throw new Error(`成長ポイントの加算に失敗しました: ${error.message}`);
+  }
+}
+
 // 育成中（成虫になる前）の全個体に、習得済みのご褒美として成長日数を加える。
 export async function addGrowthBoost(userId: string, days: number): Promise<void> {
   const { error } = await supabaseAdmin.rpc("add_kuwagata_boost", { p_user_id: userId, p_days: days });
@@ -171,11 +207,45 @@ export type KuwagataGrowingIndividual = {
   growthGauge: KuwagataGrowthGauge;
 };
 
-// 結果画面用：育成中（成虫になる前）の個体と、その成長ゲージ。
-export async function getGrowingKuwagata(userId: string): Promise<KuwagataGrowingIndividual[]> {
-  const individuals = await getUserKuwagataIndividuals(userId);
+export type KuwagataAdultGrowth = {
+  id: string;
+  speciesCode: string;
+  speciesName: string;
+  mandibleVariant: number;
+  sizeLevel: number;
+  // 現在のレベル内での進み具合（0〜1）
+  sizeRatio: number;
+  // 前回見せたレベルより上がっている（レベルアップの演出を出す）
+  leveledUp: boolean;
+};
+
+// 結果画面に出す表示数の上限（成虫は数が増えるので、レベルアップした個体を先頭に絞る）。
+const RESULT_ADULT_LIMIT = 4;
+
+// 結果画面用：育成中（成虫になる前）の個体とその成長ゲージ、と成虫のサイズレベル。
+// レベルアップを見せた個体は、見せ終えたレベルとして記録する（次回は演出を出さない）。
+export async function getGrowingKuwagata(
+  userId: string
+): Promise<{ individuals: KuwagataGrowingIndividual[]; adults: KuwagataAdultGrowth[] }> {
+  const all = await getUserKuwagataIndividuals(userId);
   const growing: KuwagataGrowingIndividual[] = [];
-  for (const individual of individuals) {
+  const adultCandidates: (KuwagataAdultGrowth & { points: number })[] = [];
+
+  for (const individual of all) {
+    if (individual.hatchedAt) {
+      const level = getSizeLevel(individual.sizeGrowthPoints);
+      adultCandidates.push({
+        id: individual.id,
+        speciesCode: individual.speciesCode,
+        speciesName: individual.speciesName,
+        mandibleVariant: individual.mandibleVariant,
+        sizeLevel: level,
+        sizeRatio: getSizeLevelRatio(individual.sizeGrowthPoints),
+        leveledUp: level > individual.sizeLevelSeen,
+        points: individual.sizeGrowthPoints,
+      });
+      continue;
+    }
     const growthGauge = getIndividualGrowthGauge(individual);
     if (!growthGauge) continue;
     growing.push({
@@ -187,12 +257,33 @@ export async function getGrowingKuwagata(userId: string): Promise<KuwagataGrowin
       growthGauge,
     });
   }
-  return growing;
+
+  // 見せ終えていないレベルアップは、表示に絞られなくても全部「見せた」扱いにする（遅れて出さない）。
+  const leveledUp = adultCandidates.filter((adult) => adult.leveledUp);
+  await Promise.all(
+    leveledUp.map((adult) =>
+      supabaseAdmin
+        .from("kuwagata_individuals")
+        .update({ size_level_seen: adult.sizeLevel })
+        .eq("id", adult.id)
+        .eq("user_id", userId)
+    )
+  );
+
+  const adults = adultCandidates
+    .sort((a, b) => Number(b.leveledUp) - Number(a.leveledUp) || b.points - a.points)
+    .slice(0, RESULT_ADULT_LIMIT)
+    .map(({ points: _points, ...adult }) => adult);
+
+  return { individuals: growing, adults };
 }
 
 export type KuwagataShelfIndividual = KuwagataIndividual & {
   growthStage: KuwagataGrowthStage;
   growthGauge: KuwagataGrowthGauge | null;
+  // 成虫のサイズレベル（0〜5）と、現在のレベル内の進み具合（0〜1）。sizeScaleはレベル反映後の表示倍率。
+  sizeLevel: number;
+  sizeRatio: number;
 };
 
 // 1つの水槽に入れる最大匹数。拡大表示で歩き回るのが気持ちよく収まる数(置物と衝突回避を
@@ -240,8 +331,12 @@ export async function getKuwagataShelfTanks(userId: string): Promise<KuwagataShe
   const speciesInfo = new Map<string, Pick<KuwagataShelfTank, "speciesName" | "speciesKind" | "speciesAreaCode">>();
 
   for (const individual of individuals) {
+    const sizeLevel = individual.hatchedAt ? getSizeLevel(individual.sizeGrowthPoints) : 0;
     const shelfIndividual: KuwagataShelfIndividual = {
       ...individual,
+      sizeScale: getDisplaySizeScale(individual.sizeScale, sizeLevel),
+      sizeLevel,
+      sizeRatio: individual.hatchedAt ? getSizeLevelRatio(individual.sizeGrowthPoints) : 0,
       growthStage: getIndividualGrowthStage(individual),
       growthGauge: getIndividualGrowthGauge(individual),
     };
@@ -345,7 +440,7 @@ export async function getUserKuwagataIndividuals(userId: string): Promise<Kuwaga
   const { data, error } = await supabaseAdmin
     .from("kuwagata_individuals")
     .select(
-      "id, species_id, obtained_via, obtained_at, size_scale, mandible_variant, hatched_at, boost_days, login_boost_days, nickname, kuwagata_species(code, name, kind, rarity, area_code)"
+      "id, species_id, obtained_via, obtained_at, size_scale, mandible_variant, hatched_at, boost_days, login_boost_days, size_growth_points, size_level_seen, nickname, kuwagata_species(code, name, kind, rarity, area_code)"
     )
     .eq("user_id", userId)
     .order("obtained_at", { ascending: true });
@@ -378,6 +473,8 @@ export async function getUserKuwagataIndividuals(userId: string): Promise<Kuwaga
       hatchedAt: (row.hatched_at as string | null) ?? null,
       boostDays: Number(row.boost_days ?? 0),
       loginBoostDays: Number(row.login_boost_days ?? 0),
+      sizeGrowthPoints: Number(row.size_growth_points ?? 0),
+      sizeLevelSeen: Number(row.size_level_seen ?? 0),
     };
   });
 }
