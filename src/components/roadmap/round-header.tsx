@@ -2,12 +2,14 @@
 
 import { Coffee, Lightbulb, Mic, PenLine, RadioTower, Sparkles } from "lucide-react";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
-import { ArthurTag } from "./arthur";
+import { ArthurScene, type ArthurMood } from "./arthur";
 
 type RoundHeaderProps = {
   stage: 0 | 1 | 2 | 3 | 4 | 5;
   // Stage2の出題形式（穴埋め／文選択／微改変）を表す小タグ。Stage1・Stage0では未指定。
   subFormatLabel?: string;
+  // アーサーの表情。未指定なら問題の切り替わりで口パクする
+  arthurMood?: ArthurMood;
 } & (
   | {
       // Stage0〜2：ラウンド内の問題番号（1始まり）と、ラウンドの総問題数
@@ -38,7 +40,7 @@ const STAGE_META = {
   5: { label: "Stage5", icon: RadioTower },
 } as const;
 
-export function RoundHeader({ stage, subFormatLabel, current, total, usageLabel }: RoundHeaderProps) {
+export function RoundHeader({ stage, subFormatLabel, arthurMood, current, total, usageLabel }: RoundHeaderProps) {
   const meta = STAGE_META[stage];
   const Icon = meta.icon;
   const color = STAGE_COLORS[stage];
@@ -81,8 +83,8 @@ export function RoundHeader({ stage, subFormatLabel, current, total, usageLabel 
         )}
       </div>
 
-      {/* アーサー（練習相手）の常時表示。Stage0〜5すべての練習画面共通で、見守り役として存在感を出す。 */}
-      <ArthurTag className="mt-1.5" />
+      {/* アーサー（練習相手）と水槽。Stage0〜5すべての練習画面共通。問題が切り替わるたびに口パクする。 */}
+      <ArthurScene className="mt-3" mood={arthurMood} talkKey={current ?? usageLabel} />
     </div>
   );
 }

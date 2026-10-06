@@ -53,6 +53,7 @@ export function Stage1Practice() {
   const [audioLoading, setAudioLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reaction, setReaction] = useState<"happy" | "sad" | null>(null);
 
   const currentQuestion = questions[currentIndex];
 
@@ -119,6 +120,9 @@ export function Stage1Practice() {
         throw new Error(json.error ?? "結果の保存に失敗しました");
       }
       const json = await res.json();
+
+      setReaction(correct ? "happy" : "sad");
+      setTimeout(() => setReaction(null), 1100);
 
       setResults((prev) => [
         ...prev,
@@ -252,7 +256,7 @@ export function Stage1Practice() {
 
   return (
     <div>
-      <RoundHeader stage={1} current={currentIndex + 1} total={questions.length} />
+      <RoundHeader stage={1} current={currentIndex + 1} total={questions.length} arthurMood={reaction ?? "talk"} />
 
       <div
         key={currentIndex}

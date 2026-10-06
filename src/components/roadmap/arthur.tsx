@@ -24,10 +24,19 @@ type ArthurAvatarProps = {
   mood?: ArthurMood;
   // talkのとき、この値が変わるたびに口パクをやり直す（台詞が切り替わるタイミングで渡す）
   talkKey?: string | number;
+  // 円形の枠・背景なしで、バストアップをそのまま出す（練習画面の中央配置用）
+  bare?: boolean;
 };
 
 // 円形アバター単体。RoundHeaderの小バッジやStage4/5のチャット吹き出しなど、サイズだけ変えて使い回す。
-export function ArthurAvatar({ size = 24, className, animated = false, mood = "idle", talkKey }: ArthurAvatarProps) {
+export function ArthurAvatar({
+  size = 24,
+  className,
+  animated = false,
+  mood = "idle",
+  talkKey,
+  bare = false,
+}: ArthurAvatarProps) {
   const [talking, setTalking] = useState(mood === "talk");
 
   useEffect(() => {
@@ -58,8 +67,9 @@ export function ArthurAvatar({ size = 24, className, animated = false, mood = "i
       role="img"
       aria-label={ARTHUR_NAME}
       className={cn(
-        "relative inline-block shrink-0 overflow-hidden rounded-full bg-amber-100 ring-1 ring-amber-200/70",
-        animated && "animate-mascot-bob",
+        "relative inline-block shrink-0",
+        !bare && "overflow-hidden rounded-full bg-amber-100 ring-1 ring-amber-200/70",
+        animated && !bare && "animate-mascot-bob",
         className
       )}
       style={{ width: size, height: size }}
@@ -69,6 +79,27 @@ export function ArthurAvatar({ size = 24, className, animated = false, mood = "i
         style={{ backgroundImage: `url(${ARTHUR_SHEET_SRC})` }}
       />
     </span>
+  );
+}
+
+// 練習画面の中央に置く、アーサー（バストアップ）と水槽。虫に英語を聞かせている世界観の飾り。
+export const PRACTICE_TANK_SRC = "/mascot/practice_tank.png";
+
+export function ArthurScene({
+  mood = "talk",
+  talkKey,
+  className,
+}: {
+  mood?: ArthurMood;
+  talkKey?: string | number;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex items-end justify-center gap-1", className)}>
+      <ArthurAvatar size={112} animated bare mood={mood} talkKey={talkKey} />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={PRACTICE_TANK_SRC} alt="" aria-hidden className="mb-1 w-32 select-none" draggable={false} />
+    </div>
   );
 }
 
