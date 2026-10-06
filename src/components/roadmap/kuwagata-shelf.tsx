@@ -404,11 +404,11 @@ export function GrowthGauge({
 // 拡大水槽表示の中だけは、他の表示箇所(棚のグリッド・リストなど)と違って固定pxではなく
 // コンテナ幅に対する%でサイズを決める(デコレーションと同じ考え方)。ポップアップの大きさが
 // 変わっても常に水槽とバランスが取れた大きさになる。individual.sizeScaleは、サイズレベル反映後で
-// 0.8〜1.95(元のsize_scale 0.8〜1.3 × 最大+50%)。0.8→10%、1.3→16%の基準の傾きのまま延ばすと
-// 1.95倍で約24%になり、6匹並ぶと窮屈なので、1.3倍を超える分は傾きを半分にして最大約19%に抑える。
+// 0.8〜1.95(元のsize_scale 0.8〜1.3 × 最大+50%)。6匹が最大サイズでも窮屈にならないよう、
+// 0.8→9%、1.3→13%とし、1.3倍を超える分は傾きを抑えて最大(1.95倍)でも約15%に収める。
 function creatureWidthPct(sizeScale: number): number {
-  const base = 10 + ((Math.min(sizeScale, 1.3) - 0.8) / (1.3 - 0.8)) * 6;
-  const extra = Math.max(sizeScale - 1.3, 0) * (6 / 0.5) * 0.5;
+  const base = 9 + ((Math.min(sizeScale, 1.3) - 0.8) / (1.3 - 0.8)) * 4;
+  const extra = Math.max(sizeScale - 1.3, 0) * 3;
   return base + extra;
 }
 
