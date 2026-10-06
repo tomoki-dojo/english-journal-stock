@@ -9,6 +9,7 @@ import {
 } from "@/lib/roadmap-notices";
 import { getLoginStageUps, getUncelebratedEggs, getUncelebratedHatches } from "@/lib/supabase/kuwagata";
 import { getTodaysTrivia, type ArthurTrivia } from "@/lib/supabase/arthur-trivia";
+import { grantMilestoneEggs } from "@/lib/supabase/kuwagata-egg-events";
 
 export type RoadmapNotices = {
   showAdvice: boolean;
@@ -35,6 +36,9 @@ export async function getRoadmapNotices(
     .maybeSingle();
 
   if (!data) return { showAdvice: false, announcements: [], newEggs: [], newHatches: [], stageUps: [], trivia: null };
+
+  // 練習日数・習得数の節目のタマゴを先に配って、そのまま「手に入れた！」の演出に載せる。
+  await grantMilestoneEggs(userId).catch(() => {});
 
   const [newEggs, newHatches, stageUps] = await Promise.all([
     getUncelebratedEggs(userId),

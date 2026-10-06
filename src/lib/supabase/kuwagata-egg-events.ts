@@ -1,0 +1,101 @@
+// 練習日数・習得数の節目で、既知種のタマゴを配る。
+import { supabaseAdmin } from "@/lib/supabase/server";
+import { getStreakStats, getUserRoadmapState } from "@/lib/supabase/speaking-roadmap";
+import {
+  MANDIBLE_VARIANT_COUNT,
+  getKuwagataSpeciesList,
+  getUserKuwagataIndividuals,
+} from "@/lib/supabase/kuwagata";
+
+// 累計の練習日数（連続していなくてよい）の節目。最後の節目のあとは、REPEATごとに配る。
+const PRACTICE_DAY_MILESTONES = [7, 14, 30, 60, 100, 150, 250, 365];
+const PRACTICE_DAY_REPEAT = 100;
+
+// 習得フレーズの累計の節目。最後の節目のあとは、REPEATごとに配る。
+const MASTERED_MILESTONES = [30, 100, 200, 300, 500, 750, 1000];
+const MASTERED_REPEAT = 500;
+
+function reachedMilestones(value: number, milestones: number[], repeat: number): number[] {
+  const reached = milestones.filter((m) => value >= m);
+  for (let m = milestones[milestones.length - 1] + repeat; m <= value; m += repeat) reached.push(m);
+  return reached;
+}
+
+// 配る種類は、解放済みのStageに対応する既知種（最初のタマゴを持っているもの）からランダムに選ぶ。
+// テッペンクワたん（Stage5）は対象外。
+async function getEggSpeciesPool(userId: string) {
+  const [species, individuals] = await Promise.all([getKuwagataSpeciesList(), getUserKuwagataIndividuals(userId)]);
+  const ownedFirstEggIds = new Set(
+    individuals.filter((i) => i.obtainedVia === "stage_clear").map((i) => i.speciesId)
+  );
+  return species.filter(
+    (s) =>
+      s.kind === "known" &&
+      s.stageTrigger !== null &&
+      s.stageTrigger >= 1 &&
+      s.stageTrigger <= 4 &&
+      ownedFirstEggIds.has(s.id)
+  );
+}
+
+// 節目に達していて、まだ配っていないタマゴを配る（部屋に入ったときに呼ぶ）。
+// 配った節目は台帳（kuwagata_egg_events）に記録するので、二重には配らない。
+export async function grantMilestoneEggs(userId: string): Promise<void> {
+  const state = await getUserRoadmapState(userId);
+  if (!state) return;
+
+  const { totalDays } = await getStreakStats(userId);
+  const eventKeys = [
+    ...reachedMilestones(totalDays, PRACTICE_DAY_MILESTONES, PRACTICE_DAY_REPEAT).map((m) => `days:${m}`),
+    ...reachedMilestones(state.totalMasteredCount, MASTERED_MILESTONES, MASTERED_REPEAT).map((m) => `mastered:${m}`),
+  ];
+  if (eventKeys.length === 0) return;
+
+  const { data: granted, error } = await supabaseAdmin
+    .from("kuwagata_egg_events")
+    .select("event_key")
+    .eq("user_id", userId);
+  if (error) throw new Error(`タマゴの配布記録の取得に失敗しました: ${error.message}`);
+
+  const grantedKeys = new Set((granted ?? []).map((row) => row.event_key as string));
+  const pending = eventKeys.filter((key) => !grantedKeys.has(key));
+  if (pending.length === 0) return;
+
+  const pool = await getEggSpeciesPool(userId);
+  if (pool.length === 0) return;
+
+  for (const eventKey of pending) {
+    // 先に台帳へ記録して、同時に開いた別の画面と二重に配らないようにする。
+    const { data: claimed, error: claimError } = await supabaseAdmin
+      .from("kuwagata_egg_events")
+      .upsert({ user_id: userId, event_key: eventKey }, { onConflict: "user_id,event_key", ignoreDuplicates: true })
+      .select("event_key");
+    if (claimError) throw new Error(`タマゴの配布記録に失敗しました: ${claimError.message}`);
+    if ((claimed?.length ?? 0) === 0) continue; // 別の画面が先に配った。
+
+    const species = pool[Math.floor(Math.random() * pool.length)];
+    const { data: inserted, error: insertError } = await supabaseAdmin
+      .from("kuwagata_individuals")
+      .insert({
+        user_id: userId,
+        species_id: species.id,
+        obtained_via: "event",
+        size_scale: species.baseSize,
+        mandible_variant: Math.floor(Math.random() * MANDIBLE_VARIANT_COUNT) + 1,
+      })
+      .select("id")
+      .single();
+
+    if (insertError || !inserted) {
+      // タマゴを作れなかったときは記録を戻して、次の機会にやり直す。
+      await supabaseAdmin.from("kuwagata_egg_events").delete().eq("user_id", userId).eq("event_key", eventKey);
+      throw new Error(`節目のタマゴの登録に失敗しました: ${insertError?.message ?? "不明なエラー"}`);
+    }
+
+    await supabaseAdmin
+      .from("kuwagata_egg_events")
+      .update({ individual_id: inserted.id })
+      .eq("user_id", userId)
+      .eq("event_key", eventKey);
+  }
+}

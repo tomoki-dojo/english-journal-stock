@@ -27,7 +27,7 @@ export const FREE_SHELF_NEW_SPECIES_TANK_CAP = 10;
 // 野生で採集した個体のサイズは、種類の基準サイズ（base_size）の±10%でばらつかせる。
 const WILD_SIZE_VARIANCE = 0.1;
 
-const MANDIBLE_VARIANT_COUNT = 3;
+export const MANDIBLE_VARIANT_COUNT = 3;
 
 export type KuwagataRarity = "コモン" | "レア" | "激レア";
 
@@ -60,7 +60,8 @@ export type KuwagataIndividual = {
   speciesKind: "known" | "new";
   speciesRarity: KuwagataRarity;
   speciesAreaCode: KuwagataAreaCode | null;
-  obtainedVia: "stage_clear" | "roll";
+  // stage_clear: Stage解放・サインアップ時の確定入手 / roll: 野生の採集 / event: 練習日数・習得数の節目のタマゴ
+  obtainedVia: "stage_clear" | "roll" | "event";
   obtainedAt: string;
   sizeScale: number;
   mandibleVariant: number;
@@ -737,15 +738,16 @@ function randomBetween(min: number, max: number): number {
   return Math.round((min + Math.random() * (max - min)) * 100) / 100;
 }
 
-// 「手に入れた！」演出をまだ見せていない確定入手のタマゴ（Stage解放・サインアップ時）。部屋に入ったときに出す。
+// 「手に入れた！」演出をまだ見せていない確定入手のタマゴ（Stage解放・サインアップ時・節目のイベント）。
+// 部屋に入ったときに出す。節目のイベントのタマゴは、Stage解放の演出を挟まないようstageTriggerをnullにする。
 export async function getUncelebratedEggs(
   userId: string
 ): Promise<{ id: string; speciesCode: string; speciesName: string; stageTrigger: number | null }[]> {
   const { data, error } = await supabaseAdmin
     .from("kuwagata_individuals")
-    .select("id, kuwagata_species(code, name, stage_trigger)")
+    .select("id, obtained_via, kuwagata_species(code, name, stage_trigger)")
     .eq("user_id", userId)
-    .eq("obtained_via", "stage_clear")
+    .in("obtained_via", ["stage_clear", "event"])
     .is("celebrated_at", null)
     .order("obtained_at", { ascending: true });
 
@@ -761,7 +763,7 @@ export async function getUncelebratedEggs(
             id: row.id as string,
             speciesCode: species.code as string,
             speciesName: species.name as string,
-            stageTrigger: (species.stage_trigger as number | null) ?? null,
+            stageTrigger: row.obtained_via === "event" ? null : ((species.stage_trigger as number | null) ?? null),
           },
         ]
       : [];
