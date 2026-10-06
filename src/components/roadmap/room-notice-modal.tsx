@@ -13,8 +13,10 @@ import {
   type RoadmapAnnouncement,
   type RoadmapNewEgg,
   type RoadmapNewHatch,
+  type RoadmapStageUp,
 } from "@/lib/roadmap-notices";
 import { HatchOverlay } from "./hatch-overlay";
+import { GrowthStageOverlay } from "./growth-stage-overlay";
 
 type Item =
   | { kind: "intro" }
@@ -22,6 +24,7 @@ type Item =
   | { kind: "stageUnlock"; stage: 2 | 3 | 4 | 5; key: string }
   | { kind: "egg"; egg: RoadmapNewEgg }
   | { kind: "hatch"; hatch: RoadmapNewHatch }
+  | { kind: "growth"; stageUps: RoadmapStageUp[] }
   | { kind: "announcement"; announcement: RoadmapAnnouncement }
   | { kind: "trivia"; trivia: { id: string; body: string } };
 
@@ -32,12 +35,14 @@ export function RoomNoticeModal({
   announcements,
   newEggs,
   newHatches = [],
+  stageUps = [],
   trivia = null,
 }: {
   showAdvice: boolean;
   announcements: RoadmapAnnouncement[];
   newEggs: RoadmapNewEgg[];
   newHatches?: RoadmapNewHatch[];
+  stageUps?: RoadmapStageUp[];
   trivia?: { id: string; body: string } | null;
 }) {
   const [queue, setQueue] = useState<Item[]>(() => [
@@ -54,6 +59,8 @@ export function RoomNoticeModal({
         : [eggItem];
     }),
     ...newHatches.map((hatch) => ({ kind: "hatch" as const, hatch })),
+    // 日数がたって成長したクワたん（練習のご褒美で成長した分は、結果画面でその場で見せる）
+    ...(stageUps.length > 0 ? ([{ kind: "growth", stageUps }] as Item[]) : []),
     ...announcements.map((announcement) => ({
       kind: "announcement" as const,
       announcement,
@@ -115,6 +122,19 @@ export function RoomNoticeModal({
         <span className="text-2xl text-white/70">▼</span>
       </button>
     );
+  }
+
+  if (current.kind === "growth") {
+    const { stageUps: items } = current;
+    const closeGrowth = () => {
+      void fetch("/api/roadmap/notices/seen", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "growth", ids: items.map((item) => item.id) }),
+      }).catch(() => {});
+      setQueue((q) => q.slice(1));
+    };
+    return <GrowthStageOverlay key={`growth-${items[0].id}`} stageUps={items} onClose={closeGrowth} />;
   }
 
   if (current.kind === "stageUnlock") {

@@ -2,13 +2,19 @@
 
 import { useEffect, useState } from "react";
 import type { KuwagataAdultGrowth, KuwagataGrowingIndividual } from "@/lib/supabase/kuwagata";
+import type { RoadmapStageUp } from "@/lib/roadmap-notices";
+import { GrowthStageOverlay } from "./growth-stage-overlay";
 import { GrowthGauge, SizeGauge, TankOccupant } from "./kuwagata-shelf";
 
 type GrowingResponse = {
   individuals?: KuwagataGrowingIndividual[];
   adults?: KuwagataAdultGrowth[];
   hiddenCount?: number;
+  stageUps?: RoadmapStageUp[];
 };
+
+// ゲージが伸びきってから「成長した！」を出すまでの間。
+const STAGE_UP_DELAY_MS = 1600;
 
 // 成虫のサイズレベル1つ分（+10%）を、パネル内の見た目にもそのまま反映する。
 const SIZE_STEP = 0.1;
@@ -19,9 +25,12 @@ export function GrowingKuwagataPanel() {
   const [growing, setGrowing] = useState<KuwagataGrowingIndividual[]>([]);
   const [adults, setAdults] = useState<KuwagataAdultGrowth[]>([]);
   const [hiddenCount, setHiddenCount] = useState(0);
+  const [stageUps, setStageUps] = useState<RoadmapStageUp[]>([]);
+  const [showStageUps, setShowStageUps] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     fetch("/api/roadmap/kuwagata/growing", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
       .then((json: GrowingResponse | null) => {
@@ -29,10 +38,14 @@ export function GrowingKuwagataPanel() {
         setGrowing(json.individuals ?? []);
         setAdults(json.adults ?? []);
         setHiddenCount(json.hiddenCount ?? 0);
+        const ups = json.stageUps ?? [];
+        setStageUps(ups);
+        if (ups.length > 0) timer = setTimeout(() => setShowStageUps(true), STAGE_UP_DELAY_MS);
       })
       .catch(() => {});
     return () => {
       cancelled = true;
+      if (timer) clearTimeout(timer);
     };
   }, []);
 
@@ -40,6 +53,15 @@ export function GrowingKuwagataPanel() {
 
   return (
     <div className="relative mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
+      {showStageUps && (
+        <GrowthStageOverlay
+          stageUps={stageUps}
+          onClose={() => {
+            setShowStageUps(false);
+            setStageUps([]);
+          }}
+        />
+      )}
       <div className="flex flex-wrap items-end justify-center gap-4">
         {growing.map((individual) => (
           <div key={individual.id} className="flex flex-col items-center gap-1.5">

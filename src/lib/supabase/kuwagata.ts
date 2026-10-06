@@ -1,6 +1,7 @@
 // クワガタ育成機能（棚・図鑑）のデータアクセス層。
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getPlan } from "@/lib/supabase/profile";
+import type { RoadmapStageUp } from "@/lib/roadmap-notices";
 
 export type KuwagataAreaCode = "area1" | "area2" | "area3" | "area4" | "aquarium";
 
@@ -70,6 +71,8 @@ export type KuwagataIndividual = {
   sizeGrowthPoints: number;
   // レベルアップを見せ終えた最後のサイズレベル。
   sizeLevelSeen: number;
+  // 「成長した！」の演出を見せ終えた最後の成長段階。
+  stageSeen: KuwagataGrowthStage;
   // ユーザーが付けた名前(未命名はnull)。
   nickname: string | null;
 };
@@ -143,14 +146,78 @@ function getElapsedDays(individual: GrowthInput): number {
   return Math.max(0, (Date.now() - new Date(individual.obtainedAt).getTime()) / (1000 * 60 * 60 * 24));
 }
 
-export function getIndividualGrowthStage(individual: GrowthInput): KuwagataGrowthStage {
-  if (individual.hatchedAt) return "成虫";
-
-  const effectiveDays = getElapsedDays(individual) + individual.boostDays + individual.loginBoostDays;
+function stageForDays(effectiveDays: number, speciesCode: string): KuwagataGrowthStage {
   for (const { stage, end } of GROWTH_STAGE_RANGES) {
     if (effectiveDays < end) return stage;
   }
-  return individual.speciesCode === TEPPEN_SPECIES_CODE ? "蛹" : "成虫";
+  return speciesCode === TEPPEN_SPECIES_CODE ? "蛹" : "成虫";
+}
+
+export function getIndividualGrowthStage(individual: GrowthInput): KuwagataGrowthStage {
+  if (individual.hatchedAt) return "成虫";
+  return stageForDays(
+    getElapsedDays(individual) + individual.boostDays + individual.loginBoostDays,
+    individual.speciesCode
+  );
+}
+
+const STAGE_ORDER: KuwagataGrowthStage[] = ["卵", "幼虫", "蛹", "成虫"];
+
+function stageIndex(stage: KuwagataGrowthStage): number {
+  return STAGE_ORDER.indexOf(stage);
+}
+
+// 演出をまだ見せていない成長（見せ終えた段階より進んでいる個体）を、きっかけ別に拾う。
+// 練習のブーストが無ければその段階に届いていなかった成長は「練習きっかけ」（結果画面でその場で見せる）、
+// 日数やログインのご褒美だけで届いていた成長は「日数きっかけ」（ログイン後に見せる）。
+// テッペンクワたんの羽化（hatched_at）は専用の羽化演出があるので対象外。
+function findStageUps(individuals: KuwagataIndividual[], practiceTriggered: boolean): (RoadmapStageUp & { current: KuwagataGrowthStage })[] {
+  return individuals.flatMap((individual) => {
+    if (individual.hatchedAt) return [];
+    const current = getIndividualGrowthStage(individual);
+    if (stageIndex(current) <= stageIndex(individual.stageSeen)) return [];
+    const withoutPractice = stageForDays(
+      getElapsedDays(individual) + individual.loginBoostDays,
+      individual.speciesCode
+    );
+    if ((stageIndex(withoutPractice) < stageIndex(current)) !== practiceTriggered) return [];
+    return [
+      {
+        id: individual.id,
+        speciesCode: individual.speciesCode,
+        speciesName: individual.speciesName,
+        mandibleVariant: individual.mandibleVariant,
+        stage: current as RoadmapStageUp["stage"],
+        current,
+      },
+    ];
+  });
+}
+
+async function saveStageSeen(userId: string, entries: { id: string; stage: KuwagataGrowthStage }[]): Promise<void> {
+  const byStage = new Map<KuwagataGrowthStage, string[]>();
+  for (const { id, stage } of entries) byStage.set(stage, [...(byStage.get(stage) ?? []), id]);
+  await Promise.all(
+    [...byStage.entries()].map(([stage, ids]) =>
+      supabaseAdmin.from("kuwagata_individuals").update({ stage_seen: stage }).in("id", ids).eq("user_id", userId)
+    )
+  );
+}
+
+// ログイン後に見せる成長（日数やログインのご褒美で段階が上がったもの）。
+export async function getLoginStageUps(userId: string): Promise<RoadmapStageUp[]> {
+  const all = await getUserKuwagataIndividuals(userId);
+  return findStageUps(all, false).map(({ current: _current, ...rest }) => rest);
+}
+
+// 成長の演出を見せ終えたとき。指定の個体を、いまの成長段階まで見せた扱いにする。
+export async function markStageSeen(userId: string, ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const all = await getUserKuwagataIndividuals(userId);
+  const entries = all
+    .filter((individual) => ids.includes(individual.id) && !individual.hatchedAt)
+    .map((individual) => ({ id: individual.id, stage: getIndividualGrowthStage(individual) }));
+  await saveStageSeen(userId, entries);
 }
 
 // 成虫かどうか。羽化済み(hatched_at)だけでなく、日数がたって成虫になった個体も含む。
@@ -236,8 +303,22 @@ const RESULT_DISPLAY_LIMIT = 6;
 // レベルアップを見せた個体は、見せ終えたレベルとして記録する（次回は演出を出さない）。
 export async function getGrowingKuwagata(
   userId: string
-): Promise<{ individuals: KuwagataGrowingIndividual[]; adults: KuwagataAdultGrowth[]; hiddenCount: number }> {
+): Promise<{
+  individuals: KuwagataGrowingIndividual[];
+  adults: KuwagataAdultGrowth[];
+  hiddenCount: number;
+  stageUps: RoadmapStageUp[];
+}> {
   const all = await getUserKuwagataIndividuals(userId);
+
+  // 練習のご褒美で段階が上がった個体は、この画面でその場で演出する（見せたものは記録して、二度出さない）。
+  const practiceStageUps = findStageUps(all, true);
+  await saveStageSeen(
+    userId,
+    practiceStageUps.map(({ id, current }) => ({ id, stage: current }))
+  );
+  const stageUps: RoadmapStageUp[] = practiceStageUps.map(({ current: _current, ...rest }) => rest);
+
   const growing: KuwagataGrowingIndividual[] = [];
   const adultCandidates: (KuwagataAdultGrowth & { points: number })[] = [];
 
@@ -298,6 +379,7 @@ export async function getGrowingKuwagata(
     individuals: shownGrowing,
     adults: [...shownLeveled, ...shownOthers].map(strip),
     hiddenCount: totalCount - shownCount,
+    stageUps,
   };
 }
 
@@ -464,7 +546,7 @@ export async function getUserKuwagataIndividuals(userId: string): Promise<Kuwaga
   const { data, error } = await supabaseAdmin
     .from("kuwagata_individuals")
     .select(
-      "id, species_id, obtained_via, obtained_at, size_scale, mandible_variant, hatched_at, boost_days, login_boost_days, size_growth_points, size_level_seen, nickname, kuwagata_species(code, name, kind, rarity, area_code)"
+      "id, species_id, obtained_via, obtained_at, size_scale, mandible_variant, hatched_at, boost_days, login_boost_days, size_growth_points, size_level_seen, stage_seen, nickname, kuwagata_species(code, name, kind, rarity, area_code)"
     )
     .eq("user_id", userId)
     .order("obtained_at", { ascending: true });
@@ -499,6 +581,7 @@ export async function getUserKuwagataIndividuals(userId: string): Promise<Kuwaga
       loginBoostDays: Number(row.login_boost_days ?? 0),
       sizeGrowthPoints: Number(row.size_growth_points ?? 0),
       sizeLevelSeen: Number(row.size_level_seen ?? 0),
+      stageSeen: (row.stage_seen as KuwagataGrowthStage | null) ?? "卵",
     };
   });
 }

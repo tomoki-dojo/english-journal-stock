@@ -22,6 +22,16 @@ export type RoadmapNewHatch = {
   hatchedFrom: string | null;
 };
 
+// 成長段階が上がったクワたん（「〇〇が□に成長した！」の演出に使う）。
+export type RoadmapStageUp = {
+  id: string;
+  speciesCode: string;
+  speciesName: string;
+  mandibleVariant: number;
+  // 成長した先の段階
+  stage: "幼虫" | "蛹" | "成虫";
+};
+
 export const ANNOUNCEMENTS: RoadmapAnnouncement[] = [];
 
 export const LATEST_ANNOUNCEMENT_ID = ANNOUNCEMENTS.reduce((max, a) => Math.max(max, a.id), 0);
