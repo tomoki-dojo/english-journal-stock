@@ -84,6 +84,7 @@ export function ArthurAvatar({
 
 // 練習画面の中央に置く、アーサー（バストアップ）と水槽。虫に英語を聞かせている世界観の飾り。
 export const PRACTICE_TANK_SRC = "/mascot/practice_tank.png";
+const SCENE_SIZE = 176;
 
 export function ArthurScene({
   mood = "talk",
@@ -94,11 +95,19 @@ export function ArthurScene({
   talkKey?: string | number;
   className?: string;
 }) {
+  // 水槽はアーサーの右前（画面では左下）に、胸元へ重ねる。サイズ・位置はアーサーのキャンバス幅に対する比率。
   return (
-    <div className={cn("flex items-end justify-center gap-1", className)}>
-      <ArthurAvatar size={112} animated bare mood={mood} talkKey={talkKey} />
+    <div className={cn("relative mx-auto", className)} style={{ width: SCENE_SIZE, height: SCENE_SIZE }}>
+      <ArthurAvatar size={SCENE_SIZE} animated bare mood={mood} talkKey={talkKey} />
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={PRACTICE_TANK_SRC} alt="" aria-hidden className="mb-1 w-32 select-none" draggable={false} />
+      <img
+        src={PRACTICE_TANK_SRC}
+        alt=""
+        aria-hidden
+        draggable={false}
+        className="pointer-events-none absolute select-none"
+        style={{ left: "6%", bottom: "-2%", width: "52%" }}
+      />
     </div>
   );
 }
