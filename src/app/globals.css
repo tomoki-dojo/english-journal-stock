@@ -60,6 +60,59 @@ body {
   }
 }
 
+/* アーサーのスプライトシート（7コマを横一列、3584×512）。background-position-xは コマ番号/6 ×100% */
+.arthur-sheet {
+  background-repeat: no-repeat;
+  background-size: 700% 100%;
+  background-position: 100% 0;
+}
+.arthur-frame-idle {
+  background-position-x: 100%;
+}
+.arthur-frame-point {
+  background-position-x: 0%;
+}
+.arthur-frame-sad {
+  background-position-x: 16.6667%;
+}
+.arthur-frame-happy {
+  background-position-x: 33.3333%;
+}
+@keyframes arthur-blink {
+  0%,
+  92% {
+    background-position-x: 100%;
+  }
+  93%,
+  100% {
+    background-position-x: 83.3333%;
+  }
+}
+.arthur-blink {
+  animation: arthur-blink 4s steps(1, end) infinite;
+}
+@keyframes arthur-talk {
+  0% {
+    background-position-x: 50%;
+  }
+  50% {
+    background-position-x: 66.6667%;
+  }
+  100% {
+    background-position-x: 50%;
+  }
+}
+.arthur-talk {
+  animation: arthur-talk 0.32s steps(1, end) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .arthur-blink,
+  .arthur-talk {
+    animation: none;
+    background-position-x: 100%;
+  }
+}
+
 /* ラウンド終了時のキラキラ演出。基準位置から小さな粒が飛んで消える。 */
 @keyframes round-complete-sparkle {
   0% {

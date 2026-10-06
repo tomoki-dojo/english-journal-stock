@@ -89,7 +89,7 @@ export function RoomNoticeModal({
         onClick={advance}
         className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-8 bg-zinc-900/90 px-8 text-center"
       >
-        <ArthurAvatar size={128} animated className="shadow-lg" />
+        <ArthurAvatar size={128} animated mood="talk" talkKey={introPage} className="shadow-lg" />
         <p
           key={introPage}
           className="max-w-xs animate-question-card-enter text-lg font-bold leading-relaxed text-white"
@@ -118,7 +118,7 @@ export function RoomNoticeModal({
         onClick={closeTrivia}
         className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-8 bg-zinc-900/90 px-8 text-center"
       >
-        <ArthurAvatar size={128} animated className="shadow-lg" />
+        <ArthurAvatar size={128} animated mood="talk" talkKey={item.id} className="shadow-lg" />
         <p className="max-w-xs animate-question-card-enter text-base font-bold leading-relaxed text-white">
           {item.body}
         </p>

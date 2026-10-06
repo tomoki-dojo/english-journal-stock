@@ -1,53 +1,81 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
-import { PawPrint } from "lucide-react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 // ロードマップ機能全体を通じての「練習相手」キャラクター＝アーサー（クマの同僚、外国人設定）。
 // Stage0〜5すべてのRoundHeaderに常時登場し、Stage4・5の会話パートではAIの発言者としても表示される。
 //
-// 画像素材は別途用意される想定のため、ここでは既存のマスコット画像（public/mascot/bear-suit.png）を
-// 暫定表示に使い、専用イラストが用意され次第 ARTHUR_AVATAR_SRC を差し替えるだけで全箇所に反映される
-// ようにしてある。画像の読み込みに失敗した場合はアイコン＋背景色のフォールバック表示にする。
+// 画像は7コマを横一列に並べたスプライトシート1枚（512×512 × 7 = 3584×512）。
+// 表情の切り替え・口パク・まばたきはCSSのbackground-positionで行う（globals.cssの.arthur-*）。
 export const ARTHUR_NAME = "アーサー";
-// TODO: 専用イラストが用意でき次第このパスを差し替える（例: "/mascot/arthur.png"）
-export const ARTHUR_AVATAR_SRC = "/mascot/bear-suit.png";
+export const ARTHUR_SHEET_SRC = "/mascot/arthur_sheet.png";
+
+// コマ番号（左から0始まり）
+const FRAME = {
+  point: 0,
+  sad: 1,
+  happy: 2,
+  idle: 6,
+} as const;
+
+export type ArthurMood = "idle" | "talk" | "happy" | "sad" | "point";
+
+const TALK_DURATION_MS = 1600;
 
 type ArthurAvatarProps = {
   size?: number;
   className?: string;
-  // ごく控えめに上下に揺れる待機アニメーション（globals.cssのanimate-mascot-bobを流用）。
-  // 常時視界に入るRoundHeaderのタグでは付ける、会話バブルの中では付けない、など呼び出し側で選べるようにしてある。
+  // 待機中のまばたき＋ごく控えめな上下動。
   animated?: boolean;
+  // idle=通常（animatedでまばたき）、talk=口パク（TALK_DURATION_MS後にidleへ）、happy/sad/point=固定表情
+  mood?: ArthurMood;
+  // talkのとき、この値が変わるたびに口パクをやり直す（台詞が切り替わるタイミングで渡す）
+  talkKey?: string | number;
 };
 
 // 円形アバター単体。RoundHeaderの小バッジやStage4/5のチャット吹き出しなど、サイズだけ変えて使い回す。
-export function ArthurAvatar({ size = 24, className, animated = false }: ArthurAvatarProps) {
-  const [failed, setFailed] = useState(false);
+export function ArthurAvatar({ size = 24, className, animated = false, mood = "idle", talkKey }: ArthurAvatarProps) {
+  const [talking, setTalking] = useState(mood === "talk");
+
+  useEffect(() => {
+    if (mood !== "talk") {
+      setTalking(false);
+      return;
+    }
+    setTalking(true);
+    const timer = setTimeout(() => setTalking(false), TALK_DURATION_MS);
+    return () => clearTimeout(timer);
+  }, [mood, talkKey]);
+
+  const frameClass =
+    mood === "talk" && talking
+      ? "arthur-talk"
+      : mood === "happy"
+        ? "arthur-frame-happy"
+        : mood === "sad"
+          ? "arthur-frame-sad"
+          : mood === "point"
+            ? "arthur-frame-point"
+            : animated
+              ? "arthur-blink"
+              : "arthur-frame-idle";
 
   return (
     <span
+      role="img"
+      aria-label={ARTHUR_NAME}
       className={cn(
-        "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-amber-100 ring-1 ring-amber-200/70",
+        "relative inline-block shrink-0 overflow-hidden rounded-full bg-amber-100 ring-1 ring-amber-200/70",
         animated && "animate-mascot-bob",
         className
       )}
       style={{ width: size, height: size }}
     >
-      {failed ? (
-        <PawPrint className="h-[60%] w-[60%] text-amber-700" />
-      ) : (
-        <Image
-          src={ARTHUR_AVATAR_SRC}
-          alt={ARTHUR_NAME}
-          fill
-          sizes={`${size}px`}
-          className="object-cover"
-          onError={() => setFailed(true)}
-        />
-      )}
+      <span
+        className={cn("absolute inset-0 block arthur-sheet", frameClass)}
+        style={{ backgroundImage: `url(${ARTHUR_SHEET_SRC})` }}
+      />
     </span>
   );
 }
@@ -61,3 +89,5 @@ export function ArthurTag({ className }: { className?: string }) {
     </span>
   );
 }
+
+export { FRAME as ARTHUR_FRAME };
