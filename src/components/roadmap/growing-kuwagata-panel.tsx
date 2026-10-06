@@ -77,7 +77,7 @@ export function GrowingKuwagataPanel() {
         ))}
         {hiddenCount > 0 && (
           <span className="self-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-700">
-            +{hiddenCount}
+            +{hiddenCount}匹
           </span>
         )}
       </div>
