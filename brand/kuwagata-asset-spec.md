@@ -370,5 +370,5 @@ public/roadmap/tank/tank_bg_aquarium.png        水中アクアリウムの水�
 
 ### 実装済みコマ構成（public/mascot/arthur_sheet.png、3584×512）
 
-左から: 1=指差し、2=残念、3=喜ぶ（親指）、4=口パクA、5=口パクB、6=まばたき、7=通常。
-mood: idle（待機＋まばたき）／talk（4↔5、約1.6秒）／happy／sad／point。
+ファイル名（１コマ目〜７コマ目）の順に左から結合。1=通常、2=まばたき、3=口パクA、4=口パクB、5=喜ぶ（親指）、6=残念、7=指差し。
+mood: idle（待機＋まばたき）／talk（3↔4、約1.6秒）／happy／sad／point。

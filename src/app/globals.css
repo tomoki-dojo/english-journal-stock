@@ -60,32 +60,33 @@ body {
   }
 }
 
-/* アーサーのスプライトシート（7コマを横一列、3584×512）。background-position-xは コマ番号/6 ×100% */
+/* アーサーのスプライトシート（7コマを横一列、3584×512）。background-position-xは コマ番号(0始まり)/6 ×100%
+   コマ順: 1通常 2まばたき 3口パクA 4口パクB 5喜ぶ 6残念 7指差し */
 .arthur-sheet {
   background-repeat: no-repeat;
   background-size: 700% 100%;
-  background-position: 100% 0;
+  background-position: 0 0;
 }
 .arthur-frame-idle {
-  background-position-x: 100%;
-}
-.arthur-frame-point {
   background-position-x: 0%;
 }
-.arthur-frame-sad {
-  background-position-x: 16.6667%;
-}
 .arthur-frame-happy {
-  background-position-x: 33.3333%;
+  background-position-x: 66.6667%;
+}
+.arthur-frame-sad {
+  background-position-x: 83.3333%;
+}
+.arthur-frame-point {
+  background-position-x: 100%;
 }
 @keyframes arthur-blink {
   0%,
   92% {
-    background-position-x: 100%;
+    background-position-x: 0%;
   }
   93%,
   100% {
-    background-position-x: 83.3333%;
+    background-position-x: 16.6667%;
   }
 }
 .arthur-blink {
@@ -93,13 +94,13 @@ body {
 }
 @keyframes arthur-talk {
   0% {
-    background-position-x: 50%;
+    background-position-x: 33.3333%;
   }
   50% {
-    background-position-x: 66.6667%;
+    background-position-x: 50%;
   }
   100% {
-    background-position-x: 50%;
+    background-position-x: 33.3333%;
   }
 }
 .arthur-talk {
@@ -109,7 +110,7 @@ body {
   .arthur-blink,
   .arthur-talk {
     animation: none;
-    background-position-x: 100%;
+    background-position-x: 0%;
   }
 }
 

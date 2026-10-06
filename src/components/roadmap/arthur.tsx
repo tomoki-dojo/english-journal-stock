@@ -11,14 +11,6 @@ import { cn } from "@/lib/utils";
 export const ARTHUR_NAME = "アーサー";
 export const ARTHUR_SHEET_SRC = "/mascot/arthur_sheet.png";
 
-// コマ番号（左から0始まり）
-const FRAME = {
-  point: 0,
-  sad: 1,
-  happy: 2,
-  idle: 6,
-} as const;
-
 export type ArthurMood = "idle" | "talk" | "happy" | "sad" | "point";
 
 const TALK_DURATION_MS = 1600;
@@ -89,5 +81,3 @@ export function ArthurTag({ className }: { className?: string }) {
     </span>
   );
 }
-
-export { FRAME as ARTHUR_FRAME };
