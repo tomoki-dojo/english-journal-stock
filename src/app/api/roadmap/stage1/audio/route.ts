@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
 import { getStage1AudioUrl } from "@/lib/supabase/speaking-roadmap";
+import { parseStage1Scene } from "@/components/roadmap/types";
 
 // Stage1練習画面専用の音声URL発行。ライブラリの音声再生（Pro限定）とは別ルート。
 // 「そのユーザーの現在のStage1出題フレーズ」と一致するexpressionIdでなければnullを返す
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const url = await getStage1AudioUrl(user.id, expressionId);
+    const url = await getStage1AudioUrl(user.id, expressionId, parseStage1Scene(searchParams.get("scene")));
     if (!url) {
       return NextResponse.json({ error: "現在の出題フレーズと一致しません" }, { status: 403 });
     }

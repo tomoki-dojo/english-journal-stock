@@ -2,13 +2,20 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, PartyPopper, PenLine, Volume2, X } from "lucide-react";
+import { Check, ChevronDown, PartyPopper, PenLine, Volume2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RoundHeader } from "./round-header";
 import { GrowthBadge } from "./growth-badge";
 import { GrowingKuwagataPanel } from "./growing-kuwagata-panel";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
-import type { Stage1RoundQuestion, Stage1RoundResponse, WarmthLevel } from "./types";
+import {
+  parseStage1Scene,
+  STAGE1_SCENE_OPTIONS,
+  type Stage1RoundQuestion,
+  type Stage1RoundResponse,
+  type Stage1Scene,
+  type WarmthLevel,
+} from "./types";
 
 type ViewState = "loading" | "round" | "round_complete" | "done" | "error";
 
@@ -21,9 +28,21 @@ type QuestionResult = {
 };
 
 const STAGE_COLOR = STAGE_COLORS[1];
+// 選んだシーンを次回以降も覚えておく（端末ごとの軽い便宜のため、失敗しても動作には影響させない）
+const SCENE_STORAGE_KEY = "roadmap-stage1-scene";
 // warmth（0〜3）に応じて、フレーズカードの縁・背景にStage1カラーをうっすら重ねる度合い。
-const WARMTH_BORDER_ALPHA: Record<WarmthLevel, string> = { 0: "00", 1: "33", 2: "55", 3: "80" };
-const WARMTH_BG_ALPHA: Record<WarmthLevel, string> = { 0: "00", 1: "0a", 2: "12", 3: "1a" };
+const WARMTH_BORDER_ALPHA: Record<WarmthLevel, string> = {
+  0: "00",
+  1: "33",
+  2: "55",
+  3: "80",
+};
+const WARMTH_BG_ALPHA: Record<WarmthLevel, string> = {
+  0: "00",
+  1: "0a",
+  2: "12",
+  3: "1a",
+};
 
 // ラウンド終了時のキラキラ演出用。カード上部に沿って10個の粒を散らし、
 // それぞれ少し上・斜めに飛んでフェードする（位置・角度は固定・決定的）。
@@ -54,17 +73,21 @@ export function Stage1Practice() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reaction, setReaction] = useState<"happy" | "sad" | null>(null);
+  const [scene, setScene] = useState<Stage1Scene | null>(null);
 
   const currentQuestion = questions[currentIndex];
 
-  async function loadRound() {
+  async function loadRound(sceneArg: Stage1Scene | null = scene) {
     setState("loading");
     setCurrentIndex(0);
     setResults([]);
     setError(null);
 
     try {
-      const res = await fetch("/api/roadmap/stage1/round", { cache: "no-store" });
+      const sceneQuery = sceneArg ? `?scene=${encodeURIComponent(sceneArg)}` : "";
+      const res = await fetch(`/api/roadmap/stage1/round${sceneQuery}`, {
+        cache: "no-store",
+      });
       if (!res.ok) throw new Error("出題データの取得に失敗しました");
       const json: Stage1RoundResponse = await res.json();
 
@@ -83,7 +106,14 @@ export function Stage1Practice() {
   }
 
   useEffect(() => {
-    loadRound();
+    let saved: Stage1Scene | null = null;
+    try {
+      saved = parseStage1Scene(window.localStorage.getItem(SCENE_STORAGE_KEY));
+    } catch {
+      // 保存値が読めなくても「すべて」で続行する
+    }
+    setScene(saved);
+    loadRound(saved);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -92,7 +122,9 @@ export function Stage1Practice() {
     setAudioLoading(true);
     try {
       const res = await fetch(
-        `/api/roadmap/stage1/audio?expressionId=${encodeURIComponent(currentQuestion.expressionId)}`
+        `/api/roadmap/stage1/audio?expressionId=${encodeURIComponent(currentQuestion.expressionId)}${
+          scene ? `&scene=${encodeURIComponent(scene)}` : ""
+        }`,
       );
       if (!res.ok) throw new Error("音声の取得に失敗しました");
       const json = await res.json();
@@ -113,7 +145,10 @@ export function Stage1Practice() {
       const res = await fetch("/api/roadmap/stage1/report", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ expressionId: currentQuestion.expressionId, correct }),
+        body: JSON.stringify({
+          expressionId: currentQuestion.expressionId,
+          correct,
+        }),
       });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -147,8 +182,51 @@ export function Stage1Practice() {
     }
   }
 
+  function handleSelectScene(next: Stage1Scene | null) {
+    if (next === scene) return;
+    setScene(next);
+    try {
+      if (next) window.localStorage.setItem(SCENE_STORAGE_KEY, next);
+      else window.localStorage.removeItem(SCENE_STORAGE_KEY);
+    } catch {
+      // 保存できなくても練習は続けられる
+    }
+    loadRound(next);
+  }
+
+  // シーン選択（「すべて」＋12シーン）。1行のセレクトに畳んで、スマホでも縦に長くならないようにしている。
+  const sceneSelector = (
+    <div className="mb-4">
+      <label className="relative inline-flex max-w-full items-center">
+        <span className="sr-only">シーン</span>
+        <select
+          value={scene ?? ""}
+          onChange={(e) => handleSelectScene(parseStage1Scene(e.target.value))}
+          className="max-w-full appearance-none truncate rounded-full py-1.5 pl-3.5 pr-8 text-xs font-semibold outline-none"
+          style={{
+            backgroundColor: withAlpha(STAGE_COLOR, "12"),
+            color: STAGE_COLOR,
+          }}
+        >
+          <option value="">すべてのシーン</option>
+          {STAGE1_SCENE_OPTIONS.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-2.5 h-3.5 w-3.5" style={{ color: STAGE_COLOR }} />
+      </label>
+    </div>
+  );
+
   if (state === "loading") {
-    return <p className="text-sm text-zinc-400">読み込み中...</p>;
+    return (
+      <div>
+        {sceneSelector}
+        <p className="text-sm text-zinc-400">読み込み中...</p>
+      </div>
+    );
   }
 
   if (state === "error") {
@@ -157,15 +235,20 @@ export function Stage1Practice() {
 
   if (state === "done") {
     return (
-      <div className="rounded-xl border border-zinc-200 bg-zinc-100/50 px-6 py-10 text-center">
-        <PartyPopper className="mx-auto mb-3 h-6 w-6" style={{ color: STAGE_COLOR }} />
-        <p className="text-sm text-zinc-700">Stage1（音読・シャドーイング）は全て卒業しました。</p>
-        <Link
-          href="/roadmap"
-          className="mt-4 inline-flex items-center gap-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
-        >
-          部屋に戻る
-        </Link>
+      <div>
+        {sceneSelector}
+        <div className="rounded-xl border border-zinc-200 bg-zinc-100/50 px-6 py-10 text-center">
+          <PartyPopper className="mx-auto mb-3 h-6 w-6" style={{ color: STAGE_COLOR }} />
+          <p className="text-sm text-zinc-700">
+            {scene ? `「${scene}」のStage1は全て卒業しました。` : "Stage1（音読・シャドーイング）は全て卒業しました。"}
+          </p>
+          <Link
+            href="/roadmap"
+            className="mt-4 inline-flex items-center gap-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
+          >
+            部屋に戻る
+          </Link>
+        </div>
       </div>
     );
   }
@@ -182,7 +265,7 @@ export function Stage1Practice() {
             key={i}
             className={cn(
               "absolute top-3 rounded-full animate-round-complete-sparkle",
-              s.large ? "h-2 w-2" : "h-1.5 w-1.5"
+              s.large ? "h-2 w-2" : "h-1.5 w-1.5",
             )}
             style={
               {
@@ -219,7 +302,10 @@ export function Stage1Practice() {
           // 箱庭ビジュアル実装（#150）までは簡易なバナーとして示す。
           <div
             className="relative mt-4 overflow-hidden rounded-lg border p-3 text-left text-sm animate-round-complete-pop"
-            style={{ borderColor: withAlpha(STAGE_COLORS[2], "55"), backgroundColor: withAlpha(STAGE_COLORS[2], "14") }}
+            style={{
+              borderColor: withAlpha(STAGE_COLORS[2], "55"),
+              backgroundColor: withAlpha(STAGE_COLORS[2], "14"),
+            }}
           >
             <div className="flex items-center gap-1.5 font-semibold" style={{ color: STAGE_COLORS[2] }}>
               <PenLine className="h-4 w-4" />
@@ -231,7 +317,7 @@ export function Stage1Practice() {
         <div className="mt-6 flex gap-3">
           <button
             type="button"
-            onClick={loadRound}
+            onClick={() => loadRound()}
             style={{ backgroundColor: STAGE_COLOR }}
             className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97]"
           >
@@ -256,13 +342,14 @@ export function Stage1Practice() {
 
   return (
     <div>
+      {sceneSelector}
       <RoundHeader stage={1} current={currentIndex + 1} total={questions.length} arthurMood={reaction ?? "talk"} />
 
       <div
         key={currentIndex}
         className={cn(
           "animate-question-card-enter rounded-xl border p-6",
-          hasTint ? "" : "border-zinc-200 bg-zinc-100/50"
+          hasTint ? "" : "border-zinc-200 bg-zinc-100/50",
         )}
         style={
           hasTint
@@ -283,9 +370,7 @@ export function Stage1Practice() {
           <GrowthBadge stage={1} warmth={currentQuestion.warmth} />
           <p className="text-lg font-medium text-zinc-900">{currentQuestion.expressionEn}</p>
         </div>
-        {currentQuestion.meaningJa && (
-          <p className="mb-4 text-sm text-zinc-500">{currentQuestion.meaningJa}</p>
-        )}
+        {currentQuestion.meaningJa && <p className="mb-4 text-sm text-zinc-500">{currentQuestion.meaningJa}</p>}
 
         {currentQuestion.hasAudio && (
           <button

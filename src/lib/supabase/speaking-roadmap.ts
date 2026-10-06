@@ -27,6 +27,7 @@ import {
   STAGE1_ACTIVE_SET_SIZE,
   STAGE1_GRADUATE_STREAK,
   STAGE1_ROUND_SIZE,
+  type Stage1Scene,
   STAGE2_ACTIVE_SET_SIZE,
   STAGE2_GRADUATE_STREAK,
   STAGE2_ROUND_SIZE,
@@ -370,8 +371,30 @@ function sortDailyFirst<T extends { sceneTags: string[] }>(rows: T[]): T[] {
 // 前にデータごと届かず、並べ替えが一切効いていないように見える不具合が起きていた。
 // 対策として、日常会話タグを含む行は専用のクエリ（.overlaps）で別出しにして取得することで、
 // 全体件数が1000件を超えても日常会話タグの行だけは常に取得漏れしないようにする。
-async function listStage1PhrasePool(): Promise<Stage1PoolRow[]> {
+async function listStage1PhrasePool(scene?: Stage1Scene | null): Promise<Stage1PoolRow[]> {
   const selectCols = "id, expression_en, meaning_ja, audio_expression_path, scene_tags";
+
+  // シーンが選ばれているときは、そのシーンの表現だけをcode順に返す（1シーン最大でも数百件のため1回の取得で足りる）。
+  if (scene) {
+    const { data, error } = await supabaseAdmin
+      .from("expressions")
+      .select(selectCols)
+      .eq("publish_status", "公開")
+      .contains("scene_tags", [scene])
+      .order("code", { ascending: true })
+      .limit(1000);
+
+    if (error) {
+      throw new Error(`Stage1出題プールの取得に失敗しました: ${error.message}`);
+    }
+    return (data ?? []).map((row) => ({
+      id: row.id as string,
+      expressionEn: row.expression_en as string,
+      meaningJa: (row.meaning_ja as string | null) ?? undefined,
+      hasAudioExpression: Boolean(row.audio_expression_path),
+      sceneTags: (row.scene_tags as string[] | null) ?? [],
+    }));
+  }
   const dailyTagsLiteral = `{${DAILY_SCENE_TAGS.join(",")}}`;
 
   const [dailyRes, restRes] = await Promise.all([
@@ -414,12 +437,12 @@ async function listStage1PhrasePool(): Promise<Stage1PoolRow[]> {
 // Stage1のアクティブセット（未卒業フレーズの先頭からSTAGE1_ACTIVE_SET_SIZE件）を計算する。
 // 新しい状態は持たず、毎回動的に計算するだけでよい（あるフレーズが卒業した瞬間、
 // 自動的にアクティブセットから外れ、次のフレーズが繰り上がる）。
-async function getStage1ActiveSet(userId: string): Promise<{
+async function getStage1ActiveSet(userId: string, scene?: Stage1Scene | null): Promise<{
   activeSet: (Stage1PoolRow & { streak: number })[];
   totalCount: number;
   remainingCount: number;
 }> {
-  const pool = await listStage1PhrasePool();
+  const pool = await listStage1PhrasePool(scene);
   const progressMap = await getStage1ProgressMap(userId);
 
   const totalCount = pool.length;
@@ -436,8 +459,8 @@ async function getStage1ActiveSet(userId: string): Promise<{
 
 // Stage1のラウンド（ミニクイズ1回分）を決める。
 // アクティブセット（最大7件）から最大5件をランダムに選んで返す。全て卒業済みならdoneを返す。
-export async function getStage1Round(userId: string): Promise<Stage1RoundResponse> {
-  const { activeSet, totalCount, remainingCount } = await getStage1ActiveSet(userId);
+export async function getStage1Round(userId: string, scene?: Stage1Scene | null): Promise<Stage1RoundResponse> {
+  const { activeSet, totalCount, remainingCount } = await getStage1ActiveSet(userId, scene);
 
   if (activeSet.length === 0) {
     return { status: "done", totalCount };
@@ -601,8 +624,12 @@ async function incrementTotalMasteredCount(userId: string): Promise<void> {
 // Stage1練習画面専用の音声URL発行。
 // ライブラリの音声再生（Pro限定）とは別ルートで、「そのユーザーの現在のアクティブセットに
 // 含まれるフレーズ」と一致する場合のみ発行する（任意のexpressionIdを指定して聴ける汎用APIにはしない）。
-export async function getStage1AudioUrl(userId: string, expressionId: string): Promise<string | null> {
-  const { activeSet } = await getStage1ActiveSet(userId);
+export async function getStage1AudioUrl(
+  userId: string,
+  expressionId: string,
+  scene?: Stage1Scene | null
+): Promise<string | null> {
+  const { activeSet } = await getStage1ActiveSet(userId, scene);
   if (!activeSet.some((e) => e.id === expressionId)) {
     return null;
   }

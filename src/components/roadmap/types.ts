@@ -95,6 +95,27 @@ export const STAGE1_ROUND_SIZE = 5;
 
 export type Stage1RoundQuestion = Stage1Phrase & { warmth: WarmthLevel };
 
+// Stage1で選べるシーン（expressions.scene_tagsの値）。日常会話5種→ビジネス7種の順。
+export const STAGE1_SCENE_OPTIONS = [
+  "買い物",
+  "外食",
+  "旅行",
+  "友人",
+  "体調",
+  "会議",
+  "メール",
+  "交渉",
+  "雑談",
+  "電話",
+  "プレゼン",
+  "依頼・断り",
+] as const;
+export type Stage1Scene = (typeof STAGE1_SCENE_OPTIONS)[number];
+
+export function parseStage1Scene(value: string | null | undefined): Stage1Scene | null {
+  return (STAGE1_SCENE_OPTIONS as readonly string[]).includes(value ?? "") ? (value as Stage1Scene) : null;
+}
+
 export type Stage1RoundResponse =
   | {
       status: "round";
