@@ -202,11 +202,8 @@ export function Stage1Practice() {
         <select
           value={scene ?? ""}
           onChange={(e) => handleSelectScene(parseStage1Scene(e.target.value))}
-          className="max-w-full appearance-none truncate rounded-full py-1.5 pl-3.5 pr-8 text-xs font-semibold outline-none"
-          style={{
-            backgroundColor: withAlpha(STAGE_COLOR, "12"),
-            color: STAGE_COLOR,
-          }}
+          className="max-w-full appearance-none truncate rounded-full py-2 pl-4 pr-9 text-sm font-bold text-white shadow-sm outline-none transition-all duration-150 active:scale-[.97]"
+          style={{ backgroundColor: STAGE_COLOR }}
         >
           <option value="">すべてのシーン</option>
           {STAGE1_SCENE_OPTIONS.map((s) => (
@@ -215,7 +212,7 @@ export function Stage1Practice() {
             </option>
           ))}
         </select>
-        <ChevronDown className="pointer-events-none absolute right-2.5 h-3.5 w-3.5" style={{ color: STAGE_COLOR }} />
+        <ChevronDown className="pointer-events-none absolute right-3 h-4 w-4 text-white" />
       </label>
     </div>
   );
