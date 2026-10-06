@@ -430,8 +430,25 @@ function surfacePoint(u: number, v: number): { left: number; top: number } {
   return { left, top };
 }
 
-// クワたん・デコレーションの置き場所(u,v)。0.28〜0.72程度に収め、天面の縁から
-// もう一回り内側に余白を持たせている(=座標のセーフティゾーン)。
+// 歩き回る・置かれる位置(u,v)の候補を、天面のほぼ全体(縁から0.08だけ内側)から選ぶ。
+// ただし虫は幅の半分ほどが左右にはみ出すので、アンカーの横位置は水槽の端から
+// 「虫の幅の約35%」以上内側に制限する(大きい虫ほど左右の端に寄れない)。
+// 奥・手前の縁は、虫が縁の上に立って見えるだけなので制限しない。
+const SPOT_EDGE_MARGIN = 0.08;
+function pickRandomSpot(widthPct: number, random: () => number): { u: number; v: number } {
+  const halfWidth = widthPct * 0.35;
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const candidate = {
+      u: SPOT_EDGE_MARGIN + random() * (1 - 2 * SPOT_EDGE_MARGIN),
+      v: SPOT_EDGE_MARGIN + random() * (1 - 2 * SPOT_EDGE_MARGIN),
+    };
+    const { left } = surfacePoint(candidate.u, candidate.v);
+    if (left >= halfWidth + 1 && left <= 99 - halfWidth) return candidate;
+  }
+  return { u: 0.5, v: 0.5 };
+}
+
+// クワたん・デコレーションの最初の置き場所(u,v)。
 const CREATURE_SPOTS: { u: number; v: number }[] = [
   { u: 0.5, v: 0.45 },
   { u: 0.32, v: 0.32 },
@@ -458,7 +475,7 @@ function spriteRadius(widthPct: number): number {
 
 const SPOT_PICK_ATTEMPTS = 30;
 
-// セーフティゾーン内(u,v = 0.28〜0.72)をランダムに歩き回らせるためのフック。
+// 天面(pickRandomSpotの範囲)をランダムに歩き回らせるためのフック。
 // 一定間隔で次の目的地(u,v)を決め、CSSのtransition(left/top)でそこへゆっくり
 // 移動させる。個体ごとにinitial delayをズラしているので、同じ水槽内の複数匹が
 // 同時に動き出さず自然に見える。移動のたびに前回位置との差分(dx/dy)から
@@ -506,10 +523,10 @@ function useWander(
 
     const pickNextSpot = () => {
       const others = Object.entries(positionsRef.current).filter(([id]) => id !== seedKey);
-      let best = { u: 0.28 + Math.random() * 0.44, v: 0.28 + Math.random() * 0.44 };
+      let best = pickRandomSpot(widthPct, Math.random);
       let bestSlack = -Infinity;
       for (let attempt = 0; attempt < SPOT_PICK_ATTEMPTS; attempt++) {
-        const candidate = { u: 0.28 + Math.random() * 0.44, v: 0.28 + Math.random() * 0.44 };
+        const candidate = pickRandomSpot(widthPct, Math.random);
         const pt = surfacePoint(candidate.u, candidate.v);
         // スコア=一番近い障害物との余裕(距離-必要距離)の最小値。プラスなら衝突なし、
         // マイナスでも値が大きい(=0に近い)ほど「まだマシな重なり方」として優先される。
@@ -589,7 +606,7 @@ function pickStationarySpot(
   let best = { u: 0.5, v: 0.5 };
   let bestSlack = -Infinity;
   for (let attempt = 0; attempt < SPOT_PICK_ATTEMPTS * 2; attempt++) {
-    const candidate = { u: 0.28 + random() * 0.44, v: 0.28 + random() * 0.44 };
+    const candidate = pickRandomSpot(widthPct, random);
     const pt = surfacePoint(candidate.u, candidate.v);
     let slack = Infinity;
     for (const o of obstacles) {
