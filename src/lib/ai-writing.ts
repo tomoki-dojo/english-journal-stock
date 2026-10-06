@@ -151,7 +151,12 @@ export async function callAnthropic(systemPrompt: string, userText: string, mode
   return block?.type === "text" ? block.text : "";
 }
 
-export async function callGemini(systemPrompt: string, userText: string, model: string): Promise<string> {
+export async function callGemini(
+  systemPrompt: string,
+  userText: string,
+  model: string,
+  maxOutputTokens = 1024
+): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEYが設定されていません");
 
@@ -160,7 +165,7 @@ export async function callGemini(systemPrompt: string, userText: string, model: 
     model,
     contents: userText,
     // Claude側のmax_tokens: 1024と揃えて、1回あたりのコスト上限を必ず設ける。
-    config: { systemInstruction: systemPrompt, maxOutputTokens: 1024 },
+    config: { systemInstruction: systemPrompt, maxOutputTokens },
   });
 
   return response.text ?? "";
