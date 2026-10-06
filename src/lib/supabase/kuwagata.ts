@@ -308,6 +308,8 @@ export async function getGrowingKuwagata(
   adults: KuwagataAdultGrowth[];
   hiddenCount: number;
   stageUps: RoadmapStageUp[];
+  // 最大サイズレベルに初めて届いた成虫（1匹につき一度きりの特別な演出に使う）
+  maxSizeUps: RoadmapStageUp[];
 }> {
   const all = await getUserKuwagataIndividuals(userId);
 
@@ -361,6 +363,16 @@ export async function getGrowingKuwagata(
     )
   );
 
+  const maxSizeUps: RoadmapStageUp[] = leveledUp
+    .filter((adult) => adult.sizeLevel >= SIZE_LEVEL_MAX)
+    .map((adult) => ({
+      id: adult.id,
+      speciesCode: adult.speciesCode,
+      speciesName: adult.speciesName,
+      mandibleVariant: adult.mandibleVariant,
+      stage: "成虫" as const,
+    }));
+
   const strip = ({ points: _points, ...adult }: KuwagataAdultGrowth & { points: number }): KuwagataAdultGrowth => adult;
   const leveledAdults = leveledUp.sort((a, b) => b.points - a.points);
   const otherAdults = adultCandidates.filter((adult) => !adult.leveledUp).sort((a, b) => b.points - a.points);
@@ -380,6 +392,7 @@ export async function getGrowingKuwagata(
     adults: [...shownLeveled, ...shownOthers].map(strip),
     hiddenCount: totalCount - shownCount,
     stageUps,
+    maxSizeUps,
   };
 }
 

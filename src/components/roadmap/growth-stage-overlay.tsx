@@ -9,7 +9,16 @@ const STAGE_LABEL: Record<RoadmapStageUp["stage"], string> = { 幼虫: "幼虫",
 const MAX_SHOWN = 4;
 
 // 成長段階が上がったクワたんを、暗転した全画面で見せる。複数匹が同時に成長したときは1画面にまとめる。
-export function GrowthStageOverlay({ stageUps, onClose }: { stageUps: RoadmapStageUp[]; onClose: () => void }) {
+export function GrowthStageOverlay({
+  stageUps,
+  onClose,
+  kind = "stage",
+}: {
+  stageUps: RoadmapStageUp[];
+  onClose: () => void;
+  // "maxSize": 最大サイズレベルに届いた成虫（1匹につき一度きり）
+  kind?: "stage" | "maxSize";
+}) {
   const shown = stageUps.slice(0, MAX_SHOWN);
   const hiddenCount = stageUps.length - shown.length;
   const single = shown.length === 1;
@@ -28,7 +37,7 @@ export function GrowthStageOverlay({ stageUps, onClose }: { stageUps: RoadmapSta
               <div className="relative">
                 <TankOccupant
                   color="#f59e0b"
-                  sizeScale={single ? 4 : 2.5}
+                  sizeScale={(single ? 4 : 2.5) * (kind === "maxSize" ? 1.3 : 1)}
                   speciesCode={item.speciesCode}
                   mandibleVariant={item.mandibleVariant}
                   growthStage={item.stage}
@@ -36,7 +45,9 @@ export function GrowthStageOverlay({ stageUps, onClose }: { stageUps: RoadmapSta
               </div>
             </div>
             <p className={`max-w-xs font-bold leading-relaxed text-white ${single ? "text-lg" : "text-base"}`}>
-              {item.speciesName}が{STAGE_LABEL[item.stage]}に成長した！
+              {kind === "maxSize"
+                ? `${item.speciesName}が最大サイズまで成長した！`
+                : `${item.speciesName}が${STAGE_LABEL[item.stage]}に成長した！`}
             </p>
           </div>
         ))}

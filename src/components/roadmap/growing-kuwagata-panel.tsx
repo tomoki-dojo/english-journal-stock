@@ -11,6 +11,7 @@ type GrowingResponse = {
   adults?: KuwagataAdultGrowth[];
   hiddenCount?: number;
   stageUps?: RoadmapStageUp[];
+  maxSizeUps?: RoadmapStageUp[];
 };
 
 // ゲージが伸びきってから「成長した！」を出すまでの間。
@@ -26,7 +27,9 @@ export function GrowingKuwagataPanel() {
   const [adults, setAdults] = useState<KuwagataAdultGrowth[]>([]);
   const [hiddenCount, setHiddenCount] = useState(0);
   const [stageUps, setStageUps] = useState<RoadmapStageUp[]>([]);
-  const [showStageUps, setShowStageUps] = useState(false);
+  const [maxSizeUps, setMaxSizeUps] = useState<RoadmapStageUp[]>([]);
+  // 演出は「成長段階」→「最大サイズ」の順に、1つずつ出す。
+  const [overlay, setOverlay] = useState<"none" | "stage" | "maxSize">("none");
 
   useEffect(() => {
     let cancelled = false;
@@ -39,8 +42,11 @@ export function GrowingKuwagataPanel() {
         setAdults(json.adults ?? []);
         setHiddenCount(json.hiddenCount ?? 0);
         const ups = json.stageUps ?? [];
+        const maxUps = json.maxSizeUps ?? [];
         setStageUps(ups);
-        if (ups.length > 0) timer = setTimeout(() => setShowStageUps(true), STAGE_UP_DELAY_MS);
+        setMaxSizeUps(maxUps);
+        if (ups.length > 0) timer = setTimeout(() => setOverlay("stage"), STAGE_UP_DELAY_MS);
+        else if (maxUps.length > 0) timer = setTimeout(() => setOverlay("maxSize"), STAGE_UP_DELAY_MS);
       })
       .catch(() => {});
     return () => {
@@ -53,12 +59,22 @@ export function GrowingKuwagataPanel() {
 
   return (
     <div className="relative mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
-      {showStageUps && (
+      {overlay === "stage" && (
         <GrowthStageOverlay
           stageUps={stageUps}
           onClose={() => {
-            setShowStageUps(false);
             setStageUps([]);
+            setOverlay(maxSizeUps.length > 0 ? "maxSize" : "none");
+          }}
+        />
+      )}
+      {overlay === "maxSize" && (
+        <GrowthStageOverlay
+          kind="maxSize"
+          stageUps={maxSizeUps}
+          onClose={() => {
+            setMaxSizeUps([]);
+            setOverlay("none");
           }}
         />
       )}
