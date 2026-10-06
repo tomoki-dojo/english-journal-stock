@@ -1404,6 +1404,7 @@ export async function reportStage3Result(
       correct: judged.judgment.correct,
       errorTags: judged.judgment.errorTags,
       feedbackJa: judged.judgment.feedbackJa,
+      modelAnswerEn: expr.expression_en as string,
       streak: newStreak,
       subStep: getStage3SubStep(newStreak),
       graduated,

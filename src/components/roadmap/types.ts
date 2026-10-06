@@ -310,6 +310,8 @@ export type Stage3JudgeResult = {
   // user_error_tag_statsへの集計に使う。
   errorTags: string[];
   feedbackJa: string;
+  // 判定後に、入力した解答と並べて見せる模範解答
+  modelAnswerEn: string;
   streak: number;
   subStep: Stage3SubStep;
   graduated: boolean;

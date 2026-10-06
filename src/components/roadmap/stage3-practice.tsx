@@ -38,7 +38,7 @@ export function Stage3Practice() {
   // ——それ自体は正しい判定であり、ヒントを見るかどうかを自己申告制にする方が筋が良い）。
   const [hintRevealed, setHintRevealed] = useState(false);
 
-  const speech = useSpeechRecognition();
+  const speech = useSpeechRecognition({ continuous: true });
 
   async function loadSession() {
     setState("loading");
@@ -270,6 +270,9 @@ export function Stage3Practice() {
             <p className="mt-3 text-xs text-zinc-400">
               {speech.status === "listening" ? "聞き取り中...もう一度タップで終了" : "タップして声に出す"}
             </p>
+            {speech.status === "listening" && speech.liveText && (
+              <p className="mt-3 rounded-lg bg-white px-3 py-2 text-left text-sm text-zinc-700">{speech.liveText}</p>
+            )}
             {speech.errorMessage && <p className="mt-2 text-xs text-red-600">{speech.errorMessage}</p>}
           </div>
         )}
@@ -321,6 +324,19 @@ export function Stage3Practice() {
                 <X className="h-5 w-5 shrink-0 text-zinc-500" />
               )}
               <p className="text-sm text-zinc-800">{result.feedbackJa}</p>
+            </div>
+
+            <div className="mb-3 grid gap-2 sm:grid-cols-2">
+              <div className="rounded-lg border border-zinc-200 bg-white px-3 py-2">
+                <p className="mb-0.5 text-[10px] font-semibold text-zinc-400">あなたの解答</p>
+                <p className="text-sm text-zinc-800">{manualText.trim()}</p>
+              </div>
+              <div className="rounded-lg border bg-white px-3 py-2" style={{ borderColor: withAlpha(STAGE_COLOR, "66") }}>
+                <p className="mb-0.5 text-[10px] font-semibold" style={{ color: STAGE_COLOR }}>
+                  模範解答
+                </p>
+                <p className="text-sm text-zinc-800">{result.modelAnswerEn}</p>
+              </div>
             </div>
 
             {result.graduated && (
