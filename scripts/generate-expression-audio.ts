@@ -9,6 +9,11 @@
 // デフォルトでは「まだ音声が無い行」だけを対象に生成する（何度実行しても安全・再実行可）。
 // 特定の表現だけ対象にしたい場合は: npx tsx scripts/generate-expression-audio.ts --only=EX-0001,EX-0003
 // 既存の音声を作り直したい場合は:   npx tsx scripts/generate-expression-audio.ts --force
+// 表現の音声だけ作りたい場合は（Stage1練習用。例文は作らない）:
+//   npx tsx scripts/generate-expression-audio.ts --fields=expression
+// 日常会話のシーン（買い物・外食・旅行・友人・体調）の表現だけ作りたい場合は:
+//   npx tsx scripts/generate-expression-audio.ts --fields=expression --daily
+// 件数だけ確認したい（生成しない）場合は --dry-run を付ける。
 //
 // 音声量の目安: 50件×最大3フィールド×数十文字なので、Google Cloud TTSの無料枠
 // （Neural2ボイスで月100万文字まで無料）に収まる想定。心配なら--onlyで数件ずつ試すこと。
@@ -49,6 +54,19 @@ const args = process.argv.slice(2);
 const force = args.includes("--force");
 const onlyArg = args.find((a) => a.startsWith("--only="));
 const onlyCodes = onlyArg ? onlyArg.replace("--only=", "").split(",").map((c) => c.trim()) : null;
+const dailyOnly = args.includes("--daily");
+const dryRun = args.includes("--dry-run");
+const fieldsArg = args.find((a) => a.startsWith("--fields="));
+const ALL_FIELDS = ["expression", "example1", "example2"] as const;
+const targetFields: readonly (typeof ALL_FIELDS)[number][] = fieldsArg
+  ? ALL_FIELDS.filter((f) => fieldsArg.replace("--fields=", "").split(",").map((x) => x.trim()).includes(f))
+  : ALL_FIELDS;
+if (targetFields.length === 0) {
+  console.error("--fieldsにはexpression,example1,example2のいずれかを指定してください");
+  process.exit(1);
+}
+// ロードマップStage1の日常会話シーン（src/components/roadmap/types.tsのSTAGE1_SCENE_OPTIONSの前半5つと同じ）
+const DAILY_SCENE_TAGS = ["買い物", "外食", "旅行", "友人", "体調"];
 
 type ExpressionRow = {
   id: string;
@@ -108,6 +126,10 @@ async function main() {
     .eq("publish_status", "公開")
     .order("code");
 
+  if (dailyOnly) {
+    query = query.overlaps("scene_tags", DAILY_SCENE_TAGS);
+  }
+
   if (onlyCodes) {
     query = query.in("code", onlyCodes);
   }
@@ -119,14 +141,17 @@ async function main() {
   }
 
   const rows = data as ExpressionRow[];
-  console.log(`対象: ${rows.length}件${onlyCodes ? ` (--only=${onlyCodes.join(",")})` : ""}`);
+  console.log(
+    `対象: ${rows.length}件${onlyCodes ? ` (--only=${onlyCodes.join(",")})` : ""}${dailyOnly ? " (--daily)" : ""} / フィールド: ${targetFields.join(",")}`
+  );
 
   let generated = 0;
   let skipped = 0;
   let failed = 0;
+  let totalChars = 0;
 
   for (const row of rows) {
-    for (const field of Object.keys(FIELD_CONFIG) as Field[]) {
+    for (const field of targetFields) {
       const { textKey, pathKey, fileName } = FIELD_CONFIG[field];
       const text = row[textKey] as string | null;
       const existingPath = row[pathKey] as string | null;
@@ -138,6 +163,12 @@ async function main() {
       }
 
       const storagePath = `${row.code}/${fileName}`;
+
+      if (dryRun) {
+        generated++;
+        totalChars += text.length;
+        continue;
+      }
 
       try {
         console.log(`生成中: ${row.code} / ${field} — "${text.slice(0, 40)}${text.length > 40 ? "..." : ""}"`);
@@ -165,6 +196,10 @@ async function main() {
     }
   }
 
+  if (dryRun) {
+    console.log(`\n[dry-run] 生成予定: ${generated}件 / 約${totalChars}文字（実際には生成していません）`);
+    return;
+  }
   console.log(`\n完了: 生成${generated}件 / スキップ${skipped}件（既存あり） / 失敗${failed}件`);
 }
 
