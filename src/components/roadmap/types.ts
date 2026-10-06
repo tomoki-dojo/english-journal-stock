@@ -312,6 +312,11 @@ export type Stage3JudgeResult = {
   feedbackJa: string;
   // 判定後に、入力した解答と並べて見せる模範解答
   modelAnswerEn: string;
+  // ミニ拡張の1つ目の発話が通ったとき、相手（アーサー）の返答を見せて返事を促す
+  // （streakはこの時点では動かさず、返事の判定で更新する）
+  awaitingFollowUp?: boolean;
+  partnerReplyEn?: string;
+  partnerReplyJa?: string;
   streak: number;
   subStep: Stage3SubStep;
   graduated: boolean;

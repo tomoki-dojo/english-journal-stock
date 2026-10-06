@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/supabase/server-auth";
 import { getPlan } from "@/lib/supabase/profile";
 import { reportStage3Result } from "@/lib/supabase/speaking-roadmap";
 
-type JudgeRequestBody = { expressionId: string; userSpokenText: string };
+type JudgeRequestBody = { expressionId: string; userSpokenText: string; followUp?: { partnerReplyEn: string } };
 
 function isJudgeRequestBody(value: unknown): value is JudgeRequestBody {
   if (typeof value !== "object" || value === null) return false;
@@ -44,7 +44,11 @@ export async function POST(request: Request) {
 
   try {
     const plan = await getPlan(user.id);
-    const outcome = await reportStage3Result(user.id, plan, json.expressionId, spokenText);
+    const followUp =
+      json.followUp && typeof json.followUp.partnerReplyEn === "string" && json.followUp.partnerReplyEn.length > 0
+        ? { partnerReplyEn: json.followUp.partnerReplyEn.slice(0, 300) }
+        : undefined;
+    const outcome = await reportStage3Result(user.id, plan, json.expressionId, spokenText, followUp);
 
     if (outcome.status === "limit_exceeded") {
       return NextResponse.json(

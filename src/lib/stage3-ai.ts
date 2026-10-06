@@ -71,6 +71,8 @@ export type JudgeStage3AnswerParams = JudgeStage3Input & {
   plan: Plan;
   provider?: AiWritingProvider;
   model?: string;
+  // ミニ拡張の2つ目の発話（返事）は、1つ目と合わせて1回分として数える（利用枠は消費しない）
+  skipUsageCount?: boolean;
 };
 
 export type JudgeStage3AnswerResult =
@@ -81,9 +83,15 @@ export type JudgeStage3AnswerResult =
 // Stage3のAI意味判定のエントリポイント。利用回数チェック→プロンプト構築→Claude/Geminiいずれかを
 // 呼び出し、判定結果を返す。呼び出し元（reportStage3Result）がstreak更新・エラータグ集計を行う。
 export async function judgeStage3Answer(params: JudgeStage3AnswerParams): Promise<JudgeStage3AnswerResult> {
-  const usage = await checkStage3Usage(params.userId, params.plan);
-  if (!usage.allowed) {
-    return { ok: false, reason: "limit_exceeded", limit: usage.limit };
+  const checked = await checkStage3Usage(params.userId, params.plan);
+  // 返事の判定は1つ目の発話と合わせて1回分なので、枠を使い切った直後でも通す
+  const usage = checked.allowed
+    ? checked
+    : params.skipUsageCount
+      ? { allowed: true as const, remaining: 0, limit: checked.limit, currentCount: checked.limit }
+      : null;
+  if (!usage) {
+    return { ok: false, reason: "limit_exceeded", limit: checked.limit };
   }
 
   const provider: AiWritingProvider =
@@ -91,7 +99,9 @@ export async function judgeStage3Answer(params: JudgeStage3AnswerParams): Promis
   const model =
     params.model ?? (provider === "anthropic" ? DEFAULT_ANTHROPIC_MODEL : DEFAULT_GEMINI_MODEL);
 
-  const systemPrompt = buildStage3SystemPrompt();
+  const systemPrompt = buildStage3SystemPrompt(
+    params.phase === "followUp" ? "exampleReply" : params.subStep === "ミニ拡張" ? "partnerReply" : null
+  );
   const userPrompt = buildStage3UserPrompt(params);
 
   try {
@@ -100,12 +110,17 @@ export async function judgeStage3Answer(params: JudgeStage3AnswerParams): Promis
         ? await callAnthropic(systemPrompt, userPrompt, model)
         : await callGemini(systemPrompt, userPrompt, model);
 
-    await incrementStage3Usage(params.userId, usage.currentCount);
+    if (!params.skipUsageCount) {
+      await incrementStage3Usage(params.userId, usage.currentCount);
+    }
 
     return {
       ok: true,
       judgment: parseStage3JudgmentJson(raw),
-      usage: { remaining: usage.remaining, limit: usage.limit },
+      usage: {
+        remaining: params.skipUsageCount ? Math.max(usage.remaining + (checked.allowed ? 1 : 0), 0) : usage.remaining,
+        limit: usage.limit,
+      },
     };
   } catch (error) {
     return {

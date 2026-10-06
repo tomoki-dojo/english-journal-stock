@@ -1341,7 +1341,8 @@ export async function reportStage3Result(
   userId: string,
   plan: Plan,
   expressionId: string,
-  userSpokenText: string
+  userSpokenText: string,
+  followUp?: { partnerReplyEn: string }
 ): Promise<Stage3ReportOutcome> {
   const { data: expr, error: exprError } = await supabaseAdmin
     .from("expressions")
@@ -1359,6 +1360,7 @@ export async function reportStage3Result(
   const progressMap = await getStage3ProgressMap(userId);
   const currentStreak = progressMap.get(expressionId)?.correct_streak ?? 0;
   const subStep = getStage3SubStep(currentStreak);
+  const isFollowUp = followUp !== undefined && subStep === "ミニ拡張";
 
   const judged = await judgeStage3Answer({
     userId,
@@ -1367,6 +1369,9 @@ export async function reportStage3Result(
     meaningJa: (expr.meaning_ja as string | null) ?? "",
     subStep,
     userSpokenText,
+    phase: isFollowUp ? "followUp" : "first",
+    partnerReplyEn: followUp?.partnerReplyEn,
+    skipUsageCount: isFollowUp,
   });
 
   if (!judged.ok) {
@@ -1374,6 +1379,26 @@ export async function reportStage3Result(
       return { status: "limit_exceeded", limit: judged.limit };
     }
     return { status: "error", message: judged.message };
+  }
+
+  // ミニ拡張の1つ目の発話が通ったら、相手の返答を返して返事を待つ（streakは返事の判定で動かす）
+  if (subStep === "ミニ拡張" && !isFollowUp && judged.judgment.correct && judged.judgment.partnerReplyEn) {
+    return {
+      status: "ok",
+      result: {
+        correct: true,
+        errorTags: [],
+        feedbackJa: judged.judgment.feedbackJa,
+        modelAnswerEn: expr.expression_en as string,
+        awaitingFollowUp: true,
+        partnerReplyEn: judged.judgment.partnerReplyEn,
+        partnerReplyJa: judged.judgment.partnerReplyJa ?? "",
+        streak: currentStreak,
+        subStep,
+        graduated: false,
+        usage: judged.usage,
+      },
+    };
   }
 
   const { streak: newStreak, graduated } = await reportStageStreakResult(
@@ -1404,7 +1429,9 @@ export async function reportStage3Result(
       correct: judged.judgment.correct,
       errorTags: judged.judgment.errorTags,
       feedbackJa: judged.judgment.feedbackJa,
-      modelAnswerEn: expr.expression_en as string,
+      modelAnswerEn: isFollowUp
+        ? (judged.judgment.exampleReplyEn ?? (expr.expression_en as string))
+        : (expr.expression_en as string),
       streak: newStreak,
       subStep: getStage3SubStep(newStreak),
       graduated,

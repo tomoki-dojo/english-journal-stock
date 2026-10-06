@@ -10,6 +10,10 @@ export type JudgeStage3Input = {
   meaningJa: string;
   subStep: Stage3SubStep;
   userSpokenText: string;
+  // ミニ拡張は2段階：first=まずフレーズを言う（意味判定＋相手の返答を生成）、
+  // followUp=相手（アーサー）の返答に対して一言返す。未指定はfirst扱い。
+  phase?: "first" | "followUp";
+  partnerReplyEn?: string;
 };
 
 const SUB_STEP_INSTRUCTION: Record<Stage3SubStep, string> = {
@@ -18,10 +22,19 @@ const SUB_STEP_INSTRUCTION: Record<Stage3SubStep, string> = {
   自由言い換え:
     "お手本の英文は見せず、日本語の意味だけから自由に組み立てています。お手本と語順や単語が違っても、意味が伝わっていれば正解とします。",
   ミニ拡張:
-    "日本語の意味に加えて、状況を一言足すよう求めています。核となる意味が伝わっており、かつ最低限の拡張（状況・理由・詳細など）が加えられていれば正解とします。拡張が一切ない場合は、核の意味だけ合っていても不正解にしてください。",
+    "日本語の意味を、お手本を見ずに自分の言葉で言っています（ミニ会話の1つ目の発話）。意味が伝わっていれば正解とし、状況の付け足しは求めません。",
 };
 
-export function buildStage3SystemPrompt(): string {
+export function buildStage3SystemPrompt(extra: "partnerReply" | "exampleReply" | null = null): string {
+  const extraFields =
+    extra === "partnerReply"
+      ? `,
+  "partnerReplyEn": "学習者の発話に対して、英語話者の相手（同僚アーサー）が自然に返す短い一言（英語、1文、やさしい語彙。質問や確認など、学習者が一言返したくなる内容）",
+  "partnerReplyJa": "partnerReplyEnの日本語訳"`
+      : extra === "exampleReply"
+        ? `,
+  "exampleReplyEn": "相手の発言に対する、自然な返答の例（英語、1文、やさしい語彙）"`
+        : "";
   return `あなたは英語スピーキング練習アプリの採点者です。日本語話者が声に出した英文（音声認識でテキスト化されたもの）を判定してください。
 
 出力は必ず次のJSON形式のみとし、前後に説明文やMarkdownのコードブロック記法（\`\`\`）を一切付けないこと。
@@ -29,7 +42,7 @@ export function buildStage3SystemPrompt(): string {
 {
   "correct": true または false,
   "errorTags": ["該当するエラータグ（0〜2件、なければ空配列）"],
-  "feedbackJa": "日本語で1〜2文の短いフィードバック（なぜ正解/不正解か、次に何を意識すればいいか）"
+  "feedbackJa": "日本語で1〜2文の短いフィードバック（なぜ正解/不正解か、次に何を意識すればいいか）"${extraFields}
 }
 
 判定基準：
@@ -41,6 +54,16 @@ export function buildStage3SystemPrompt(): string {
 }
 
 export function buildStage3UserPrompt(input: JudgeStage3Input): string {
+  if (input.phase === "followUp") {
+    return `最初に学習者が言った表現（お手本）: ${input.expressionEn}
+日本語の意味: ${input.meaningJa}
+相手（アーサー）の返答: ${input.partnerReplyEn ?? ""}
+
+学習者が、この返答に対して返した英文（音声認識のテキスト化結果）:
+${input.userSpokenText}
+
+相手の返答に対する返事として、意味が通じていて文法的に大きな問題がなければ正解としてください（内容は自由。お手本の表現を使う必要はありません）。この返事を判定してください。`;
+  }
   return `お手本の英文: ${input.expressionEn}
 日本語の意味: ${input.meaningJa}
 出題形式: ${input.subStep}（${SUB_STEP_INSTRUCTION[input.subStep]}）
@@ -61,6 +84,9 @@ export type ParsedStage3Judgment = {
   correct: boolean;
   errorTags: string[];
   feedbackJa: string;
+  partnerReplyEn?: string;
+  partnerReplyJa?: string;
+  exampleReplyEn?: string;
 };
 
 const VALID_ERROR_TAGS = new Set<string>(ERROR_TAG_VALUES);
@@ -76,6 +102,9 @@ export function parseStage3JudgmentJson(raw: string): ParsedStage3Judgment {
       correct: parsed.correct === true,
       errorTags,
       feedbackJa: typeof parsed.feedbackJa === "string" ? parsed.feedbackJa : "",
+      partnerReplyEn: typeof parsed.partnerReplyEn === "string" ? parsed.partnerReplyEn : undefined,
+      partnerReplyJa: typeof parsed.partnerReplyJa === "string" ? parsed.partnerReplyJa : undefined,
+      exampleReplyEn: typeof parsed.exampleReplyEn === "string" ? parsed.exampleReplyEn : undefined,
     };
   } catch {
     // モデルがJSON以外を返した場合のフォールバック。安全側に倒して不正解扱いにする

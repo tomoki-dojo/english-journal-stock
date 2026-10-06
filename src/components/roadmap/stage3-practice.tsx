@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Check, Hourglass, Mic, PartyPopper, RotateCcw, Square, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RoundHeader } from "./round-header";
+import { ArthurAvatar } from "./arthur";
 import { GrowthBadge } from "./growth-badge";
 import { GrowingKuwagataPanel } from "./growing-kuwagata-panel";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
@@ -37,6 +38,9 @@ export function Stage3Practice() {
   // 通ってしまい「自分の言葉で言う」練習にならない。AI判定側は一字一句同じでも正解のまま変えない
   // ——それ自体は正しい判定であり、ヒントを見るかどうかを自己申告制にする方が筋が良い）。
   const [hintRevealed, setHintRevealed] = useState(false);
+  // ミニ拡張：1つ目の発話のあとに相手（アーサー）が返した一言。返事を待っている間だけ持つ。
+  const [followUp, setFollowUp] = useState<{ partnerReplyEn: string; partnerReplyJa: string } | null>(null);
+  const [firstAnswer, setFirstAnswer] = useState("");
 
   const speech = useSpeechRecognition({ continuous: true });
 
@@ -47,6 +51,8 @@ export function Stage3Practice() {
     setResult(null);
     setError(null);
     setHintRevealed(false);
+    setFollowUp(null);
+    setFirstAnswer("");
     speech.reset();
 
     try {
@@ -105,7 +111,11 @@ export function Stage3Practice() {
       const res = await fetch("/api/roadmap/stage3/judge", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ expressionId: question.expressionId, userSpokenText: manualText.trim() }),
+        body: JSON.stringify({
+          expressionId: question.expressionId,
+          userSpokenText: manualText.trim(),
+          followUp: followUp ? { partnerReplyEn: followUp.partnerReplyEn } : undefined,
+        }),
       });
       const json = await res.json();
 
@@ -118,8 +128,20 @@ export function Stage3Practice() {
         throw new Error(json.error ?? "判定処理に失敗しました");
       }
 
-      setResult(json as Stage3JudgeResult);
-      setUsage((json as Stage3JudgeResult).usage);
+      const judged = json as Stage3JudgeResult;
+      setUsage(judged.usage);
+
+      // ミニ拡張：1つ目が通ったら、相手の返答を見せて、返事をもらう
+      if (judged.awaitingFollowUp && judged.partnerReplyEn) {
+        setFirstAnswer(manualText.trim());
+        setFollowUp({ partnerReplyEn: judged.partnerReplyEn, partnerReplyJa: judged.partnerReplyJa ?? "" });
+        setManualText("");
+        speech.reset();
+        setAnswerPhase("prompt");
+        return;
+      }
+
+      setResult(judged);
       setAnswerPhase("result");
     } catch (err) {
       setError(err instanceof Error ? err.message : "判定処理に失敗しました");
@@ -229,8 +251,24 @@ export function Stage3Practice() {
             </button>
           ))}
 
-        {question.subStep === "ミニ拡張" && (
-          <p className="mb-3 text-xs text-zinc-400">意味に加えて、状況を一言足して言ってみよう。</p>
+        {followUp && (
+          <div className="mb-3 flex flex-col gap-2">
+            <div className="flex flex-row-reverse items-start gap-2">
+              <div
+                className="max-w-[85%] rounded-lg px-3 py-1.5 text-sm text-white"
+                style={{ backgroundColor: STAGE_COLOR }}
+              >
+                {firstAnswer}
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <ArthurAvatar size={24} />
+              <div className="max-w-[85%] rounded-lg bg-zinc-100 px-3 py-1.5 text-sm text-zinc-800">
+                <p>{followUp.partnerReplyEn}</p>
+                {followUp.partnerReplyJa && <p className="mt-0.5 text-xs text-zinc-400">{followUp.partnerReplyJa}</p>}
+              </div>
+            </div>
+          </div>
         )}
 
         {answerPhase === "prompt" && (
