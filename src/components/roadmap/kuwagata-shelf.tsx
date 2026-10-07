@@ -136,6 +136,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0006": buildNewSpeciesWalkerArt("KW-0006"),
   // ダンたん(ダンゴムシ)
   "KW-0007": buildNewSpeciesWalkerArt("KW-0007"),
+  // バッたん(トノサマバッタ。ときどき跳ねる＝WanderingCreatureのHOP_*)
+  "KW-0009": buildNewSpeciesWalkerArt("KW-0009"),
   "KW-0001": buildKnownCreatureArt("KW-0001"),
   // ヒビクワたん(背中に波紋模様)
   "KW-0002": buildKnownCreatureArt("KW-0002"),
@@ -714,6 +716,12 @@ const PROUD_CYCLE_MS = 14000;
 const PROUD_DURATION_MS = 3000;
 const PROUD_SPECIES_CODE = "KW-0004";
 
+// バッたん(KW-0009)の「ジャンプ」。バッタらしく、歩いている途中でときどき(8秒に1回)ぴょんと跳ぶ。
+// 一瞬かがんで溜め→跳ね上がる→着地でぺちゃっと潰れる、1.1秒の動き。
+const HOP_CYCLE_MS = 8000;
+const HOP_DURATION_MS = 1100;
+const HOP_SPECIES_CODE = "KW-0009";
+
 // 一定周期で短時間だけtrueになる仕草用のフック。開始は個体ごとにずらす。
 function useTimedGesture(enabled: boolean, seedKey: string, cycleMs: number, durationMs: number): boolean {
   const [active, setActive] = useState(false);
@@ -792,6 +800,12 @@ function WanderingCreature({
     PROUD_CYCLE_MS,
     PROUD_DURATION_MS
   );
+  const hopping = useTimedGesture(
+    speciesCode === HOP_SPECIES_CODE && growthStage === "成虫" && hasArt,
+    seedKey + ":hop",
+    HOP_CYCLE_MS,
+    HOP_DURATION_MS
+  );
   const moves = !isStationaryStage(speciesCode, growthStage);
   const { spot, facing, heading } = useWander(seedKey, initialSpot, widthPct, moves, decorationSpots, positionsRef);
   const pt = surfacePoint(spot.u, spot.v);
@@ -812,7 +826,7 @@ function WanderingCreature({
     >
       {hasArt ? (
         <div
-          className={`h-full w-full ${chatting ? "animate-kuwagata-chat" : ""} ${fighting ? "animate-kuwagata-fight" : ""} ${proud ? "animate-kuwagata-proud" : ""}`}
+          className={`h-full w-full ${chatting ? "animate-kuwagata-chat" : ""} ${fighting ? "animate-kuwagata-fight" : ""} ${proud ? "animate-kuwagata-proud" : ""} ${hopping ? "animate-kuwagata-hop" : ""}`}
         >
           <KnownCreatureSprite
             fighting={fighting}

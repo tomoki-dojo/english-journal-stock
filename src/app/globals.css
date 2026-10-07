@@ -598,7 +598,35 @@ body {
   animation: kuwagata-proud 3s ease-in-out;
 }
 
+/* バッたんの「ジャンプ」。かがんで溜め→跳ね上がる(体を少し傾ける)→着地で潰れて戻る。 */
+@keyframes kuwagata-hop {
+  0% {
+    transform: translateY(0) scale(1, 1) rotate(0deg);
+  }
+  18% {
+    transform: translateY(0) scale(1.1, 0.82) rotate(0deg);
+  }
+  45% {
+    transform: translateY(-85%) scale(0.95, 1.12) rotate(-10deg);
+  }
+  70% {
+    transform: translateY(-20%) scale(1, 1) rotate(4deg);
+  }
+  86% {
+    transform: translateY(0) scale(1.12, 0.8) rotate(0deg);
+  }
+  100% {
+    transform: translateY(0) scale(1, 1) rotate(0deg);
+  }
+}
+
+.animate-kuwagata-hop {
+  transform-origin: 50% 100%;
+  animation: kuwagata-hop 1.1s ease-in-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .animate-kuwagata-hop,
   .animate-kuwagata-proud,
   .animate-kuwagata-chat,
   .animate-kuwagata-chat-dot,
