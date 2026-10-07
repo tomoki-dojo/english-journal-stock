@@ -218,7 +218,12 @@ export function Stage3Practice() {
 
   return (
     <div>
-      <RoundHeader stage={3} subFormatLabel={question.subStep} usageLabel={usageLabel} />
+      <RoundHeader
+        stage={3}
+        subFormatLabel={question.subStep}
+        usageLabel={usageLabel}
+        arthurMood={result ? (result.correct ? "happy" : "sad") : "talk"}
+      />
 
       <div
         className={cn("rounded-xl border p-6", hasTint ? "" : "border-zinc-200 bg-zinc-100/50")}

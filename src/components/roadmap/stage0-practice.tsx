@@ -65,6 +65,7 @@ export function Stage0Practice({ availableErrorTags }: Stage0PracticeProps) {
   const [questions, setQuestions] = useState<Stage0RoundQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [results, setResults] = useState<QuestionResult[]>([]);
+  const [reaction, setReaction] = useState<"happy" | "sad" | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -144,6 +145,9 @@ export function Stage0Practice({ availableErrorTags }: Stage0PracticeProps) {
         throw new Error(json.error ?? "結果の保存に失敗しました");
       }
       const json = await res.json();
+
+      setReaction(correct ? "happy" : "sad");
+      setTimeout(() => setReaction(null), 1100);
 
       setResults((prev) => [
         ...prev,
@@ -310,7 +314,13 @@ export function Stage0Practice({ availableErrorTags }: Stage0PracticeProps) {
   return (
     <div>
       {categorySelector}
-      <RoundHeader stage={0} subFormatLabel="感覚" current={currentIndex + 1} total={questions.length} />
+      <RoundHeader
+        stage={0}
+        subFormatLabel="感覚"
+        current={currentIndex + 1}
+        total={questions.length}
+        arthurMood={reaction ?? "talk"}
+      />
 
       <div
         key={currentIndex}
