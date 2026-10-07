@@ -56,7 +56,7 @@ function formatDate(iso: string): string {
 // 持てる形にしており、backが未着手の種・向きはKnownCreatureSprite側でfrontにフォール
 // バックする。ここに無い種はTankOccupantのフォールバック(Bugアイコン)になる。
 // legsBehindBody/legsInFrontOfBodyは配列の並び順がそのままDOM描画順(=重ね順)になる。
-// 正面(front)は「奥脚(1本)→本体→手前脚3本→大顎」、背面(back)は「奥脚3本→本体→大顎」
+// 正面(front)は「奥脚(1本)→本体→手前脚3本→大顎」、背面(back)は「本体→脚3本(R3→R2→R1)→大顎」
 // という向きごとに違う重なり方になるため、2つの配列に分けて向きごとに自由に組めるように
 // している(体より奥に描く脚=legsBehindBody、体より手前に描く脚=legsInFrontOfBody)。
 const KUWAGATA_ART_DIR = "/roadmap/kuwagata";
