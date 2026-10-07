@@ -151,8 +151,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   // ダンたん(ダンゴムシ)
   "KW-0007": buildNewSpeciesWalkerArt("KW-0007"),
   // バッたん(トノサマバッタ。ときどき跳ねる＝WanderingCreatureのHOP_*)
-  // 背面の大きな後ろ脚(R1)は体の手前に描く(奥に回すと体に隠れて見えないため)
-  "KW-0009": buildNewSpeciesWalkerArt("KW-0009", { backLegsInFront: ["R1"] }),
+  // 背面の脚は3本とも体の手前に描く(手前からR1→R2→R3。奥に回すと体に隠れて見えないため)
+  "KW-0009": buildNewSpeciesWalkerArt("KW-0009", { backLegsInFront: ["R1", "R2", "R3"] }),
   "KW-0001": buildKnownCreatureArt("KW-0001"),
   // ヒビクワたん(背中に波紋模様)
   "KW-0002": buildKnownCreatureArt("KW-0002"),
