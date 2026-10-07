@@ -60,9 +60,12 @@ export default function TermsPage() {
         </section>
 
         <section className="space-y-2">
-          <h2 className="text-base font-semibold text-zinc-900">第5条（音声コンテンツについて）</h2>
+          <h2 className="text-base font-semibold text-zinc-900">第5条（音声機能・動作環境について）</h2>
           <p>
             本サービスの例文音声は、外部の音声合成サービス（Google Cloud Text-to-Speech等）を用いて生成しています。音声の発音・イントネーション等について、運営者はその完全性を保証しません。
+          </p>
+          <p>
+            音声入力を伴う練習機能は、ブラウザの音声認識機能を利用しています。Google Chrome・Microsoft Edgeでのご利用を推奨します。Safariでは動作が不安定な場合があり、Firefoxでは音声入力をご利用いただけません（テキスト入力で代替できます）。
           </p>
         </section>
 
