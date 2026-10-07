@@ -121,11 +121,25 @@ function buildKnownCreatureArt(code: string): Partial<Record<Facing, KnownCreatu
 
 // 新種(動きの種類A=歩く6脚)の成虫アート。既知種と同じ脚の構成だが、大顎が無い(mandibles空)・
 // 卵/幼虫/蛹も無い(成虫のみ)。ファイルは kuwagata_{code}_{front|back}_*.svg の9枚。
-function buildNewSpeciesWalkerArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
+// backLegsInFront: 背面で本体より「手前」に描く脚(例: ["R1"])。既定は背面の脚3本とも本体の奥。
+// バッたんの後ろ脚(back R1)のように、体の前に見せたい大きな脚だけ指定する。
+function buildNewSpeciesWalkerArt(
+  code: string,
+  options: { backLegsInFront?: string[] } = {}
+): Partial<Record<Facing, KnownCreatureArt>> {
   const base = buildKnownCreatureArt(code);
+  let back = base.back && { ...base.back, mandibles: {} };
+  if (back && options.backLegsInFront?.length) {
+    const isFront = (src: string) => options.backLegsInFront!.some((leg) => src.endsWith(`_back_leg_${leg}.svg`));
+    back = {
+      ...back,
+      legsBehindBody: back.legsBehindBody.filter((leg) => !isFront(leg.src)),
+      legsInFrontOfBody: back.legsBehindBody.filter((leg) => isFront(leg.src)),
+    };
+  }
   return {
     front: base.front && { ...base.front, mandibles: {} },
-    back: base.back && { ...base.back, mandibles: {} },
+    back,
   };
 }
 
@@ -137,7 +151,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   // ダンたん(ダンゴムシ)
   "KW-0007": buildNewSpeciesWalkerArt("KW-0007"),
   // バッたん(トノサマバッタ。ときどき跳ねる＝WanderingCreatureのHOP_*)
-  "KW-0009": buildNewSpeciesWalkerArt("KW-0009"),
+  // 背面の大きな後ろ脚(R1)は体の手前に描く(奥に回すと体に隠れて見えないため)
+  "KW-0009": buildNewSpeciesWalkerArt("KW-0009", { backLegsInFront: ["R1"] }),
   "KW-0001": buildKnownCreatureArt("KW-0001"),
   // ヒビクワたん(背中に波紋模様)
   "KW-0002": buildKnownCreatureArt("KW-0002"),
