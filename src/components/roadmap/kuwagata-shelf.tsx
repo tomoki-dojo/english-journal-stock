@@ -525,6 +525,12 @@ function spriteRadius(widthPct: number): number {
 
 const SPOT_PICK_ATTEMPTS = 30;
 
+// 歩く速さ。移動時間(travelMs)=距離(横幅%相当)×TRAVEL_MS_PER_PCT を、MIN〜MAXの範囲に収める。
+// 大きいほどゆっくり歩く(2026-10: 移動範囲を全面に広げて速く見えたため、固定7秒から距離比例に変更)。
+const TRAVEL_MS_PER_PCT = 700;
+const MIN_TRAVEL_MS = 7000;
+const MAX_TRAVEL_MS = 30000;
+
 // 天面(pickRandomSpotの範囲)をランダムに歩き回らせるためのフック。
 // 一定間隔で次の目的地(u,v)を決め、CSSのtransition(left/top)でそこへゆっくり
 // 移動させる。個体ごとにinitial delayをズラしているので、同じ水槽内の複数匹が
@@ -548,12 +554,19 @@ function useWander(
   moves: boolean,
   decorationSpots: { u: number; v: number; widthPct: number }[],
   positionsRef: { current: Record<string, { u: number; v: number; widthPct: number }> },
-): { spot: { u: number; v: number }; facing: Facing; heading: Heading } {
-  const [state, setState] = useState<{ spot: { u: number; v: number }; facing: Facing; heading: Heading }>({
+): { spot: { u: number; v: number }; facing: Facing; heading: Heading; travelMs: number } {
+  const [state, setState] = useState<{
+    spot: { u: number; v: number };
+    facing: Facing;
+    heading: Heading;
+    travelMs: number;
+  }>({
     spot: initial,
     facing: "front",
     heading: "left",
+    travelMs: MIN_TRAVEL_MS,
   });
+  const stateRef = useRef(state);
 
   useEffect(() => {
     const positions = positionsRef.current;
@@ -598,18 +611,26 @@ function useWander(
 
     const goToNextSpot = () => {
       if (cancelled) return;
-      setState((prev) => {
-        const nextSpot = pickNextSpot();
-        positionsRef.current[seedKey] = { ...nextSpot, widthPct };
-        const prevPt = surfacePoint(prev.spot.u, prev.spot.v);
-        const nextPt = surfacePoint(nextSpot.u, nextSpot.v);
-        const dx = nextPt.left - prevPt.left;
-        const dy = nextPt.top - prevPt.top;
-        const facing: Facing = Math.abs(dy) >= Math.abs(dx) ? (dy >= 0 ? "front" : "back") : dx <= 0 ? "front" : "back";
-        const heading: Heading = dx === 0 ? prev.heading : dx < 0 ? "left" : "right";
-        return { spot: nextSpot, facing, heading };
-      });
-      timer = setTimeout(goToNextSpot, 9000 + Math.random() * 6000);
+      // 更新関数の外で次の状態を決める(移動時間を、次のタイマーの待ち時間にも使うため)
+      const prev = stateRef.current;
+      const nextSpot = pickNextSpot();
+      positionsRef.current[seedKey] = { ...nextSpot, widthPct };
+      const prevPt = surfacePoint(prev.spot.u, prev.spot.v);
+      const nextPt = surfacePoint(nextSpot.u, nextSpot.v);
+      const dx = nextPt.left - prevPt.left;
+      const dy = nextPt.top - prevPt.top;
+      const facing: Facing = Math.abs(dy) >= Math.abs(dx) ? (dy >= 0 ? "front" : "back") : dx <= 0 ? "front" : "back";
+      const heading: Heading = dx === 0 ? prev.heading : dx < 0 ? "left" : "right";
+      // 移動時間は距離に比例(歩く速さを一定に保つ)。移動範囲が広くても速くならない。
+      const travelMs = Math.min(
+        MAX_TRAVEL_MS,
+        Math.max(MIN_TRAVEL_MS, surfaceDistancePct(prevPt, nextPt) * TRAVEL_MS_PER_PCT)
+      );
+      const next = { spot: nextSpot, facing, heading, travelMs };
+      stateRef.current = next;
+      setState(next);
+      // 次の移動は、到着してからひと休みした後(休み2〜7秒)
+      timer = setTimeout(goToNextSpot, travelMs + 2000 + Math.random() * 5000);
     };
 
     // 個体ごとに最初の移動タイミングをズラす(同期して動くのを防ぐ)
@@ -851,7 +872,7 @@ function WanderingCreature({
     HORN_DURATION_MS
   );
   const moves = !isStationaryStage(speciesCode, growthStage);
-  const { spot, facing, heading } = useWander(seedKey, initialSpot, widthPct, moves, decorationSpots, positionsRef);
+  const { spot, facing, heading, travelMs } = useWander(seedKey, initialSpot, widthPct, moves, decorationSpots, positionsRef);
   const pt = surfacePoint(spot.u, spot.v);
 
   return (
@@ -862,7 +883,7 @@ function WanderingCreature({
         top: `${pt.top}%`,
         width: `${widthPct}%`,
         aspectRatio: hasArt ? "1 / 1" : undefined,
-        transition: "left 7s ease-in-out, top 7s ease-in-out",
+        transition: `left ${travelMs}ms ease-in-out, top ${travelMs}ms ease-in-out`,
         // 実アートは左右反転しない(反転すると脚の左右が逆になってしまうため)。
         // Bugアイコンのフォールバックのみ、個体ごとに左右反転して向きにバリエーションを出す。
         transform: mirror ? "translateX(-50%) translateY(-100%) scaleX(-1)" : "translateX(-50%) translateY(-100%)",
