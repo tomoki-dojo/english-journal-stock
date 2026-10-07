@@ -625,7 +625,29 @@ body {
   animation: kuwagata-hop 1.1s ease-in-out;
 }
 
+/* カブたんの「ツノ振り」。付け根(transform-originはインラインで指定)を軸に、ぐっと振り上げて小さく揺り戻し、戻る。 */
+@keyframes kuwagata-horn {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  30% {
+    transform: rotate(-12deg);
+  }
+  55% {
+    transform: rotate(4deg);
+  }
+  75% {
+    transform: rotate(-6deg);
+  }
+}
+
+.animate-kuwagata-horn {
+  animation: kuwagata-horn 1.6s ease-in-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .animate-kuwagata-horn,
   .animate-kuwagata-hop,
   .animate-kuwagata-proud,
   .animate-kuwagata-chat,

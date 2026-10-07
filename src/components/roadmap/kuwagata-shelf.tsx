@@ -68,6 +68,9 @@ type KnownCreatureArt = {
   // 背面からは構造上ほぼ見えないはずのパーツだが、素材があれば使う(無ければ省略可)。
   // 個体ごとのmandible_variant(DBのsmallint列、1始まり)をキーにした差分バリエーション。
   mandibles: Partial<Record<number, string>>;
+  // 大顎(ツノ)の付け根。動かすときの回転の軸(CSSのtransform-origin、例: "29% 43%")。
+  // 省略時は中央。カブたんのツノのように、付け根を軸に首振りさせたい種だけ指定する。
+  mandibleOrigin?: string;
   legsBehindBody: CreaturePartArt[];
   legsInFrontOfBody: CreaturePartArt[];
 };
@@ -122,11 +125,21 @@ function buildKnownCreatureArt(code: string): Partial<Record<Facing, KnownCreatu
 
 // 新種(動きの種類A=歩く6脚)の成虫アート。既知種と同じ脚の構成だが、大顎が無い(mandibles空)・
 // 卵/幼虫/蛹も無い(成虫のみ)。ファイルは kuwagata_{code}_{front|back}_*.svg の9枚。
-function buildNewSpeciesWalkerArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
+// horn: ツノ(大顎パーツ_mandible_01の1枚)がある種は、付け根の位置(正面/背面)を渡す。
+function buildNewSpeciesWalkerArt(
+  code: string,
+  horn?: { frontOrigin: string; backOrigin: string }
+): Partial<Record<Facing, KnownCreatureArt>> {
   const base = buildKnownCreatureArt(code);
+  const withHorn = (art: KnownCreatureArt | undefined, origin: string | undefined) =>
+    art && {
+      ...art,
+      mandibles: horn && art.mandibles[1] ? { 1: art.mandibles[1] } : {},
+      mandibleOrigin: horn ? origin : undefined,
+    };
   return {
-    front: base.front && { ...base.front, mandibles: {} },
-    back: base.back && { ...base.back, mandibles: {} },
+    front: withHorn(base.front, horn?.frontOrigin),
+    back: withHorn(base.back, horn?.backOrigin),
   };
 }
 
@@ -139,6 +152,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0007": buildNewSpeciesWalkerArt("KW-0007"),
   // バッたん(トノサマバッタ。ときどき跳ねる＝WanderingCreatureのHOP_*)
   "KW-0009": buildNewSpeciesWalkerArt("KW-0009"),
+  // カブたん(カブトムシ。ツノはmandible_01、付け根を軸にときどき首振り＝HORN_*)
+  "KW-0014": buildNewSpeciesWalkerArt("KW-0014", { frontOrigin: "29% 43%", backOrigin: "76% 38%" }),
   "KW-0001": buildKnownCreatureArt("KW-0001"),
   // ヒビクワたん(背中に波紋模様)
   "KW-0002": buildKnownCreatureArt("KW-0002"),
@@ -215,6 +230,7 @@ function KnownCreatureSprite({
   heading = "left",
   phaseSeed = "",
   fighting = false,
+  hornSwing = false,
 }: {
   code: string;
   facing: Facing;
@@ -223,6 +239,8 @@ function KnownCreatureSprite({
   heading?: Heading;
   phaseSeed?: string;
   fighting?: boolean;
+  // ツノを付け根を軸に首振りさせる(カブたんの仕草)。mandibleOriginが設定された種だけ効く。
+  hornSwing?: boolean;
 }) {
   const stageArt = KNOWN_STAGE_ART[code];
 
@@ -300,7 +318,8 @@ function KnownCreatureSprite({
         <img
           src={mandible}
           alt=""
-          className={`absolute inset-0 h-full w-full ${fighting ? "animate-kuwagata-fight-jaw" : ""}`}
+          className={`absolute inset-0 h-full w-full ${fighting ? "animate-kuwagata-fight-jaw" : ""} ${hornSwing && art.mandibleOrigin ? "animate-kuwagata-horn" : ""}`}
+          style={art.mandibleOrigin ? { transformOrigin: art.mandibleOrigin } : undefined}
         />
       )}
     </div>
@@ -723,6 +742,12 @@ const HOP_CYCLE_MS = 8000;
 const HOP_DURATION_MS = 1100;
 const HOP_SPECIES_CODE = "KW-0009";
 
+// カブたん(KW-0014)の「ツノ振り」。7秒に1回・1.6秒間、立派なツノを付け根を軸にゆっくり
+// 振り上げて戻す(力強さのアピール)。個体ごとに開始をずらす。
+const HORN_CYCLE_MS = 7000;
+const HORN_DURATION_MS = 1600;
+const HORN_SPECIES_CODE = "KW-0014";
+
 // 一定周期で短時間だけtrueになる仕草用のフック。開始は個体ごとにずらす。
 function useTimedGesture(enabled: boolean, seedKey: string, cycleMs: number, durationMs: number): boolean {
   const [active, setActive] = useState(false);
@@ -807,6 +832,12 @@ function WanderingCreature({
     HOP_CYCLE_MS,
     HOP_DURATION_MS
   );
+  const hornSwing = useTimedGesture(
+    speciesCode === HORN_SPECIES_CODE && growthStage === "成虫" && hasArt,
+    seedKey + ":horn",
+    HORN_CYCLE_MS,
+    HORN_DURATION_MS
+  );
   const moves = !isStationaryStage(speciesCode, growthStage);
   const { spot, facing, heading } = useWander(seedKey, initialSpot, widthPct, moves, decorationSpots, positionsRef);
   const pt = surfacePoint(spot.u, spot.v);
@@ -831,6 +862,7 @@ function WanderingCreature({
         >
           <KnownCreatureSprite
             fighting={fighting}
+            hornSwing={hornSwing}
             code={speciesCode}
             facing={facing}
             mandibleVariant={mandibleVariant}
