@@ -134,6 +134,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0005": buildNewSpeciesWalkerArt("KW-0005"),
   // テントたん(ナナホシテントウ)
   "KW-0006": buildNewSpeciesWalkerArt("KW-0006"),
+  // ダンたん(ダンゴムシ)
+  "KW-0007": buildNewSpeciesWalkerArt("KW-0007"),
   "KW-0001": buildKnownCreatureArt("KW-0001"),
   // ヒビクワたん(背中に波紋模様)
   "KW-0002": buildKnownCreatureArt("KW-0002"),
