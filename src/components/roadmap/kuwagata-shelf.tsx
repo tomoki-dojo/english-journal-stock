@@ -130,6 +130,8 @@ function buildNewSpeciesWalkerArt(code: string): Partial<Record<Facing, KnownCre
 }
 
 const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCreatureArt>>>> = {
+  // カナたん(カナブン)
+  "KW-0005": buildNewSpeciesWalkerArt("KW-0005"),
   // テントたん(ナナホシテントウ)
   "KW-0006": buildNewSpeciesWalkerArt("KW-0006"),
   "KW-0001": buildKnownCreatureArt("KW-0001"),
