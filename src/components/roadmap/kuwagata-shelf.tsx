@@ -107,39 +107,26 @@ function buildKnownCreatureArt(code: string): Partial<Record<Facing, KnownCreatu
         2: file("back_mandible_02"),
         3: file("back_mandible_03"),
       },
-      // 背面は3本とも本体の奥(後ろ)に重なる。配列の並び順=DOM描画順(先に描いたものほど
-      // 奥)なので、一番手前に見せたいR1を配列の最後に置く(R3→R2→R1の順で描画される)
-      legsBehindBody: [
+      // 背面は3本とも本体の手前(前)に重なる。配列の並び順=DOM描画順(先に描いたものほど
+      // 奥)なので、一番手前に見せたいR1を配列の最後に置く(R3→R2→R1の順で描画される)。
+      // 体の奥に回すと、体の中に重なる絵(バッたんなど)で脚が隠れてしまうため、全種を手前にそろえている。
+      legsBehindBody: [],
+      legsInFrontOfBody: [
         { src: file("back_leg_R3"), delay: "-0.3s" },
         { src: file("back_leg_R2"), delay: "-0.15s" },
         { src: file("back_leg_R1"), delay: "0s" },
       ],
-      legsInFrontOfBody: [],
     },
   };
 }
 
 // 新種(動きの種類A=歩く6脚)の成虫アート。既知種と同じ脚の構成だが、大顎が無い(mandibles空)・
 // 卵/幼虫/蛹も無い(成虫のみ)。ファイルは kuwagata_{code}_{front|back}_*.svg の9枚。
-// backLegsInFront: 背面で本体より「手前」に描く脚(例: ["R1"])。既定は背面の脚3本とも本体の奥。
-// バッたんの後ろ脚(back R1)のように、体の前に見せたい大きな脚だけ指定する。
-function buildNewSpeciesWalkerArt(
-  code: string,
-  options: { backLegsInFront?: string[] } = {}
-): Partial<Record<Facing, KnownCreatureArt>> {
+function buildNewSpeciesWalkerArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
   const base = buildKnownCreatureArt(code);
-  let back = base.back && { ...base.back, mandibles: {} };
-  if (back && options.backLegsInFront?.length) {
-    const isFront = (src: string) => options.backLegsInFront!.some((leg) => src.endsWith(`_back_leg_${leg}.svg`));
-    back = {
-      ...back,
-      legsBehindBody: back.legsBehindBody.filter((leg) => !isFront(leg.src)),
-      legsInFrontOfBody: back.legsBehindBody.filter((leg) => isFront(leg.src)),
-    };
-  }
   return {
     front: base.front && { ...base.front, mandibles: {} },
-    back,
+    back: base.back && { ...base.back, mandibles: {} },
   };
 }
 
@@ -151,8 +138,7 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   // ダンたん(ダンゴムシ)
   "KW-0007": buildNewSpeciesWalkerArt("KW-0007"),
   // バッたん(トノサマバッタ。ときどき跳ねる＝WanderingCreatureのHOP_*)
-  // 背面の脚は3本とも体の手前に描く(手前からR1→R2→R3。奥に回すと体に隠れて見えないため)
-  "KW-0009": buildNewSpeciesWalkerArt("KW-0009", { backLegsInFront: ["R1", "R2", "R3"] }),
+  "KW-0009": buildNewSpeciesWalkerArt("KW-0009"),
   "KW-0001": buildKnownCreatureArt("KW-0001"),
   // ヒビクワたん(背中に波紋模様)
   "KW-0002": buildKnownCreatureArt("KW-0002"),
