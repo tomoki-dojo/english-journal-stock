@@ -71,6 +71,9 @@ type KnownCreatureArt = {
   // 大顎(ツノ)の付け根。動かすときの回転の軸(CSSのtransform-origin、例: "29% 43%")。
   // 省略時は中央。カブたんのツノのように、付け根を軸に首振りさせたい種だけ指定する。
   mandibleOrigin?: string;
+  // trueなら大顎(ツノ)を本体より奥(最背面)に描く。後ろ向きのカブたんのように、ツノが体の向こう側に
+  // 隠れて見えるべき向き用。省略時は従来どおり一番手前。
+  mandibleBehindBody?: boolean;
   legsBehindBody: CreaturePartArt[];
   legsInFrontOfBody: CreaturePartArt[];
 };
@@ -128,18 +131,19 @@ function buildKnownCreatureArt(code: string): Partial<Record<Facing, KnownCreatu
 // horn: ツノ(大顎パーツ_mandible_01の1枚)がある種は、付け根の位置(正面/背面)を渡す。
 function buildNewSpeciesWalkerArt(
   code: string,
-  horn?: { frontOrigin: string; backOrigin: string }
+  horn?: { frontOrigin: string; backOrigin: string; backBehindBody?: boolean }
 ): Partial<Record<Facing, KnownCreatureArt>> {
   const base = buildKnownCreatureArt(code);
-  const withHorn = (art: KnownCreatureArt | undefined, origin: string | undefined) =>
+  const withHorn = (art: KnownCreatureArt | undefined, origin: string | undefined, behindBody: boolean) =>
     art && {
       ...art,
       mandibles: horn && art.mandibles[1] ? { 1: art.mandibles[1] } : {},
       mandibleOrigin: horn ? origin : undefined,
+      mandibleBehindBody: horn ? behindBody : undefined,
     };
   return {
-    front: withHorn(base.front, horn?.frontOrigin),
-    back: withHorn(base.back, horn?.backOrigin),
+    front: withHorn(base.front, horn?.frontOrigin, false),
+    back: withHorn(base.back, horn?.backOrigin, horn?.backBehindBody ?? false),
   };
 }
 
@@ -153,7 +157,11 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   // バッたん(トノサマバッタ。ときどき跳ねる＝WanderingCreatureのHOP_*)
   "KW-0009": buildNewSpeciesWalkerArt("KW-0009"),
   // カブたん(カブトムシ。ツノはmandible_01、付け根を軸にときどき首振り＝HORN_*)
-  "KW-0014": buildNewSpeciesWalkerArt("KW-0014", { frontOrigin: "29% 43%", backOrigin: "76% 38%" }),
+  "KW-0014": buildNewSpeciesWalkerArt("KW-0014", {
+    frontOrigin: "29% 43%",
+    backOrigin: "76% 38%",
+    backBehindBody: true,
+  }),
   "KW-0001": buildKnownCreatureArt("KW-0001"),
   // ヒビクワたん(背中に波紋模様)
   "KW-0002": buildKnownCreatureArt("KW-0002"),
@@ -293,8 +301,19 @@ function KnownCreatureSprite({
   if (!art) return null;
   const mandible = art.mandibles[mandibleVariant] ?? art.mandibles[1];
 
+  // 大顎(ツノ)。既定は一番手前、mandibleBehindBodyの向きは最背面(本体より奥)に描く。
+  const mandibleEl = mandible ? (
+    <img
+      src={mandible}
+      alt=""
+      className={`absolute inset-0 h-full w-full ${fighting ? "animate-kuwagata-fight-jaw" : ""} ${hornSwing && art.mandibleOrigin ? "animate-kuwagata-horn" : ""}`}
+      style={art.mandibleOrigin ? { transformOrigin: art.mandibleOrigin } : undefined}
+    />
+  ) : null;
+
   return (
     <div className="relative h-full w-full animate-kuwagata-body">
+      {art.mandibleBehindBody && mandibleEl}
       {art.legsBehindBody.map((leg, i) => (
         <img
           key={`behind${i}`}
@@ -314,14 +333,7 @@ function KnownCreatureSprite({
           style={{ animationDelay: leg.delay }}
         />
       ))}
-      {mandible && (
-        <img
-          src={mandible}
-          alt=""
-          className={`absolute inset-0 h-full w-full ${fighting ? "animate-kuwagata-fight-jaw" : ""} ${hornSwing && art.mandibleOrigin ? "animate-kuwagata-horn" : ""}`}
-          style={art.mandibleOrigin ? { transformOrigin: art.mandibleOrigin } : undefined}
-        />
-      )}
+      {!art.mandibleBehindBody && mandibleEl}
     </div>
   );
 }
@@ -941,7 +953,7 @@ function WanderingCreature({
         <span
           className="pointer-events-none absolute left-1/2 z-10 max-w-[11em] truncate whitespace-nowrap rounded-full bg-white/85 px-1.5 py-px text-[9px] font-semibold leading-tight text-zinc-700 shadow-sm"
           style={{
-            top: hasArt ? "16%" : 0,
+            top: hasArt ? "10%" : 0,
             transform: `translateX(-50%) translateY(-100%)${mirror ? " scaleX(-1)" : ""}`,
           }}
         >
