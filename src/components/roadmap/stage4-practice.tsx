@@ -226,7 +226,12 @@ export function Stage4Practice() {
   if (sessionResult) {
     return (
       <div>
-        <RoundHeader stage={4} subFormatLabel={activeScenario.titleJa} usageLabel={usage ? `今日のセッション あと${usage.remaining}回` : ""} />
+        <RoundHeader
+          stage={4}
+          subFormatLabel={activeScenario.titleJa}
+          usageLabel={usage ? `今日のセッション あと${usage.remaining}回` : ""}
+          arthurMood={sessionResult.overallPass ? "happy" : "sad"}
+        />
         <div className="rounded-xl border border-zinc-200 bg-zinc-100/50 p-6 text-center">
           <PartyPopper className="mx-auto mb-3 h-6 w-6" style={{ color: sessionResult.overallPass ? STAGE_COLOR : "#a1a1aa" }} />
           <p className="text-sm font-medium text-zinc-800">
@@ -281,9 +286,14 @@ export function Stage4Practice() {
         {history.map((turn, i) => (
           <div key={i} className={cn("flex items-start gap-2", turn.role === "user" && "flex-row-reverse")}>
             {turn.role === "ai" ? (
-              <ArthurAvatar size={24} />
+              <ArthurAvatar
+                size={36}
+                animated={i === history.length - 1}
+                mood={i === history.length - 1 ? "talk" : "idle"}
+                talkKey={i}
+              />
             ) : (
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-zinc-600">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-zinc-600">
                 <User2 className="h-3.5 w-3.5" />
               </div>
             )}
