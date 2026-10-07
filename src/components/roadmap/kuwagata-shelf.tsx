@@ -119,7 +119,19 @@ function buildKnownCreatureArt(code: string): Partial<Record<Facing, KnownCreatu
   };
 }
 
+// 新種(動きの種類A=歩く6脚)の成虫アート。既知種と同じ脚の構成だが、大顎が無い(mandibles空)・
+// 卵/幼虫/蛹も無い(成虫のみ)。ファイルは kuwagata_{code}_{front|back}_*.svg の9枚。
+function buildNewSpeciesWalkerArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
+  const base = buildKnownCreatureArt(code);
+  return {
+    front: base.front && { ...base.front, mandibles: {} },
+    back: base.back && { ...base.back, mandibles: {} },
+  };
+}
+
 const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCreatureArt>>>> = {
+  // テントたん(ナナホシテントウ)
+  "KW-0006": buildNewSpeciesWalkerArt("KW-0006"),
   "KW-0001": buildKnownCreatureArt("KW-0001"),
   // ヒビクワたん(背中に波紋模様)
   "KW-0002": buildKnownCreatureArt("KW-0002"),
