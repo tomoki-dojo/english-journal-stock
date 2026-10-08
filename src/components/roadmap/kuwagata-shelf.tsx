@@ -251,6 +251,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0012": buildWingedFlyerArt("KW-0012", { front: "46% 31%", back: "54% 28%" }),
   // セミたん(飛ぶ。ヒラヒラ＋ふわふわ上下はチョウたんと同じ)
   "KW-0015": buildWingedFlyerArt("KW-0015", { front: "47% 35%", back: "50% 38%" }),
+  // タマたん(タマムシ。歩く6脚・大顎なし。テッペンクワたん同様に大きくなってカラフルにキラキラ)
+  "KW-0019": buildNewSpeciesWalkerArt("KW-0019"),
   // カミたん(カミキリムシ。大顎mandible_01をときどきガチガチ=CHOMP_*)
   "KW-0017": buildLongicornArt("KW-0017", { front: "31% 85%", back: "90% 58%" }),
   // カブたん(カブトムシ。ツノはmandible_01、付け根を軸にときどき首振り＝HORN_*)
@@ -867,6 +869,9 @@ const FIGHT_SPECIES_CODE = "KW-0008";
 const PROUD_CYCLE_MS = 14000;
 const PROUD_DURATION_MS = 3000;
 const PROUD_SPECIES_CODE = "KW-0004";
+// タマたんもテッペンクワたんと同じ「大きくなる」ポーズをする。きらきらは黄・黄緑・緑・紫・赤紫のカラフルなランダム色。
+const RAINBOW_SPARKLE_SPECIES_CODE = "KW-0019";
+const RAINBOW_SPARKLE_COLORS = ["#facc15", "#a3e635", "#22c55e", "#a855f7", "#d946ef"];
 
 // バッたん(KW-0009)の「ジャンプ」。バッタらしく、歩いている途中でときどき(8秒に1回)ぴょんと跳ぶ。
 // 一瞬かがんで溜め→跳ね上がる→着地でぺちゃっと潰れる、1.1秒の動き。
@@ -956,11 +961,18 @@ function WanderingCreature({
     FIGHT_DURATION_MS
   );
   const proud = useTimedGesture(
-    speciesCode === PROUD_SPECIES_CODE && growthStage === "成虫" && hasArt,
+    (speciesCode === PROUD_SPECIES_CODE || speciesCode === RAINBOW_SPARKLE_SPECIES_CODE) && growthStage === "成虫" && hasArt,
     seedKey + ":proud",
     PROUD_CYCLE_MS,
     PROUD_DURATION_MS
   );
+  const rainbowSparkle = speciesCode === RAINBOW_SPARKLE_SPECIES_CODE;
+  const [sparkleColors, setSparkleColors] = useState<string[]>([]);
+  useEffect(() => {
+    if (proud && rainbowSparkle) {
+      setSparkleColors(Array.from({ length: 6 }, () => RAINBOW_SPARKLE_COLORS[Math.floor(Math.random() * RAINBOW_SPARKLE_COLORS.length)]));
+    }
+  }, [proud, rainbowSparkle]);
   const hopping = useTimedGesture(
     speciesCode === HOP_SPECIES_CODE && growthStage === "成虫" && hasArt,
     seedKey + ":hop",
@@ -1064,25 +1076,40 @@ function WanderingCreature({
         </span>
       )}
       {proud &&
-        // てっぺんポーズ中だけ頭上で瞬くきらきら(位置・タイミングを少しずつずらした3つ)
-        [
-          { left: "-6%", top: "14%", delay: "0s" },
-          { left: "88%", top: "8%", delay: "0.5s" },
-          { left: "96%", top: "34%", delay: "1s" },
-        ].map((s, i) => (
-          <span
-            key={i}
-            className="animate-egg-twinkle pointer-events-none absolute z-20 text-[18px] leading-none text-amber-300"
-            style={{
-              left: s.left,
-              top: s.top,
-              animationDelay: s.delay,
-              textShadow: "0 0 3px #b45309, 0 0 1px #b45309",
-            }}
-          >
-            ✦
-          </span>
-        ))}
+        // てっぺんポーズ中だけ頭上で瞬くきらきら(位置・タイミングを少しずつずらした3つ)。
+        // タマたんは6つに増やし、1つずつ黄・黄緑・緑・紫・赤紫のランダム色にする。
+        (rainbowSparkle
+          ? [
+              { left: "-6%", top: "14%", delay: "0s" },
+              { left: "88%", top: "8%", delay: "0.4s" },
+              { left: "96%", top: "34%", delay: "0.8s" },
+              { left: "10%", top: "-2%", delay: "0.2s" },
+              { left: "50%", top: "-6%", delay: "0.6s" },
+              { left: "-10%", top: "40%", delay: "1.0s" },
+            ]
+          : [
+              { left: "-6%", top: "14%", delay: "0s" },
+              { left: "88%", top: "8%", delay: "0.5s" },
+              { left: "96%", top: "34%", delay: "1s" },
+            ]
+        ).map((sp, i) => {
+          const color = rainbowSparkle ? (sparkleColors[i] ?? RAINBOW_SPARKLE_COLORS[i % RAINBOW_SPARKLE_COLORS.length]) : "#fcd34d";
+          return (
+            <span
+              key={i}
+              className="animate-egg-twinkle pointer-events-none absolute z-20 text-[18px] leading-none"
+              style={{
+                left: sp.left,
+                top: sp.top,
+                animationDelay: sp.delay,
+                color,
+                textShadow: rainbowSparkle ? `0 0 4px ${color}, 0 0 1px #52525b` : "0 0 3px #b45309, 0 0 1px #b45309",
+              }}
+            >
+              ✦
+            </span>
+          );
+        })}
       {nickname && (
         // 名前ラベル。スプライトの頭上に出し、歩き回るのに合わせてラベルも一緒に動く。
         // 幅は名前の最大10文字(+左右の余白)が省略されずに入る広さ。最長の種類名は「テッペンクワたん」(8文字)。
