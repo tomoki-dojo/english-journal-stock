@@ -249,6 +249,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   // チョウたん(アゲハチョウ。飛ぶ＝buildWingedFlyerArt。羽根の付け根を軸にヒラヒラ)
   "KW-0011": buildWingedFlyerArt("KW-0011", { front: "52% 50%", back: "54% 52%" }),
   "KW-0012": buildWingedFlyerArt("KW-0012", { front: "46% 31%", back: "54% 28%" }),
+  // セミたん(飛ぶ。ヒラヒラ＋ふわふわ上下はチョウたんと同じ)
+  "KW-0015": buildWingedFlyerArt("KW-0015", { front: "47% 35%", back: "50% 38%" }),
   // カミたん(カミキリムシ。大顎mandible_01をときどきガチガチ=CHOMP_*)
   "KW-0017": buildLongicornArt("KW-0017", { front: "31% 85%", back: "90% 58%" }),
   // カブたん(カブトムシ。ツノはmandible_01、付け根を軸にときどき首振り＝HORN_*)
