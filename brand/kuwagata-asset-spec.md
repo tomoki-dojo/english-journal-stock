@@ -212,7 +212,7 @@ kuwagata_KW-0013_body.svg
 - 枚数の目安：A=9枚、B=約11枚、C=6枚、D=12枚（正面・背面で本体・カマ・脚4本×2）、E=1枚、F=3〜5枚（ゲンゴロウ5枚、タツノオトシゴ3枚）
 - 実装済み（B 歩く8脚）：KW-0010（クモたん）。`buildEightLegWalkerArt(code, { backLeftLeg: true })`で登録（計12枚）。背面の左脚`back_leg_L1`が無い種は、第2引数を省略して11枚で登録する。
 - 実装済み（C 飛ぶ）：KW-0011（チョウたん）、KW-0012（ハチたん）。`buildWingedFlyerArt(code, { front, back })`で登録（6枚）。羽根の付け根の位置(%)を正面・背面で渡す。羽根は付け根を軸にヒラヒラ（横につぶれる）、体はふわふわ上下に漂う。正面は羽根が体の奥、背面は羽根が体の手前。
-- 実装済み（A 歩く6脚）：KW-0005・0006・0007・0009・0014。`kuwagata-shelf.tsx`の`buildNewSpeciesWalkerArt(code)`で登録する（大顎なし）。ほかのA種も、9枚を置いて`KNOWN_CREATURE_ART`に1行足すだけ。Illustratorの書き出しで`back_leg_R3`が`back_leg_R1_1`という名前になる場合は、`R3`にリネームして置く
+- 実装済み（A 歩く6脚）：KW-0005・0006・0007・0009・0014・0017（カミたん。大顎1枚をガチガチ噛み合わせ、手前脚は正面L1/L3のみ）。`kuwagata-shelf.tsx`の`buildNewSpeciesWalkerArt(code)`で登録する（大顎なし）。ほかのA種も、9枚を置いて`KNOWN_CREATURE_ART`に1行足すだけ。Illustratorの書き出しで`back_leg_R3`が`back_leg_R1_1`という名前になる場合は、`R3`にリネームして置く
 - 注意：A以外の新種（B〜F）の描画コードは未実装。ファイルを置いても、種コードを登録するまで画面には出ない（大顎なしの構成、飛ぶ・ぶらぶら・泳ぐの動きと合わせて実装する）
 
 ### 新種の動きの種類
