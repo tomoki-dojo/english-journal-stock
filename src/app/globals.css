@@ -667,10 +667,10 @@ body {
     transform: translateY(0) rotate(0deg);
   }
   30% {
-    transform: translateY(-9%) rotate(-3deg);
+    transform: translateY(-1.5%) rotate(-1.5deg);
   }
   65% {
-    transform: translateY(-3%) rotate(3deg);
+    transform: translateY(-0.5%) rotate(1.5deg);
   }
 }
 

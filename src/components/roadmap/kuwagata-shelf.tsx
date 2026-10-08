@@ -951,6 +951,15 @@ function WanderingCreature({
   const moves = !isStationaryStage(speciesCode, growthStage);
   const { spot, facing, heading, travelMs } = useWander(seedKey, initialSpot, widthPct, moves, decorationSpots, positionsRef);
   const pt = surfacePoint(spot.u, spot.v);
+  // 飛ぶ種は縦横で別のイージングにして、目的地まで直線ではなく滑らかな曲線(弧)を描いて飛ぶ。
+  // 弧の向き(上に膨らむ/下に膨らむ)は目的地ごとに決まる。
+  const flyingCurve = KNOWN_CREATURE_ART[speciesCode]?.front?.flying === true && growthStage === "成虫";
+  const arcUp = Math.round(spot.u * 100 + spot.v * 100) % 2 === 0;
+  const moveTransition = flyingCurve
+    ? `left ${travelMs}ms cubic-bezier(0.45, 0, 0.55, 1), top ${travelMs}ms ${
+        arcUp ? "cubic-bezier(0.3, 0, 0.2, 1)" : "cubic-bezier(0.8, 0, 0.7, 1)"
+      }`
+    : `left ${travelMs}ms ease-in-out, top ${travelMs}ms ease-in-out`;
 
   return (
     <div
@@ -960,7 +969,7 @@ function WanderingCreature({
         top: `${pt.top}%`,
         width: `${widthPct}%`,
         aspectRatio: hasArt ? "1 / 1" : undefined,
-        transition: `left ${travelMs}ms ease-in-out, top ${travelMs}ms ease-in-out`,
+        transition: moveTransition,
         // 実アートは左右反転しない(反転すると脚の左右が逆になってしまうため)。
         // Bugアイコンのフォールバックのみ、個体ごとに左右反転して向きにバリエーションを出す。
         transform: mirror ? "translateX(-50%) translateY(-100%) scaleX(-1)" : "translateX(-50%) translateY(-100%)",
