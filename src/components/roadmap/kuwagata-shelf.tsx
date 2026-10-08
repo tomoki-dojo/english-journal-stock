@@ -253,6 +253,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0015": buildWingedFlyerArt("KW-0015", { front: "47% 35%", back: "50% 38%" }),
   // タマたん(タマムシ。歩く6脚・大顎なし。テッペンクワたん同様に大きくなってカラフルにキラキラ)
   "KW-0019": buildNewSpeciesWalkerArt("KW-0019"),
+  // ゾウたん(ゾウムシ。鼻=mandible_01を付け根を軸にフンフン大きく振る=SNIFF_*)
+  "KW-0021": buildNewSpeciesWalkerArt("KW-0021", { frontOrigin: "23% 70%", backOrigin: "80% 60%" }),
   // カミたん(カミキリムシ。大顎mandible_01をときどきガチガチ=CHOMP_*)
   "KW-0017": buildLongicornArt("KW-0017", { front: "31% 85%", back: "90% 58%" }),
   // カブたん(カブトムシ。ツノはmandible_01、付け根を軸にときどき首振り＝HORN_*)
@@ -339,6 +341,7 @@ function KnownCreatureSprite({
   fighting = false,
   hornSwing = false,
   chomp = false,
+  sniff = false,
 }: {
   code: string;
   facing: Facing;
@@ -350,6 +353,7 @@ function KnownCreatureSprite({
   // ツノを付け根を軸に首振りさせる(カブたんの仕草)。mandibleOriginが設定された種だけ効く。
   hornSwing?: boolean;
   chomp?: boolean;
+  sniff?: boolean;
 }) {
   const stageArt = KNOWN_STAGE_ART[code];
 
@@ -407,7 +411,7 @@ function KnownCreatureSprite({
     <img
       src={mandible}
       alt=""
-      className={`absolute inset-0 h-full w-full ${fighting ? "animate-kuwagata-fight-jaw" : ""} ${hornSwing && art.mandibleOrigin ? "animate-kuwagata-horn" : ""} ${chomp && art.mandibleOrigin ? "animate-kuwagata-chomp" : ""}`}
+      className={`absolute inset-0 h-full w-full ${fighting ? "animate-kuwagata-fight-jaw" : ""} ${hornSwing && art.mandibleOrigin ? "animate-kuwagata-horn" : ""} ${chomp && art.mandibleOrigin ? "animate-kuwagata-chomp" : ""} ${sniff && art.mandibleOrigin ? "animate-kuwagata-sniff" : ""}`}
       style={art.mandibleOrigin ? { transformOrigin: art.mandibleOrigin } : undefined}
     />
   ) : null;
@@ -887,6 +891,9 @@ const HORN_SPECIES_CODE = "KW-0014";
 const CHOMP_CYCLE_MS = 6000;
 const CHOMP_DURATION_MS = 1500;
 const CHOMP_SPECIES_CODE = "KW-0017";
+const SNIFF_CYCLE_MS = 5500;
+const SNIFF_DURATION_MS = 1800;
+const SNIFF_SPECIES_CODE = "KW-0021";
 
 // 一定周期で短時間だけtrueになる仕草用のフック。開始は個体ごとにずらす。
 function useTimedGesture(enabled: boolean, seedKey: string, cycleMs: number, durationMs: number): boolean {
@@ -1008,6 +1015,12 @@ function WanderingCreature({
     CHOMP_CYCLE_MS,
     CHOMP_DURATION_MS
   );
+  const sniffing = useTimedGesture(
+    speciesCode === SNIFF_SPECIES_CODE && growthStage === "成虫" && hasArt,
+    seedKey + ":sniff",
+    SNIFF_CYCLE_MS,
+    SNIFF_DURATION_MS
+  );
   const moves = !isStationaryStage(speciesCode, growthStage);
   const { spot, facing, heading, travelMs } = useWander(seedKey, initialSpot, widthPct, moves, decorationSpots, positionsRef);
   const pt = surfacePoint(spot.u, spot.v);
@@ -1043,6 +1056,7 @@ function WanderingCreature({
             fighting={fighting}
             hornSwing={hornSwing}
             chomp={chomping}
+            sniff={sniffing}
             code={speciesCode}
             facing={facing}
             mandibleVariant={mandibleVariant}
