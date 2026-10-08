@@ -1191,24 +1191,28 @@ function WanderingCreature({
         ))}
       {stinking &&
         // モンたん: 震えたあと、臭いガスの粒がもわっと出て、ふくらみながら漂って消える
-        STINK_PUFFS.map((pf, i) => (
+        // 後ろ向きのときは、おしり側が反対(左右逆)になるので位置と漂う向きを左右反転する。
+        STINK_PUFFS.map((pf, i) => {
+          const flip = facing === "back";
+          return (
           <span
             key={i}
             className="animate-kuwagata-stink-puff pointer-events-none absolute z-20 rounded-full"
             style={
               {
-                left: pf.left,
+                left: flip ? `${100 - parseFloat(pf.left)}%` : pf.left,
                 top: pf.top,
                 width: pf.size,
                 height: pf.size,
                 background: "radial-gradient(circle, rgba(190,220,60,0.85) 0%, rgba(150,190,40,0.55) 55%, rgba(150,190,40,0) 100%)",
                 animationDelay: `${pf.delay}s`,
-                "--gx": `${pf.px}px`,
+                "--gx": `${flip ? -pf.px : pf.px}px`,
                 "--gy": `${-pf.py}px`,
               } as CSSProperties
             }
           />
-        ))}
+          );
+        })}
       {nickname && (
         // 名前ラベル。スプライトの頭上に出し、歩き回るのに合わせてラベルも一緒に動く。
         // 幅は名前の最大10文字(+左右の余白)が省略されずに入る広さ。最長の種類名は「テッペンクワたん」(8文字)。
