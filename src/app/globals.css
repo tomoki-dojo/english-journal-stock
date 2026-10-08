@@ -593,6 +593,32 @@ body {
   }
 }
 
+/* タマたんのきらきら。体の中心から放射(--sx,--sy)へ減速しながら飛び、頂点から重力で加速して落ちながら(--sf)消える。 */
+@keyframes kuwagata-sparkle-burst {
+  0% {
+    transform: translate(-50%, -50%) translate(0, 0) scale(0.3);
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.1, 0.7, 0.3, 1);
+  }
+  12% {
+    opacity: 1;
+  }
+  45% {
+    transform: translate(-50%, -50%) translate(var(--sx), var(--sy)) scale(1);
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.6);
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(calc(var(--sx) * 1.2), calc(var(--sy) + var(--sf))) scale(0.4);
+    opacity: 0;
+  }
+}
+
+.animate-kuwagata-sparkle-burst {
+  opacity: 0;
+  animation: kuwagata-sparkle-burst 1.3s linear both;
+}
+
 .animate-kuwagata-proud {
   transform-origin: 50% 100%;
   animation: kuwagata-proud 3s ease-in-out;
@@ -730,6 +756,7 @@ body {
   .animate-kuwagata-chomp,
   .animate-kuwagata-hop,
   .animate-kuwagata-proud,
+  .animate-kuwagata-sparkle-burst,
   .animate-kuwagata-chat,
   .animate-kuwagata-chat-dot,
   .animate-kuwagata-fight,

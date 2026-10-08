@@ -967,11 +967,28 @@ function WanderingCreature({
     PROUD_DURATION_MS
   );
   const rainbowSparkle = speciesCode === RAINBOW_SPARKLE_SPECIES_CODE;
-  const [sparkleColors, setSparkleColors] = useState<string[]>([]);
+  // タマたんのきらきら。ポーズのたびに、体の中心から放射状に飛び散る粒を作り直す(色・向き・距離・落ちる量がランダム)。
+  const [sparkles, setSparkles] = useState<
+    { color: string; dx: number; dy: number; fall: number; delay: number; size: number }[]
+  >([]);
   useEffect(() => {
-    if (proud && rainbowSparkle) {
-      setSparkleColors(Array.from({ length: 6 }, () => RAINBOW_SPARKLE_COLORS[Math.floor(Math.random() * RAINBOW_SPARKLE_COLORS.length)]));
-    }
+    if (!(proud && rainbowSparkle)) return;
+    const count = 10;
+    setSparkles(
+      Array.from({ length: count }, (_, i) => {
+        // 真上〜左右に広がる扇形(真下は除く)。粒ごとに角度を均等割り+ゆらぎ
+        const angle = (-170 + (160 * i) / (count - 1) + (Math.random() - 0.5) * 16) * (Math.PI / 180);
+        const dist = 34 + Math.random() * 26;
+        return {
+          color: RAINBOW_SPARKLE_COLORS[Math.floor(Math.random() * RAINBOW_SPARKLE_COLORS.length)],
+          dx: Math.round(Math.cos(angle) * dist),
+          dy: Math.round(Math.sin(angle) * dist),
+          fall: 30 + Math.round(Math.random() * 24),
+          delay: Math.round(Math.random() * 1600) / 1000,
+          size: 12 + Math.round(Math.random() * 8),
+        };
+      })
+    );
   }, [proud, rainbowSparkle]);
   const hopping = useTimedGesture(
     speciesCode === HOP_SPECIES_CODE && growthStage === "成虫" && hasArt,
@@ -1076,40 +1093,50 @@ function WanderingCreature({
         </span>
       )}
       {proud &&
-        // てっぺんポーズ中だけ頭上で瞬くきらきら(位置・タイミングを少しずつずらした3つ)。
-        // タマたんは6つに増やし、1つずつ黄・黄緑・緑・紫・赤紫のランダム色にする。
-        (rainbowSparkle
-          ? [
-              { left: "-6%", top: "14%", delay: "0s" },
-              { left: "88%", top: "8%", delay: "0.4s" },
-              { left: "96%", top: "34%", delay: "0.8s" },
-              { left: "10%", top: "-2%", delay: "0.2s" },
-              { left: "50%", top: "-6%", delay: "0.6s" },
-              { left: "-10%", top: "40%", delay: "1.0s" },
-            ]
-          : [
-              { left: "-6%", top: "14%", delay: "0s" },
-              { left: "88%", top: "8%", delay: "0.5s" },
-              { left: "96%", top: "34%", delay: "1s" },
-            ]
-        ).map((sp, i) => {
-          const color = rainbowSparkle ? (sparkleColors[i] ?? RAINBOW_SPARKLE_COLORS[i % RAINBOW_SPARKLE_COLORS.length]) : "#fcd34d";
-          return (
-            <span
-              key={i}
-              className="animate-egg-twinkle pointer-events-none absolute z-20 text-[18px] leading-none"
-              style={{
-                left: sp.left,
-                top: sp.top,
-                animationDelay: sp.delay,
-                color,
-                textShadow: rainbowSparkle ? `0 0 4px ${color}, 0 0 1px #52525b` : "0 0 3px #b45309, 0 0 1px #b45309",
-              }}
-            >
-              ✦
-            </span>
-          );
-        })}
+        !rainbowSparkle &&
+        // てっぺんポーズ中だけ頭上で瞬くきらきら(位置・タイミングを少しずつずらした3つ)
+        [
+          { left: "-6%", top: "14%", delay: "0s" },
+          { left: "88%", top: "8%", delay: "0.5s" },
+          { left: "96%", top: "34%", delay: "1s" },
+        ].map((sp, i) => (
+          <span
+            key={i}
+            className="animate-egg-twinkle pointer-events-none absolute z-20 text-[18px] leading-none text-amber-300"
+            style={{
+              left: sp.left,
+              top: sp.top,
+              animationDelay: sp.delay,
+              textShadow: "0 0 3px #b45309, 0 0 1px #b45309",
+            }}
+          >
+            ✦
+          </span>
+        ))}
+      {proud &&
+        rainbowSparkle &&
+        // タマたん: 体の中心から放射状に飛び散り、最後は重力で落ちながら消えるきらきら
+        sparkles.map((sp, i) => (
+          <span
+            key={i}
+            className="animate-kuwagata-sparkle-burst pointer-events-none absolute z-20 leading-none"
+            style={
+              {
+                left: "50%",
+                top: "50%",
+                fontSize: sp.size,
+                color: sp.color,
+                textShadow: `0 0 4px ${sp.color}, 0 0 1px #52525b`,
+                animationDelay: `${sp.delay}s`,
+                "--sx": `${sp.dx}px`,
+                "--sy": `${sp.dy}px`,
+                "--sf": `${sp.fall}px`,
+              } as CSSProperties
+            }
+          >
+            ✦
+          </span>
+        ))}
       {nickname && (
         // 名前ラベル。スプライトの頭上に出し、歩き回るのに合わせてラベルも一緒に動く。
         // 幅は名前の最大10文字(+左右の余白)が省略されずに入る広さ。最長の種類名は「テッペンクワたん」(8文字)。
