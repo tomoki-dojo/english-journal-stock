@@ -149,9 +149,13 @@ function buildNewSpeciesWalkerArt(
 
 // 新種(動きの種類B=歩く8脚)の成虫アート。クモなど。ファイルは
 //   正面: front_body / front_leg_L1〜L4(手前脚4本) / front_leg_R1(奥脚1本)
-//   背面: back_body / back_leg_R1〜R4(脚4本) / back_leg_L1(左側にちらっと見える脚1本)
-// の計12枚。背面は脚を全て体の手前に描き(手前からR1→…→R4)、左の脚L1も動かす(バランス用)。
-function buildEightLegWalkerArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
+//   背面: back_body / back_leg_R1〜R4(脚4本) / back_leg_L1(左側にちらっと見える脚1本。種によっては無い)
+// の計12枚(L1が無い種は11枚)。背面は脚を全て体の手前に描き(手前からR1→…→R4)、
+// back_leg_L1がある種(backLeftLeg: true)は、その左脚も動かす(バランス用)。
+function buildEightLegWalkerArt(
+  code: string,
+  options: { backLeftLeg?: boolean } = {}
+): Partial<Record<Facing, KnownCreatureArt>> {
   const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
   return {
     front: {
@@ -174,7 +178,7 @@ function buildEightLegWalkerArt(code: string): Partial<Record<Facing, KnownCreat
         { src: file("back_leg_R3"), delay: "-0.3s" },
         { src: file("back_leg_R2"), delay: "-0.15s" },
         { src: file("back_leg_R1"), delay: "0s" },
-        { src: file("back_leg_L1"), delay: "-0.7s" },
+        ...(options.backLeftLeg ? [{ src: file("back_leg_L1"), delay: "-0.7s" }] : []),
       ],
     },
   };
@@ -190,7 +194,7 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   // バッたん(トノサマバッタ。ときどき跳ねる＝WanderingCreatureのHOP_*)
   "KW-0009": buildNewSpeciesWalkerArt("KW-0009"),
   // クモたん(ジョロウグモ。8本脚＝buildEightLegWalkerArt。背面は左の脚1本も動く)
-  "KW-0010": buildEightLegWalkerArt("KW-0010"),
+  "KW-0010": buildEightLegWalkerArt("KW-0010", { backLeftLeg: true }),
   // カブたん(カブトムシ。ツノはmandible_01、付け根を軸にときどき首振り＝HORN_*)
   "KW-0014": buildNewSpeciesWalkerArt("KW-0014", {
     frontOrigin: "29% 43%",

@@ -188,7 +188,7 @@ kuwagata_[code]_back_leg_R3.svg
 【B 歩く（8脚）】Aの脚を4本に増やした構成（ハサミ・尾は本体に含める）
 kuwagata_[code]_front_leg_L1〜L4.svg / front_leg_R1.svg
 kuwagata_[code]_back_leg_R1〜R4.svg
-kuwagata_[code]_back_leg_L1.svg       背面で左側にちらっと見える脚1本（これも歩きに合わせて動く）
+kuwagata_[code]_back_leg_L1.svg       （種によってはある）背面で左側にちらっと見える脚1本。これも歩きに合わせて動く。無い種もあるので必須ではない（クモたんはあり）
 （front_body / back_body はAと同じ）
 
 【C 飛ぶ】本体＋羽根のみ（脚は本体に含める）・6枚
@@ -210,7 +210,7 @@ kuwagata_KW-0013_body.svg
 - `[code]`はDBの`kuwagata_species.code`（例: カナたん＝`KW-0005`、ホタたん＝`KW-0023`、アワたん＝`KW-0043`）。ハイフン付き・大文字・ゼロ埋め4桁
 - 拡張子は`.svg`、フォルダは`public/roadmap/kuwagata/`直下（サブフォルダは作らない）
 - 枚数の目安：A=9枚、B=約11枚、C=6枚、D=12枚（正面・背面で本体・カマ・脚4本×2）、E=1枚、F=3〜5枚（ゲンゴロウ5枚、タツノオトシゴ3枚）
-- 実装済み（B 歩く8脚）：KW-0010（クモたん）。`buildEightLegWalkerArt(code)`で登録（計12枚）。
+- 実装済み（B 歩く8脚）：KW-0010（クモたん）。`buildEightLegWalkerArt(code, { backLeftLeg: true })`で登録（計12枚）。背面の左脚`back_leg_L1`が無い種は、第2引数を省略して11枚で登録する。
 - 実装済み（A 歩く6脚）：KW-0005・0006・0007・0009・0014。`kuwagata-shelf.tsx`の`buildNewSpeciesWalkerArt(code)`で登録する（大顎なし）。ほかのA種も、9枚を置いて`KNOWN_CREATURE_ART`に1行足すだけ。Illustratorの書き出しで`back_leg_R3`が`back_leg_R1_1`という名前になる場合は、`R3`にリネームして置く
 - 注意：A以外の新種（B〜F）の描画コードは未実装。ファイルを置いても、種コードを登録するまで画面には出ない（大顎なしの構成、飛ぶ・ぶらぶら・泳ぐの動きと合わせて実装する）
 
