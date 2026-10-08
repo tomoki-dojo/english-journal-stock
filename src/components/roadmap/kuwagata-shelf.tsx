@@ -207,7 +207,8 @@ function buildEightLegWalkerArt(
 // 体全体もふわふわ上下に漂う(flying)。大顎・卵/幼虫/蛹は無い。
 function buildWingedFlyerArt(
   code: string,
-  hinge: { front: string; back: string }
+  hinge: { front: string; back: string },
+  options: { frontWingsInFront?: boolean } = {}
 ): Partial<Record<Facing, KnownCreatureArt>> {
   const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
   const wings = (facing: "front" | "back", origin: string): CreaturePartArt[] => [
@@ -219,8 +220,9 @@ function buildWingedFlyerArt(
       body: file("front_body"),
       mandibles: {},
       flying: true,
-      legsBehindBody: wings("front", hinge.front),
-      legsInFrontOfBody: [],
+      // 既定は正面の羽根が体の奥。frontWingsInFrontの種は体の手前に描く(トンたん)。
+      legsBehindBody: options.frontWingsInFront ? [] : wings("front", hinge.front),
+      legsInFrontOfBody: options.frontWingsInFront ? wings("front", hinge.front) : [],
     },
     back: {
       body: file("back_body"),
@@ -252,7 +254,7 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   // チョウたん(アゲハチョウ。飛ぶ＝buildWingedFlyerArt。羽根の付け根を軸にヒラヒラ)
   "KW-0011": buildWingedFlyerArt("KW-0011", { front: "52% 50%", back: "54% 52%" }),
   // トンたん(シオカラトンボ。飛ぶが、羽ばたきは常に素早く小さめ。直線的に速く移動=DRAGONFLY_*)
-  "KW-0016": buildWingedFlyerArt("KW-0016", { front: "47% 45%", back: "56% 46%" }),
+  "KW-0016": buildWingedFlyerArt("KW-0016", { front: "47% 45%", back: "56% 46%" }, { frontWingsInFront: true }),
   "KW-0012": buildWingedFlyerArt("KW-0012", { front: "46% 31%", back: "54% 28%" }),
   // セミたん(飛ぶ。ヒラヒラ＋ふわふわ上下はチョウたんと同じ)
   "KW-0015": buildWingedFlyerArt("KW-0015", { front: "47% 35%", back: "50% 38%" }),
