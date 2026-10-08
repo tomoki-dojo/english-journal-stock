@@ -195,9 +195,9 @@ kuwagata_[code]_back_leg_L1.svg       （種によってはある）背面で左
 kuwagata_[code]_front_body.svg / front_wing_L.svg / front_wing_R.svg
 kuwagata_[code]_back_body.svg  / back_wing_L.svg  / back_wing_R.svg
 
-【D 擬態・待機（カマキリ系）】本体＋カマ＋脚4本
-kuwagata_[code]_front_body.svg / front_scythe.svg / front_leg_1〜4.svg
-kuwagata_[code]_back_body.svg  / back_scythe.svg  / back_leg_1〜4.svg
+【D 擬態・待機（カマキリ系）】本体＋カマ＋脚（Aの命名規則に合わせる）
+kuwagata_[code]_front_body.svg / front_scythe.svg / front_leg_R1.svg（奥脚1本）/ front_leg_L1〜L3.svg（手前脚3本）
+kuwagata_[code]_back_body.svg  / back_scythe.svg  / back_leg_R1〜R4.svg（右脚4本。手前からR1→R4）
 
 【E ぶらぶら（ミノムシ）】本体1枚（正面・背面の区別なし）
 kuwagata_KW-0013_body.svg
@@ -209,7 +209,7 @@ kuwagata_KW-0013_body.svg
 
 - `[code]`はDBの`kuwagata_species.code`（例: カナたん＝`KW-0005`、ホタたん＝`KW-0023`、アワたん＝`KW-0043`）。ハイフン付き・大文字・ゼロ埋め4桁
 - 拡張子は`.svg`、フォルダは`public/roadmap/kuwagata/`直下（サブフォルダは作らない）
-- 枚数の目安：A=9枚、B=約11枚、C=6枚、D=12枚（正面・背面で本体・カマ・脚4本×2）、E=1枚、F=3〜5枚（ゲンゴロウ5枚、タツノオトシゴ3枚）
+- 枚数の目安：A=9枚、B=約11枚、C=6枚、D=12枚（正面：本体・カマ・脚4本、背面：本体・カマ・脚4本）、E=1枚、F=3〜5枚（ゲンゴロウ5枚、タツノオトシゴ3枚）
 - 実装済み（B 歩く8脚）：KW-0010（クモたん）。`buildEightLegWalkerArt(code, { backLeftLeg: true })`で登録（計12枚）。背面の左脚`back_leg_L1`が無い種は、第2引数を省略して11枚で登録する。
 - 実装済み（C 飛ぶ）：KW-0011（チョウたん）、KW-0012（ハチたん）、KW-0015（セミたん）、KW-0016（トンたん。小さく素早く常に羽ばたき・直線で速く移動）。`buildWingedFlyerArt(code, { front, back })`で登録（6枚）。羽根の付け根の位置(%)を正面・背面で渡す。羽根は付け根を軸にヒラヒラ（横につぶれる）、体はふわふわ上下に漂う。正面は羽根が体の奥、背面は羽根が体の手前。
 - 実装済み（A 歩く6脚）：KW-0005・0006・0007・0009・0014・0017・0019・0021・0022（モンたん。体を震わせ臭いガスをぷしゅっと出す）、0021（ゾウたん。鼻をフンフン）、0019（タマたん。大きくなってカラフルにキラキラ）、0017（カミたん。大顎1枚をガチガチ噛み合わせ、手前脚は正面L1/L3のみ）。`kuwagata-shelf.tsx`の`buildNewSpeciesWalkerArt(code)`で登録する（大顎なし）。ほかのA種も、9枚を置いて`KNOWN_CREATURE_ART`に1行足すだけ。Illustratorの書き出しで`back_leg_R3`が`back_leg_R1_1`という名前になる場合は、`R3`にリネームして置く
