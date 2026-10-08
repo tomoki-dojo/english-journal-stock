@@ -736,7 +736,7 @@ const SPOT_PICK_ATTEMPTS = 30;
 const TRAVEL_MS_PER_PCT = 700;
 // ハンたん: たまに弧を描いて素早く飛んで移動する。頻度は低め(移動のたびにLEAP_CHANCEの確率)、飛行時間はLEAP_MS。
 const LEAP_SPECIES_CODE = "KW-0027";
-const LEAP_CHANCE = 0.2;
+const LEAP_CHANCE = 0.4;
 const LEAP_MS = 1100;
 const MIN_TRAVEL_MS = 7000;
 const MAX_TRAVEL_MS = 30000;
