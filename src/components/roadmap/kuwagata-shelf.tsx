@@ -908,6 +908,14 @@ const STINK_CYCLE_MS = 9000;
 const STINK_DURATION_MS = 2000;
 const STINK_SPECIES_CODE = "KW-0022";
 // ガスの粒(位置はスプライト内の%、px/pyは漂う量[px]、delayは出る順)
+// 後ろ向きのときは、おしりが左下側にあるので、別の位置(STINK_PUFFS_BACK)から左へ漂う。
+const STINK_PUFFS_BACK = [
+  { left: "34%", top: "68%", px: -22, py: 18, size: 22, delay: 0.1 },
+  { left: "28%", top: "60%", px: -30, py: 30, size: 28, delay: 0.35 },
+  { left: "38%", top: "74%", px: -14, py: 24, size: 18, delay: 0.55 },
+  { left: "24%", top: "68%", px: -34, py: 14, size: 20, delay: 0.8 },
+  { left: "32%", top: "56%", px: -20, py: 40, size: 24, delay: 1.0 },
+];
 const STINK_PUFFS = [
   { left: "62%", top: "38%", px: 16, py: 34, size: 22, delay: 0.1 },
   { left: "55%", top: "30%", px: -10, py: 42, size: 28, delay: 0.35 },
@@ -1191,22 +1199,21 @@ function WanderingCreature({
         ))}
       {stinking &&
         // モンたん: 震えたあと、臭いガスの粒がもわっと出て、ふくらみながら漂って消える
-        // 後ろ向きのときは、おしり側が反対(左右逆)になるので位置と漂う向きを左右反転する。
-        STINK_PUFFS.map((pf, i) => {
-          const flip = facing === "back";
+        // 後ろ向きのときは、おしり(左下)側から出す。
+        (facing === "back" ? STINK_PUFFS_BACK : STINK_PUFFS).map((pf, i) => {
           return (
           <span
             key={i}
             className="animate-kuwagata-stink-puff pointer-events-none absolute z-20 rounded-full"
             style={
               {
-                left: flip ? `${100 - parseFloat(pf.left)}%` : pf.left,
+                left: pf.left,
                 top: pf.top,
                 width: pf.size,
                 height: pf.size,
                 background: "radial-gradient(circle, rgba(190,220,60,0.85) 0%, rgba(150,190,40,0.55) 55%, rgba(150,190,40,0) 100%)",
                 animationDelay: `${pf.delay}s`,
-                "--gx": `${flip ? -pf.px : pf.px}px`,
+                "--gx": `${pf.px}px`,
                 "--gy": `${-pf.py}px`,
               } as CSSProperties
             }
