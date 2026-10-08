@@ -835,6 +835,21 @@ body {
   animation: kuwagata-glow 3.6s ease-in-out infinite;
 }
 
+/* ハンたんのジャンプ飛行。放物線を描いて持ち上がり、着地する(横移動は別に行う)。体も進行に合わせて少し傾く。 */
+@keyframes kuwagata-leap {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1);
+  }
+  50% {
+    transform: translateY(-85%) rotate(-6deg) scale(1.05);
+    animation-timing-function: cubic-bezier(0.6, 0, 0.8, 0.3);
+  }
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+}
+
 .animate-kuwagata-chomp {
   animation: kuwagata-chomp 1.5s ease-in-out;
 }

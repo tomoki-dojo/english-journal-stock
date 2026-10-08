@@ -330,6 +330,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0021": buildNewSpeciesWalkerArt("KW-0021", { frontOrigin: "23% 70%", backOrigin: "80% 60%", backBehindBody: true }),
   // モンたん(エサキモンキツノカメムシ。歩く6脚・大顎なし。ときどき体をぷるぷる震わせて臭いガスをぷしゅっと出す=STINK_*)
   "KW-0022": buildNewSpeciesWalkerArt("KW-0022"),
+  // ハンたん(ハンミョウ。大顎をガチガチ=CHOMP_*。たまに弧を描いて素早く飛んで移動=LEAP_*)
+  "KW-0027": buildNewSpeciesWalkerArt("KW-0027", { frontOrigin: "30% 88%", backOrigin: "90% 60%" }),
   // カミたん(カミキリムシ。大顎mandible_01をときどきガチガチ=CHOMP_*)
   "KW-0017": buildLongicornArt("KW-0017", { front: "31% 85%", back: "90% 58%" }),
   // カブたん(カブトムシ。ツノはmandible_01、付け根を軸にときどき首振り＝HORN_*)
@@ -732,6 +734,10 @@ const SPOT_PICK_ATTEMPTS = 30;
 // 歩く速さ。移動時間(travelMs)=距離(横幅%相当)×TRAVEL_MS_PER_PCT を、MIN〜MAXの範囲に収める。
 // 大きいほどゆっくり歩く(2026-10: 移動範囲を全面に広げて速く見えたため、固定7秒から距離比例に変更)。
 const TRAVEL_MS_PER_PCT = 700;
+// ハンたん: たまに弧を描いて素早く飛んで移動する。頻度は低め(移動のたびにLEAP_CHANCEの確率)、飛行時間はLEAP_MS。
+const LEAP_SPECIES_CODE = "KW-0027";
+const LEAP_CHANCE = 0.2;
+const LEAP_MS = 1100;
 const MIN_TRAVEL_MS = 7000;
 const MAX_TRAVEL_MS = 30000;
 
@@ -758,18 +764,22 @@ function useWander(
   moves: boolean,
   decorationSpots: { u: number; v: number; widthPct: number }[],
   positionsRef: { current: Record<string, { u: number; v: number; widthPct: number }> },
-  travelScale = 1
-): { spot: { u: number; v: number }; facing: Facing; heading: Heading; travelMs: number } {
+  travelScale = 1,
+  leapChance = 0
+): { spot: { u: number; v: number }; facing: Facing; heading: Heading; travelMs: number; leaping: boolean } {
   const [state, setState] = useState<{
     spot: { u: number; v: number };
     facing: Facing;
     heading: Heading;
     travelMs: number;
+    // 弧を描いて飛んで移動している最中(着地したらfalseに戻る)
+    leaping: boolean;
   }>({
     spot: initial,
     facing: "front",
     heading: "left",
     travelMs: MIN_TRAVEL_MS,
+    leaping: false,
   });
   const stateRef = useRef(state);
 
@@ -786,6 +796,7 @@ function useWander(
     if (!moves) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
+    let leapTimer: ReturnType<typeof setTimeout> | undefined;
     const ownRadius = spriteRadius(widthPct);
     const decorationPts = decorationSpots.map((spot) => ({ pt: surfacePoint(spot.u, spot.v), radius: spriteRadius(spot.widthPct) }));
 
@@ -827,13 +838,25 @@ function useWander(
       const facing: Facing = Math.abs(dy) >= Math.abs(dx) ? (dy >= 0 ? "front" : "back") : dx <= 0 ? "front" : "back";
       const heading: Heading = dx === 0 ? prev.heading : dx < 0 ? "left" : "right";
       // 移動時間は距離に比例(歩く速さを一定に保つ)。移動範囲が広くても速くならない。
-      const travelMs = Math.min(
-        MAX_TRAVEL_MS * travelScale,
-        Math.max(MIN_TRAVEL_MS * travelScale, surfaceDistancePct(prevPt, nextPt) * TRAVEL_MS_PER_PCT * travelScale)
-      );
-      const next = { spot: nextSpot, facing, heading, travelMs };
+      // たまに(leapChance)、歩かずに速く弧を描いて飛んで移動する(着地まで LEAP_MS)。
+      const leaping = leapChance > 0 && Math.random() < leapChance;
+      const travelMs = leaping
+        ? LEAP_MS
+        : Math.min(
+            MAX_TRAVEL_MS * travelScale,
+            Math.max(MIN_TRAVEL_MS * travelScale, surfaceDistancePct(prevPt, nextPt) * TRAVEL_MS_PER_PCT * travelScale)
+          );
+      const next = { spot: nextSpot, facing, heading, travelMs, leaping };
       stateRef.current = next;
       setState(next);
+      if (leaping) {
+        leapTimer = setTimeout(() => {
+          if (cancelled) return;
+          const landed = { ...stateRef.current, leaping: false };
+          stateRef.current = landed;
+          setState(landed);
+        }, travelMs);
+      }
       // 次の移動は、到着してからひと休みした後(休み2〜7秒)
       timer = setTimeout(goToNextSpot, travelMs + 2000 + Math.random() * 5000);
     };
@@ -845,8 +868,9 @@ function useWander(
     return () => {
       cancelled = true;
       clearTimeout(timer);
+      if (leapTimer) clearTimeout(leapTimer);
     };
-  }, [seedKey, widthPct, moves, decorationSpots, positionsRef, travelScale]);
+  }, [seedKey, widthPct, moves, decorationSpots, positionsRef, travelScale, leapChance]);
 
   return state;
 }
@@ -991,6 +1015,7 @@ const HORN_SPECIES_CODE = "KW-0014";
 const CHOMP_CYCLE_MS = 6000;
 const CHOMP_DURATION_MS = 1500;
 const CHOMP_SPECIES_CODE = "KW-0017";
+const CHOMP_SPECIES_CODE_2 = "KW-0027"; // ハンたんも大顎をガチガチさせる
 const SNIFF_CYCLE_MS = 5500;
 const SNIFF_DURATION_MS = 1800;
 const SNIFF_SPECIES_CODE = "KW-0021";
@@ -1133,7 +1158,7 @@ function WanderingCreature({
     HORN_DURATION_MS
   );
   const chomping = useTimedGesture(
-    speciesCode === CHOMP_SPECIES_CODE && growthStage === "成虫" && hasArt,
+    (speciesCode === CHOMP_SPECIES_CODE || speciesCode === CHOMP_SPECIES_CODE_2) && growthStage === "成虫" && hasArt,
     seedKey + ":chomp",
     CHOMP_CYCLE_MS,
     CHOMP_DURATION_MS
@@ -1157,14 +1182,15 @@ function WanderingCreature({
     STINK_DURATION_MS
   );
   const moves = !isStationaryStage(speciesCode, growthStage);
-  const { spot, facing, heading, travelMs } = useWander(
+  const { spot, facing, heading, travelMs, leaping } = useWander(
     seedKey,
     initialSpot,
     widthPct,
     moves,
     decorationSpots,
     positionsRef,
-    speciesCode === DRAGONFLY_SPECIES_CODE ? DRAGONFLY_TRAVEL_SCALE : speciesCode === SCYTHE_SPECIES_CODE ? SCYTHE_TRAVEL_SCALE : 1
+    speciesCode === DRAGONFLY_SPECIES_CODE ? DRAGONFLY_TRAVEL_SCALE : speciesCode === SCYTHE_SPECIES_CODE ? SCYTHE_TRAVEL_SCALE : 1,
+    speciesCode === LEAP_SPECIES_CODE && growthStage === "成虫" ? LEAP_CHANCE : 0
   );
   const pt = surfacePoint(spot.u, spot.v);
   // 飛ぶ種は縦横で別のイージングにして、目的地まで直線ではなく滑らかな曲線(弧)を描いて飛ぶ。
@@ -1172,7 +1198,9 @@ function WanderingCreature({
   const flyingCurve = speciesCode === CURVE_FLIGHT_SPECIES_CODE && growthStage === "成虫";
   const arcUp = Math.round(spot.u * 100 + spot.v * 100) % 2 === 0;
   const straightFlight = speciesCode === DRAGONFLY_SPECIES_CODE && growthStage === "成虫";
-  const moveTransition = straightFlight
+  const moveTransition = leaping
+    ? `left ${travelMs}ms linear, top ${travelMs}ms linear`
+    : straightFlight
     ? `left ${travelMs}ms linear, top ${travelMs}ms linear`
     : flyingCurve
     ? `left ${travelMs}ms cubic-bezier(0.45, 0, 0.55, 1), top ${travelMs}ms ${
@@ -1197,6 +1225,7 @@ function WanderingCreature({
       {hasArt ? (
         <div
           className={`h-full w-full ${chatting ? "animate-kuwagata-chat" : ""} ${fighting ? "animate-kuwagata-fight" : ""} ${proud ? "animate-kuwagata-proud" : ""} ${hopping ? "animate-kuwagata-hop" : ""} ${stinking ? "animate-kuwagata-stink" : ""}`}
+          style={leaping ? { animation: `kuwagata-leap ${travelMs}ms linear` } : undefined}
         >
           <KnownCreatureSprite
             fighting={fighting}
