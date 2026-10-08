@@ -1,6 +1,6 @@
 // 採集ミニゲーム「10秒単語チャレンジ」のサーバー側。
 // 問題の出題と正解の保持・回答の採点はすべてサーバーで行い、クライアントの申告する正解数は信用しない。
-// 流れ: startMinigameSession(問題を発行・正解はDBに保存) → クライアントが5秒で回答 → finishMinigameSession(採点・使い切り)
+// 流れ: startMinigameSession(問題を発行・正解はDBに保存) → クライアントが制限時間内に回答 → finishMinigameSession(採点・使い切り)
 import { supabaseAdmin } from "@/lib/supabase/server";
 import type { KuwagataAreaCode } from "@/lib/supabase/kuwagata";
 
