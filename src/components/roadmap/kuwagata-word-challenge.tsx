@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ArthurAvatar, type ArthurMood } from "./arthur";
 import type { KuwagataAreaCode } from "@/lib/supabase/kuwagata";
 
 type Question = { word: string; choices: string[] };
@@ -8,7 +9,12 @@ type StartResponse = { sessionId: string; questions: Question[]; durationSec: nu
 
 const COUNTDOWN_FROM = 3;
 
-// 採集ミニゲーム「5秒単語チャレンジ」。説明(暗転)→OK→3秒カウントダウン→5秒で英単語→日本語の4択にどんどん答える。
+// ミニゲームに出るアーサー。あとで「採集スタイルのアーサー」の絵ができたら、ここだけ差し替える。
+function CatchArthur({ size, mood }: { size: number; mood: ArthurMood }) {
+  return <ArthurAvatar bare animated size={size} mood={mood} />;
+}
+
+// 採集ミニゲーム「10秒単語チャレンジ」。説明(暗転)→OK→3秒カウントダウン→10秒で英単語→日本語の4択にどんどん答える。
 // 正解の判定と採集確率のブーストはサーバーで行うので、ここでは選んだ選択肢の番号を記録して返すだけ。
 // 背景は /roadmap/minigame/bg_{エリア}.png を置くと反映される(無ければ暗い背景のまま)。
 export function KuwagataWordChallenge({
@@ -96,15 +102,17 @@ export function KuwagataWordChallenge({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 bg-cover bg-center px-6 text-center"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-cover bg-center px-6 text-center"
       style={{ backgroundImage: `url(/roadmap/minigame/bg_${areaCode}.png)` }}
     >
-      <div className="absolute inset-0 bg-black/60" />
+      {/* 暗転は他の演出(CelebrationOverlay)と同じ暗さ */}
+      <div className="absolute inset-0 bg-black/75" />
       <div className="relative z-10 flex w-full max-w-md flex-col items-center gap-6">
         {(phase === "intro" || phase === "loading") && (
           <>
+            <CatchArthur size={140} mood="point" />
             <p className="text-xl font-bold leading-relaxed text-white">
-              5秒で単語の意味をできるだけ沢山答えろ！
+              10秒で単語の意味をできるだけ沢山答えろ！
               <br />
               正解数が多いとレアな虫がゲットできるかも！？
             </p>
@@ -128,13 +136,17 @@ export function KuwagataWordChallenge({
         )}
 
         {phase === "countdown" && (
-          <span key={count} className="animate-question-card-enter text-8xl font-black text-amber-300">
-            {count}
-          </span>
+          <>
+            <CatchArthur size={140} mood="idle" />
+            <span key={count} className="animate-question-card-enter text-8xl font-black text-amber-300">
+              {count}
+            </span>
+          </>
         )}
 
         {phase === "playing" && question && (
           <>
+            <CatchArthur size={72} mood="idle" />
             <div className="h-2 w-full overflow-hidden rounded-full bg-white/20">
               <div
                 className="h-full rounded-full bg-amber-400"

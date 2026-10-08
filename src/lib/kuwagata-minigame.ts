@@ -1,4 +1,4 @@
-// 採集ミニゲーム「5秒単語チャレンジ」のサーバー側。
+// 採集ミニゲーム「10秒単語チャレンジ」のサーバー側。
 // 問題の出題と正解の保持・回答の採点はすべてサーバーで行い、クライアントの申告する正解数は信用しない。
 // 流れ: startMinigameSession(問題を発行・正解はDBに保存) → クライアントが5秒で回答 → finishMinigameSession(採点・使い切り)
 import { supabaseAdmin } from "@/lib/supabase/server";
@@ -14,14 +14,14 @@ const AREA_DIFFICULTY_RANGE: Record<KuwagataAreaCode, [number, number]> = {
 };
 
 export const MINIGAME_QUESTION_COUNT = 30;
-export const MINIGAME_DURATION_SEC = 5;
+export const MINIGAME_DURATION_SEC = 10;
 const CHOICE_COUNT = 4;
 // 発行から採点までの有効時間(説明・カウントダウン・プレイ込み)
 const SESSION_TTL_MS = 3 * 60 * 1000;
 // 1問に最低かかる時間(これより速い回答数は物理的に不可能として切り捨てる)
 const MIN_SEC_PER_ANSWER = 0.4;
-// 5秒で正解できる数の上限(これ以上は不正とみなして丸める)
-const MAX_PLAUSIBLE_CORRECT = 12;
+// 制限時間内で正解できる数の上限(これ以上は不正とみなして丸める)
+const MAX_PLAUSIBLE_CORRECT = 25;
 
 export type MinigameQuestion = { word: string; choices: string[] };
 
@@ -36,9 +36,9 @@ function shuffle<T>(items: T[]): T[] {
 
 // 正解数に応じたレア・激レアの重み倍率。コモンの重みは変えない。
 export function getRareBoostMultiplier(correctCount: number): number {
-  if (correctCount >= 7) return 3;
-  if (correctCount >= 5) return 2;
-  if (correctCount >= 3) return 1.5;
+  if (correctCount >= 14) return 3;
+  if (correctCount >= 10) return 2;
+  if (correctCount >= 6) return 1.5;
   return 1;
 }
 
