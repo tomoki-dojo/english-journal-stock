@@ -234,6 +234,9 @@ function buildWingedFlyerArt(
 
 // ハチたん: 上下に漂わず、曲線を描いてなめらかに飛ぶ(チョウたんはふわふわ上下)。
 const CURVE_FLIGHT_SPECIES_CODE = "KW-0012";
+// トンたん: 羽ばたきは控えめ(ときどき素早く)、移動は直線的で速め。他の飛ぶ種には適用しない。
+const DRAGONFLY_SPECIES_CODE = "KW-0016";
+const DRAGONFLY_TRAVEL_SCALE = 0.45;
 
 const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCreatureArt>>>> = {
   // カナたん(カナブン)
@@ -248,6 +251,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0010": buildEightLegWalkerArt("KW-0010", { backLeftLeg: true }),
   // チョウたん(アゲハチョウ。飛ぶ＝buildWingedFlyerArt。羽根の付け根を軸にヒラヒラ)
   "KW-0011": buildWingedFlyerArt("KW-0011", { front: "52% 50%", back: "54% 52%" }),
+  // トンたん(シオカラトンボ。飛ぶが、羽ばたきは普段ほぼ止まって、ときどき素早く羽ばたく。直線的に速く移動=DRAGONFLY_*)
+  "KW-0016": buildWingedFlyerArt("KW-0016", { front: "47% 45%", back: "56% 46%" }),
   "KW-0012": buildWingedFlyerArt("KW-0012", { front: "46% 31%", back: "54% 28%" }),
   // セミたん(飛ぶ。ヒラヒラ＋ふわふわ上下はチョウたんと同じ)
   "KW-0015": buildWingedFlyerArt("KW-0015", { front: "47% 35%", back: "50% 38%" }),
@@ -417,14 +422,14 @@ function KnownCreatureSprite({
   ) : null;
 
   return (
-    <div className={`relative h-full w-full ${art.flying ? (code === CURVE_FLIGHT_SPECIES_CODE ? "animate-kuwagata-glide" : "animate-kuwagata-flutter") : "animate-kuwagata-body"}`}>
+    <div className={`relative h-full w-full ${art.flying ? (code === CURVE_FLIGHT_SPECIES_CODE || code === DRAGONFLY_SPECIES_CODE ? "animate-kuwagata-glide" : "animate-kuwagata-flutter") : "animate-kuwagata-body"}`}>
       {art.mandibleBehindBody && mandibleEl}
       {art.legsBehindBody.map((leg, i) => (
         <img
           key={`behind${i}`}
           src={leg.src}
           alt=""
-          className={`absolute inset-0 h-full w-full ${leg.kind === "wing" ? "animate-kuwagata-wing" : "animate-kuwagata-leg"}`}
+          className={`absolute inset-0 h-full w-full ${leg.kind === "wing" ? (code === DRAGONFLY_SPECIES_CODE ? "animate-kuwagata-wing-dragonfly" : "animate-kuwagata-wing") : "animate-kuwagata-leg"}`}
           style={{ animationDelay: leg.delay, transformOrigin: leg.origin }}
         />
       ))}
@@ -434,7 +439,7 @@ function KnownCreatureSprite({
           key={`front${i}`}
           src={leg.src}
           alt=""
-          className={`absolute inset-0 h-full w-full ${leg.kind === "wing" ? "animate-kuwagata-wing" : "animate-kuwagata-leg"}`}
+          className={`absolute inset-0 h-full w-full ${leg.kind === "wing" ? (code === DRAGONFLY_SPECIES_CODE ? "animate-kuwagata-wing-dragonfly" : "animate-kuwagata-wing") : "animate-kuwagata-leg"}`}
           style={{ animationDelay: leg.delay, transformOrigin: leg.origin }}
         />
       ))}
@@ -659,6 +664,7 @@ function useWander(
   moves: boolean,
   decorationSpots: { u: number; v: number; widthPct: number }[],
   positionsRef: { current: Record<string, { u: number; v: number; widthPct: number }> },
+  travelScale = 1
 ): { spot: { u: number; v: number }; facing: Facing; heading: Heading; travelMs: number } {
   const [state, setState] = useState<{
     spot: { u: number; v: number };
@@ -728,8 +734,8 @@ function useWander(
       const heading: Heading = dx === 0 ? prev.heading : dx < 0 ? "left" : "right";
       // 移動時間は距離に比例(歩く速さを一定に保つ)。移動範囲が広くても速くならない。
       const travelMs = Math.min(
-        MAX_TRAVEL_MS,
-        Math.max(MIN_TRAVEL_MS, surfaceDistancePct(prevPt, nextPt) * TRAVEL_MS_PER_PCT)
+        MAX_TRAVEL_MS * travelScale,
+        Math.max(MIN_TRAVEL_MS * travelScale, surfaceDistancePct(prevPt, nextPt) * TRAVEL_MS_PER_PCT * travelScale)
       );
       const next = { spot: nextSpot, facing, heading, travelMs };
       stateRef.current = next;
@@ -746,7 +752,7 @@ function useWander(
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [seedKey, widthPct, moves, decorationSpots, positionsRef]);
+  }, [seedKey, widthPct, moves, decorationSpots, positionsRef, travelScale]);
 
   return state;
 }
@@ -1022,13 +1028,24 @@ function WanderingCreature({
     SNIFF_DURATION_MS
   );
   const moves = !isStationaryStage(speciesCode, growthStage);
-  const { spot, facing, heading, travelMs } = useWander(seedKey, initialSpot, widthPct, moves, decorationSpots, positionsRef);
+  const { spot, facing, heading, travelMs } = useWander(
+    seedKey,
+    initialSpot,
+    widthPct,
+    moves,
+    decorationSpots,
+    positionsRef,
+    speciesCode === DRAGONFLY_SPECIES_CODE ? DRAGONFLY_TRAVEL_SCALE : 1
+  );
   const pt = surfacePoint(spot.u, spot.v);
   // 飛ぶ種は縦横で別のイージングにして、目的地まで直線ではなく滑らかな曲線(弧)を描いて飛ぶ。
   // 弧の向き(上に膨らむ/下に膨らむ)は目的地ごとに決まる。
   const flyingCurve = speciesCode === CURVE_FLIGHT_SPECIES_CODE && growthStage === "成虫";
   const arcUp = Math.round(spot.u * 100 + spot.v * 100) % 2 === 0;
-  const moveTransition = flyingCurve
+  const straightFlight = speciesCode === DRAGONFLY_SPECIES_CODE && growthStage === "成虫";
+  const moveTransition = straightFlight
+    ? `left ${travelMs}ms linear, top ${travelMs}ms linear`
+    : flyingCurve
     ? `left ${travelMs}ms cubic-bezier(0.45, 0, 0.55, 1), top ${travelMs}ms ${
         arcUp ? "cubic-bezier(0.3, 0, 0.2, 1)" : "cubic-bezier(0.8, 0, 0.7, 1)"
       }`
