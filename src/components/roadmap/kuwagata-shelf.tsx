@@ -219,6 +219,9 @@ function buildWingedFlyerArt(
   };
 }
 
+// ハチたん: 上下に漂わず、曲線を描いてなめらかに飛ぶ(チョウたんはふわふわ上下)。
+const CURVE_FLIGHT_SPECIES_CODE = "KW-0012";
+
 const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCreatureArt>>>> = {
   // カナたん(カナブン)
   "KW-0005": buildNewSpeciesWalkerArt("KW-0005"),
@@ -389,7 +392,7 @@ function KnownCreatureSprite({
   ) : null;
 
   return (
-    <div className={`relative h-full w-full ${art.flying ? "animate-kuwagata-flutter" : "animate-kuwagata-body"}`}>
+    <div className={`relative h-full w-full ${art.flying ? (code === CURVE_FLIGHT_SPECIES_CODE ? "animate-kuwagata-glide" : "animate-kuwagata-flutter") : "animate-kuwagata-body"}`}>
       {art.mandibleBehindBody && mandibleEl}
       {art.legsBehindBody.map((leg, i) => (
         <img
@@ -953,7 +956,7 @@ function WanderingCreature({
   const pt = surfacePoint(spot.u, spot.v);
   // 飛ぶ種は縦横で別のイージングにして、目的地まで直線ではなく滑らかな曲線(弧)を描いて飛ぶ。
   // 弧の向き(上に膨らむ/下に膨らむ)は目的地ごとに決まる。
-  const flyingCurve = KNOWN_CREATURE_ART[speciesCode]?.front?.flying === true && growthStage === "成虫";
+  const flyingCurve = speciesCode === CURVE_FLIGHT_SPECIES_CODE && growthStage === "成虫";
   const arcUp = Math.round(spot.u * 100 + spot.v * 100) % 2 === 0;
   const moveTransition = flyingCurve
     ? `left ${travelMs}ms cubic-bezier(0.45, 0, 0.55, 1), top ${travelMs}ms ${

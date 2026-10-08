@@ -667,11 +667,28 @@ body {
     transform: translateY(0) rotate(0deg);
   }
   30% {
+    transform: translateY(-9%) rotate(-3deg);
+  }
+  65% {
+    transform: translateY(-3%) rotate(3deg);
+  }
+}
+
+@keyframes kuwagata-glide {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  30% {
     transform: translateY(-1.5%) rotate(-1.5deg);
   }
   65% {
     transform: translateY(-0.5%) rotate(1.5deg);
   }
+}
+
+.animate-kuwagata-glide {
+  animation: kuwagata-glide 2.2s ease-in-out infinite;
 }
 
 .animate-kuwagata-wing {
@@ -685,6 +702,7 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .animate-kuwagata-wing,
   .animate-kuwagata-flutter,
+  .animate-kuwagata-glide,
   .animate-kuwagata-horn,
   .animate-kuwagata-hop,
   .animate-kuwagata-proud,
