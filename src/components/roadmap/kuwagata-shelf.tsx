@@ -1369,7 +1369,9 @@ function TankButton({
   );
 }
 
-const NEW_SHELF_PAGE_SIZE = 9;
+// 新種の棚の1ページの個数。PC/タブレット(sm以上)は3列×3段=9、スマホは2列×4段=8。
+const NEW_SHELF_PAGE_SIZE_WIDE = 9;
+const NEW_SHELF_PAGE_SIZE_NARROW = 8;
 
 export function KuwagataShelf({
   tanks,
@@ -1418,6 +1420,18 @@ export function KuwagataShelf({
   };
 
   const newShelfRef = useRef<HTMLDivElement>(null);
+  const [isWideShelf, setIsWideShelf] = useState(true);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 640px)");
+    const update = () => {
+      setIsWideShelf(mq.matches);
+      setNewPage(0);
+      newShelfRef.current?.scrollTo({ left: 0 });
+    };
+    setIsWideShelf(mq.matches);
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
   const [newPage, setNewPage] = useState(0);
   const handleNewShelfScroll = () => {
     const el = newShelfRef.current;
@@ -1436,8 +1450,9 @@ export function KuwagataShelf({
   const knownGroups = groupBySpecies(knownTanks);
   const newGroups = groupBySpecies(tanks);
   // 新種の棚は9個(3×3)ずつのページに分け、右スクロールで次のページを見せる。
+  const newPageSize = isWideShelf ? NEW_SHELF_PAGE_SIZE_WIDE : NEW_SHELF_PAGE_SIZE_NARROW;
   const newPages: KuwagataShelfTank[][][] = [];
-  for (let i = 0; i < newGroups.length; i += NEW_SHELF_PAGE_SIZE) newPages.push(newGroups.slice(i, i + NEW_SHELF_PAGE_SIZE));
+  for (let i = 0; i < newGroups.length; i += newPageSize) newPages.push(newGroups.slice(i, i + newPageSize));
   // 選択中の水槽と同じ種類の水槽(ページャ用)と、その中での位置
   const siblingTanks = selectedTank ? lookupTanks.filter((t) => t.speciesId === selectedTank.speciesId) : [];
   const siblingIndex = selectedTank ? siblingTanks.findIndex((t) => t.tankId === selectedTank.tankId) : 0;
