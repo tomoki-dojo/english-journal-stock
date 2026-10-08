@@ -62,7 +62,7 @@ function formatDate(iso: string): string {
 const KUWAGATA_ART_DIR = "/roadmap/kuwagata";
 
 // kind: "wing"なら脚ではなく羽根として羽ばたかせる(originは羽根の付け根=回転・つぶれの軸、例: "52% 50%")。
-type CreaturePartArt = { src: string; delay: string; kind?: "wing"; origin?: string };
+type CreaturePartArt = { src: string; delay: string; kind?: "wing" | "scythe"; origin?: string };
 
 type KnownCreatureArt = {
   body: string;
@@ -163,6 +163,42 @@ function buildLongicornArt(code: string, origin: { front: string; back: string }
   };
 }
 
+// 新種(動きの種類D=擬態・待機)の成虫アート。カマキリ。ファイルは
+//   正面: front_body / front_scythe(両腕のカマ1枚) / front_leg_R1・R2(奥脚) / front_leg_L1・L2(手前脚)
+//   背面: back_body / back_scythe / back_leg_L1・L2(奥脚) / back_leg_R1・R2(手前脚)
+// の計12枚。カマは付け根(origin)を軸に、ときどき構えてブンッと振る。体はゆらゆら揺れ、ゆっくりしか動かない。
+function buildMantisArt(code: string, origin: { front: string; back: string }): Partial<Record<Facing, KnownCreatureArt>> {
+  const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
+  return {
+    front: {
+      body: file("front_body"),
+      mandibles: {},
+      legsBehindBody: [
+        { src: file("front_leg_R2"), delay: "-0.45s" },
+        { src: file("front_leg_R1"), delay: "-0.15s" },
+      ],
+      legsInFrontOfBody: [
+        { src: file("front_leg_L2"), delay: "-0.3s" },
+        { src: file("front_leg_L1"), delay: "0s" },
+        { src: file("front_scythe"), delay: "0s", kind: "scythe", origin: origin.front },
+      ],
+    },
+    back: {
+      body: file("back_body"),
+      mandibles: {},
+      legsBehindBody: [
+        { src: file("back_leg_L2"), delay: "-0.45s" },
+        { src: file("back_leg_L1"), delay: "-0.15s" },
+      ],
+      legsInFrontOfBody: [
+        { src: file("back_leg_R2"), delay: "-0.3s" },
+        { src: file("back_leg_R1"), delay: "0s" },
+        { src: file("back_scythe"), delay: "0s", kind: "scythe", origin: origin.back },
+      ],
+    },
+  };
+}
+
 // 新種(動きの種類B=歩く8脚)の成虫アート。クモなど。ファイルは
 //   正面: front_body / front_leg_L1〜L4(手前脚4本) / front_leg_R1(奥脚1本)
 //   背面: back_body / back_leg_R1〜R4(脚4本) / back_leg_L1(左側にちらっと見える脚1本。種によっては無い)
@@ -258,6 +294,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0012": buildWingedFlyerArt("KW-0012", { front: "46% 31%", back: "54% 28%" }),
   // セミたん(飛ぶ。ヒラヒラ＋ふわふわ上下はチョウたんと同じ)
   "KW-0015": buildWingedFlyerArt("KW-0015", { front: "47% 35%", back: "50% 38%" }),
+  // カマたん(カマキリ。擬態・待機=D。体がゆらゆら揺れ、ときどきカマを構えて振る=SCYTHE_*。移動はゆっくり)
+  "KW-0018": buildMantisArt("KW-0018", { front: "42% 40%", back: "50% 39%" }),
   // タマたん(タマムシ。歩く6脚・大顎なし。テッペンクワたん同様に大きくなってカラフルにキラキラ)
   "KW-0019": buildNewSpeciesWalkerArt("KW-0019"),
   // ゾウたん(ゾウムシ。鼻=mandible_01を付け根を軸にフンフン大きく振る=SNIFF_*)
@@ -351,6 +389,7 @@ function KnownCreatureSprite({
   hornSwing = false,
   chomp = false,
   sniff = false,
+  scythe = false,
 }: {
   code: string;
   facing: Facing;
@@ -363,6 +402,7 @@ function KnownCreatureSprite({
   hornSwing?: boolean;
   chomp?: boolean;
   sniff?: boolean;
+  scythe?: boolean;
 }) {
   const stageArt = KNOWN_STAGE_ART[code];
 
@@ -426,14 +466,14 @@ function KnownCreatureSprite({
   ) : null;
 
   return (
-    <div className={`relative h-full w-full ${art.flying ? (code === CURVE_FLIGHT_SPECIES_CODE || code === DRAGONFLY_SPECIES_CODE ? "animate-kuwagata-glide" : "animate-kuwagata-flutter") : "animate-kuwagata-body"}`}>
+    <div className={`relative h-full w-full ${art.flying ? (code === CURVE_FLIGHT_SPECIES_CODE || code === DRAGONFLY_SPECIES_CODE ? "animate-kuwagata-glide" : "animate-kuwagata-flutter") : code === SCYTHE_SPECIES_CODE ? "animate-kuwagata-sway" : "animate-kuwagata-body"}`}>
       {art.mandibleBehindBody && mandibleEl}
       {art.legsBehindBody.map((leg, i) => (
         <img
           key={`behind${i}`}
           src={leg.src}
           alt=""
-          className={`absolute inset-0 h-full w-full ${leg.kind === "wing" ? (code === DRAGONFLY_SPECIES_CODE ? "animate-kuwagata-wing-dragonfly" : "animate-kuwagata-wing") : "animate-kuwagata-leg"}`}
+          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe)}`}
           style={{ animationDelay: leg.delay, transformOrigin: leg.origin }}
         />
       ))}
@@ -443,13 +483,20 @@ function KnownCreatureSprite({
           key={`front${i}`}
           src={leg.src}
           alt=""
-          className={`absolute inset-0 h-full w-full ${leg.kind === "wing" ? (code === DRAGONFLY_SPECIES_CODE ? "animate-kuwagata-wing-dragonfly" : "animate-kuwagata-wing") : "animate-kuwagata-leg"}`}
+          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe)}`}
           style={{ animationDelay: leg.delay, transformOrigin: leg.origin }}
         />
       ))}
       {!art.mandibleBehindBody && mandibleEl}
     </div>
   );
+}
+
+// 脚・羽根・カマのCSSクラス。カマは構えて振るとき(scythe)だけ動かす。
+function legClassName(kind: CreaturePartArt["kind"], code: string, scythe: boolean): string {
+  if (kind === "wing") return code === DRAGONFLY_SPECIES_CODE ? "animate-kuwagata-wing-dragonfly" : "animate-kuwagata-wing";
+  if (kind === "scythe") return scythe ? "animate-kuwagata-scythe" : "";
+  return "animate-kuwagata-leg";
 }
 
 export function TankOccupant({
@@ -904,6 +951,10 @@ const CHOMP_SPECIES_CODE = "KW-0017";
 const SNIFF_CYCLE_MS = 5500;
 const SNIFF_DURATION_MS = 1800;
 const SNIFF_SPECIES_CODE = "KW-0021";
+const SCYTHE_CYCLE_MS = 7000;
+const SCYTHE_DURATION_MS = 1800;
+const SCYTHE_SPECIES_CODE = "KW-0018";
+const SCYTHE_TRAVEL_SCALE = 2.2;
 const STINK_CYCLE_MS = 9000;
 const STINK_DURATION_MS = 2000;
 const STINK_SPECIES_CODE = "KW-0022";
@@ -1050,6 +1101,12 @@ function WanderingCreature({
     SNIFF_CYCLE_MS,
     SNIFF_DURATION_MS
   );
+  const scything = useTimedGesture(
+    speciesCode === SCYTHE_SPECIES_CODE && growthStage === "成虫" && hasArt,
+    seedKey + ":scythe",
+    SCYTHE_CYCLE_MS,
+    SCYTHE_DURATION_MS
+  );
   const stinking = useTimedGesture(
     speciesCode === STINK_SPECIES_CODE && growthStage === "成虫" && hasArt,
     seedKey + ":stink",
@@ -1064,7 +1121,7 @@ function WanderingCreature({
     moves,
     decorationSpots,
     positionsRef,
-    speciesCode === DRAGONFLY_SPECIES_CODE ? DRAGONFLY_TRAVEL_SCALE : 1
+    speciesCode === DRAGONFLY_SPECIES_CODE ? DRAGONFLY_TRAVEL_SCALE : speciesCode === SCYTHE_SPECIES_CODE ? SCYTHE_TRAVEL_SCALE : 1
   );
   const pt = surfacePoint(spot.u, spot.v);
   // 飛ぶ種は縦横で別のイージングにして、目的地まで直線ではなく滑らかな曲線(弧)を描いて飛ぶ。
@@ -1103,6 +1160,7 @@ function WanderingCreature({
             hornSwing={hornSwing}
             chomp={chomping}
             sniff={sniffing}
+            scythe={scything}
             code={speciesCode}
             facing={facing}
             mandibleVariant={mandibleVariant}

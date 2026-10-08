@@ -770,6 +770,49 @@ body {
   animation: kuwagata-stink-puff 1.1s ease-out both;
 }
 
+/* カマたんの体のゆらゆら(風にそよぐ草のように、足元を軸にゆっくり左右に傾く)。 */
+@keyframes kuwagata-sway {
+  0%,
+  100% {
+    transform: rotate(-2.5deg);
+  }
+  50% {
+    transform: rotate(2.5deg);
+  }
+}
+
+.animate-kuwagata-sway {
+  transform-origin: 50% 100%;
+  animation: kuwagata-sway 3.6s ease-in-out infinite;
+}
+
+/* カマたんのカマ。付け根を軸に、構えて(上げて)からブンッと振り下ろし、2回繰り返して戻る。 */
+@keyframes kuwagata-scythe {
+  0%,
+  100% {
+    transform: rotate(0deg) translateY(0);
+  }
+  15% {
+    transform: rotate(-8deg) translateY(-6%) scale(1.04);
+  }
+  28% {
+    transform: rotate(10deg) translateY(4%) scale(0.98);
+  }
+  50% {
+    transform: rotate(-8deg) translateY(-6%) scale(1.04);
+  }
+  63% {
+    transform: rotate(10deg) translateY(4%) scale(0.98);
+  }
+  85% {
+    transform: rotate(-3deg) translateY(-2%);
+  }
+}
+
+.animate-kuwagata-scythe {
+  animation: kuwagata-scythe 1.8s ease-in-out;
+}
+
 .animate-kuwagata-chomp {
   animation: kuwagata-chomp 1.5s ease-in-out;
 }
@@ -849,6 +892,8 @@ body {
   .animate-kuwagata-glide,
   .animate-kuwagata-horn,
   .animate-kuwagata-chomp,
+  .animate-kuwagata-sway,
+  .animate-kuwagata-scythe,
   .animate-kuwagata-stink,
   .animate-kuwagata-stink-puff,
   .animate-kuwagata-sniff,
