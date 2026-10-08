@@ -164,10 +164,13 @@ function buildLongicornArt(code: string, origin: { front: string; back: string }
 }
 
 // 新種(動きの種類D=擬態・待機)の成虫アート。カマキリ。ファイルは
-//   正面: front_body / front_scythe(両腕のカマ1枚) / front_leg_R1・R2(奥脚) / front_leg_L1・L2(手前脚)
-//   背面: back_body / back_scythe / back_leg_L1・L2(奥脚) / back_leg_R1・R2(手前脚)
-// の計12枚。カマは付け根(origin)を軸に、ときどき構えてブンッと振る。体はゆらゆら揺れ、ゆっくりしか動かない。
-function buildMantisArt(code: string, origin: { front: string; back: string }): Partial<Record<Facing, KnownCreatureArt>> {
+//   正面: front_body / front_scythe_L・front_scythe_R(左右のカマ) / front_leg_R1・R2(奥脚) / front_leg_L1・L2(手前脚)
+//   背面: back_body / back_scythe_L・back_scythe_R / back_leg_L1・L2(奥脚) / back_leg_R1・R2(手前脚)
+// の計12枚。左右のカマはそれぞれの付け根(origin)を軸に、ときどき時間をずらして交互にブンッと振る。体はゆらゆら揺れ、ゆっくりしか動かない。
+function buildMantisArt(
+  code: string,
+  origin: { front: { L: string; R: string }; back: { L: string; R: string } }
+): Partial<Record<Facing, KnownCreatureArt>> {
   const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
   return {
     front: {
@@ -180,7 +183,8 @@ function buildMantisArt(code: string, origin: { front: string; back: string }): 
       legsInFrontOfBody: [
         { src: file("front_leg_L2"), delay: "-0.3s" },
         { src: file("front_leg_L1"), delay: "0s" },
-        { src: file("front_scythe"), delay: "0s", kind: "scythe", origin: origin.front },
+        { src: file("front_scythe_L"), delay: "0s", kind: "scythe", origin: origin.front.L },
+        { src: file("front_scythe_R"), delay: "0.3s", kind: "scythe", origin: origin.front.R },
       ],
     },
     back: {
@@ -193,7 +197,8 @@ function buildMantisArt(code: string, origin: { front: string; back: string }): 
       legsInFrontOfBody: [
         { src: file("back_leg_R2"), delay: "-0.3s" },
         { src: file("back_leg_R1"), delay: "0s" },
-        { src: file("back_scythe"), delay: "0s", kind: "scythe", origin: origin.back },
+        { src: file("back_scythe_L"), delay: "0s", kind: "scythe", origin: origin.back.L },
+        { src: file("back_scythe_R"), delay: "0.3s", kind: "scythe", origin: origin.back.R },
       ],
     },
   };
@@ -295,7 +300,10 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   // セミたん(飛ぶ。ヒラヒラ＋ふわふわ上下はチョウたんと同じ)
   "KW-0015": buildWingedFlyerArt("KW-0015", { front: "47% 35%", back: "50% 38%" }),
   // カマたん(カマキリ。擬態・待機=D。体がゆらゆら揺れ、ときどきカマを構えて振る=SCYTHE_*。移動はゆっくり)
-  "KW-0018": buildMantisArt("KW-0018", { front: "42% 40%", back: "50% 39%" }),
+  "KW-0018": buildMantisArt("KW-0018", {
+    front: { L: "35% 42%", R: "44% 48%" },
+    back: { L: "50% 47%", R: "59% 51%" },
+  }),
   // タマたん(タマムシ。歩く6脚・大顎なし。テッペンクワたん同様に大きくなってカラフルにキラキラ)
   "KW-0019": buildNewSpeciesWalkerArt("KW-0019"),
   // ゾウたん(ゾウムシ。鼻=mandible_01を付け根を軸にフンフン大きく振る=SNIFF_*)
