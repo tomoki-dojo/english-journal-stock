@@ -193,12 +193,13 @@ function buildMantisArt(
       legsBehindBody: [
         { src: file("back_leg_L2"), delay: "-0.45s" },
         { src: file("back_leg_L1"), delay: "-0.15s" },
+        // 背面のカマは体の奥(後ろ)に描く
+        { src: file("back_scythe_L"), delay: "0s", kind: "scythe", origin: origin.back.L },
+        { src: file("back_scythe_R"), delay: "0.3s", kind: "scythe", origin: origin.back.R },
       ],
       legsInFrontOfBody: [
         { src: file("back_leg_R2"), delay: "-0.3s" },
         { src: file("back_leg_R1"), delay: "0s" },
-        { src: file("back_scythe_L"), delay: "0s", kind: "scythe", origin: origin.back.L },
-        { src: file("back_scythe_R"), delay: "0.3s", kind: "scythe", origin: origin.back.R },
       ],
     },
   };
@@ -301,8 +302,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0015": buildWingedFlyerArt("KW-0015", { front: "47% 35%", back: "50% 38%" }),
   // カマたん(カマキリ。擬態・待機=D。体がゆらゆら揺れ、ときどきカマを構えて振る=SCYTHE_*。移動はゆっくり)
   "KW-0018": buildMantisArt("KW-0018", {
-    front: { L: "35% 42%", R: "44% 48%" },
-    back: { L: "50% 47%", R: "59% 51%" },
+    front: { L: "35% 40%", R: "40% 39%" },
+    back: { L: "53% 38%", R: "60% 41%" },
   }),
   // タマたん(タマムシ。歩く6脚・大顎なし。テッペンクワたん同様に大きくなってカラフルにキラキラ)
   "KW-0019": buildNewSpeciesWalkerArt("KW-0019"),
