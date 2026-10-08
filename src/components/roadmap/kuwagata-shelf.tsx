@@ -1369,6 +1369,8 @@ function TankButton({
   );
 }
 
+const NEW_SHELF_PAGE_SIZE = 9;
+
 export function KuwagataShelf({
   tanks,
   knownTanks,
@@ -1415,10 +1417,27 @@ export function KuwagataShelf({
     }
   };
 
+  const newShelfRef = useRef<HTMLDivElement>(null);
+  const [newPage, setNewPage] = useState(0);
+  const handleNewShelfScroll = () => {
+    const el = newShelfRef.current;
+    if (el && el.clientWidth > 0) setNewPage(Math.round(el.scrollLeft / el.clientWidth));
+  };
+  const scrollNewShelf = () => {
+    const el = newShelfRef.current;
+    if (!el) return;
+    const last = Math.max(0, Math.ceil(el.scrollWidth / el.clientWidth) - 1);
+    const next = newPage < last ? newPage + 1 : 0;
+    el.scrollTo({ left: next * el.clientWidth, behavior: "smooth" });
+  };
+
   const lookupTanks = [...knownTanks, ...tanks];
   const selectedTank = lookupTanks.find((t) => t.tankId === selectedTankId) ?? null;
   const knownGroups = groupBySpecies(knownTanks);
   const newGroups = groupBySpecies(tanks);
+  // 新種の棚は9個(3×3)ずつのページに分け、右スクロールで次のページを見せる。
+  const newPages: KuwagataShelfTank[][][] = [];
+  for (let i = 0; i < newGroups.length; i += NEW_SHELF_PAGE_SIZE) newPages.push(newGroups.slice(i, i + NEW_SHELF_PAGE_SIZE));
   // 選択中の水槽と同じ種類の水槽(ページャ用)と、その中での位置
   const siblingTanks = selectedTank ? lookupTanks.filter((t) => t.speciesId === selectedTank.speciesId) : [];
   const siblingIndex = selectedTank ? siblingTanks.findIndex((t) => t.tankId === selectedTank.tankId) : 0;
@@ -1470,33 +1489,57 @@ export function KuwagataShelf({
             </div>
           )}
 
-          <div className="grid grid-cols-2 sm:grid-cols-3">
-            {newGroups.map((group) => {
-              const tank = group[0];
-              const color = tankColor(tank);
-              const representative = pickRepresentative(group);
-              const count = group.reduce((sum, t) => sum + t.individuals.length, 0);
+          <div className="relative">
+            <div
+              ref={newShelfRef}
+              onScroll={handleNewShelfScroll}
+              className="flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
+              {newPages.map((pageGroups, pageIndex) => (
+                <div key={pageIndex} className="grid w-full shrink-0 snap-start grid-cols-2 sm:grid-cols-3">
+                  {pageGroups.map((group) => {
+                    const tank = group[0];
+                    const color = tankColor(tank);
+                    const representative = pickRepresentative(group);
+                    const count = group.reduce((sum, t) => sum + t.individuals.length, 0);
 
-              return (
-                <RackCell key={tank.speciesId} plate={`棚${tank.tankNumber}`}>
-                  <TankButton
-                    onClick={() => setSelectedTankId(tank.tankId)}
-                    variant={tank.speciesAreaCode === "aquarium" ? "aquarium" : "terrarium"}
-                    name={tank.speciesName}
-                    sub={count > 1 ? `${count}匹` : GROWTH_STAGE_LABEL[representative.growthStage]}
-                  >
-                    <TankOccupant
-                      color={color}
-                      sizeScale={representative.sizeScale}
-                      speciesCode={representative.speciesCode}
-                      mandibleVariant={representative.mandibleVariant}
-                      growthStage={representative.growthStage}
-                    />
-                  </TankButton>
-                </RackCell>
-              );
-            })}
-            <RackFillers count={newGroups.length} />
+                    return (
+                      <RackCell key={tank.speciesId} plate={`棚${tank.tankNumber}`}>
+                        <TankButton
+                          onClick={() => setSelectedTankId(tank.tankId)}
+                          variant={tank.speciesAreaCode === "aquarium" ? "aquarium" : "terrarium"}
+                          name={tank.speciesName}
+                          sub={count > 1 ? `${count}匹` : GROWTH_STAGE_LABEL[representative.growthStage]}
+                        >
+                          <TankOccupant
+                            color={color}
+                            sizeScale={representative.sizeScale}
+                            speciesCode={representative.speciesCode}
+                            mandibleVariant={representative.mandibleVariant}
+                            growthStage={representative.growthStage}
+                          />
+                        </TankButton>
+                      </RackCell>
+                    );
+                  })}
+                  <RackFillers count={pageGroups.length} />
+                </div>
+              ))}
+            </div>
+            {newPages.length > 1 && (
+              <button
+                type="button"
+                aria-label={newPage < newPages.length - 1 ? "次の棚へ" : "最初の棚へ"}
+                onClick={scrollNewShelf}
+                className="absolute left-1/2 top-1 z-10 flex h-9 w-9 -translate-x-1/2 items-center justify-center rounded-full bg-white/50 text-zinc-500 shadow ring-1 ring-zinc-300/70 backdrop-blur-sm transition hover:bg-white/80 active:scale-95"
+              >
+                {newPage < newPages.length - 1 ? (
+                  <ChevronRight className="h-5 w-5" strokeWidth={1.75} />
+                ) : (
+                  <ChevronLeft className="h-5 w-5" strokeWidth={1.75} />
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>
