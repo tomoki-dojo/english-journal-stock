@@ -150,6 +150,19 @@ function buildNewSpeciesWalkerArt(
   };
 }
 
+// カミたん(カミキリムシ): 大顎(mandible_01の1枚)がある6脚の歩行種。手前脚は正面L1・L3の2本のみ(L2なし)。
+// 大顎は付け根を軸に、ときどきガチガチ噛み合わせる(CHOMP_*)。
+function buildLongicornArt(code: string, origin: { front: string; back: string }): Partial<Record<Facing, KnownCreatureArt>> {
+  const art = buildNewSpeciesWalkerArt(code, { frontOrigin: origin.front, backOrigin: origin.back });
+  return {
+    front: art.front && {
+      ...art.front,
+      legsInFrontOfBody: art.front.legsInFrontOfBody.filter((leg) => !leg.src.endsWith("_front_leg_L2.svg")),
+    },
+    back: art.back,
+  };
+}
+
 // 新種(動きの種類B=歩く8脚)の成虫アート。クモなど。ファイルは
 //   正面: front_body / front_leg_L1〜L4(手前脚4本) / front_leg_R1(奥脚1本)
 //   背面: back_body / back_leg_R1〜R4(脚4本) / back_leg_L1(左側にちらっと見える脚1本。種によっては無い)
@@ -236,6 +249,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   // チョウたん(アゲハチョウ。飛ぶ＝buildWingedFlyerArt。羽根の付け根を軸にヒラヒラ)
   "KW-0011": buildWingedFlyerArt("KW-0011", { front: "52% 50%", back: "54% 52%" }),
   "KW-0012": buildWingedFlyerArt("KW-0012", { front: "46% 31%", back: "54% 28%" }),
+  // カミたん(カミキリムシ。大顎mandible_01をときどきガチガチ=CHOMP_*)
+  "KW-0017": buildLongicornArt("KW-0017", { front: "31% 85%", back: "90% 58%" }),
   // カブたん(カブトムシ。ツノはmandible_01、付け根を軸にときどき首振り＝HORN_*)
   "KW-0014": buildNewSpeciesWalkerArt("KW-0014", {
     frontOrigin: "29% 43%",
@@ -319,6 +334,7 @@ function KnownCreatureSprite({
   phaseSeed = "",
   fighting = false,
   hornSwing = false,
+  chomp = false,
 }: {
   code: string;
   facing: Facing;
@@ -329,6 +345,7 @@ function KnownCreatureSprite({
   fighting?: boolean;
   // ツノを付け根を軸に首振りさせる(カブたんの仕草)。mandibleOriginが設定された種だけ効く。
   hornSwing?: boolean;
+  chomp?: boolean;
 }) {
   const stageArt = KNOWN_STAGE_ART[code];
 
@@ -386,7 +403,7 @@ function KnownCreatureSprite({
     <img
       src={mandible}
       alt=""
-      className={`absolute inset-0 h-full w-full ${fighting ? "animate-kuwagata-fight-jaw" : ""} ${hornSwing && art.mandibleOrigin ? "animate-kuwagata-horn" : ""}`}
+      className={`absolute inset-0 h-full w-full ${fighting ? "animate-kuwagata-fight-jaw" : ""} ${hornSwing && art.mandibleOrigin ? "animate-kuwagata-horn" : ""} ${chomp && art.mandibleOrigin ? "animate-kuwagata-chomp" : ""}`}
       style={art.mandibleOrigin ? { transformOrigin: art.mandibleOrigin } : undefined}
     />
   ) : null;
@@ -860,6 +877,9 @@ const HOP_SPECIES_CODE = "KW-0009";
 const HORN_CYCLE_MS = 7000;
 const HORN_DURATION_MS = 1600;
 const HORN_SPECIES_CODE = "KW-0014";
+const CHOMP_CYCLE_MS = 6000;
+const CHOMP_DURATION_MS = 1500;
+const CHOMP_SPECIES_CODE = "KW-0017";
 
 // 一定周期で短時間だけtrueになる仕草用のフック。開始は個体ごとにずらす。
 function useTimedGesture(enabled: boolean, seedKey: string, cycleMs: number, durationMs: number): boolean {
@@ -951,6 +971,12 @@ function WanderingCreature({
     HORN_CYCLE_MS,
     HORN_DURATION_MS
   );
+  const chomping = useTimedGesture(
+    speciesCode === CHOMP_SPECIES_CODE && growthStage === "成虫" && hasArt,
+    seedKey + ":chomp",
+    CHOMP_CYCLE_MS,
+    CHOMP_DURATION_MS
+  );
   const moves = !isStationaryStage(speciesCode, growthStage);
   const { spot, facing, heading, travelMs } = useWander(seedKey, initialSpot, widthPct, moves, decorationSpots, positionsRef);
   const pt = surfacePoint(spot.u, spot.v);
@@ -985,6 +1011,7 @@ function WanderingCreature({
           <KnownCreatureSprite
             fighting={fighting}
             hornSwing={hornSwing}
+            chomp={chomping}
             code={speciesCode}
             facing={facing}
             mandibleVariant={mandibleVariant}

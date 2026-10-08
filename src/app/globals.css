@@ -646,6 +646,29 @@ body {
   animation: kuwagata-horn 1.6s ease-in-out;
 }
 
+/* カミたんの大顎。付け根を軸に、素早く閉じて開くのを4回繰り返す(ガチガチ)。 */
+@keyframes kuwagata-chomp {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+  12%,
+  37%,
+  62%,
+  87% {
+    transform: scale(0.72, 0.9) rotate(-4deg);
+  }
+  25%,
+  50%,
+  75% {
+    transform: scale(1.06, 1.04);
+  }
+}
+
+.animate-kuwagata-chomp {
+  animation: kuwagata-chomp 1.5s ease-in-out;
+}
+
 /* 飛ぶ種(チョウたん)。羽根は付け根(transform-originはインラインで指定)を軸に、横につぶれて開くのを素早く繰り返し(ヒラヒラ)、
    体全体はふわふわ上下に漂う。 */
 @keyframes kuwagata-wing-flap {
@@ -704,6 +727,7 @@ body {
   .animate-kuwagata-flutter,
   .animate-kuwagata-glide,
   .animate-kuwagata-horn,
+  .animate-kuwagata-chomp,
   .animate-kuwagata-hop,
   .animate-kuwagata-proud,
   .animate-kuwagata-chat,
