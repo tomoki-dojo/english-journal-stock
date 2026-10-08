@@ -721,6 +721,55 @@ body {
   animation: kuwagata-sniff 1.8s ease-in-out;
 }
 
+/* モンたんの「ぷしゅっ」。体を小刻みに震わせる(縮んで力む→戻る)。 */
+@keyframes kuwagata-stink {
+  0%,
+  100% {
+    transform: translateX(0) scale(1);
+  }
+  8%,
+  24%,
+  40% {
+    transform: translateX(-3%) rotate(-2deg) scale(0.96, 0.94);
+  }
+  16%,
+  32%,
+  48% {
+    transform: translateX(3%) rotate(2deg) scale(0.96, 0.94);
+  }
+  60% {
+    transform: translateY(-6%) scale(1.1, 1.08);
+  }
+  75% {
+    transform: translateY(0) scale(0.98);
+  }
+}
+
+.animate-kuwagata-stink {
+  transform-origin: 50% 100%;
+  animation: kuwagata-stink 1.4s ease-in-out;
+}
+
+/* 臭いガスの粒。ふくらみながらふわっと漂い、薄くなって消える。 */
+@keyframes kuwagata-stink-puff {
+  0% {
+    transform: translate(-50%, -50%) translate(0, 0) scale(0.3);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(var(--gx), var(--gy)) scale(1.8);
+    opacity: 0;
+  }
+}
+
+.animate-kuwagata-stink-puff {
+  opacity: 0;
+  animation: kuwagata-stink-puff 1.1s ease-out both;
+}
+
 .animate-kuwagata-chomp {
   animation: kuwagata-chomp 1.5s ease-in-out;
 }
@@ -800,6 +849,8 @@ body {
   .animate-kuwagata-glide,
   .animate-kuwagata-horn,
   .animate-kuwagata-chomp,
+  .animate-kuwagata-stink,
+  .animate-kuwagata-stink-puff,
   .animate-kuwagata-sniff,
   .animate-kuwagata-hop,
   .animate-kuwagata-proud,

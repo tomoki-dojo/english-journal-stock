@@ -262,6 +262,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0019": buildNewSpeciesWalkerArt("KW-0019"),
   // ゾウたん(ゾウムシ。鼻=mandible_01を付け根を軸にフンフン大きく振る=SNIFF_*)
   "KW-0021": buildNewSpeciesWalkerArt("KW-0021", { frontOrigin: "23% 70%", backOrigin: "80% 60%", backBehindBody: true }),
+  // モンたん(エサキモンキツノカメムシ。歩く6脚・大顎なし。ときどき体をぷるぷる震わせて臭いガスをぷしゅっと出す=STINK_*)
+  "KW-0022": buildNewSpeciesWalkerArt("KW-0022"),
   // カミたん(カミキリムシ。大顎mandible_01をときどきガチガチ=CHOMP_*)
   "KW-0017": buildLongicornArt("KW-0017", { front: "31% 85%", back: "90% 58%" }),
   // カブたん(カブトムシ。ツノはmandible_01、付け根を軸にときどき首振り＝HORN_*)
@@ -902,6 +904,17 @@ const CHOMP_SPECIES_CODE = "KW-0017";
 const SNIFF_CYCLE_MS = 5500;
 const SNIFF_DURATION_MS = 1800;
 const SNIFF_SPECIES_CODE = "KW-0021";
+const STINK_CYCLE_MS = 9000;
+const STINK_DURATION_MS = 2000;
+const STINK_SPECIES_CODE = "KW-0022";
+// ガスの粒(位置はスプライト内の%、px/pyは漂う量[px]、delayは出る順)
+const STINK_PUFFS = [
+  { left: "62%", top: "38%", px: 16, py: 34, size: 22, delay: 0.1 },
+  { left: "55%", top: "30%", px: -10, py: 42, size: 28, delay: 0.35 },
+  { left: "68%", top: "44%", px: 26, py: 26, size: 18, delay: 0.55 },
+  { left: "48%", top: "36%", px: -22, py: 30, size: 20, delay: 0.8 },
+  { left: "60%", top: "28%", px: 6, py: 50, size: 24, delay: 1.0 },
+];
 
 // 一定周期で短時間だけtrueになる仕草用のフック。開始は個体ごとにずらす。
 function useTimedGesture(enabled: boolean, seedKey: string, cycleMs: number, durationMs: number): boolean {
@@ -1029,6 +1042,12 @@ function WanderingCreature({
     SNIFF_CYCLE_MS,
     SNIFF_DURATION_MS
   );
+  const stinking = useTimedGesture(
+    speciesCode === STINK_SPECIES_CODE && growthStage === "成虫" && hasArt,
+    seedKey + ":stink",
+    STINK_CYCLE_MS,
+    STINK_DURATION_MS
+  );
   const moves = !isStationaryStage(speciesCode, growthStage);
   const { spot, facing, heading, travelMs } = useWander(
     seedKey,
@@ -1069,7 +1088,7 @@ function WanderingCreature({
     >
       {hasArt ? (
         <div
-          className={`h-full w-full ${chatting ? "animate-kuwagata-chat" : ""} ${fighting ? "animate-kuwagata-fight" : ""} ${proud ? "animate-kuwagata-proud" : ""} ${hopping ? "animate-kuwagata-hop" : ""}`}
+          className={`h-full w-full ${chatting ? "animate-kuwagata-chat" : ""} ${fighting ? "animate-kuwagata-fight" : ""} ${proud ? "animate-kuwagata-proud" : ""} ${hopping ? "animate-kuwagata-hop" : ""} ${stinking ? "animate-kuwagata-stink" : ""}`}
         >
           <KnownCreatureSprite
             fighting={fighting}
@@ -1169,6 +1188,26 @@ function WanderingCreature({
           >
             ✦
           </span>
+        ))}
+      {stinking &&
+        // モンたん: 震えたあと、臭いガスの粒がもわっと出て、ふくらみながら漂って消える
+        STINK_PUFFS.map((pf, i) => (
+          <span
+            key={i}
+            className="animate-kuwagata-stink-puff pointer-events-none absolute z-20 rounded-full"
+            style={
+              {
+                left: pf.left,
+                top: pf.top,
+                width: pf.size,
+                height: pf.size,
+                background: "radial-gradient(circle, rgba(190,220,60,0.85) 0%, rgba(150,190,40,0.55) 55%, rgba(150,190,40,0) 100%)",
+                animationDelay: `${pf.delay}s`,
+                "--gx": `${pf.px}px`,
+                "--gy": `${-pf.py}px`,
+              } as CSSProperties
+            }
+          />
         ))}
       {nickname && (
         // 名前ラベル。スプライトの頭上に出し、歩き回るのに合わせてラベルも一緒に動く。
