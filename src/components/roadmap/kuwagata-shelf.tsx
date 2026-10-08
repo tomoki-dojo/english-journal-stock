@@ -302,8 +302,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0015": buildWingedFlyerArt("KW-0015", { front: "47% 35%", back: "50% 38%" }),
   // カマたん(カマキリ。擬態・待機=D。体がゆらゆら揺れ、ときどきカマを構えて振る=SCYTHE_*。移動はゆっくり)
   "KW-0018": buildMantisArt("KW-0018", {
-    front: { L: "35% 40%", R: "40% 39%" },
-    back: { L: "53% 38%", R: "60% 41%" },
+    front: { L: "36% 48%", R: "40% 47%" },
+    back: { L: "53% 46%", R: "60% 49%" },
   }),
   // タマたん(タマムシ。歩く6脚・大顎なし。テッペンクワたん同様に大きくなってカラフルにキラキラ)
   "KW-0019": buildNewSpeciesWalkerArt("KW-0019"),
