@@ -321,8 +321,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   }),
   // ホタたん(ホタル。歩く6脚+お腹がゆっくり明滅して光る)
   "KW-0023": buildFireflyArt("KW-0023", {
-    front: { left: 78, top: 64, size: 30 },
-    back: { left: 36, top: 68, size: 34 },
+    front: { left: 90, top: 62, size: 34 },
+    back: { left: 12, top: 68, size: 38 },
   }),
   // タマたん(タマムシ。歩く6脚・大顎なし。テッペンクワたん同様に大きくなってカラフルにキラキラ)
   "KW-0019": buildNewSpeciesWalkerArt("KW-0019"),
@@ -495,6 +495,21 @@ function KnownCreatureSprite({
 
   return (
     <div className={`relative h-full w-full ${art.flying ? (code === CURVE_FLIGHT_SPECIES_CODE || code === DRAGONFLY_SPECIES_CODE ? "animate-kuwagata-glide" : "animate-kuwagata-flutter") : code === SCYTHE_SPECIES_CODE ? "animate-kuwagata-sway" : "animate-kuwagata-body"}`}>
+      {art.glow && (
+        // お腹の光。体の後ろ(奥)に置き、おしり側からはみ出して見える。ゆっくり明るくなって消えるのを繰り返す。
+        <span
+          className="animate-kuwagata-glow pointer-events-none absolute rounded-full"
+          style={{
+            left: `${art.glow.left}%`,
+            top: `${art.glow.top}%`,
+            width: `${art.glow.size}%`,
+            height: `${art.glow.size}%`,
+            transform: "translate(-50%, -50%)",
+            background:
+              "radial-gradient(circle, rgba(254,249,130,0.95) 0%, rgba(190,235,60,0.7) 40%, rgba(150,220,60,0) 72%)",
+          }}
+        />
+      )}
       {art.mandibleBehindBody && mandibleEl}
       {art.legsBehindBody.map((leg, i) => (
         <img
@@ -506,22 +521,6 @@ function KnownCreatureSprite({
         />
       ))}
       <img src={art.body} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />
-      {art.glow && (
-        // お腹の光。体の上に重ねて明るく(screen)見せ、周りににじむ。ゆっくり明るくなって消えるのを繰り返す。
-        <span
-          className="animate-kuwagata-glow pointer-events-none absolute rounded-full"
-          style={{
-            left: `${art.glow.left}%`,
-            top: `${art.glow.top}%`,
-            width: `${art.glow.size}%`,
-            height: `${art.glow.size}%`,
-            transform: "translate(-50%, -50%)",
-            background:
-              "radial-gradient(circle, rgba(254,249,130,0.95) 0%, rgba(190,235,60,0.7) 40%, rgba(150,220,60,0) 72%)",
-            mixBlendMode: "screen",
-          }}
-        />
-      )}
       {art.legsInFrontOfBody.map((leg, i) => (
         <img
           key={`front${i}`}
