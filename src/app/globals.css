@@ -786,26 +786,26 @@ body {
   animation: kuwagata-sway 3.6s ease-in-out infinite;
 }
 
-/* カマたんのカマ。付け根を軸に、構えて(上げて)からブンッと振り下ろし、2回繰り返して戻る。 */
+/* カマたんのカマ。付け根を軸に回転だけで、構えて→ブンッと振り下ろすのを2回繰り返して戻る(上下移動・拡縮はしない)。 */
 @keyframes kuwagata-scythe {
   0%,
   100% {
-    transform: rotate(0deg) translateY(0);
+    transform: rotate(0deg);
   }
   15% {
-    transform: rotate(-8deg) translateY(-6%) scale(1.04);
+    transform: rotate(-10deg);
   }
   28% {
-    transform: rotate(10deg) translateY(4%) scale(0.98);
+    transform: rotate(12deg);
   }
   50% {
-    transform: rotate(-8deg) translateY(-6%) scale(1.04);
+    transform: rotate(-10deg);
   }
   63% {
-    transform: rotate(10deg) translateY(4%) scale(0.98);
+    transform: rotate(12deg);
   }
   85% {
-    transform: rotate(-3deg) translateY(-2%);
+    transform: rotate(-3deg);
   }
 }
 
