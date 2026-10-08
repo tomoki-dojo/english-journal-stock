@@ -150,8 +150,8 @@ function buildNewSpeciesWalkerArt(
 // 新種(動きの種類B=歩く8脚)の成虫アート。クモなど。ファイルは
 //   正面: front_body / front_leg_L1〜L4(手前脚4本) / front_leg_R1(奥脚1本)
 //   背面: back_body / back_leg_R1〜R4(脚4本) / back_leg_L1(左側にちらっと見える脚1本。種によっては無い)
-// の計12枚(L1が無い種は11枚)。背面は脚を全て体の手前に描き(手前からR1→…→R4)、
-// back_leg_L1がある種(backLeftLeg: true)は、その左脚も動かす(バランス用)。
+// の計12枚(L1が無い種は11枚)。背面は右脚R1〜R4を体の手前に描き(手前からR1→…→R4)、
+// back_leg_L1がある種(backLeftLeg: true)は、その左脚を体の奥に描いて動かす(バランス用)。
 function buildEightLegWalkerArt(
   code: string,
   options: { backLeftLeg?: boolean } = {}
@@ -172,13 +172,13 @@ function buildEightLegWalkerArt(
     back: {
       body: file("back_body"),
       mandibles: {},
-      legsBehindBody: [],
+      // 左脚L1は体の奥(後ろ)に描く。右脚R1〜R4は体の手前。
+      legsBehindBody: options.backLeftLeg ? [{ src: file("back_leg_L1"), delay: "-0.7s" }] : [],
       legsInFrontOfBody: [
         { src: file("back_leg_R4"), delay: "-0.45s" },
         { src: file("back_leg_R3"), delay: "-0.3s" },
         { src: file("back_leg_R2"), delay: "-0.15s" },
         { src: file("back_leg_R1"), delay: "0s" },
-        ...(options.backLeftLeg ? [{ src: file("back_leg_L1"), delay: "-0.7s" }] : []),
       ],
     },
   };

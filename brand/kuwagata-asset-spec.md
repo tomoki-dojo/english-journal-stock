@@ -188,7 +188,7 @@ kuwagata_[code]_back_leg_R3.svg
 【B 歩く（8脚）】Aの脚を4本に増やした構成（ハサミ・尾は本体に含める）
 kuwagata_[code]_front_leg_L1〜L4.svg / front_leg_R1.svg
 kuwagata_[code]_back_leg_R1〜R4.svg
-kuwagata_[code]_back_leg_L1.svg       （種によってはある）背面で左側にちらっと見える脚1本。これも歩きに合わせて動く。無い種もあるので必須ではない（クモたんはあり）
+kuwagata_[code]_back_leg_L1.svg       （種によってはある）背面で左側にちらっと見える脚1本（体の奥＝後ろに描く）。これも歩きに合わせて動く。無い種もあるので必須ではない（クモたんはあり）
 （front_body / back_body はAと同じ）
 
 【C 飛ぶ】本体＋羽根のみ（脚は本体に含める）・6枚
