@@ -813,6 +813,28 @@ body {
   animation: kuwagata-scythe 1.8s ease-in-out;
 }
 
+/* ホタたんのお腹の光。ふわっと明るくなって、ゆっくり消え、しばらく暗いまま。 */
+@keyframes kuwagata-glow {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.7);
+  }
+  25%,
+  45% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.15);
+  }
+  70% {
+    opacity: 0.1;
+    transform: translate(-50%, -50%) scale(0.85);
+  }
+}
+
+.animate-kuwagata-glow {
+  animation: kuwagata-glow 3.6s ease-in-out infinite;
+}
+
 .animate-kuwagata-chomp {
   animation: kuwagata-chomp 1.5s ease-in-out;
 }
@@ -892,6 +914,7 @@ body {
   .animate-kuwagata-glide,
   .animate-kuwagata-horn,
   .animate-kuwagata-chomp,
+  .animate-kuwagata-glow,
   .animate-kuwagata-sway,
   .animate-kuwagata-scythe,
   .animate-kuwagata-stink,
