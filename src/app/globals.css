@@ -646,7 +646,45 @@ body {
   animation: kuwagata-horn 1.6s ease-in-out;
 }
 
+/* 飛ぶ種(チョウたん)。羽根は付け根(transform-originはインラインで指定)を軸に、横につぶれて開くのを素早く繰り返し(ヒラヒラ)、
+   体全体はふわふわ上下に漂う。 */
+@keyframes kuwagata-wing-flap {
+  0%,
+  100% {
+    transform: scaleX(1) rotate(0deg);
+  }
+  45% {
+    transform: scaleX(0.3) rotate(4deg);
+  }
+  70% {
+    transform: scaleX(0.75) rotate(-3deg);
+  }
+}
+
+@keyframes kuwagata-flutter {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  30% {
+    transform: translateY(-9%) rotate(-3deg);
+  }
+  65% {
+    transform: translateY(-3%) rotate(3deg);
+  }
+}
+
+.animate-kuwagata-wing {
+  animation: kuwagata-wing-flap 0.7s ease-in-out infinite;
+}
+
+.animate-kuwagata-flutter {
+  animation: kuwagata-flutter 2.2s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .animate-kuwagata-wing,
+  .animate-kuwagata-flutter,
   .animate-kuwagata-horn,
   .animate-kuwagata-hop,
   .animate-kuwagata-proud,

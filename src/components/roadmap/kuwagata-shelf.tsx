@@ -61,7 +61,8 @@ function formatDate(iso: string): string {
 // している(体より奥に描く脚=legsBehindBody、体より手前に描く脚=legsInFrontOfBody)。
 const KUWAGATA_ART_DIR = "/roadmap/kuwagata";
 
-type CreaturePartArt = { src: string; delay: string };
+// kind: "wing"なら脚ではなく羽根として羽ばたかせる(originは羽根の付け根=回転・つぶれの軸、例: "52% 50%")。
+type CreaturePartArt = { src: string; delay: string; kind?: "wing"; origin?: string };
 
 type KnownCreatureArt = {
   body: string;
@@ -74,6 +75,8 @@ type KnownCreatureArt = {
   // trueなら大顎(ツノ)を本体より奥(最背面)に描く。後ろ向きのカブたんのように、ツノが体の向こう側に
   // 隠れて見えるべき向き用。省略時は従来どおり一番手前。
   mandibleBehindBody?: boolean;
+  // trueなら体全体がふわふわ上下に漂う(飛ぶ種。歩く種のbobの代わり)
+  flying?: boolean;
   legsBehindBody: CreaturePartArt[];
   legsInFrontOfBody: CreaturePartArt[];
 };
@@ -184,6 +187,38 @@ function buildEightLegWalkerArt(
   };
 }
 
+// 新種(動きの種類C=飛ぶ)の成虫アート。チョウなど。ファイルは
+//   正面: front_body / front_wing_L / front_wing_R、背面: back_body / back_wing_L / back_wing_R(計6枚)
+// 脚は本体に含める。羽根は付け根(hinge)を軸に、ヒラヒラと閉じたり開いたりする(横につぶれる)。
+// 正面は羽根が体の奥、背面は羽根が体の手前(後ろから見ると羽根に体が隠れる)。
+// 体全体もふわふわ上下に漂う(flying)。大顎・卵/幼虫/蛹は無い。
+function buildWingedFlyerArt(
+  code: string,
+  hinge: { front: string; back: string }
+): Partial<Record<Facing, KnownCreatureArt>> {
+  const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
+  const wings = (facing: "front" | "back", origin: string): CreaturePartArt[] => [
+    { src: file(`${facing}_wing_L`), delay: "0s", kind: "wing", origin },
+    { src: file(`${facing}_wing_R`), delay: "0s", kind: "wing", origin },
+  ];
+  return {
+    front: {
+      body: file("front_body"),
+      mandibles: {},
+      flying: true,
+      legsBehindBody: wings("front", hinge.front),
+      legsInFrontOfBody: [],
+    },
+    back: {
+      body: file("back_body"),
+      mandibles: {},
+      flying: true,
+      legsBehindBody: [],
+      legsInFrontOfBody: wings("back", hinge.back),
+    },
+  };
+}
+
 const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCreatureArt>>>> = {
   // カナたん(カナブン)
   "KW-0005": buildNewSpeciesWalkerArt("KW-0005"),
@@ -195,6 +230,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0009": buildNewSpeciesWalkerArt("KW-0009"),
   // クモたん(ジョロウグモ。8本脚＝buildEightLegWalkerArt。背面は左の脚1本も動く)
   "KW-0010": buildEightLegWalkerArt("KW-0010", { backLeftLeg: true }),
+  // チョウたん(アゲハチョウ。飛ぶ＝buildWingedFlyerArt。羽根の付け根を軸にヒラヒラ)
+  "KW-0011": buildWingedFlyerArt("KW-0011", { front: "52% 50%", back: "54% 52%" }),
   // カブたん(カブトムシ。ツノはmandible_01、付け根を軸にときどき首振り＝HORN_*)
   "KW-0014": buildNewSpeciesWalkerArt("KW-0014", {
     frontOrigin: "29% 43%",
@@ -351,15 +388,15 @@ function KnownCreatureSprite({
   ) : null;
 
   return (
-    <div className="relative h-full w-full animate-kuwagata-body">
+    <div className={`relative h-full w-full ${art.flying ? "animate-kuwagata-flutter" : "animate-kuwagata-body"}`}>
       {art.mandibleBehindBody && mandibleEl}
       {art.legsBehindBody.map((leg, i) => (
         <img
           key={`behind${i}`}
           src={leg.src}
           alt=""
-          className="absolute inset-0 h-full w-full animate-kuwagata-leg"
-          style={{ animationDelay: leg.delay }}
+          className={`absolute inset-0 h-full w-full ${leg.kind === "wing" ? "animate-kuwagata-wing" : "animate-kuwagata-leg"}`}
+          style={{ animationDelay: leg.delay, transformOrigin: leg.origin }}
         />
       ))}
       <img src={art.body} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />
@@ -368,8 +405,8 @@ function KnownCreatureSprite({
           key={`front${i}`}
           src={leg.src}
           alt=""
-          className="absolute inset-0 h-full w-full animate-kuwagata-leg"
-          style={{ animationDelay: leg.delay }}
+          className={`absolute inset-0 h-full w-full ${leg.kind === "wing" ? "animate-kuwagata-wing" : "animate-kuwagata-leg"}`}
+          style={{ animationDelay: leg.delay, transformOrigin: leg.origin }}
         />
       ))}
       {!art.mandibleBehindBody && mandibleEl}
