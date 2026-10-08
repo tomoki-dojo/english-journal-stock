@@ -234,9 +234,9 @@ function buildWingedFlyerArt(
 
 // ハチたん: 上下に漂わず、曲線を描いてなめらかに飛ぶ(チョウたんはふわふわ上下)。
 const CURVE_FLIGHT_SPECIES_CODE = "KW-0012";
-// トンたん: 羽ばたきは控えめ(ときどき素早く)、移動は直線的で速め。他の飛ぶ種には適用しない。
+// トンたん: 羽ばたきは常に素早く小さめ、移動は直線的でかなり速め。他の飛ぶ種には適用しない。
 const DRAGONFLY_SPECIES_CODE = "KW-0016";
-const DRAGONFLY_TRAVEL_SCALE = 0.225;
+const DRAGONFLY_TRAVEL_SCALE = 0.1125;
 
 const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCreatureArt>>>> = {
   // カナたん(カナブン)
@@ -251,7 +251,7 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0010": buildEightLegWalkerArt("KW-0010", { backLeftLeg: true }),
   // チョウたん(アゲハチョウ。飛ぶ＝buildWingedFlyerArt。羽根の付け根を軸にヒラヒラ)
   "KW-0011": buildWingedFlyerArt("KW-0011", { front: "52% 50%", back: "54% 52%" }),
-  // トンたん(シオカラトンボ。飛ぶが、羽ばたきは普段ほぼ止まって、ときどき素早く羽ばたく。直線的に速く移動=DRAGONFLY_*)
+  // トンたん(シオカラトンボ。飛ぶが、羽ばたきは常に素早く小さめ。直線的に速く移動=DRAGONFLY_*)
   "KW-0016": buildWingedFlyerArt("KW-0016", { front: "47% 45%", back: "56% 46%" }),
   "KW-0012": buildWingedFlyerArt("KW-0012", { front: "46% 31%", back: "54% 28%" }),
   // セミたん(飛ぶ。ヒラヒラ＋ふわふわ上下はチョウたんと同じ)

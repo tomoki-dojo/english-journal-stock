@@ -727,41 +727,17 @@ body {
 
 @keyframes kuwagata-wing-flap-dragonfly {
   0%,
-  84% {
-    transform: scaleX(1) rotate(0deg);
-  }
-  86% {
-    transform: scaleX(0.35) rotate(4deg);
-  }
-  88% {
-    transform: scaleX(1) rotate(0deg);
-  }
-  90% {
-    transform: scaleX(0.35) rotate(4deg);
-  }
-  92% {
-    transform: scaleX(1) rotate(0deg);
-  }
-  94% {
-    transform: scaleX(0.35) rotate(4deg);
-  }
-  96% {
-    transform: scaleX(1) rotate(0deg);
-  }
-  98% {
-    transform: scaleX(0.35) rotate(4deg);
-  }
   100% {
     transform: scaleX(1) rotate(0deg);
   }
-  100% {
-    transform: scaleX(1) rotate(0deg);
+  50% {
+    transform: scaleX(0.75) rotate(2deg);
   }
 }
 
-/* トンたんの羽根。普段はほぼ止まっていて、ときどき短時間だけ素早く(約0.07秒刻みで)羽ばたく。 */
+/* トンたんの羽根。常に素早く、振れ幅は小さめに羽ばたく。 */
 .animate-kuwagata-wing-dragonfly {
-  animation: kuwagata-wing-flap-dragonfly 3.6s linear infinite;
+  animation: kuwagata-wing-flap-dragonfly 0.14s ease-in-out infinite;
 }
 
 /* 飛ぶ種(チョウたん)。羽根は付け根(transform-originはインラインで指定)を軸に、横につぶれて開くのを素早く繰り返し(ヒラヒラ)、
