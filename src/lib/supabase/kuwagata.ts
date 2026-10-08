@@ -889,11 +889,14 @@ export async function recordStageClearCatch(userId: string, stageJustCleared: nu
   }
 }
 
-function pickByRarityWeight(pool: KuwagataSpecies[]): KuwagataSpecies {
-  const totalWeight = pool.reduce((sum, s) => sum + KUWAGATA_RARITY_WEIGHT[s.rarity], 0);
+// rareBoost: レア・激レアの重みにだけ掛ける倍率(ミニゲームの成績)。コモンの重みは変えない。
+function pickByRarityWeight(pool: KuwagataSpecies[], rareBoost = 1): KuwagataSpecies {
+  const weightOf = (s: KuwagataSpecies) =>
+    s.rarity === "コモン" ? KUWAGATA_RARITY_WEIGHT[s.rarity] : KUWAGATA_RARITY_WEIGHT[s.rarity] * rareBoost;
+  const totalWeight = pool.reduce((sum, s) => sum + weightOf(s), 0);
   let roll = Math.random() * totalWeight;
   for (const species of pool) {
-    roll -= KUWAGATA_RARITY_WEIGHT[species.rarity];
+    roll -= weightOf(species);
     if (roll <= 0) return species;
   }
   return pool[pool.length - 1]; // 浮動小数点誤差のフォールバック。
@@ -907,7 +910,8 @@ export type KuwagataCatchResult = {
 export async function goCatchInArea(
   userId: string,
   areaCode: KuwagataAreaCode,
-  guaranteedRare: boolean
+  guaranteedRare: boolean,
+  rareBoost = 1
 ): Promise<KuwagataCatchResult | null> {
   const [species, unlockedAreas, individuals, plan] = await Promise.all([
     getKuwagataSpeciesList(),
@@ -952,7 +956,7 @@ export async function goCatchInArea(
   const rarePool = pool.filter((s) => s.rarity !== "コモン");
   const effectivePool = guaranteedRare && rarePool.length > 0 ? rarePool : pool;
 
-  const picked = pickByRarityWeight(effectivePool);
+  const picked = pickByRarityWeight(effectivePool, rareBoost);
 
   // 新種は野生採集＝見つけた時点で成虫という設定。既知種（stage_clear、卵から育てる）と違い
   // 日数経過での成長段階表示（卵→幼虫→蛹）の対象にしないよう、取得と同時にhatched_atを立てる。
@@ -1053,7 +1057,8 @@ export async function stockCatchChanceOnMasteredCountUpdate(userId: string, newT
 
 export async function consumePendingCatch(
   userId: string,
-  areaCode: KuwagataAreaCode
+  areaCode: KuwagataAreaCode,
+  rareBoost = 1
 ): Promise<KuwagataCatchResult | null> {
   const state = await getPendingCatchState(userId);
   if (state.pendingCatchCount <= 0) return null;
@@ -1074,7 +1079,7 @@ export async function consumePendingCatch(
     throw new Error(`採集チャンスの消費に失敗しました: ${updateError.message}`);
   }
 
-  return goCatchInArea(userId, areaCode, useGuaranteedRare);
+  return goCatchInArea(userId, areaCode, useGuaranteedRare, rareBoost);
 }
 
 export async function forceHatchTeppenToAdult(userId: string): Promise<void> {

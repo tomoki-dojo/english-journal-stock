@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Sparkles, ArrowRight } from "lucide-react";
 import { CelebrationOverlay } from "./celebration-overlay";
+import { KuwagataWordChallenge } from "./kuwagata-word-challenge";
 import type { KuwagataAreaCode } from "@/lib/supabase/kuwagata";
 
 const AREA_LABEL: Record<KuwagataAreaCode, string> = {
@@ -45,19 +46,21 @@ export function KuwagataCatchExpedition({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CatchResponse | null>(null);
+  // ミニゲーム中のエリア。ミニゲームが終わったら、その成績つきで採集を実行する。
+  const [challengeArea, setChallengeArea] = useState<KuwagataAreaCode | null>(null);
 
   if (pendingCount <= 0 && !result) {
     return null;
   }
 
-  async function handleGoCatch(areaCode: KuwagataAreaCode) {
+  async function handleGoCatch(areaCode: KuwagataAreaCode, sessionId?: string, answers?: number[]) {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/roadmap/kuwagata/catch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ areaCode }),
+        body: JSON.stringify({ areaCode, sessionId, answers }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -69,8 +72,10 @@ export function KuwagataCatchExpedition({
       setResult(json as CatchResponse);
       setPendingCount((n) => Math.max(0, n - 1));
       setPicking(false);
+      setChallengeArea(null);
     } catch {
       setError("採集に失敗しました。時間を置いて再度お試しください。");
+      setChallengeArea(null);
     } finally {
       setLoading(false);
     }
@@ -78,7 +83,7 @@ export function KuwagataCatchExpedition({
 
   function startExpedition() {
     if (initialUnlockedAreas.length === 1) {
-      void handleGoCatch(initialUnlockedAreas[0]);
+      setChallengeArea(initialUnlockedAreas[0]);
       return;
     }
     setPicking(true);
@@ -91,7 +96,7 @@ export function KuwagataCatchExpedition({
 
   return (
     <div className="mb-4">
-      {!picking && !result && (
+      {!picking && !result && !challengeArea && (
         <button
           type="button"
           onClick={startExpedition}
@@ -113,7 +118,10 @@ export function KuwagataCatchExpedition({
               <button
                 key={areaCode}
                 type="button"
-                onClick={() => handleGoCatch(areaCode)}
+                onClick={() => {
+                  setPicking(false);
+                  setChallengeArea(areaCode);
+                }}
                 disabled={loading}
                 className="rounded-full border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-100 disabled:opacity-50"
               >
@@ -129,6 +137,14 @@ export function KuwagataCatchExpedition({
             やめる
           </button>
         </div>
+      )}
+
+      {challengeArea && (
+        <KuwagataWordChallenge
+          areaCode={challengeArea}
+          onFinish={(sessionId, answers) => void handleGoCatch(challengeArea, sessionId, answers)}
+          onCancel={() => setChallengeArea(null)}
+        />
       )}
 
       {error && <p className="mt-2 text-xs text-red-500">{error}</p>}

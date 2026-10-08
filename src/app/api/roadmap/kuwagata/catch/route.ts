@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
+import { finishMinigameSession, getRareBoostMultiplier } from "@/lib/kuwagata-minigame";
 import {
   consumePendingCatch,
   getPendingCatchState,
@@ -74,7 +75,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "未解放のエリアでは採集できません" }, { status: 400 });
     }
 
-    const result = await consumePendingCatch(user.id, json.areaCode);
+    // ミニゲームの成績(サーバーで採点)に応じて、レア・激レアの出やすさを上げる。
+    const body = json as unknown as Record<string, unknown>;
+    const correctCount =
+      typeof body.sessionId === "string"
+        ? await finishMinigameSession(user.id, body.sessionId, json.areaCode, body.answers)
+        : 0;
+    const result = await consumePendingCatch(user.id, json.areaCode, getRareBoostMultiplier(correctCount));
     if (!result) {
       return NextResponse.json({ error: "採集チャンスがありません" }, { status: 409 });
     }
@@ -87,6 +94,7 @@ export async function POST(request: Request) {
         rarity: result.species.rarity,
         guaranteedRare: result.guaranteedRare,
         flavorTextJa: result.species.flavorTextJa,
+        correctCount,
       },
       { headers: { "Cache-Control": "no-store, must-revalidate" } }
     );
