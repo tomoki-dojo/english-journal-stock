@@ -236,7 +236,7 @@ function buildWingedFlyerArt(
 const CURVE_FLIGHT_SPECIES_CODE = "KW-0012";
 // トンたん: 羽ばたきは控えめ(ときどき素早く)、移動は直線的で速め。他の飛ぶ種には適用しない。
 const DRAGONFLY_SPECIES_CODE = "KW-0016";
-const DRAGONFLY_TRAVEL_SCALE = 0.45;
+const DRAGONFLY_TRAVEL_SCALE = 0.225;
 
 const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCreatureArt>>>> = {
   // カナたん(カナブン)
@@ -1408,6 +1408,21 @@ function RackFillers({ count }: { count: number }) {
   );
 }
 
+// 複数ページある新種の棚で、最後のページの空きマスを空の棚板で埋める(全ページの段数をそろえ、
+// 行が間延びして見えないようにする)。
+function RackEmptyCells({ count }: { count: number }) {
+  return (
+    <>
+      {Array.from({ length: Math.max(0, count) }).map((_, i) => (
+        <div key={i} className={RACK_CELL_CLASS}>
+          <div className="h-[114px]" />
+          <div className={RACK_SHELF_CLASS} style={RACK_BAR_STYLE} />
+        </div>
+      ))}
+    </>
+  );
+}
+
 // 棚に載る水槽。ガラスの枠・蓋・土(アクアリウムは砂)・ガラスの照り返しを描き、中に生きものを立たせる。
 // 土は水槽の一番下から厚めに敷き、その土の上に「名前＋匹数」の半透明ラベルを貼る。
 // 水槽の下端は棚板に直接置く。
@@ -1596,7 +1611,7 @@ export function KuwagataShelf({
               className="flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
               {newPages.map((pageGroups, pageIndex) => (
-                <div key={pageIndex} className="grid w-full shrink-0 snap-start grid-cols-2 sm:grid-cols-3">
+                <div key={pageIndex} className="grid w-full shrink-0 snap-start grid-cols-2 content-start sm:grid-cols-3">
                   {pageGroups.map((group) => {
                     const tank = group[0];
                     const color = tankColor(tank);
@@ -1622,7 +1637,11 @@ export function KuwagataShelf({
                       </RackCell>
                     );
                   })}
-                  <RackFillers count={pageGroups.length} />
+                  {newPages.length > 1 ? (
+                    <RackEmptyCells count={newPageSize - pageGroups.length} />
+                  ) : (
+                    <RackFillers count={pageGroups.length} />
+                  )}
                 </div>
               ))}
             </div>
