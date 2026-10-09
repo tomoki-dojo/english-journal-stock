@@ -216,7 +216,7 @@ kuwagata_KW-0013_body.svg
 - 実装済み（A 歩く6脚）：KW-0005・0006・0007・0009・0014・0017・0019・0021・0022（モンたん。体を震わせ臭いガスをぷしゅっと出す）、0021（ゾウたん。鼻をフンフン）、0019（タマたん。大きくなってカラフルにキラキラ）、0017（カミたん。大顎1枚をガチガチ噛み合わせ、手前脚は正面L1/L3のみ）。`kuwagata-shelf.tsx`の`buildNewSpeciesWalkerArt(code)`で登録する（大顎なし）。ほかのA種も、9枚を置いて`KNOWN_CREATURE_ART`に1行足すだけ。Illustratorの書き出しで`back_leg_R3`が`back_leg_R1_1`という名前になる場合は、`R3`にリネームして置く
 - 実装済み（B 歩く8脚＋ハサミ）：KW-0024（サワたん）。`buildCrabArt`で登録。脚L1〜L4・R1〜R4（8本、正面・背面とも体の後ろ）＋front/back_mandible_L・R（ハサミ左右別ファイル。正面は体の手前・背面は体の奥。交互にパクパク）。計20枚。
 - 実装済み（B 歩く8脚＋爪＋尻尾）：KW-0031（サソたん）。`buildScorpionArt`で登録。脚は正面L1〜L3＋R1(奥)、背面R1〜R3＋L1(奥)。爪`front_claw_L/R`・`back_claw_R`（背面は右のみ）を交互にパクパク、尻尾`front/back_tale`をシュシュッと打ち下ろし（残像つき）。計16枚。
-- 実装済み（A 歩く6脚＋ツノ）：KW-0034（ツノたん）。標準9枚＋front/back_mandible_01（ツノ）。ツノを軽く振る（HORN）＋ときどき、体とツノが赤くキラッ・キラッと光る溜め→跳ねる（CHARGE_HOP）。
+- 実装済み（A 歩く6脚＋ツノ）：KW-0034（ツノたん）。標準9枚＋front/back_mandible_01（ツノ）。ツノを軽く振る（HORN）＋移動のたびに一定確率で、その場で溜め(体とツノが赤くキラッ・キラッと光る)→止まったまま溜めて、少し弧を描いて跳ねて移動（CHARGE_HOP。useWanderのchargeHopChance）。
 - 実装済み（A 歩く6脚＋頭一体のツノ）：KW-0032（ヘラたん）。`buildHerculesArt`で登録（10枚＋背面R3。Illustratorの書き出しで`back_leg_R1_1`になったものは`back_leg_R3`にリネーム）。ときどき(PROUD周期)大きくなり、頭ごとツノを上下にガチガチ(nod)＋体全体にキラッ(shine)。
 - 実装済み（A 歩く6脚＋背面L1＋大顎）：KW-0033（グンたん）。`buildWalkerWithBackLeftLegArt(code, horn)`で登録（計13枚：標準9枚＋back_leg_L1＋front/back_mandible_01）。大顎をガチガチ（CHOMP）。背面の大顎は体の奥。
 - 実装済み（A 歩く6脚＋大顎・光）：KW-0030（ルリたん）。`buildShineBeetleArt`で登録（計11枚：標準9枚＋front/back_mandible_01）。大顎をガチガチ（CHOMP）＋ときどき体の形でマスクした光の帯が体を走る（SHINE）。

@@ -1004,8 +1004,9 @@ function useWander(
   decorationSpots: { u: number; v: number; widthPct: number }[],
   positionsRef: { current: Record<string, { u: number; v: number; widthPct: number }> },
   travelScale = 1,
-  leapChance = 0
-): { spot: { u: number; v: number }; facing: Facing; heading: Heading; travelMs: number; leaping: boolean } {
+  leapChance = 0,
+  chargeHopChance = 0
+): { spot: { u: number; v: number }; facing: Facing; heading: Heading; travelMs: number; leaping: boolean; charging: boolean } {
   const [state, setState] = useState<{
     spot: { u: number; v: number };
     facing: Facing;
@@ -1013,12 +1014,15 @@ function useWander(
     travelMs: number;
     // 弧を描いて飛んで移動している最中(着地したらfalseに戻る)
     leaping: boolean;
+    // その場で力を溜めている最中(ツノたん。溜め終わると跳ねて移動する)
+    charging: boolean;
   }>({
     spot: initial,
     facing: "front",
     heading: "left",
     travelMs: MIN_TRAVEL_MS,
     leaping: false,
+    charging: false,
   });
   const stateRef = useRef(state);
 
@@ -1036,6 +1040,7 @@ function useWander(
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
     let leapTimer: ReturnType<typeof setTimeout> | undefined;
+    let chargeTimer: ReturnType<typeof setTimeout> | undefined;
     const ownRadius = spriteRadius(widthPct);
     const decorationPts = decorationSpots.map((spot) => ({ pt: surfacePoint(spot.u, spot.v), radius: spriteRadius(spot.widthPct) }));
 
@@ -1068,6 +1073,35 @@ function useWander(
       if (cancelled) return;
       // 更新関数の外で次の状態を決める(移動時間を、次のタイマーの待ち時間にも使うため)
       const prev = stateRef.current;
+      if (chargeHopChance > 0 && Math.random() < chargeHopChance) {
+        // 近めの着地点を選ぶ(少し弧を描いて跳ねる距離)。その場で溜めてから跳ねる。
+        const prevPt0 = surfacePoint(prev.spot.u, prev.spot.v);
+        let hopSpot = pickNextSpot();
+        for (let i = 0; i < 8 && surfaceDistancePct(prevPt0, surfacePoint(hopSpot.u, hopSpot.v)) > 30; i++) hopSpot = pickNextSpot();
+        const charging = { ...prev, leaping: false, charging: true };
+        stateRef.current = charging;
+        setState(charging);
+        chargeTimer = setTimeout(() => {
+          if (cancelled) return;
+          positionsRef.current[seedKey] = { ...hopSpot, widthPct };
+          const toPt = surfacePoint(hopSpot.u, hopSpot.v);
+          const hx = toPt.left - prevPt0.left;
+          const hy = toPt.top - prevPt0.top;
+          const hopFacing: Facing = Math.abs(hy) >= Math.abs(hx) ? (hy >= 0 ? "front" : "back") : hx <= 0 ? "front" : "back";
+          const hopHeading: Heading = hx === 0 ? prev.heading : hx < 0 ? "left" : "right";
+          const hop = { spot: hopSpot, facing: hopFacing, heading: hopHeading, travelMs: HOP_MOVE_MS, leaping: true, charging: false };
+          stateRef.current = hop;
+          setState(hop);
+          leapTimer = setTimeout(() => {
+            if (cancelled) return;
+            const landed = { ...stateRef.current, leaping: false };
+            stateRef.current = landed;
+            setState(landed);
+          }, HOP_MOVE_MS);
+        }, CHARGE_MS);
+        timer = setTimeout(goToNextSpot, CHARGE_MS + HOP_MOVE_MS + 2000 + Math.random() * 5000);
+        return;
+      }
       const nextSpot = pickNextSpot();
       positionsRef.current[seedKey] = { ...nextSpot, widthPct };
       const prevPt = surfacePoint(prev.spot.u, prev.spot.v);
@@ -1085,7 +1119,7 @@ function useWander(
             MAX_TRAVEL_MS * travelScale,
             Math.max(MIN_TRAVEL_MS * travelScale, surfaceDistancePct(prevPt, nextPt) * TRAVEL_MS_PER_PCT * travelScale)
           );
-      const next = { spot: nextSpot, facing, heading, travelMs, leaping };
+      const next = { spot: nextSpot, facing, heading, travelMs, leaping, charging: false };
       stateRef.current = next;
       setState(next);
       if (leaping) {
@@ -1108,8 +1142,9 @@ function useWander(
       cancelled = true;
       clearTimeout(timer);
       if (leapTimer) clearTimeout(leapTimer);
+      if (chargeTimer) clearTimeout(chargeTimer);
     };
-  }, [seedKey, widthPct, moves, decorationSpots, positionsRef, travelScale, leapChance]);
+  }, [seedKey, widthPct, moves, decorationSpots, positionsRef, travelScale, leapChance, chargeHopChance]);
 
   return state;
 }
@@ -1254,8 +1289,10 @@ const HORN_SPECIES_CODE = "KW-0014";
 // ツノたん(ツノゼミ): ツノを軽く振る(HORN_*と同じ)＋ときどき、溜め(体が赤くキラッ、キラッ)→跳ねる。
 const HORN_SPECIES_CODE_2 = "KW-0034";
 const CHARGE_HOP_SPECIES_CODE = "KW-0034";
-const CHARGE_HOP_CYCLE_MS = 10000;
-const CHARGE_HOP_DURATION_MS = 2300;
+// 移動のたびにこの確率で「その場で溜める(赤くキラッ)→少し弧を描いて跳ねて移動」を行う。
+const CHARGE_HOP_CHANCE = 0.4;
+const CHARGE_MS = 1400;
+const HOP_MOVE_MS = 900;
 const CHOMP_CYCLE_MS = 6000;
 const CHOMP_DURATION_MS = 1500;
 const CHOMP_SPECIES_CODE = "KW-0017";
@@ -1406,12 +1443,6 @@ function WanderingCreature({
     HOP_CYCLE_MS,
     HOP_DURATION_MS
   );
-  const charging = useTimedGesture(
-    speciesCode === CHARGE_HOP_SPECIES_CODE && growthStage === "成虫" && hasArt,
-    seedKey + ":charge",
-    CHARGE_HOP_CYCLE_MS,
-    CHARGE_HOP_DURATION_MS
-  );
   const hornSwing = useTimedGesture(
     (speciesCode === HORN_SPECIES_CODE || speciesCode === HORN_SPECIES_CODE_2) && growthStage === "成虫" && hasArt,
     seedKey + ":horn",
@@ -1455,7 +1486,7 @@ function WanderingCreature({
     STINK_DURATION_MS
   );
   const moves = !isStationaryStage(speciesCode, growthStage);
-  const { spot, facing, heading, travelMs, leaping } = useWander(
+  const { spot, facing, heading, travelMs, leaping, charging } = useWander(
     seedKey,
     initialSpot,
     widthPct,
@@ -1463,7 +1494,8 @@ function WanderingCreature({
     decorationSpots,
     positionsRef,
     isDragonfly(speciesCode) ? DRAGONFLY_TRAVEL_SCALE : speciesCode === HORNET_SPECIES_CODE ? HORNET_TRAVEL_SCALE : speciesCode === SCYTHE_SPECIES_CODE ? SCYTHE_TRAVEL_SCALE : 1,
-    speciesCode === LEAP_SPECIES_CODE && growthStage === "成虫" ? LEAP_CHANCE : 0
+    speciesCode === LEAP_SPECIES_CODE && growthStage === "成虫" ? LEAP_CHANCE : 0,
+    speciesCode === CHARGE_HOP_SPECIES_CODE && growthStage === "成虫" ? CHARGE_HOP_CHANCE : 0
   );
   const pt = surfacePoint(spot.u, spot.v);
   // 飛ぶ種は縦横で別のイージングにして、目的地まで直線ではなく滑らかな曲線(弧)を描いて飛ぶ。
@@ -1497,7 +1529,7 @@ function WanderingCreature({
     >
       {hasArt ? (
         <div
-          className={`h-full w-full ${chatting ? "animate-kuwagata-chat" : ""} ${fighting ? "animate-kuwagata-fight" : ""} ${proud ? "animate-kuwagata-proud" : ""} ${hopping ? "animate-kuwagata-hop" : ""} ${charging ? "animate-kuwagata-charge-hop" : ""} ${stinking ? "animate-kuwagata-stink" : ""}`}
+          className={`h-full w-full ${chatting ? "animate-kuwagata-chat" : ""} ${fighting ? "animate-kuwagata-fight" : ""} ${proud ? "animate-kuwagata-proud" : ""} ${hopping ? "animate-kuwagata-hop" : ""} ${charging ? "animate-kuwagata-charge" : ""} ${stinking ? "animate-kuwagata-stink" : ""}`}
           style={leaping ? { animation: `kuwagata-leap ${travelMs}ms linear` } : undefined}
         >
           <KnownCreatureSprite

@@ -933,7 +933,7 @@ body {
   .animate-kuwagata-chomp,
   .animate-kuwagata-shine,
   .animate-kuwagata-claw,
-  .animate-kuwagata-charge-hop,
+  .animate-kuwagata-charge,
   .animate-kuwagata-red-flash,
   .animate-kuwagata-nod,
   .animate-kuwagata-tail,
@@ -1071,67 +1071,55 @@ body {
   animation: kuwagata-nod 2s ease-in-out 0.5s both;
 }
 
-/* ツノたんの溜め→ジャンプ(2.3秒)。しゃがんで小刻みに力み(前半)→跳ね上がる→着地で潰れる。 */
-@keyframes kuwagata-charge-hop {
+/* ツノたんの溜め(1.4秒)。その場でしゃがんで小刻みに力む。終わると跳ねて(arc)移動する。 */
+@keyframes kuwagata-charge {
   0% {
     transform: translateY(0) scale(1, 1) rotate(0deg);
   }
-  10% {
+  15% {
     transform: translateY(0) scale(1.06, 0.9) rotate(0deg);
   }
-  16% {
+  30% {
     transform: translateY(0) scale(1.08, 0.86) rotate(-1.5deg);
   }
-  22% {
-    transform: translateY(0) scale(1.08, 0.86) rotate(1.5deg);
-  }
-  28% {
-    transform: translateY(0) scale(1.1, 0.83) rotate(-1.5deg);
-  }
-  34% {
+  45% {
     transform: translateY(0) scale(1.1, 0.83) rotate(1.5deg);
   }
-  46% {
-    transform: translateY(0) scale(1.14, 0.78) rotate(0deg);
-  }
   60% {
-    transform: translateY(-85%) scale(0.95, 1.12) rotate(-10deg);
+    transform: translateY(0) scale(1.1, 0.82) rotate(-1.5deg);
   }
-  80% {
-    transform: translateY(-20%) scale(1, 1) rotate(4deg);
-  }
-  91% {
-    transform: translateY(0) scale(1.12, 0.8) rotate(0deg);
+  75% {
+    transform: translateY(0) scale(1.12, 0.8) rotate(1.5deg);
   }
   100% {
-    transform: translateY(0) scale(1, 1) rotate(0deg);
+    transform: translateY(0) scale(1.14, 0.78) rotate(0deg);
   }
 }
 
-.animate-kuwagata-charge-hop {
+.animate-kuwagata-charge {
   transform-origin: 50% 100%;
-  animation: kuwagata-charge-hop 2.3s ease-in-out;
+  animation: kuwagata-charge 1.4s ease-in-out both;
 }
 
 /* 溜め中の赤いキラッ(2回)。体とツノの形でマスクした赤い光が、ぴかっと光って消える。 */
 @keyframes kuwagata-red-flash {
   0%,
-  6%,
-  21%,
-  27%,
-  42%,
+  10%,
+  40%,
+  48%,
+  75%,
   100% {
     opacity: 0;
   }
-  12% {
+  24% {
     opacity: 0.85;
   }
-  33% {
+  60% {
     opacity: 0.95;
   }
 }
 
 .animate-kuwagata-red-flash {
   background: linear-gradient(120deg, rgba(255, 90, 60, 0.9), rgba(255, 150, 90, 0.95) 50%, rgba(255, 70, 50, 0.9));
-  animation: kuwagata-red-flash 2.3s ease-out both;
+  animation: kuwagata-red-flash 1.4s ease-out both;
 }
