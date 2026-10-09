@@ -299,6 +299,38 @@ function buildEightLegWalkerArt(
   };
 }
 
+// サワたん(サワガニ): 脚は正面・背面とも L1〜L4・R1〜R4 の8本をすべて体の後ろに描く。
+// ハサミ(mandible_01。左右2つで1枚)は、正面は体の手前・背面は体の奥に置き、付け根を軸にときどきガチガチ(CHOMP_*)。
+// 素材が無い脚(例: 正面L2)はスキップする(missing に列挙)。
+function buildCrabArt(
+  code: string,
+  origin: { front: string; back: string },
+  missing: string[] = []
+): Partial<Record<Facing, KnownCreatureArt>> {
+  const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
+  const legs = (facing: "front" | "back"): CreaturePartArt[] =>
+    ["R4", "R3", "R2", "R1", "L4", "L3", "L2", "L1"]
+      .filter((n) => !missing.includes(`${facing}_leg_${n}`))
+      .map((n, i) => ({ src: file(`${facing}_leg_${n}`), delay: `-${((i % 4) * 0.15).toFixed(2)}s` }));
+  return {
+    front: {
+      body: file("front_body"),
+      mandibles: { 1: file("front_mandible_01") },
+      mandibleOrigin: origin.front,
+      legsBehindBody: legs("front"),
+      legsInFrontOfBody: [],
+    },
+    back: {
+      body: file("back_body"),
+      mandibles: { 1: file("back_mandible_01") },
+      mandibleOrigin: origin.back,
+      mandibleBehindBody: true,
+      legsBehindBody: legs("back"),
+      legsInFrontOfBody: [],
+    },
+  };
+}
+
 // 新種(動きの種類C=飛ぶ)の成虫アート。チョウなど。ファイルは
 //   正面: front_body / front_wing_L / front_wing_R、背面: back_body / back_wing_L / back_wing_R(計6枚)
 // 脚は本体に含める。羽根は付け根(hinge)を軸に、ヒラヒラと閉じたり開いたりする(横につぶれる)。
@@ -372,6 +404,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0011": buildWingedFlyerArt("KW-0011", { front: "52% 50%", back: "54% 52%" }),
   // オニたん(オニヤンマ。動きはトンたんと同じ。斜めに描かれた羽根は基準姿勢を回して水平寄りにする=wingTilt)
   "KW-0028": buildWingedFlyerArt("KW-0028", { front: "45% 50%", back: "45% 47%" }, { frontWingsInFront: true, wingTilt: { front: { L: 30, R: -35 }, back: { L: -30, R: 30 } }, wingShiftY: { front: { R: -10 } }, wingSquashAt: { front: { R: { x: -12, y: 7 } } } }),
+  // サワたん(サワガニ。8本脚はすべて体の後ろ。ハサミをときどきガチガチ=CHOMP_*。正面L2は素材待ち)
+  "KW-0024": buildCrabArt("KW-0024", { front: "48% 78%", back: "55% 44%" }, ["front_leg_L2"]),
   // アオたん(アオスジアゲハ。飛び方はチョウたんと同じ)
   "KW-0026": buildWingedFlyerArt("KW-0026", { front: "49% 58%", back: "40% 57%" }),
   // ハグロたん(ハグロトンボ。羽根は正面・背面とも体の手前。羽ばたきはチョウたんと同じヒラヒラ)
@@ -1104,7 +1138,7 @@ const CHOMP_CYCLE_MS = 6000;
 const CHOMP_DURATION_MS = 1500;
 const CHOMP_SPECIES_CODE = "KW-0017";
 const CHOMP_SPECIES_CODE_2 = "KW-0027"; // ハンたんも大顎をガチガチさせる
-const CHOMP_SPECIES_CODE_3 = "KW-0030"; // ルリたん・スズたんも
+const CHOMP_SPECIES_CODE_3 = "KW-0030"; // ルリたん・スズたん・サワたんも
 const SHINE_CYCLE_MS = 5000;
 const SHINE_DURATION_MS = 1300;
 const SHINE_SPECIES_CODE = "KW-0030";
@@ -1250,7 +1284,7 @@ function WanderingCreature({
     HORN_DURATION_MS
   );
   const chomping = useTimedGesture(
-    (speciesCode === CHOMP_SPECIES_CODE || speciesCode === CHOMP_SPECIES_CODE_2 || speciesCode === CHOMP_SPECIES_CODE_3 || speciesCode === HORNET_SPECIES_CODE) && growthStage === "成虫" && hasArt,
+    (speciesCode === CHOMP_SPECIES_CODE || speciesCode === CHOMP_SPECIES_CODE_2 || speciesCode === CHOMP_SPECIES_CODE_3 || speciesCode === HORNET_SPECIES_CODE || speciesCode === "KW-0024") && growthStage === "成虫" && hasArt,
     seedKey + ":chomp",
     CHOMP_CYCLE_MS,
     CHOMP_DURATION_MS
