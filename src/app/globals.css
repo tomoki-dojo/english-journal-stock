@@ -932,6 +932,7 @@ body {
   .animate-kuwagata-horn,
   .animate-kuwagata-chomp,
   .animate-kuwagata-shine,
+  .animate-kuwagata-shine-jaw,
   .animate-kuwagata-glow,
   .animate-kuwagata-sway,
   .animate-kuwagata-scythe,
@@ -970,4 +971,18 @@ body {
   );
   background-size: 300% 100%;
   animation: kuwagata-shine 1.3s ease-in-out both;
+}
+
+/* グンたんの大顎のキラッ。大顎の形でマスクした白い光の帯が、ガチガチの間に左から右へ走る。 */
+.animate-kuwagata-shine-jaw {
+  background: linear-gradient(
+    105deg,
+    rgba(255, 255, 255, 0) 42%,
+    rgba(254, 249, 195, 0.9) 47%,
+    rgba(255, 255, 255, 1) 50%,
+    rgba(254, 249, 195, 0.9) 53%,
+    rgba(255, 255, 255, 0) 58%
+  );
+  background-size: 300% 100%;
+  animation: kuwagata-shine 0.75s ease-in-out 0.1s both;
 }

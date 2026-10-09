@@ -600,13 +600,31 @@ function KnownCreatureSprite({
   const mandible = art.mandibles[mandibleVariant] ?? art.mandibles[1];
 
   // 大顎(ツノ)。既定は一番手前、mandibleBehindBodyの向きは最背面(本体より奥)に描く。
+  const jawClassName = `absolute inset-0 h-full w-full ${fighting ? "animate-kuwagata-fight-jaw" : ""} ${hornSwing && art.mandibleOrigin ? "animate-kuwagata-horn" : ""} ${chomp && art.mandibleOrigin ? "animate-kuwagata-chomp" : ""} ${sniff && art.mandibleOrigin ? "animate-kuwagata-sniff" : ""}`;
+  // グンたん: ガチガチの間、大顎の形でくり抜いた光がキラッと走る(大顎と一緒に動く)。
+  const jawShine = code === JAW_SHINE_SPECIES_CODE && chomp && mandible;
   const mandibleEl = mandible ? (
-    <img
-      src={mandible}
-      alt=""
-      className={`absolute inset-0 h-full w-full ${fighting ? "animate-kuwagata-fight-jaw" : ""} ${hornSwing && art.mandibleOrigin ? "animate-kuwagata-horn" : ""} ${chomp && art.mandibleOrigin ? "animate-kuwagata-chomp" : ""} ${sniff && art.mandibleOrigin ? "animate-kuwagata-sniff" : ""}`}
-      style={art.mandibleOrigin ? { transformOrigin: art.mandibleOrigin } : undefined}
-    />
+    jawShine ? (
+      <div className={jawClassName} style={art.mandibleOrigin ? { transformOrigin: art.mandibleOrigin } : undefined}>
+        <img src={mandible} alt="" className="absolute inset-0 h-full w-full" />
+        <span
+          className="animate-kuwagata-shine-jaw pointer-events-none absolute inset-0"
+          style={{
+            WebkitMaskImage: `url(${mandible})`,
+            maskImage: `url(${mandible})`,
+            WebkitMaskSize: "100% 100%",
+            maskSize: "100% 100%",
+          }}
+        />
+      </div>
+    ) : (
+      <img
+        src={mandible}
+        alt=""
+        className={jawClassName}
+        style={art.mandibleOrigin ? { transformOrigin: art.mandibleOrigin } : undefined}
+      />
+    )
   ) : null;
 
   return (
@@ -1143,6 +1161,7 @@ const CHOMP_CYCLE_MS = 6000;
 const CHOMP_DURATION_MS = 1500;
 const CHOMP_SPECIES_CODE = "KW-0017";
 const CHOMP_SPECIES_CODE_2 = "KW-0027"; // ハンたんも大顎をガチガチさせる
+const JAW_SHINE_SPECIES_CODE = "KW-0033"; // グンたん: ガチガチ中に大顎がキラッと光る
 const CHOMP_SPECIES_CODE_3 = "KW-0030"; // ルリたん・スズたん・サワたん・グンたんも
 const SHINE_CYCLE_MS = 5000;
 const SHINE_DURATION_MS = 1300;
