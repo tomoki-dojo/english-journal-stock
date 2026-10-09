@@ -1801,11 +1801,11 @@ export function KuwagataShelf({
     const el = newShelfRef.current;
     if (el && el.clientWidth > 0) setNewPage(Math.round(el.scrollLeft / el.clientWidth));
   };
-  const scrollNewShelf = () => {
+  const scrollNewShelf = (dir: 1 | -1) => {
     const el = newShelfRef.current;
     if (!el) return;
     const last = Math.max(0, Math.ceil(el.scrollWidth / el.clientWidth) - 1);
-    const next = newPage < last ? newPage + 1 : 0;
+    const next = Math.min(last, Math.max(0, newPage + dir));
     el.scrollTo({ left: next * el.clientWidth, behavior: "smooth" });
   };
 
@@ -1910,18 +1910,28 @@ export function KuwagataShelf({
               ))}
             </div>
             {newPages.length > 1 && (
-              <button
-                type="button"
-                aria-label={newPage < newPages.length - 1 ? "次の棚へ" : "最初の棚へ"}
-                onClick={scrollNewShelf}
-                className="absolute left-1/2 top-1 z-10 flex h-9 w-9 -translate-x-1/2 items-center justify-center rounded-full bg-white/50 text-zinc-500 shadow ring-1 ring-zinc-300/70 backdrop-blur-sm transition hover:bg-white/80 active:scale-95"
-              >
-                {newPage < newPages.length - 1 ? (
-                  <ChevronRight className="h-5 w-5" strokeWidth={1.75} />
-                ) : (
-                  <ChevronLeft className="h-5 w-5" strokeWidth={1.75} />
+              <div className="absolute left-1/2 top-1 z-10 flex -translate-x-1/2 gap-2">
+                {newPage > 0 && (
+                  <button
+                    type="button"
+                    aria-label="前の棚へ"
+                    onClick={() => scrollNewShelf(-1)}
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-white/50 text-zinc-500 shadow ring-1 ring-zinc-300/70 backdrop-blur-sm transition hover:bg-white/80 active:scale-95"
+                  >
+                    <ChevronLeft className="h-5 w-5" strokeWidth={1.75} />
+                  </button>
                 )}
-              </button>
+                {newPage < newPages.length - 1 && (
+                  <button
+                    type="button"
+                    aria-label="次の棚へ"
+                    onClick={() => scrollNewShelf(1)}
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-white/50 text-zinc-500 shadow ring-1 ring-zinc-300/70 backdrop-blur-sm transition hover:bg-white/80 active:scale-95"
+                  >
+                    <ChevronRight className="h-5 w-5" strokeWidth={1.75} />
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
