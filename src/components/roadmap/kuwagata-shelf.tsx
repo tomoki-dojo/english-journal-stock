@@ -357,6 +357,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0010": buildEightLegWalkerArt("KW-0010", { backLeftLeg: true }),
   // チョウたん(アゲハチョウ。飛ぶ＝buildWingedFlyerArt。羽根の付け根を軸にヒラヒラ)
   "KW-0011": buildWingedFlyerArt("KW-0011", { front: "52% 50%", back: "54% 52%" }),
+  // アオたん(アオスジアゲハ。飛び方はチョウたんと同じ)
+  "KW-0026": buildWingedFlyerArt("KW-0026", { front: "49% 58%", back: "40% 57%" }),
   // ハグロたん(ハグロトンボ。羽根は正面・背面とも体の手前。羽ばたきはチョウたんと同じヒラヒラ)
   "KW-0025": buildWingedFlyerArt("KW-0025", { front: "43% 64%", back: "44% 55%" }, { frontWingsInFront: true }),
   // トンたん(シオカラトンボ。飛ぶが、羽ばたきは常に素早く小さめ。直線的に速く移動=DRAGONFLY_*)
