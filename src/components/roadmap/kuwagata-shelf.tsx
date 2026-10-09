@@ -219,6 +219,18 @@ function buildFireflyArt(
   };
 }
 
+// 背面でL1(左脚)が見えてしまう種のA(歩く6脚)。標準の9枚に加えて back_leg_L1 を体の奥(後ろ)に描いて動かす(計10枚)。
+function buildWalkerWithBackLeftLegArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
+  const art = buildNewSpeciesWalkerArt(code);
+  return {
+    front: art.front,
+    back: art.back && {
+      ...art.back,
+      legsBehindBody: [{ src: `${KUWAGATA_ART_DIR}/kuwagata_${code}_back_leg_L1.svg`, delay: "-0.7s" }],
+    },
+  };
+}
+
 // 新種(動きの種類B=歩く8脚)の成虫アート。クモなど。ファイルは
 //   正面: front_body / front_leg_L1〜L4(手前脚4本) / front_leg_R1(奥脚1本)
 //   背面: back_body / back_leg_R1〜R4(脚4本) / back_leg_L1(左側にちらっと見える脚1本。種によっては無い)
@@ -324,6 +336,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
     front: { left: 90, top: 62, size: 34 },
     back: { left: 12, top: 82, size: 38 },
   }),
+  // ニシキたん(歩く6脚+背面でL1が見える。タマたんと同じ「大きくなってカラフルにキラキラ」)
+  "KW-0029": buildWalkerWithBackLeftLegArt("KW-0029"),
   // タマたん(タマムシ。歩く6脚・大顎なし。テッペンクワたん同様に大きくなってカラフルにキラキラ)
   "KW-0019": buildNewSpeciesWalkerArt("KW-0019"),
   // ゾウたん(ゾウムシ。鼻=mandible_01を付け根を軸にフンフン大きく振る=SNIFF_*)
@@ -999,7 +1013,7 @@ const PROUD_CYCLE_MS = 14000;
 const PROUD_DURATION_MS = 3000;
 const PROUD_SPECIES_CODE = "KW-0004";
 // タマたんもテッペンクワたんと同じ「大きくなる」ポーズをする。きらきらは黄・黄緑・緑・紫・赤紫のカラフルなランダム色。
-const RAINBOW_SPARKLE_SPECIES_CODE = "KW-0019";
+const RAINBOW_SPARKLE_SPECIES_CODES = ["KW-0019", "KW-0029"]; // タマたん・ニシキたん
 const RAINBOW_SPARKLE_COLORS = ["#facc15", "#a3e635", "#22c55e", "#a855f7", "#d946ef"];
 
 // バッたん(KW-0009)の「ジャンプ」。バッタらしく、歩いている途中でときどき(8秒に1回)ぴょんと跳ぶ。
@@ -1117,12 +1131,12 @@ function WanderingCreature({
     FIGHT_DURATION_MS
   );
   const proud = useTimedGesture(
-    (speciesCode === PROUD_SPECIES_CODE || speciesCode === RAINBOW_SPARKLE_SPECIES_CODE) && growthStage === "成虫" && hasArt,
+    (speciesCode === PROUD_SPECIES_CODE || RAINBOW_SPARKLE_SPECIES_CODES.includes(speciesCode)) && growthStage === "成虫" && hasArt,
     seedKey + ":proud",
     PROUD_CYCLE_MS,
     PROUD_DURATION_MS
   );
-  const rainbowSparkle = speciesCode === RAINBOW_SPARKLE_SPECIES_CODE;
+  const rainbowSparkle = RAINBOW_SPARKLE_SPECIES_CODES.includes(speciesCode);
   // タマたんのきらきら。ポーズのたびに、体の中心から放射状に飛び散る粒を作り直す(色・向き・距離・落ちる量がランダム)。
   const [sparkles, setSparkles] = useState<
     { color: string; dx: number; dy: number; fall: number; delay: number; size: number }[]
