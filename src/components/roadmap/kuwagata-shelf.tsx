@@ -469,7 +469,7 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   // サソたん(サソリ。ハサミ=claw、尻尾=taleをシュシュッと残像つきで打ち下ろす)
   "KW-0031": buildScorpionArt("KW-0031", { frontClaw: { L: "72% 74%", R: "17% 68%" }, backClawR: "87% 78%", frontTale: "67% 30%", backTale: "28% 33%" }),
   // ヘラたん(ヘラクレスオオカブト。ツノ+頭=mandible_01。付け根を軸に上下にガチガチ=nod、体全体にキラッ)
-  "KW-0032": buildHerculesArt("KW-0032", { frontOrigin: "32% 82%", backOrigin: "62% 60%", backBehindBody: true }),
+  "KW-0032": buildHerculesArt("KW-0032", { frontOrigin: "50% 80%", backOrigin: "62% 60%", backBehindBody: true }),
   // アオたん(アオスジアゲハ。飛び方はチョウたんと同じ)
   "KW-0026": buildWingedFlyerArt("KW-0026", { front: "49% 58%", back: "40% 57%" }),
   // ハグロたん(ハグロトンボ。羽根は正面・背面とも体の手前。羽ばたきはチョウたんと同じヒラヒラ)
