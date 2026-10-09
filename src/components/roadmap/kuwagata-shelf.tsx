@@ -219,6 +219,14 @@ function buildFireflyArt(
   };
 }
 
+// 脚がすべて体の下(奥)に隠れる構造の種(カメムシ)。標準の9枚はそのまま、正面・背面とも脚をすべて体の後ろに描く。
+function buildWalkerLegsBehindBodyArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
+  const art = buildNewSpeciesWalkerArt(code);
+  const toBehind = (a: KnownCreatureArt | undefined) =>
+    a && { ...a, legsBehindBody: [...a.legsBehindBody, ...a.legsInFrontOfBody], legsInFrontOfBody: [] };
+  return { front: toBehind(art.front), back: toBehind(art.back) };
+}
+
 // 背面でL1(左脚)が見えてしまう種のA(歩く6脚)。標準の9枚に加えて back_leg_L1 を体の奥(後ろ)に描いて動かす(計10枚)。
 function buildWalkerWithBackLeftLegArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
   const art = buildNewSpeciesWalkerArt(code);
@@ -342,8 +350,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0019": buildNewSpeciesWalkerArt("KW-0019"),
   // ゾウたん(ゾウムシ。鼻=mandible_01を付け根を軸にフンフン大きく振る=SNIFF_*)
   "KW-0021": buildNewSpeciesWalkerArt("KW-0021", { frontOrigin: "23% 70%", backOrigin: "80% 60%", backBehindBody: true }),
-  // モンたん(エサキモンキツノカメムシ。歩く6脚・大顎なし。ときどき体をぷるぷる震わせて臭いガスをぷしゅっと出す=STINK_*)
-  "KW-0022": buildNewSpeciesWalkerArt("KW-0022"),
+  // モンたん(エサキモンキツノカメムシ。歩く6脚・大顎なし・脚は正面/背面ともすべて体の後ろ。ときどき体をぷるぷる震わせて臭いガスをぷしゅっと出す=STINK_*)
+  "KW-0022": buildWalkerLegsBehindBodyArt("KW-0022"),
   // ハンたん(ハンミョウ。大顎をガチガチ=CHOMP_*。たまに弧を描いて素早く飛んで移動=LEAP_*)
   "KW-0027": buildNewSpeciesWalkerArt("KW-0027", { frontOrigin: "30% 88%", backOrigin: "90% 60%" }),
   // カミたん(カミキリムシ。大顎mandible_01をときどきガチガチ=CHOMP_*)
