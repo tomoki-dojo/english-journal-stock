@@ -932,6 +932,7 @@ body {
   .animate-kuwagata-horn,
   .animate-kuwagata-chomp,
   .animate-kuwagata-shine,
+  .animate-kuwagata-claw,
   .animate-kuwagata-shine-jaw,
   .animate-kuwagata-glow,
   .animate-kuwagata-sway,
@@ -985,4 +986,27 @@ body {
   );
   background-size: 300% 100%;
   animation: kuwagata-shine 0.75s ease-in-out 0.1s both;
+}
+
+/* サワたんのハサミ。付け根を軸に、開いて(外へ)→閉じる(内へ)を数回。左右は--claw-dirで向きを反転し、時間差で交互に動く。 */
+@keyframes kuwagata-claw {
+  0%,
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+  12%,
+  37%,
+  62%,
+  87% {
+    transform: rotate(calc(var(--claw-dir, 1) * -16deg)) scale(1.06);
+  }
+  25%,
+  50%,
+  75% {
+    transform: rotate(calc(var(--claw-dir, 1) * 9deg)) scale(0.98);
+  }
+}
+
+.animate-kuwagata-claw {
+  animation: kuwagata-claw 1.5s ease-in-out;
 }

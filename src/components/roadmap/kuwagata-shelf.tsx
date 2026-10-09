@@ -63,7 +63,7 @@ const KUWAGATA_ART_DIR = "/roadmap/kuwagata";
 
 // kind: "wing"なら脚ではなく羽根として羽ばたかせる(originは羽根の付け根=回転・つぶれの軸、例: "52% 50%")。
 // baseRotateDeg: 羽根の基準姿勢の回転(付け根を軸、時計回りが正)。斜めに描かれた羽根を水平寄りに直すのに使う。
-type CreaturePartArt = { src: string; delay: string; kind?: "wing" | "scythe"; origin?: string; baseRotateDeg?: number; shiftYPct?: number; squashAt?: { x: number; y: number } };
+type CreaturePartArt = { src: string; delay: string; kind?: "wing" | "scythe" | "claw"; origin?: string; baseRotateDeg?: number; shiftYPct?: number; squashAt?: { x: number; y: number }; clawDir?: 1 | -1 };
 
 type KnownCreatureArt = {
   body: string;
@@ -303,32 +303,34 @@ function buildEightLegWalkerArt(
 }
 
 // サワたん(サワガニ): 脚は正面・背面とも L1〜L4・R1〜R4 の8本をすべて体の後ろに描く。
-// ハサミ(mandible_01。左右2つで1枚)は、正面は体の手前・背面は体の奥に置き、付け根を軸にときどきガチガチ(CHOMP_*)。
-// 素材が無い脚(例: 正面L2)はスキップする(missing に列挙)。
+// ハサミ(mandible_L・mandible_R。左右別ファイル)は、正面は体の手前・背面は体の奥に置き、付け根を軸にときどき交互にガチガチ(CHOMP_*)。
 function buildCrabArt(
   code: string,
-  origin: { front: string; back: string },
-  missing: string[] = []
+  origin: { front: { L: string; R: string }; back: { L: string; R: string } }
 ): Partial<Record<Facing, KnownCreatureArt>> {
   const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
   const legs = (facing: "front" | "back"): CreaturePartArt[] =>
-    ["R4", "R3", "R2", "R1", "L4", "L3", "L2", "L1"]
-      .filter((n) => !missing.includes(`${facing}_leg_${n}`))
-      .map((n, i) => ({ src: file(`${facing}_leg_${n}`), delay: `-${((i % 4) * 0.15).toFixed(2)}s` }));
+    ["R4", "R3", "R2", "R1", "L4", "L3", "L2", "L1"].map((n, i) => ({
+      src: file(`${facing}_leg_${n}`),
+      delay: `-${((i % 4) * 0.15).toFixed(2)}s`,
+    }));
+  // ハサミは左右別ファイル(mandible_L/R。見た目の左右ではなくファイル名の左右)。付け根を軸に交互にパクパク。
+  // 見た目で右側にあるハサミ(L)は時計回り、左側(R)は反時計回りに閉じる。
+  const claws = (facing: "front" | "back"): CreaturePartArt[] => [
+    { src: file(`${facing}_mandible_L`), delay: "0s", kind: "claw", origin: origin[facing].L, clawDir: 1 },
+    { src: file(`${facing}_mandible_R`), delay: "0.12s", kind: "claw", origin: origin[facing].R, clawDir: -1 },
+  ];
   return {
     front: {
       body: file("front_body"),
-      mandibles: { 1: file("front_mandible_01") },
-      mandibleOrigin: origin.front,
+      mandibles: {},
       legsBehindBody: legs("front"),
-      legsInFrontOfBody: [],
+      legsInFrontOfBody: claws("front"),
     },
     back: {
       body: file("back_body"),
-      mandibles: { 1: file("back_mandible_01") },
-      mandibleOrigin: origin.back,
-      mandibleBehindBody: true,
-      legsBehindBody: legs("back"),
+      mandibles: {},
+      legsBehindBody: [...claws("back"), ...legs("back")],
       legsInFrontOfBody: [],
     },
   };
@@ -408,7 +410,7 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   // オニたん(オニヤンマ。動きはトンたんと同じ。斜めに描かれた羽根は基準姿勢を回して水平寄りにする=wingTilt)
   "KW-0028": buildWingedFlyerArt("KW-0028", { front: "45% 50%", back: "45% 47%" }, { frontWingsInFront: true, wingTilt: { front: { L: 30, R: -35 }, back: { L: -30, R: 30 } }, wingShiftY: { front: { R: -10 } }, wingSquashAt: { front: { R: { x: -12, y: 7 } } } }),
   // サワたん(サワガニ。8本脚はすべて体の後ろ。ハサミをときどきガチガチ=CHOMP_*。正面L2は素材待ち)
-  "KW-0024": buildCrabArt("KW-0024", { front: "48% 78%", back: "55% 44%" }),
+  "KW-0024": buildCrabArt("KW-0024", { front: { L: "76% 66%", R: "22% 65%" }, back: { L: "44% 40%", R: "67% 40%" } }),
   // グンたん(グンタイアリ。歩く6脚＋背面のL1。大顎mandible_01をガチガチ=CHOMP_*。背面の大顎は体の奥)
   "KW-0033": buildWalkerWithBackLeftLegArt("KW-0033", { frontOrigin: "42% 60%", backOrigin: "50% 40%", backBehindBody: true }),
   // アオたん(アオスジアゲハ。飛び方はチョウたんと同じ)
@@ -650,8 +652,8 @@ function KnownCreatureSprite({
           key={`behind${i}`}
           src={leg.src}
           alt=""
-          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe)}`}
-          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
+          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp)}`}
+          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
         />
       ))}
       <img src={art.body} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />
@@ -660,8 +662,8 @@ function KnownCreatureSprite({
           key={`front${i}`}
           src={leg.src}
           alt=""
-          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe)}`}
-          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
+          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp)}`}
+          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
         />
       ))}
       {art.shine && shine && (
@@ -682,7 +684,8 @@ function KnownCreatureSprite({
 }
 
 // 脚・羽根・カマのCSSクラス。カマは構えて振るとき(scythe)だけ動かす。
-function legClassName(kind: CreaturePartArt["kind"], code: string, scythe: boolean): string {
+function legClassName(kind: CreaturePartArt["kind"], code: string, scythe: boolean, chomp = false): string {
+  if (kind === "claw") return chomp ? "animate-kuwagata-claw" : "";
   if (kind === "wing") return isDragonfly(code) || code === HORNET_SPECIES_CODE ? "animate-kuwagata-wing-dragonfly" : "animate-kuwagata-wing";
   if (kind === "scythe") return scythe ? "animate-kuwagata-scythe" : "";
   return "animate-kuwagata-leg";
