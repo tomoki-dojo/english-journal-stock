@@ -405,7 +405,7 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   // オニたん(オニヤンマ。動きはトンたんと同じ。斜めに描かれた羽根は基準姿勢を回して水平寄りにする=wingTilt)
   "KW-0028": buildWingedFlyerArt("KW-0028", { front: "45% 50%", back: "45% 47%" }, { frontWingsInFront: true, wingTilt: { front: { L: 30, R: -35 }, back: { L: -30, R: 30 } }, wingShiftY: { front: { R: -10 } }, wingSquashAt: { front: { R: { x: -12, y: 7 } } } }),
   // サワたん(サワガニ。8本脚はすべて体の後ろ。ハサミをときどきガチガチ=CHOMP_*。正面L2は素材待ち)
-  "KW-0024": buildCrabArt("KW-0024", { front: "48% 78%", back: "55% 44%" }, ["front_leg_L2"]),
+  "KW-0024": buildCrabArt("KW-0024", { front: "48% 78%", back: "55% 44%" }),
   // アオたん(アオスジアゲハ。飛び方はチョウたんと同じ)
   "KW-0026": buildWingedFlyerArt("KW-0026", { front: "49% 58%", back: "40% 57%" }),
   // ハグロたん(ハグロトンボ。羽根は正面・背面とも体の手前。羽ばたきはチョウたんと同じヒラヒラ)
