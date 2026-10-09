@@ -231,8 +231,11 @@ function buildWalkerLegsBehindBodyArt(code: string): Partial<Record<Facing, Know
 }
 
 // 背面でL1(左脚)が見えてしまう種のA(歩く6脚)。標準の9枚に加えて back_leg_L1 を体の奥(後ろ)に描いて動かす(計10枚)。
-function buildWalkerWithBackLeftLegArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
-  const art = buildNewSpeciesWalkerArt(code);
+function buildWalkerWithBackLeftLegArt(
+  code: string,
+  horn?: { frontOrigin: string; backOrigin: string; backBehindBody?: boolean }
+): Partial<Record<Facing, KnownCreatureArt>> {
+  const art = buildNewSpeciesWalkerArt(code, horn);
   return {
     front: art.front,
     back: art.back && {
@@ -406,6 +409,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0028": buildWingedFlyerArt("KW-0028", { front: "45% 50%", back: "45% 47%" }, { frontWingsInFront: true, wingTilt: { front: { L: 30, R: -35 }, back: { L: -30, R: 30 } }, wingShiftY: { front: { R: -10 } }, wingSquashAt: { front: { R: { x: -12, y: 7 } } } }),
   // サワたん(サワガニ。8本脚はすべて体の後ろ。ハサミをときどきガチガチ=CHOMP_*。正面L2は素材待ち)
   "KW-0024": buildCrabArt("KW-0024", { front: "48% 78%", back: "55% 44%" }),
+  // グンたん(グンタイアリ。歩く6脚＋背面のL1。大顎mandible_01をガチガチ=CHOMP_*。背面の大顎は体の奥)
+  "KW-0033": buildWalkerWithBackLeftLegArt("KW-0033", { frontOrigin: "42% 60%", backOrigin: "50% 40%", backBehindBody: true }),
   // アオたん(アオスジアゲハ。飛び方はチョウたんと同じ)
   "KW-0026": buildWingedFlyerArt("KW-0026", { front: "49% 58%", back: "40% 57%" }),
   // ハグロたん(ハグロトンボ。羽根は正面・背面とも体の手前。羽ばたきはチョウたんと同じヒラヒラ)
@@ -1138,7 +1143,7 @@ const CHOMP_CYCLE_MS = 6000;
 const CHOMP_DURATION_MS = 1500;
 const CHOMP_SPECIES_CODE = "KW-0017";
 const CHOMP_SPECIES_CODE_2 = "KW-0027"; // ハンたんも大顎をガチガチさせる
-const CHOMP_SPECIES_CODE_3 = "KW-0030"; // ルリたん・スズたん・サワたんも
+const CHOMP_SPECIES_CODE_3 = "KW-0030"; // ルリたん・スズたん・サワたん・グンたんも
 const SHINE_CYCLE_MS = 5000;
 const SHINE_DURATION_MS = 1300;
 const SHINE_SPECIES_CODE = "KW-0030";
@@ -1284,7 +1289,7 @@ function WanderingCreature({
     HORN_DURATION_MS
   );
   const chomping = useTimedGesture(
-    (speciesCode === CHOMP_SPECIES_CODE || speciesCode === CHOMP_SPECIES_CODE_2 || speciesCode === CHOMP_SPECIES_CODE_3 || speciesCode === HORNET_SPECIES_CODE || speciesCode === "KW-0024") && growthStage === "成虫" && hasArt,
+    (speciesCode === CHOMP_SPECIES_CODE || speciesCode === CHOMP_SPECIES_CODE_2 || speciesCode === CHOMP_SPECIES_CODE_3 || speciesCode === HORNET_SPECIES_CODE || speciesCode === "KW-0024" || speciesCode === "KW-0033") && growthStage === "成虫" && hasArt,
     seedKey + ":chomp",
     CHOMP_CYCLE_MS,
     CHOMP_DURATION_MS
