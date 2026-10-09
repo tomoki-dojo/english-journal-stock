@@ -470,6 +470,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0031": buildScorpionArt("KW-0031", { frontClaw: { L: "72% 74%", R: "17% 68%" }, backClawR: "87% 78%", frontTale: "67% 30%", backTale: "28% 33%" }),
   // ヘラたん(ヘラクレスオオカブト。ツノ+頭=mandible_01。付け根を軸に上下にガチガチ=nod、体全体にキラッ)
   "KW-0032": buildHerculesArt("KW-0032", { frontOrigin: "50% 80%", backOrigin: "62% 60%", backBehindBody: true }),
+  // ツノたん(ツノゼミ。ツノ=mandible_01を付け根を軸に軽く振る=HORN_*。ときどき赤くキラッと溜めてから跳ねる=CHARGE_HOP_*)
+  "KW-0034": buildNewSpeciesWalkerArt("KW-0034", { frontOrigin: "42% 52%", backOrigin: "54% 32%" }),
   // アオたん(アオスジアゲハ。飛び方はチョウたんと同じ)
   "KW-0026": buildWingedFlyerArt("KW-0026", { front: "49% 58%", back: "40% 57%" }),
   // ハグロたん(ハグロトンボ。羽根は正面・背面とも体の手前。羽ばたきはチョウたんと同じヒラヒラ)
@@ -588,6 +590,7 @@ function KnownCreatureSprite({
   phaseSeed = "",
   fighting = false,
   hornSwing = false,
+  charge = false,
   chomp = false,
   sniff = false,
   scythe = false,
@@ -603,6 +606,8 @@ function KnownCreatureSprite({
   fighting?: boolean;
   // ツノを付け根を軸に首振りさせる(カブたんの仕草)。mandibleOriginが設定された種だけ効く。
   hornSwing?: boolean;
+  // 溜め中に体が赤くキラッ、キラッと光る(ツノたん)。
+  charge?: boolean;
   chomp?: boolean;
   sniff?: boolean;
   scythe?: boolean;
@@ -744,6 +749,25 @@ function KnownCreatureSprite({
         />
       )}
       {!art.mandibleBehindBody && mandibleEl}
+      {charge && code === CHARGE_HOP_SPECIES_CODE && (
+        // 溜めの赤いキラッ。体とツノの形でくり抜いた赤い光を、2回ぴかっと光らせる。
+        <>
+          {[art.body, mandible].map((src, i) =>
+            src ? (
+              <span
+                key={i}
+                className="animate-kuwagata-red-flash pointer-events-none absolute inset-0"
+                style={{
+                  WebkitMaskImage: `url(${src})`,
+                  maskImage: `url(${src})`,
+                  WebkitMaskSize: "100% 100%",
+                  maskSize: "100% 100%",
+                }}
+              />
+            ) : null
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -1227,6 +1251,11 @@ const HOP_SPECIES_CODE = "KW-0009";
 const HORN_CYCLE_MS = 7000;
 const HORN_DURATION_MS = 1600;
 const HORN_SPECIES_CODE = "KW-0014";
+// ツノたん(ツノゼミ): ツノを軽く振る(HORN_*と同じ)＋ときどき、溜め(体が赤くキラッ、キラッ)→跳ねる。
+const HORN_SPECIES_CODE_2 = "KW-0034";
+const CHARGE_HOP_SPECIES_CODE = "KW-0034";
+const CHARGE_HOP_CYCLE_MS = 10000;
+const CHARGE_HOP_DURATION_MS = 2300;
 const CHOMP_CYCLE_MS = 6000;
 const CHOMP_DURATION_MS = 1500;
 const CHOMP_SPECIES_CODE = "KW-0017";
@@ -1377,8 +1406,14 @@ function WanderingCreature({
     HOP_CYCLE_MS,
     HOP_DURATION_MS
   );
+  const charging = useTimedGesture(
+    speciesCode === CHARGE_HOP_SPECIES_CODE && growthStage === "成虫" && hasArt,
+    seedKey + ":charge",
+    CHARGE_HOP_CYCLE_MS,
+    CHARGE_HOP_DURATION_MS
+  );
   const hornSwing = useTimedGesture(
-    speciesCode === HORN_SPECIES_CODE && growthStage === "成虫" && hasArt,
+    (speciesCode === HORN_SPECIES_CODE || speciesCode === HORN_SPECIES_CODE_2) && growthStage === "成虫" && hasArt,
     seedKey + ":horn",
     HORN_CYCLE_MS,
     HORN_DURATION_MS
@@ -1462,12 +1497,13 @@ function WanderingCreature({
     >
       {hasArt ? (
         <div
-          className={`h-full w-full ${chatting ? "animate-kuwagata-chat" : ""} ${fighting ? "animate-kuwagata-fight" : ""} ${proud ? "animate-kuwagata-proud" : ""} ${hopping ? "animate-kuwagata-hop" : ""} ${stinking ? "animate-kuwagata-stink" : ""}`}
+          className={`h-full w-full ${chatting ? "animate-kuwagata-chat" : ""} ${fighting ? "animate-kuwagata-fight" : ""} ${proud ? "animate-kuwagata-proud" : ""} ${hopping ? "animate-kuwagata-hop" : ""} ${charging ? "animate-kuwagata-charge-hop" : ""} ${stinking ? "animate-kuwagata-stink" : ""}`}
           style={leaping ? { animation: `kuwagata-leap ${travelMs}ms linear` } : undefined}
         >
           <KnownCreatureSprite
             fighting={fighting}
             hornSwing={hornSwing}
+            charge={charging}
             chomp={chomping}
             sniff={sniffing}
             scythe={scything}
