@@ -79,6 +79,8 @@ type KnownCreatureArt = {
   flying?: boolean;
   // お腹(体の一部)がぼんやり光る種(ホタたん)。中心位置と直径は絵のキャンバスに対する%。
   glow?: { left: number; top: number; size: number };
+  // trueなら体の形の中だけを光の帯が走る演出(ルリたん)に対応する種。
+  shine?: boolean;
   legsBehindBody: CreaturePartArt[];
   legsInFrontOfBody: CreaturePartArt[];
 };
@@ -250,6 +252,15 @@ function buildNigikiBugArt(code: string): Partial<Record<Facing, KnownCreatureAr
   };
 }
 
+// ルリたん: 大顎がある6脚の歩行種に、体に光が走る演出(shine)を足す。
+function buildShineBeetleArt(code: string, origin: { front: string; back: string }): Partial<Record<Facing, KnownCreatureArt>> {
+  const art = buildNewSpeciesWalkerArt(code, { frontOrigin: origin.front, backOrigin: origin.back });
+  return {
+    front: art.front && { ...art.front, shine: true },
+    back: art.back && { ...art.back, shine: true },
+  };
+}
+
 // 新種(動きの種類B=歩く8脚)の成虫アート。クモなど。ファイルは
 //   正面: front_body / front_leg_L1〜L4(手前脚4本) / front_leg_R1(奥脚1本)
 //   背面: back_body / back_leg_R1〜R4(脚4本) / back_leg_L1(左側にちらっと見える脚1本。種によっては無い)
@@ -357,6 +368,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   }),
   // ニシキたん(歩く6脚+背面でL1が見える。タマたんと同じ「大きくなってカラフルにキラキラ」)
   "KW-0029": buildNigikiBugArt("KW-0029"),
+  // ルリたん(ルリボシカミキリ。大顎mandible_01をガチガチ=CHOMP_*。ときどき体の上を光がスッと走る=SHINE_*)
+  "KW-0030": buildShineBeetleArt("KW-0030", { front: "31% 80%", back: "90% 66%" }),
   // タマたん(タマムシ。歩く6脚・大顎なし。テッペンクワたん同様に大きくなってカラフルにキラキラ)
   "KW-0019": buildNewSpeciesWalkerArt("KW-0019"),
   // ゾウたん(ゾウムシ。鼻=mandible_01を付け根を軸にフンフン大きく振る=SNIFF_*)
@@ -453,6 +466,7 @@ function KnownCreatureSprite({
   chomp = false,
   sniff = false,
   scythe = false,
+  shine = false,
 }: {
   code: string;
   facing: Facing;
@@ -466,6 +480,7 @@ function KnownCreatureSprite({
   chomp?: boolean;
   sniff?: boolean;
   scythe?: boolean;
+  shine?: boolean;
 }) {
   const stageArt = KNOWN_STAGE_ART[code];
 
@@ -565,6 +580,18 @@ function KnownCreatureSprite({
           style={{ animationDelay: leg.delay, transformOrigin: leg.origin }}
         />
       ))}
+      {art.shine && shine && (
+        // 体の形でくり抜いた光の帯が、体の上をスッと走る。
+        <span
+          className="animate-kuwagata-shine pointer-events-none absolute inset-0"
+          style={{
+            WebkitMaskImage: `url(${art.body})`,
+            maskImage: `url(${art.body})`,
+            WebkitMaskSize: "100% 100%",
+            maskSize: "100% 100%",
+          }}
+        />
+      )}
       {!art.mandibleBehindBody && mandibleEl}
     </div>
   );
@@ -1050,6 +1077,10 @@ const CHOMP_CYCLE_MS = 6000;
 const CHOMP_DURATION_MS = 1500;
 const CHOMP_SPECIES_CODE = "KW-0017";
 const CHOMP_SPECIES_CODE_2 = "KW-0027"; // ハンたんも大顎をガチガチさせる
+const CHOMP_SPECIES_CODE_3 = "KW-0030"; // ルリたんも
+const SHINE_CYCLE_MS = 5000;
+const SHINE_DURATION_MS = 1300;
+const SHINE_SPECIES_CODE = "KW-0030";
 const SNIFF_CYCLE_MS = 5500;
 const SNIFF_DURATION_MS = 1800;
 const SNIFF_SPECIES_CODE = "KW-0021";
@@ -1192,10 +1223,16 @@ function WanderingCreature({
     HORN_DURATION_MS
   );
   const chomping = useTimedGesture(
-    (speciesCode === CHOMP_SPECIES_CODE || speciesCode === CHOMP_SPECIES_CODE_2) && growthStage === "成虫" && hasArt,
+    (speciesCode === CHOMP_SPECIES_CODE || speciesCode === CHOMP_SPECIES_CODE_2 || speciesCode === CHOMP_SPECIES_CODE_3) && growthStage === "成虫" && hasArt,
     seedKey + ":chomp",
     CHOMP_CYCLE_MS,
     CHOMP_DURATION_MS
+  );
+  const shining = useTimedGesture(
+    speciesCode === SHINE_SPECIES_CODE && growthStage === "成虫" && hasArt,
+    seedKey + ":shine",
+    SHINE_CYCLE_MS,
+    SHINE_DURATION_MS
   );
   const sniffing = useTimedGesture(
     speciesCode === SNIFF_SPECIES_CODE && growthStage === "成虫" && hasArt,
@@ -1267,6 +1304,7 @@ function WanderingCreature({
             chomp={chomping}
             sniff={sniffing}
             scythe={scything}
+            shine={shining}
             code={speciesCode}
             facing={facing}
             mandibleVariant={mandibleVariant}

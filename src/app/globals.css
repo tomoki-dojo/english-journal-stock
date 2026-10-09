@@ -929,6 +929,7 @@ body {
   .animate-kuwagata-glide,
   .animate-kuwagata-horn,
   .animate-kuwagata-chomp,
+  .animate-kuwagata-shine,
   .animate-kuwagata-glow,
   .animate-kuwagata-sway,
   .animate-kuwagata-scythe,
@@ -944,4 +945,27 @@ body {
   .animate-kuwagata-fight-jaw {
     animation: none;
   }
+}
+
+/* ルリたんの「光が走る」。体の形でマスクした斜めの光の帯が、左から右へスッと流れる。 */
+@keyframes kuwagata-shine {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0% 0;
+  }
+}
+
+.animate-kuwagata-shine {
+  background: linear-gradient(
+    105deg,
+    rgba(34, 211, 238, 0) 44%,
+    rgba(103, 232, 249, 0.85) 48%,
+    rgba(236, 254, 255, 1) 50%,
+    rgba(103, 232, 249, 0.85) 52%,
+    rgba(34, 211, 238, 0) 56%
+  );
+  background-size: 300% 100%;
+  animation: kuwagata-shine 1.3s ease-in-out both;
 }
