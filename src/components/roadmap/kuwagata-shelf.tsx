@@ -322,7 +322,7 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   // ホタたん(ホタル。歩く6脚+お腹がゆっくり明滅して光る)
   "KW-0023": buildFireflyArt("KW-0023", {
     front: { left: 90, top: 62, size: 34 },
-    back: { left: 12, top: 78, size: 38 },
+    back: { left: 12, top: 82, size: 38 },
   }),
   // タマたん(タマムシ。歩く6脚・大顎なし。テッペンクワたん同様に大きくなってカラフルにキラキラ)
   "KW-0019": buildNewSpeciesWalkerArt("KW-0019"),
