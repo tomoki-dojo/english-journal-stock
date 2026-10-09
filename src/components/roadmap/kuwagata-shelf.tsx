@@ -63,7 +63,7 @@ const KUWAGATA_ART_DIR = "/roadmap/kuwagata";
 
 // kind: "wing"なら脚ではなく羽根として羽ばたかせる(originは羽根の付け根=回転・つぶれの軸、例: "52% 50%")。
 // baseRotateDeg: 羽根の基準姿勢の回転(付け根を軸、時計回りが正)。斜めに描かれた羽根を水平寄りに直すのに使う。
-type CreaturePartArt = { src: string; delay: string; kind?: "wing" | "scythe" | "claw"; origin?: string; baseRotateDeg?: number; shiftYPct?: number; squashAt?: { x: number; y: number }; clawDir?: 1 | -1 };
+type CreaturePartArt = { src: string; delay: string; kind?: "wing" | "scythe" | "claw" | "tail" | "tail-ghost"; origin?: string; baseRotateDeg?: number; shiftYPct?: number; squashAt?: { x: number; y: number }; clawDir?: 1 | -1; ghostOpacity?: number };
 
 type KnownCreatureArt = {
   body: string;
@@ -336,6 +336,48 @@ function buildCrabArt(
   };
 }
 
+// サソたん(サソリ): 脚は正面 L1〜L3+R1(奥)、背面 R1〜R3+L1(奥)。ハサミ(claw)は正面が左右、背面は右(R)のみ。
+// 尻尾(tale)は体の奥から、ときどきシュシュッと素早く打ち下ろす。残像用にぼかした半透明のコピーを時間差で重ねる。
+function buildScorpionArt(
+  code: string,
+  origin: { frontClaw: { L: string; R: string }; backClawR: string; frontTale: string; backTale: string }
+): Partial<Record<Facing, KnownCreatureArt>> {
+  const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
+  const tail = (facing: "front" | "back", o: string, dir: 1 | -1): CreaturePartArt[] => [
+    { src: file(`${facing}_tale`), delay: "0.09s", kind: "tail-ghost", origin: o, clawDir: dir, ghostOpacity: 0.22 },
+    { src: file(`${facing}_tale`), delay: "0.045s", kind: "tail-ghost", origin: o, clawDir: dir, ghostOpacity: 0.4 },
+    { src: file(`${facing}_tale`), delay: "0s", kind: "tail", origin: o, clawDir: dir },
+  ];
+  return {
+    front: {
+      body: file("front_body"),
+      mandibles: {},
+      legsBehindBody: [...tail("front", origin.frontTale, -1), { src: file("front_leg_R1"), delay: "-0.55s" }],
+      legsInFrontOfBody: [
+        { src: file("front_leg_L3"), delay: "-0.3s" },
+        { src: file("front_leg_L2"), delay: "-0.15s" },
+        { src: file("front_leg_L1"), delay: "0s" },
+        { src: file("front_claw_L"), delay: "0s", kind: "claw", origin: origin.frontClaw.L, clawDir: 1 },
+        { src: file("front_claw_R"), delay: "0.12s", kind: "claw", origin: origin.frontClaw.R, clawDir: -1 },
+      ],
+    },
+    back: {
+      body: file("back_body"),
+      mandibles: {},
+      legsBehindBody: [
+        ...tail("back", origin.backTale, 1),
+        { src: file("back_leg_L1"), delay: "-0.7s" },
+        { src: file("back_claw_R"), delay: "0s", kind: "claw", origin: origin.backClawR, clawDir: 1 },
+      ],
+      legsInFrontOfBody: [
+        { src: file("back_leg_R3"), delay: "-0.3s" },
+        { src: file("back_leg_R2"), delay: "-0.15s" },
+        { src: file("back_leg_R1"), delay: "0s" },
+      ],
+    },
+  };
+}
+
 // 新種(動きの種類C=飛ぶ)の成虫アート。チョウなど。ファイルは
 //   正面: front_body / front_wing_L / front_wing_R、背面: back_body / back_wing_L / back_wing_R(計6枚)
 // 脚は本体に含める。羽根は付け根(hinge)を軸に、ヒラヒラと閉じたり開いたりする(横につぶれる)。
@@ -413,6 +455,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0024": buildCrabArt("KW-0024", { front: { L: "76% 66%", R: "22% 65%" }, back: { L: "44% 40%", R: "67% 40%" } }),
   // グンたん(グンタイアリ。歩く6脚＋背面のL1。大顎mandible_01をガチガチ=CHOMP_*。背面の大顎は体の奥)
   "KW-0033": buildWalkerWithBackLeftLegArt("KW-0033", { frontOrigin: "42% 60%", backOrigin: "50% 40%", backBehindBody: true }),
+  // サソたん(サソリ。ハサミ=claw、尻尾=taleをシュシュッと残像つきで打ち下ろす)
+  "KW-0031": buildScorpionArt("KW-0031", { frontClaw: { L: "72% 74%", R: "17% 68%" }, backClawR: "78% 50%", frontTale: "67% 30%", backTale: "28% 33%" }),
   // アオたん(アオスジアゲハ。飛び方はチョウたんと同じ)
   "KW-0026": buildWingedFlyerArt("KW-0026", { front: "49% 58%", back: "40% 57%" }),
   // ハグロたん(ハグロトンボ。羽根は正面・背面とも体の手前。羽ばたきはチョウたんと同じヒラヒラ)
@@ -535,6 +579,7 @@ function KnownCreatureSprite({
   sniff = false,
   scythe = false,
   shine = false,
+  strike = false,
 }: {
   code: string;
   facing: Facing;
@@ -549,6 +594,7 @@ function KnownCreatureSprite({
   sniff?: boolean;
   scythe?: boolean;
   shine?: boolean;
+  strike?: boolean;
 }) {
   const stageArt = KNOWN_STAGE_ART[code];
 
@@ -647,23 +693,23 @@ function KnownCreatureSprite({
         />
       )}
       {art.mandibleBehindBody && mandibleEl}
-      {art.legsBehindBody.map((leg, i) => (
+      {art.legsBehindBody.map((leg, i) => leg.kind === "tail-ghost" && !strike ? null : (
         <img
           key={`behind${i}`}
           src={leg.src}
           alt=""
-          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp)}`}
-          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
+          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp, strike)}`}
+          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.ghostOpacity ? ({ opacity: leg.ghostOpacity } as CSSProperties) : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
         />
       ))}
       <img src={art.body} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />
-      {art.legsInFrontOfBody.map((leg, i) => (
+      {art.legsInFrontOfBody.map((leg, i) => leg.kind === "tail-ghost" && !strike ? null : (
         <img
           key={`front${i}`}
           src={leg.src}
           alt=""
-          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp)}`}
-          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
+          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp, strike)}`}
+          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.ghostOpacity ? ({ opacity: leg.ghostOpacity } as CSSProperties) : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
         />
       ))}
       {art.shine && shine && (
@@ -684,7 +730,9 @@ function KnownCreatureSprite({
 }
 
 // 脚・羽根・カマのCSSクラス。カマは構えて振るとき(scythe)だけ動かす。
-function legClassName(kind: CreaturePartArt["kind"], code: string, scythe: boolean, chomp = false): string {
+function legClassName(kind: CreaturePartArt["kind"], code: string, scythe: boolean, chomp = false, strike = false): string {
+  if (kind === "tail") return strike ? "animate-kuwagata-tail" : "";
+  if (kind === "tail-ghost") return "animate-kuwagata-tail animate-kuwagata-tail-ghost";
   if (kind === "claw") return chomp ? "animate-kuwagata-claw" : "";
   if (kind === "wing") return isDragonfly(code) || code === HORNET_SPECIES_CODE ? "animate-kuwagata-wing-dragonfly" : "animate-kuwagata-wing";
   if (kind === "scythe") return scythe ? "animate-kuwagata-scythe" : "";
@@ -1164,6 +1212,10 @@ const CHOMP_CYCLE_MS = 6000;
 const CHOMP_DURATION_MS = 1500;
 const CHOMP_SPECIES_CODE = "KW-0017";
 const CHOMP_SPECIES_CODE_2 = "KW-0027"; // ハンたんも大顎をガチガチさせる
+// サソたん: 尻尾(tale)をシュシュッ! と素早く打ち下ろす(残像つき)。ハサミ(claw)は左右交互にパクパク。
+const TAIL_STRIKE_SPECIES_CODE = "KW-0031";
+const TAIL_STRIKE_CYCLE_MS = 5000;
+const TAIL_STRIKE_DURATION_MS = 900;
 const JAW_SHINE_SPECIES_CODE = "KW-0033"; // グンたん: ガチガチ中に大顎がキラッと光る
 const CHOMP_SPECIES_CODE_3 = "KW-0030"; // ルリたん・スズたん・サワたん・グンたんも
 const SHINE_CYCLE_MS = 5000;
@@ -1311,7 +1363,7 @@ function WanderingCreature({
     HORN_DURATION_MS
   );
   const chomping = useTimedGesture(
-    (speciesCode === CHOMP_SPECIES_CODE || speciesCode === CHOMP_SPECIES_CODE_2 || speciesCode === CHOMP_SPECIES_CODE_3 || speciesCode === HORNET_SPECIES_CODE || speciesCode === "KW-0024" || speciesCode === "KW-0033") && growthStage === "成虫" && hasArt,
+    (speciesCode === CHOMP_SPECIES_CODE || speciesCode === CHOMP_SPECIES_CODE_2 || speciesCode === CHOMP_SPECIES_CODE_3 || speciesCode === HORNET_SPECIES_CODE || speciesCode === "KW-0024" || speciesCode === "KW-0033" || speciesCode === TAIL_STRIKE_SPECIES_CODE) && growthStage === "成虫" && hasArt,
     seedKey + ":chomp",
     CHOMP_CYCLE_MS,
     CHOMP_DURATION_MS
@@ -1321,6 +1373,12 @@ function WanderingCreature({
     seedKey + ":shine",
     SHINE_CYCLE_MS,
     SHINE_DURATION_MS
+  );
+  const striking = useTimedGesture(
+    speciesCode === TAIL_STRIKE_SPECIES_CODE && growthStage === "成虫" && hasArt,
+    seedKey + ":strike",
+    TAIL_STRIKE_CYCLE_MS,
+    TAIL_STRIKE_DURATION_MS
   );
   const sniffing = useTimedGesture(
     speciesCode === SNIFF_SPECIES_CODE && growthStage === "成虫" && hasArt,
@@ -1393,6 +1451,7 @@ function WanderingCreature({
             sniff={sniffing}
             scythe={scything}
             shine={shining}
+            strike={striking}
             code={speciesCode}
             facing={facing}
             mandibleVariant={mandibleVariant}

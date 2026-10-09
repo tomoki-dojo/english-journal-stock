@@ -933,6 +933,7 @@ body {
   .animate-kuwagata-chomp,
   .animate-kuwagata-shine,
   .animate-kuwagata-claw,
+  .animate-kuwagata-tail,
   .animate-kuwagata-shine-jaw,
   .animate-kuwagata-glow,
   .animate-kuwagata-sway,
@@ -1009,4 +1010,35 @@ body {
 
 .animate-kuwagata-claw {
   animation: kuwagata-claw 1.5s ease-in-out;
+}
+
+/* サソたんの尻尾。一瞬だけ引いて(溜め)、目にも止まらない速さで打ち下ろし、ゆっくり戻る。--claw-dirで向きを反転。 */
+@keyframes kuwagata-tail {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  10% {
+    transform: rotate(calc(var(--claw-dir, 1) * -14deg));
+    animation-timing-function: cubic-bezier(0.2, 0, 0.1, 1);
+  }
+  17% {
+    transform: rotate(calc(var(--claw-dir, 1) * 62deg));
+  }
+  24% {
+    transform: rotate(calc(var(--claw-dir, 1) * 50deg));
+    animation-timing-function: ease-in-out;
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+.animate-kuwagata-tail {
+  animation: kuwagata-tail 0.9s linear both;
+}
+
+/* 残像: ぼかした半透明のコピーを少し遅らせて重ねる。 */
+.animate-kuwagata-tail-ghost {
+  filter: blur(1.5px);
 }
