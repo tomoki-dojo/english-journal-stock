@@ -62,7 +62,8 @@ function formatDate(iso: string): string {
 const KUWAGATA_ART_DIR = "/roadmap/kuwagata";
 
 // kind: "wing"なら脚ではなく羽根として羽ばたかせる(originは羽根の付け根=回転・つぶれの軸、例: "52% 50%")。
-type CreaturePartArt = { src: string; delay: string; kind?: "wing" | "scythe"; origin?: string };
+// baseRotateDeg: 羽根の基準姿勢の回転(付け根を軸、時計回りが正)。斜めに描かれた羽根を水平寄りに直すのに使う。
+type CreaturePartArt = { src: string; delay: string; kind?: "wing" | "scythe"; origin?: string; baseRotateDeg?: number };
 
 type KnownCreatureArt = {
   body: string;
@@ -306,12 +307,17 @@ function buildEightLegWalkerArt(
 function buildWingedFlyerArt(
   code: string,
   hinge: { front: string; back: string },
-  options: { frontWingsInFront?: boolean; mandibleOrigin?: { front: string; back: string } } = {}
+  options: {
+    frontWingsInFront?: boolean;
+    mandibleOrigin?: { front: string; back: string };
+    // 羽根の基準回転(度)。L/Rは羽根ファイル名の左右。
+    wingTilt?: { front: { L: number; R: number }; back: { L: number; R: number } };
+  } = {}
 ): Partial<Record<Facing, KnownCreatureArt>> {
   const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
   const wings = (facing: "front" | "back", origin: string): CreaturePartArt[] => [
-    { src: file(`${facing}_wing_L`), delay: "0s", kind: "wing", origin },
-    { src: file(`${facing}_wing_R`), delay: "0s", kind: "wing", origin },
+    { src: file(`${facing}_wing_L`), delay: "0s", kind: "wing", origin, baseRotateDeg: options.wingTilt?.[facing].L },
+    { src: file(`${facing}_wing_R`), delay: "0s", kind: "wing", origin, baseRotateDeg: options.wingTilt?.[facing].R },
   ];
   return {
     front: {
@@ -342,6 +348,9 @@ const HORNET_TRAVEL_SCALE = 0.5;
 const isCurveFlight = (code: string) => code === CURVE_FLIGHT_SPECIES_CODE || code === HORNET_SPECIES_CODE;
 // トンたん: 羽ばたきは常に素早く小さめ、移動は直線的でかなり速め。他の飛ぶ種には適用しない。
 const DRAGONFLY_SPECIES_CODE = "KW-0016";
+// オニたん(オニヤンマ): 動きはトンたんと同じ(速い直線移動・常に小さく素早く羽ばたく)。
+const DRAGONFLY_SPECIES_CODE_2 = "KW-0028";
+const isDragonfly = (code: string) => code === DRAGONFLY_SPECIES_CODE || code === DRAGONFLY_SPECIES_CODE_2;
 const DRAGONFLY_TRAVEL_SCALE = 0.1125;
 
 const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCreatureArt>>>> = {
@@ -357,6 +366,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0010": buildEightLegWalkerArt("KW-0010", { backLeftLeg: true }),
   // チョウたん(アゲハチョウ。飛ぶ＝buildWingedFlyerArt。羽根の付け根を軸にヒラヒラ)
   "KW-0011": buildWingedFlyerArt("KW-0011", { front: "52% 50%", back: "54% 52%" }),
+  // オニたん(オニヤンマ。動きはトンたんと同じ。斜めに描かれた羽根は基準姿勢を回して水平寄りにする=wingTilt)
+  "KW-0028": buildWingedFlyerArt("KW-0028", { front: "45% 50%", back: "45% 47%" }, { wingTilt: { front: { L: 30, R: -35 }, back: { L: 30, R: -30 } } }),
   // アオたん(アオスジアゲハ。飛び方はチョウたんと同じ)
   "KW-0026": buildWingedFlyerArt("KW-0026", { front: "49% 58%", back: "40% 57%" }),
   // ハグロたん(ハグロトンボ。羽根は正面・背面とも体の手前。羽ばたきはチョウたんと同じヒラヒラ)
@@ -556,7 +567,7 @@ function KnownCreatureSprite({
   ) : null;
 
   return (
-    <div className={`relative h-full w-full ${art.flying ? (isCurveFlight(code) || code === DRAGONFLY_SPECIES_CODE ? "animate-kuwagata-glide" : "animate-kuwagata-flutter") : code === SCYTHE_SPECIES_CODE ? "animate-kuwagata-sway" : "animate-kuwagata-body"}`}>
+    <div className={`relative h-full w-full ${art.flying ? (isCurveFlight(code) || isDragonfly(code) ? "animate-kuwagata-glide" : "animate-kuwagata-flutter") : code === SCYTHE_SPECIES_CODE ? "animate-kuwagata-sway" : "animate-kuwagata-body"}`}>
       {art.glow && (
         // お腹の光。体の後ろ(奥)に置き、おしり側からはみ出して見える。ゆっくり明るくなって消えるのを繰り返す。
         <span
@@ -579,7 +590,7 @@ function KnownCreatureSprite({
           src={leg.src}
           alt=""
           className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe)}`}
-          style={{ animationDelay: leg.delay, transformOrigin: leg.origin }}
+          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}) }}
         />
       ))}
       <img src={art.body} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />
@@ -589,7 +600,7 @@ function KnownCreatureSprite({
           src={leg.src}
           alt=""
           className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe)}`}
-          style={{ animationDelay: leg.delay, transformOrigin: leg.origin }}
+          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}) }}
         />
       ))}
       {art.shine && shine && (
@@ -611,7 +622,7 @@ function KnownCreatureSprite({
 
 // 脚・羽根・カマのCSSクラス。カマは構えて振るとき(scythe)だけ動かす。
 function legClassName(kind: CreaturePartArt["kind"], code: string, scythe: boolean): string {
-  if (kind === "wing") return code === DRAGONFLY_SPECIES_CODE || code === HORNET_SPECIES_CODE ? "animate-kuwagata-wing-dragonfly" : "animate-kuwagata-wing";
+  if (kind === "wing") return isDragonfly(code) || code === HORNET_SPECIES_CODE ? "animate-kuwagata-wing-dragonfly" : "animate-kuwagata-wing";
   if (kind === "scythe") return scythe ? "animate-kuwagata-scythe" : "";
   return "animate-kuwagata-leg";
 }
@@ -1272,7 +1283,7 @@ function WanderingCreature({
     moves,
     decorationSpots,
     positionsRef,
-    speciesCode === DRAGONFLY_SPECIES_CODE ? DRAGONFLY_TRAVEL_SCALE : speciesCode === HORNET_SPECIES_CODE ? HORNET_TRAVEL_SCALE : speciesCode === SCYTHE_SPECIES_CODE ? SCYTHE_TRAVEL_SCALE : 1,
+    isDragonfly(speciesCode) ? DRAGONFLY_TRAVEL_SCALE : speciesCode === HORNET_SPECIES_CODE ? HORNET_TRAVEL_SCALE : speciesCode === SCYTHE_SPECIES_CODE ? SCYTHE_TRAVEL_SCALE : 1,
     speciesCode === LEAP_SPECIES_CODE && growthStage === "成虫" ? LEAP_CHANCE : 0
   );
   const pt = surfacePoint(spot.u, spot.v);
@@ -1280,7 +1291,7 @@ function WanderingCreature({
   // 弧の向き(上に膨らむ/下に膨らむ)は目的地ごとに決まる。
   const flyingCurve = isCurveFlight(speciesCode) && growthStage === "成虫";
   const arcUp = Math.round(spot.u * 100 + spot.v * 100) % 2 === 0;
-  const straightFlight = speciesCode === DRAGONFLY_SPECIES_CODE && growthStage === "成虫";
+  const straightFlight = isDragonfly(speciesCode) && growthStage === "成虫";
   const moveTransition = leaping
     ? `left ${travelMs}ms linear, top ${travelMs}ms linear`
     : straightFlight
