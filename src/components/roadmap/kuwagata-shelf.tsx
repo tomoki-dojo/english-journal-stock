@@ -352,8 +352,10 @@ function buildScorpionArt(
     front: {
       body: file("front_body"),
       mandibles: {},
-      legsBehindBody: [...tail("front", origin.frontTale, -1), { src: file("front_leg_R1"), delay: "-0.55s" }],
+      legsBehindBody: [{ src: file("front_leg_R1"), delay: "-0.55s" }],
+      // 正面の尻尾は体の手前
       legsInFrontOfBody: [
+        ...tail("front", origin.frontTale, -1),
         { src: file("front_leg_L3"), delay: "-0.3s" },
         { src: file("front_leg_L2"), delay: "-0.15s" },
         { src: file("front_leg_L1"), delay: "0s" },
@@ -456,7 +458,7 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   // グンたん(グンタイアリ。歩く6脚＋背面のL1。大顎mandible_01をガチガチ=CHOMP_*。背面の大顎は体の奥)
   "KW-0033": buildWalkerWithBackLeftLegArt("KW-0033", { frontOrigin: "42% 60%", backOrigin: "50% 40%", backBehindBody: true }),
   // サソたん(サソリ。ハサミ=claw、尻尾=taleをシュシュッと残像つきで打ち下ろす)
-  "KW-0031": buildScorpionArt("KW-0031", { frontClaw: { L: "72% 74%", R: "17% 68%" }, backClawR: "78% 50%", frontTale: "67% 30%", backTale: "28% 33%" }),
+  "KW-0031": buildScorpionArt("KW-0031", { frontClaw: { L: "72% 74%", R: "17% 68%" }, backClawR: "87% 78%", frontTale: "67% 30%", backTale: "28% 33%" }),
   // アオたん(アオスジアゲハ。飛び方はチョウたんと同じ)
   "KW-0026": buildWingedFlyerArt("KW-0026", { front: "49% 58%", back: "40% 57%" }),
   // ハグロたん(ハグロトンボ。羽根は正面・背面とも体の手前。羽ばたきはチョウたんと同じヒラヒラ)
