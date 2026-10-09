@@ -239,6 +239,17 @@ function buildWalkerWithBackLeftLegArt(code: string): Partial<Record<Facing, Kno
   };
 }
 
+// カメムシ系で背面L1もある種(ニシキたん): 脚は正面・背面ともすべて体の後ろ。背面は back_leg_L1 を最奥に。
+function buildNigikiBugArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
+  const behind = buildWalkerLegsBehindBodyArt(code);
+  const withL1 = buildWalkerWithBackLeftLegArt(code);
+  const l1 = withL1.back?.legsBehindBody ?? [];
+  return {
+    front: behind.front,
+    back: behind.back && { ...behind.back, legsBehindBody: [...l1, ...behind.back.legsBehindBody] },
+  };
+}
+
 // 新種(動きの種類B=歩く8脚)の成虫アート。クモなど。ファイルは
 //   正面: front_body / front_leg_L1〜L4(手前脚4本) / front_leg_R1(奥脚1本)
 //   背面: back_body / back_leg_R1〜R4(脚4本) / back_leg_L1(左側にちらっと見える脚1本。種によっては無い)
@@ -345,7 +356,7 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
     back: { left: 12, top: 82, size: 38 },
   }),
   // ニシキたん(歩く6脚+背面でL1が見える。タマたんと同じ「大きくなってカラフルにキラキラ」)
-  "KW-0029": buildWalkerWithBackLeftLegArt("KW-0029"),
+  "KW-0029": buildNigikiBugArt("KW-0029"),
   // タマたん(タマムシ。歩く6脚・大顎なし。テッペンクワたん同様に大きくなってカラフルにキラキラ)
   "KW-0019": buildNewSpeciesWalkerArt("KW-0019"),
   // ゾウたん(ゾウムシ。鼻=mandible_01を付け根を軸にフンフン大きく振る=SNIFF_*)
