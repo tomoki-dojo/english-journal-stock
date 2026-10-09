@@ -361,7 +361,7 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0016": buildWingedFlyerArt("KW-0016", { front: "47% 45%", back: "56% 46%" }, { frontWingsInFront: true }),
   "KW-0012": buildWingedFlyerArt("KW-0012", { front: "46% 31%", back: "54% 28%" }),
   // スズたん(スズメバチ。ミツたんと同じ曲線飛行を速く。大顎mandible_01をガチガチ=CHOMP_*)
-  "KW-0020": buildWingedFlyerArt("KW-0020", { front: "46% 31%", back: "50% 36%" }, { mandibleOrigin: { front: "32% 75%", back: "87% 68%" } }),
+  "KW-0020": buildWingedFlyerArt("KW-0020", { front: "46% 31%", back: "50% 36%" }, { frontWingsInFront: true, mandibleOrigin: { front: "32% 75%", back: "87% 68%" } }),
   // セミたん(飛ぶ。ヒラヒラ＋ふわふわ上下はチョウたんと同じ)
   "KW-0015": buildWingedFlyerArt("KW-0015", { front: "47% 35%", back: "50% 38%" }),
   // カマたん(カマキリ。擬態・待機=D。体がゆらゆら揺れ、ときどきカマを構えて振る=SCYTHE_*。移動はゆっくり)
@@ -607,7 +607,7 @@ function KnownCreatureSprite({
 
 // 脚・羽根・カマのCSSクラス。カマは構えて振るとき(scythe)だけ動かす。
 function legClassName(kind: CreaturePartArt["kind"], code: string, scythe: boolean): string {
-  if (kind === "wing") return code === DRAGONFLY_SPECIES_CODE ? "animate-kuwagata-wing-dragonfly" : code === HORNET_SPECIES_CODE ? "animate-kuwagata-wing-fast" : "animate-kuwagata-wing";
+  if (kind === "wing") return code === DRAGONFLY_SPECIES_CODE || code === HORNET_SPECIES_CODE ? "animate-kuwagata-wing-dragonfly" : "animate-kuwagata-wing";
   if (kind === "scythe") return scythe ? "animate-kuwagata-scythe" : "";
   return "animate-kuwagata-leg";
 }
