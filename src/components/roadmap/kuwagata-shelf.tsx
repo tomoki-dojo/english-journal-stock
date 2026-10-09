@@ -63,7 +63,7 @@ const KUWAGATA_ART_DIR = "/roadmap/kuwagata";
 
 // kind: "wing"なら脚ではなく羽根として羽ばたかせる(originは羽根の付け根=回転・つぶれの軸、例: "52% 50%")。
 // baseRotateDeg: 羽根の基準姿勢の回転(付け根を軸、時計回りが正)。斜めに描かれた羽根を水平寄りに直すのに使う。
-type CreaturePartArt = { src: string; delay: string; kind?: "wing" | "scythe"; origin?: string; baseRotateDeg?: number; shiftYPct?: number };
+type CreaturePartArt = { src: string; delay: string; kind?: "wing" | "scythe"; origin?: string; baseRotateDeg?: number; shiftYPct?: number; squashAt?: { x: number; y: number } };
 
 type KnownCreatureArt = {
   body: string;
@@ -313,13 +313,15 @@ function buildWingedFlyerArt(
     // 羽根の基準回転(度)。L/Rは羽根ファイル名の左右。
     wingTilt?: { front: { L: number; R: number }; back: { L: number; R: number } };
     // 羽根の位置の微調整(キャンバス高さに対する%、負が上)。
+    // 羽ばたきのつぶれ(横に縮む)の中心を、羽根ごとの付け根へずらす量(付け根−hingeの差、キャンバスに対する%)。
+    wingSquashAt?: { front?: { L?: { x: number; y: number }; R?: { x: number; y: number } }; back?: { L?: { x: number; y: number }; R?: { x: number; y: number } } };
     wingShiftY?: { front?: { L?: number; R?: number }; back?: { L?: number; R?: number } };
   } = {}
 ): Partial<Record<Facing, KnownCreatureArt>> {
   const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
   const wings = (facing: "front" | "back", origin: string): CreaturePartArt[] => [
-    { src: file(`${facing}_wing_L`), delay: "0s", kind: "wing", origin, baseRotateDeg: options.wingTilt?.[facing].L, shiftYPct: options.wingShiftY?.[facing]?.L },
-    { src: file(`${facing}_wing_R`), delay: "0s", kind: "wing", origin, baseRotateDeg: options.wingTilt?.[facing].R, shiftYPct: options.wingShiftY?.[facing]?.R },
+    { src: file(`${facing}_wing_L`), delay: "0s", kind: "wing", origin, baseRotateDeg: options.wingTilt?.[facing].L, shiftYPct: options.wingShiftY?.[facing]?.L, squashAt: options.wingSquashAt?.[facing]?.L },
+    { src: file(`${facing}_wing_R`), delay: "0s", kind: "wing", origin, baseRotateDeg: options.wingTilt?.[facing].R, shiftYPct: options.wingShiftY?.[facing]?.R, squashAt: options.wingSquashAt?.[facing]?.R },
   ];
   return {
     front: {
@@ -369,7 +371,7 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   // チョウたん(アゲハチョウ。飛ぶ＝buildWingedFlyerArt。羽根の付け根を軸にヒラヒラ)
   "KW-0011": buildWingedFlyerArt("KW-0011", { front: "52% 50%", back: "54% 52%" }),
   // オニたん(オニヤンマ。動きはトンたんと同じ。斜めに描かれた羽根は基準姿勢を回して水平寄りにする=wingTilt)
-  "KW-0028": buildWingedFlyerArt("KW-0028", { front: "45% 50%", back: "45% 47%" }, { frontWingsInFront: true, wingTilt: { front: { L: 30, R: -35 }, back: { L: -30, R: 30 } }, wingShiftY: { front: { R: -5 } } }),
+  "KW-0028": buildWingedFlyerArt("KW-0028", { front: "45% 50%", back: "45% 47%" }, { frontWingsInFront: true, wingTilt: { front: { L: 30, R: -35 }, back: { L: -30, R: 30 } }, wingShiftY: { front: { R: -5 } }, wingSquashAt: { front: { R: { x: -12, y: 7 } } } }),
   // アオたん(アオスジアゲハ。飛び方はチョウたんと同じ)
   "KW-0026": buildWingedFlyerArt("KW-0026", { front: "49% 58%", back: "40% 57%" }),
   // ハグロたん(ハグロトンボ。羽根は正面・背面とも体の手前。羽ばたきはチョウたんと同じヒラヒラ)
@@ -592,7 +594,7 @@ function KnownCreatureSprite({
           src={leg.src}
           alt=""
           className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe)}`}
-          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}) }}
+          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
         />
       ))}
       <img src={art.body} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />
@@ -602,7 +604,7 @@ function KnownCreatureSprite({
           src={leg.src}
           alt=""
           className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe)}`}
-          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}) }}
+          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
         />
       ))}
       {art.shine && shine && (

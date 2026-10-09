@@ -857,10 +857,12 @@ body {
 @keyframes kuwagata-wing-flap-dragonfly {
   0%,
   100% {
-    transform: rotate(var(--base-rot, 0deg)) scaleX(1) rotate(0deg);
+    transform: rotate(var(--base-rot, 0deg)) translate(var(--sq-x, 0%), var(--sq-y, 0%)) scaleX(1)
+      translate(calc(var(--sq-x, 0%) * -1), calc(var(--sq-y, 0%) * -1)) rotate(0deg);
   }
   50% {
-    transform: rotate(var(--base-rot, 0deg)) scaleX(0.75) rotate(2deg);
+    transform: rotate(var(--base-rot, 0deg)) translate(var(--sq-x, 0%), var(--sq-y, 0%)) scaleX(0.75)
+      translate(calc(var(--sq-x, 0%) * -1), calc(var(--sq-y, 0%) * -1)) rotate(2deg);
   }
 }
 
