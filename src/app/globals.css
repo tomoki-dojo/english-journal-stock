@@ -933,6 +933,7 @@ body {
   .animate-kuwagata-chomp,
   .animate-kuwagata-shine,
   .animate-kuwagata-claw,
+  .animate-kuwagata-nod,
   .animate-kuwagata-tail,
   .animate-kuwagata-shine-jaw,
   .animate-kuwagata-glow,
@@ -1041,4 +1042,29 @@ body {
 /* 残像: ぼかした半透明のコピーを少し遅らせて重ねる。 */
 .animate-kuwagata-tail-ghost {
   filter: blur(1.5px);
+}
+
+/* ヘラたんの頭ごとのツノ振り。付け根を軸に、素早く上げて下ろすのをガチガチと数回。--nod-dirで向き(正面+1/背面-1)を反転。 */
+@keyframes kuwagata-nod {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  10%,
+  34%,
+  58% {
+    transform: rotate(calc(var(--nod-dir, 1) * 15deg));
+  }
+  22%,
+  46%,
+  70% {
+    transform: rotate(calc(var(--nod-dir, 1) * -3deg));
+  }
+  85% {
+    transform: rotate(calc(var(--nod-dir, 1) * 6deg));
+  }
+}
+
+.animate-kuwagata-nod {
+  animation: kuwagata-nod 2s ease-in-out 0.5s both;
 }

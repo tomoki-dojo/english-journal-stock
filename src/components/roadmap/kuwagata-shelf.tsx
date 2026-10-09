@@ -336,6 +336,15 @@ function buildCrabArt(
   };
 }
 
+// ヘラたん: 標準の歩く6脚(A)＋頭と一体のツノ(mandible_01)。体全体のキラッ(shine)に対応。
+function buildHerculesArt(code: string, origin: { frontOrigin: string; backOrigin: string }): Partial<Record<Facing, KnownCreatureArt>> {
+  const art = buildNewSpeciesWalkerArt(code, origin);
+  return {
+    front: art.front && { ...art.front, shine: true },
+    back: art.back && { ...art.back, shine: true },
+  };
+}
+
 // サソたん(サソリ): 脚は正面 L1〜L3+R1(奥)、背面 R1〜R3+L1(奥)。ハサミ(claw)は正面が左右、背面は右(R)のみ。
 // 尻尾(tale)は体の奥から、ときどきシュシュッと素早く打ち下ろす。残像用にぼかした半透明のコピーを時間差で重ねる。
 function buildScorpionArt(
@@ -459,6 +468,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0033": buildWalkerWithBackLeftLegArt("KW-0033", { frontOrigin: "42% 60%", backOrigin: "50% 40%", backBehindBody: true }),
   // サソたん(サソリ。ハサミ=claw、尻尾=taleをシュシュッと残像つきで打ち下ろす)
   "KW-0031": buildScorpionArt("KW-0031", { frontClaw: { L: "72% 74%", R: "17% 68%" }, backClawR: "87% 78%", frontTale: "67% 30%", backTale: "28% 33%" }),
+  // ヘラたん(ヘラクレスオオカブト。ツノ+頭=mandible_01。付け根を軸に上下にガチガチ=nod、体全体にキラッ)
+  "KW-0032": buildHerculesArt("KW-0032", { frontOrigin: "47% 45%", backOrigin: "62% 60%" }),
   // アオたん(アオスジアゲハ。飛び方はチョウたんと同じ)
   "KW-0026": buildWingedFlyerArt("KW-0026", { front: "49% 58%", back: "40% 57%" }),
   // ハグロたん(ハグロトンボ。羽根は正面・背面とも体の手前。羽ばたきはチョウたんと同じヒラヒラ)
@@ -650,16 +661,21 @@ function KnownCreatureSprite({
   const mandible = art.mandibles[mandibleVariant] ?? art.mandibles[1];
 
   // 大顎(ツノ)。既定は一番手前、mandibleBehindBodyの向きは最背面(本体より奥)に描く。
-  const jawClassName = `absolute inset-0 h-full w-full ${fighting ? "animate-kuwagata-fight-jaw" : ""} ${hornSwing && art.mandibleOrigin ? "animate-kuwagata-horn" : ""} ${chomp && art.mandibleOrigin ? "animate-kuwagata-chomp" : ""} ${sniff && art.mandibleOrigin ? "animate-kuwagata-sniff" : ""}`;
+  const heraShow = code === HERA_SPECIES_CODE && shine;
+  const jawClassName = `absolute inset-0 h-full w-full ${heraShow ? "animate-kuwagata-nod" : ""} ${fighting ? "animate-kuwagata-fight-jaw" : ""} ${hornSwing && art.mandibleOrigin ? "animate-kuwagata-horn" : ""} ${chomp && art.mandibleOrigin ? "animate-kuwagata-chomp" : ""} ${sniff && art.mandibleOrigin ? "animate-kuwagata-sniff" : ""}`;
   // グンたん: ガチガチの間、大顎の形でくり抜いた光がキラッと走る(大顎と一緒に動く)。
-  const jawShine = code === JAW_SHINE_SPECIES_CODE && chomp && mandible;
+  const jawShine = ((code === JAW_SHINE_SPECIES_CODE && chomp) || heraShow) && mandible;
   const mandibleEl = mandible ? (
     jawShine ? (
-      <div className={jawClassName} style={art.mandibleOrigin ? { transformOrigin: art.mandibleOrigin } : undefined}>
+      <div
+        className={jawClassName}
+        style={{ ...(art.mandibleOrigin ? { transformOrigin: art.mandibleOrigin } : {}), ...(heraShow ? ({ "--nod-dir": facing === "front" ? 1 : -1 } as CSSProperties) : {}) }}
+      >
         <img src={mandible} alt="" className="absolute inset-0 h-full w-full" />
         <span
           className="animate-kuwagata-shine-jaw pointer-events-none absolute inset-0"
           style={{
+            ...(heraShow ? { animationDelay: "0.9s", animationDuration: "1.1s" } : {}),
             WebkitMaskImage: `url(${mandible})`,
             maskImage: `url(${mandible})`,
             WebkitMaskSize: "100% 100%",
@@ -717,8 +733,9 @@ function KnownCreatureSprite({
       {art.shine && shine && (
         // 体の形でくり抜いた光の帯が、体の上をスッと走る。
         <span
-          className="animate-kuwagata-shine pointer-events-none absolute inset-0"
+          className={`${code === HERA_SPECIES_CODE ? "animate-kuwagata-shine-jaw" : "animate-kuwagata-shine"} pointer-events-none absolute inset-0`}
           style={{
+            ...(code === HERA_SPECIES_CODE ? { animationDelay: "0.9s", animationDuration: "1.1s" } : {}),
             WebkitMaskImage: `url(${art.body})`,
             maskImage: `url(${art.body})`,
             WebkitMaskSize: "100% 100%",
@@ -1218,6 +1235,8 @@ const CHOMP_SPECIES_CODE_2 = "KW-0027"; // ハンたんも大顎をガチガチ�
 const TAIL_STRIKE_SPECIES_CODE = "KW-0031";
 const TAIL_STRIKE_CYCLE_MS = 5000;
 const TAIL_STRIKE_DURATION_MS = 900;
+// ヘラたん: ときどき大きくなり(テッペンクワたんと同じ=proud)、頭ごとツノを上下にガチガチ振り、体全体をキラッと光が走る。
+const HERA_SPECIES_CODE = "KW-0032";
 const JAW_SHINE_SPECIES_CODE = "KW-0033"; // グンたん: ガチガチ中に大顎がキラッと光る
 const CHOMP_SPECIES_CODE_3 = "KW-0030"; // ルリたん・スズたん・サワたん・グンたんも
 const SHINE_CYCLE_MS = 5000;
@@ -1323,7 +1342,7 @@ function WanderingCreature({
     FIGHT_DURATION_MS
   );
   const proud = useTimedGesture(
-    (speciesCode === PROUD_SPECIES_CODE || RAINBOW_SPARKLE_SPECIES_CODES.includes(speciesCode)) && growthStage === "成虫" && hasArt,
+    (speciesCode === PROUD_SPECIES_CODE || speciesCode === HERA_SPECIES_CODE || RAINBOW_SPARKLE_SPECIES_CODES.includes(speciesCode)) && growthStage === "成虫" && hasArt,
     seedKey + ":proud",
     PROUD_CYCLE_MS,
     PROUD_DURATION_MS
@@ -1452,7 +1471,7 @@ function WanderingCreature({
             chomp={chomping}
             sniff={sniffing}
             scythe={scything}
-            shine={shining}
+            shine={shining || (speciesCode === HERA_SPECIES_CODE && proud)}
             strike={striking}
             code={speciesCode}
             facing={facing}
