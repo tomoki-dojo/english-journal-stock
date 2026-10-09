@@ -306,7 +306,7 @@ function buildEightLegWalkerArt(
 function buildWingedFlyerArt(
   code: string,
   hinge: { front: string; back: string },
-  options: { frontWingsInFront?: boolean } = {}
+  options: { frontWingsInFront?: boolean; mandibleOrigin?: { front: string; back: string } } = {}
 ): Partial<Record<Facing, KnownCreatureArt>> {
   const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
   const wings = (facing: "front" | "back", origin: string): CreaturePartArt[] => [
@@ -316,7 +316,8 @@ function buildWingedFlyerArt(
   return {
     front: {
       body: file("front_body"),
-      mandibles: {},
+      mandibles: options.mandibleOrigin ? { 1: file("front_mandible_01") } : {},
+      mandibleOrigin: options.mandibleOrigin?.front,
       flying: true,
       // 既定は正面の羽根が体の奥。frontWingsInFrontの種は体の手前に描く(トンたん)。
       legsBehindBody: options.frontWingsInFront ? [] : wings("front", hinge.front),
@@ -324,7 +325,8 @@ function buildWingedFlyerArt(
     },
     back: {
       body: file("back_body"),
-      mandibles: {},
+      mandibles: options.mandibleOrigin ? { 1: file("back_mandible_01") } : {},
+      mandibleOrigin: options.mandibleOrigin?.back,
       flying: true,
       legsBehindBody: [],
       legsInFrontOfBody: wings("back", hinge.back),
@@ -334,6 +336,10 @@ function buildWingedFlyerArt(
 
 // ハチたん: 上下に漂わず、曲線を描いてなめらかに飛ぶ(チョウたんはふわふわ上下)。
 const CURVE_FLIGHT_SPECIES_CODE = "KW-0012";
+// スズたん: ミツたんと同じ曲線飛行だが、移動も羽ばたきも速い。大顎ガチガチ。
+const HORNET_SPECIES_CODE = "KW-0020";
+const HORNET_TRAVEL_SCALE = 0.5;
+const isCurveFlight = (code: string) => code === CURVE_FLIGHT_SPECIES_CODE || code === HORNET_SPECIES_CODE;
 // トンたん: 羽ばたきは常に素早く小さめ、移動は直線的でかなり速め。他の飛ぶ種には適用しない。
 const DRAGONFLY_SPECIES_CODE = "KW-0016";
 const DRAGONFLY_TRAVEL_SCALE = 0.1125;
@@ -354,6 +360,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   // トンたん(シオカラトンボ。飛ぶが、羽ばたきは常に素早く小さめ。直線的に速く移動=DRAGONFLY_*)
   "KW-0016": buildWingedFlyerArt("KW-0016", { front: "47% 45%", back: "56% 46%" }, { frontWingsInFront: true }),
   "KW-0012": buildWingedFlyerArt("KW-0012", { front: "46% 31%", back: "54% 28%" }),
+  // スズたん(スズメバチ。ミツたんと同じ曲線飛行を速く。大顎mandible_01をガチガチ=CHOMP_*)
+  "KW-0020": buildWingedFlyerArt("KW-0020", { front: "46% 31%", back: "50% 36%" }, { mandibleOrigin: { front: "32% 75%", back: "87% 68%" } }),
   // セミたん(飛ぶ。ヒラヒラ＋ふわふわ上下はチョウたんと同じ)
   "KW-0015": buildWingedFlyerArt("KW-0015", { front: "47% 35%", back: "50% 38%" }),
   // カマたん(カマキリ。擬態・待機=D。体がゆらゆら揺れ、ときどきカマを構えて振る=SCYTHE_*。移動はゆっくり)
@@ -544,7 +552,7 @@ function KnownCreatureSprite({
   ) : null;
 
   return (
-    <div className={`relative h-full w-full ${art.flying ? (code === CURVE_FLIGHT_SPECIES_CODE || code === DRAGONFLY_SPECIES_CODE ? "animate-kuwagata-glide" : "animate-kuwagata-flutter") : code === SCYTHE_SPECIES_CODE ? "animate-kuwagata-sway" : "animate-kuwagata-body"}`}>
+    <div className={`relative h-full w-full ${art.flying ? (isCurveFlight(code) || code === DRAGONFLY_SPECIES_CODE ? "animate-kuwagata-glide" : "animate-kuwagata-flutter") : code === SCYTHE_SPECIES_CODE ? "animate-kuwagata-sway" : "animate-kuwagata-body"}`}>
       {art.glow && (
         // お腹の光。体の後ろ(奥)に置き、おしり側からはみ出して見える。ゆっくり明るくなって消えるのを繰り返す。
         <span
@@ -599,7 +607,7 @@ function KnownCreatureSprite({
 
 // 脚・羽根・カマのCSSクラス。カマは構えて振るとき(scythe)だけ動かす。
 function legClassName(kind: CreaturePartArt["kind"], code: string, scythe: boolean): string {
-  if (kind === "wing") return code === DRAGONFLY_SPECIES_CODE ? "animate-kuwagata-wing-dragonfly" : "animate-kuwagata-wing";
+  if (kind === "wing") return code === DRAGONFLY_SPECIES_CODE ? "animate-kuwagata-wing-dragonfly" : code === HORNET_SPECIES_CODE ? "animate-kuwagata-wing-fast" : "animate-kuwagata-wing";
   if (kind === "scythe") return scythe ? "animate-kuwagata-scythe" : "";
   return "animate-kuwagata-leg";
 }
@@ -1077,7 +1085,7 @@ const CHOMP_CYCLE_MS = 6000;
 const CHOMP_DURATION_MS = 1500;
 const CHOMP_SPECIES_CODE = "KW-0017";
 const CHOMP_SPECIES_CODE_2 = "KW-0027"; // ハンたんも大顎をガチガチさせる
-const CHOMP_SPECIES_CODE_3 = "KW-0030"; // ルリたんも
+const CHOMP_SPECIES_CODE_3 = "KW-0030"; // ルリたん・スズたんも
 const SHINE_CYCLE_MS = 5000;
 const SHINE_DURATION_MS = 1300;
 const SHINE_SPECIES_CODE = "KW-0030";
@@ -1223,7 +1231,7 @@ function WanderingCreature({
     HORN_DURATION_MS
   );
   const chomping = useTimedGesture(
-    (speciesCode === CHOMP_SPECIES_CODE || speciesCode === CHOMP_SPECIES_CODE_2 || speciesCode === CHOMP_SPECIES_CODE_3) && growthStage === "成虫" && hasArt,
+    (speciesCode === CHOMP_SPECIES_CODE || speciesCode === CHOMP_SPECIES_CODE_2 || speciesCode === CHOMP_SPECIES_CODE_3 || speciesCode === HORNET_SPECIES_CODE) && growthStage === "成虫" && hasArt,
     seedKey + ":chomp",
     CHOMP_CYCLE_MS,
     CHOMP_DURATION_MS
@@ -1260,13 +1268,13 @@ function WanderingCreature({
     moves,
     decorationSpots,
     positionsRef,
-    speciesCode === DRAGONFLY_SPECIES_CODE ? DRAGONFLY_TRAVEL_SCALE : speciesCode === SCYTHE_SPECIES_CODE ? SCYTHE_TRAVEL_SCALE : 1,
+    speciesCode === DRAGONFLY_SPECIES_CODE ? DRAGONFLY_TRAVEL_SCALE : speciesCode === HORNET_SPECIES_CODE ? HORNET_TRAVEL_SCALE : speciesCode === SCYTHE_SPECIES_CODE ? SCYTHE_TRAVEL_SCALE : 1,
     speciesCode === LEAP_SPECIES_CODE && growthStage === "成虫" ? LEAP_CHANCE : 0
   );
   const pt = surfacePoint(spot.u, spot.v);
   // 飛ぶ種は縦横で別のイージングにして、目的地まで直線ではなく滑らかな曲線(弧)を描いて飛ぶ。
   // 弧の向き(上に膨らむ/下に膨らむ)は目的地ごとに決まる。
-  const flyingCurve = speciesCode === CURVE_FLIGHT_SPECIES_CODE && growthStage === "成虫";
+  const flyingCurve = isCurveFlight(speciesCode) && growthStage === "成虫";
   const arcUp = Math.round(spot.u * 100 + spot.v * 100) % 2 === 0;
   const straightFlight = speciesCode === DRAGONFLY_SPECIES_CODE && growthStage === "成虫";
   const moveTransition = leaping

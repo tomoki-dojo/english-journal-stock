@@ -918,6 +918,10 @@ body {
   animation: kuwagata-wing-flap 0.7s ease-in-out infinite;
 }
 
+.animate-kuwagata-wing-fast {
+  animation: kuwagata-wing-flap 0.3s ease-in-out infinite;
+}
+
 .animate-kuwagata-flutter {
   animation: kuwagata-flutter 2.2s ease-in-out infinite;
 }
