@@ -1072,7 +1072,8 @@ function useWander(
   chargeHopChance = 0,
   poseChance = 0,
   chargeMs = CHARGE_MS,
-  hopMs = HOP_MOVE_MS
+  hopMs = HOP_MOVE_MS,
+  hopMaxDistPct = 30
 ): { spot: { u: number; v: number }; facing: Facing; heading: Heading; travelMs: number; leaping: boolean; charging: boolean; posing: boolean } {
   const [state, setState] = useState<{
     spot: { u: number; v: number };
@@ -1162,7 +1163,15 @@ function useWander(
         // 近めの着地点を選ぶ(少し弧を描いて跳ねる距離)。その場で溜めてから跳ねる。
         const prevPt0 = surfacePoint(prev.spot.u, prev.spot.v);
         let hopSpot = pickNextSpot();
-        for (let i = 0; i < 8 && surfaceDistancePct(prevPt0, surfacePoint(hopSpot.u, hopSpot.v)) > 30; i++) hopSpot = pickNextSpot();
+        let hopDist = surfaceDistancePct(prevPt0, surfacePoint(hopSpot.u, hopSpot.v));
+        for (let i = 0; i < 14 && hopDist > hopMaxDistPct; i++) {
+          const cand = pickNextSpot();
+          const d = surfaceDistancePct(prevPt0, surfacePoint(cand.u, cand.v));
+          if (d < hopDist) {
+            hopSpot = cand;
+            hopDist = d;
+          }
+        }
         const charging = { ...prev, leaping: false, charging: true };
         stateRef.current = charging;
         setState(charging);
@@ -1230,7 +1239,7 @@ function useWander(
       if (chargeTimer) clearTimeout(chargeTimer);
       if (poseTimer) clearTimeout(poseTimer);
     };
-  }, [seedKey, widthPct, moves, decorationSpots, positionsRef, travelScale, leapChance, chargeHopChance, poseChance, chargeMs, hopMs]);
+  }, [seedKey, widthPct, moves, decorationSpots, positionsRef, travelScale, leapChance, chargeHopChance, poseChance, chargeMs, hopMs, hopMaxDistPct]);
 
   return state;
 }
@@ -1377,7 +1386,9 @@ const HORN_SPECIES_CODE = "KW-0014";
 const POUNCE_SPECIES_CODE = "KW-0036";
 const POUNCE_CHANCE = 0.4;
 const STALK_MS = 900;
-const POUNCE_MS = 380;
+const POUNCE_MS = 220;
+// 飛びつく距離の上限(棚の表面上の距離%)。短く。
+const POUNCE_MAX_DIST_PCT = 14;
 const MIMIC_SPECIES_CODE = "KW-0035";
 const MIMIC_POSE_CHANCE = 0.4;
 // 出す0.8秒＋キープ5秒＋戻す0.8秒
@@ -1596,7 +1607,8 @@ function WanderingCreature({
     growthStage === "成虫" ? (speciesCode === CHARGE_HOP_SPECIES_CODE ? CHARGE_HOP_CHANCE : speciesCode === POUNCE_SPECIES_CODE ? POUNCE_CHANCE : 0) : 0,
     speciesCode === MIMIC_SPECIES_CODE && growthStage === "成虫" ? MIMIC_POSE_CHANCE : 0,
     speciesCode === POUNCE_SPECIES_CODE ? STALK_MS : CHARGE_MS,
-    speciesCode === POUNCE_SPECIES_CODE ? POUNCE_MS : HOP_MOVE_MS
+    speciesCode === POUNCE_SPECIES_CODE ? POUNCE_MS : HOP_MOVE_MS,
+    speciesCode === POUNCE_SPECIES_CODE ? POUNCE_MAX_DIST_PCT : 30
   );
   const pt = surfacePoint(spot.u, spot.v);
   // 飛ぶ種は縦横で別のイージングにして、目的地まで直線ではなく滑らかな曲線(弧)を描いて飛ぶ。
