@@ -68,8 +68,9 @@ const KUWAGATA_ART_DIR = "/roadmap/kuwagata";
 type MimicPose = { seg: 1 | 2; origin: string; a1: number; a2?: number; ex?: number; ey?: number };
 type CreaturePartArt = {
   pose?: MimicPose;
-  // 獲物を捕まえる(grab)動き用: 肩(origin)を軸に回す角度(度)・拡大・下方向への移動(キャンバス高さ%)
-  grabTo?: { deg: number; scale: number; dy: number }; src: string; delay: string; kind?: "wing" | "scythe" | "claw" | "tail" | "tail-ghost" | "grab"; origin?: string; baseRotateDeg?: number; shiftYPct?: number; squashAt?: { x: number; y: number }; clawDir?: 1 | -1; ghostOpacity?: number };
+  // 獲物を捕まえる(grab)動き用の3関節チェーン。各パーツは肩(origin)を軸に、
+  // rotate(a1) translate(p1) rotate(a2) translate(p2) rotate(a3) translate(p3) の順で変形する(角度は度、pはキャンバスに対する%)。
+  grab?: { a: [number, number, number]; p1: [number, number]; p2: [number, number]; p3: [number, number] }; src: string; delay: string; kind?: "wing" | "scythe" | "claw" | "tail" | "tail-ghost" | "grab"; origin?: string; baseRotateDeg?: number; shiftYPct?: number; squashAt?: { x: number; y: number }; clawDir?: 1 | -1; ghostOpacity?: number };
 
 type KnownCreatureArt = {
   body: string;
@@ -216,30 +217,34 @@ function buildMantisArt(
   };
 }
 
-// ハナたん(ハナカマキリ): カマは左右それぞれ3パーツ(L1〜L3/R1〜R3)で、普段は折りたたんだまま。
-// grab: 肩を軸に3パーツを外へ扇状に開きながら少し大きく・下へ伸ばす(獲物を捕まえる)。パーツごとに回転角・拡大を変えて伸びる感じを出す。
-function buildOrchidMantisArt(
-  code: string,
-  shoulder: { front: { L: string; R: string }; back: { L: string; R: string } }
-): Partial<Record<Facing, KnownCreatureArt>> {
+// ハナたん(ハナカマキリ): カマは左右それぞれ3パーツ(L1〜L3/R1〜R3)で、普段は折りたたんだまま(Z字)。
+// 関節: L1の上端=体との接続(肩)、L1の下端=L2の下端との接続(ひじ1)、L2の上端=L3の上端との接続(ひじ2)。
+// grab: L1は肩を軸に、L2はひじ1を軸に(L1の回転に連動)、L3はひじ2を軸に(L1・L2の回転に連動)回して腕を開く。
+// 肩・関節の位置と回転角は、パーツ画像の主軸の端点から計算した値(折りたたみ時の向きと、開いたときの目標の向きの差)。
+const ORCHID_GRAB = {
+  front_L: { origin: "49.11% 45.3%", a: [-7.4, 42.2, -66.8], p1: [1.43, 31.34], p2: [9.05, -33.26], p3: [-10.48, 1.92] },
+  front_R: { origin: "35.31% 46.86%", a: [7.7, -38.8, 63.4], p1: [-1.24, 31.17], p2: [-11.36, -33.12], p3: [12.6, 1.95] },
+  back_L: { origin: "52.18% 41.78%", a: [7.9, -39.0, 63.4], p1: [-1.12, 31.34], p2: [-11.39, -33.14], p3: [12.51, 1.79] },
+  back_R: { origin: "62.48% 43.13%", a: [-7.5, 42.2, -66.7], p1: [1.37, 31.43], p2: [9.08, -33.26], p3: [-10.45, 1.83] },
+} as const;
+
+function buildOrchidMantisArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
   const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
-  // 外側へ開く向き: 見た目で右側=反時計回り(−)、左側=時計回り(+)。正面はL=右側、背面はL=左側。
-  const outward = { front: { L: -1, R: 1 }, back: { L: 1, R: -1 } } as const;
-  const steps = [
-    { deg: 8, scale: 1.0, dy: 3 },
-    { deg: 22, scale: 1.12, dy: 6 },
-    { deg: 40, scale: 1.22, dy: 9 },
-  ];
   const scythes = (facing: "front" | "back"): CreaturePartArt[] =>
-    (["L", "R"] as const).flatMap((side) =>
-      steps.map((st, i) => ({
-        src: file(`${facing}_scythe_${side}${i + 1}`),
-        delay: "0s",
-        kind: "grab" as const,
-        origin: shoulder[facing][side],
-        grabTo: { deg: st.deg * outward[facing][side], scale: st.scale, dy: st.dy },
-      }))
-    );
+    (["L", "R"] as const).flatMap((side) => {
+      const j = ORCHID_GRAB[`${facing}_${side}` as const];
+      const zero: [number, number] = [0, 0];
+      const neg = (p: readonly number[]): [number, number] => [-p[0], -p[1]];
+      const p1 = j.p1 as unknown as [number, number];
+      const p2 = j.p2 as unknown as [number, number];
+      const p3 = j.p3 as unknown as [number, number];
+      const a = j.a as unknown as [number, number, number];
+      return [
+        { src: file(`${facing}_scythe_${side}1`), delay: "0s", kind: "grab" as const, origin: j.origin, grab: { a: [a[0], 0, 0] as [number, number, number], p1: zero, p2: zero, p3: zero } },
+        { src: file(`${facing}_scythe_${side}2`), delay: "0s", kind: "grab" as const, origin: j.origin, grab: { a: [a[0], a[1], 0] as [number, number, number], p1, p2: neg(p1), p3: zero } },
+        { src: file(`${facing}_scythe_${side}3`), delay: "0s", kind: "grab" as const, origin: j.origin, grab: { a, p1, p2, p3 } },
+      ];
+    });
   return {
     front: {
       body: file("front_body"),
@@ -570,7 +575,7 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   // タランたん(タランチュラ。8本脚＝クモたんと同じ構成。ときどきピタッと止まってパッと飛びつく=POUNCE_*)
   "KW-0036": buildEightLegWalkerArt("KW-0036", { backLeftLeg: true }),
   // ハナたん(ハナカマキリ。ゆらゆら揺れて動き回らず、ときどきカマを0.12秒で伸ばして獲物を捕まえる=GRAB_*)
-  "KW-0038": buildOrchidMantisArt("KW-0038", { front: { L: "52% 46%", R: "31% 46%" }, back: { L: "46% 41%", R: "64% 42%" } }),
+  "KW-0038": buildOrchidMantisArt("KW-0038"),
   // アオたん(アオスジアゲハ。飛び方はチョウたんと同じ)
   "KW-0026": buildWingedFlyerArt("KW-0026", { front: "49% 58%", back: "40% 57%" }),
   // ハグロたん(ハグロトンボ。羽根は正面・背面とも体の手前。羽ばたきはチョウたんと同じヒラヒラ)
@@ -830,7 +835,19 @@ function KnownCreatureSprite({
           src={leg.src}
           alt=""
           className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp, strike, mimic ? leg.pose?.seg : undefined, mimic || still, grab)}`}
-          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.pose ? ({ transformOrigin: mimic ? leg.pose.origin : undefined, "--a1": `${leg.pose.a1}deg`, "--a2": `${leg.pose.a2 ?? 0}deg`, "--ex": `${leg.pose.ex ?? 0}%`, "--ey": `${leg.pose.ey ?? 0}%` } as CSSProperties) : {}), ...(leg.grabTo ? ({ "--sa": `${leg.grabTo.deg}deg`, "--ss": leg.grabTo.scale, "--sy": `${leg.grabTo.dy}%` } as CSSProperties) : {}), ...(leg.ghostOpacity ? ({ opacity: leg.ghostOpacity } as CSSProperties) : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
+          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.pose ? ({ transformOrigin: mimic ? leg.pose.origin : undefined, "--a1": `${leg.pose.a1}deg`, "--a2": `${leg.pose.a2 ?? 0}deg`, "--ex": `${leg.pose.ex ?? 0}%`, "--ey": `${leg.pose.ey ?? 0}%` } as CSSProperties) : {}), ...(leg.grab
+          ? ({
+              "--ga1": `${leg.grab.a[0]}deg`,
+              "--ga2": `${leg.grab.a[1]}deg`,
+              "--ga3": `${leg.grab.a[2]}deg`,
+              "--gp1x": `${leg.grab.p1[0]}%`,
+              "--gp1y": `${leg.grab.p1[1]}%`,
+              "--gp2x": `${leg.grab.p2[0]}%`,
+              "--gp2y": `${leg.grab.p2[1]}%`,
+              "--gp3x": `${leg.grab.p3[0]}%`,
+              "--gp3y": `${leg.grab.p3[1]}%`,
+            } as CSSProperties)
+          : {}), ...(leg.ghostOpacity ? ({ opacity: leg.ghostOpacity } as CSSProperties) : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
         />
       ))}
       <img src={art.body} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />
@@ -840,7 +857,19 @@ function KnownCreatureSprite({
           src={leg.src}
           alt=""
           className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp, strike, mimic ? leg.pose?.seg : undefined, mimic || still, grab)}`}
-          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.pose ? ({ transformOrigin: mimic ? leg.pose.origin : undefined, "--a1": `${leg.pose.a1}deg`, "--a2": `${leg.pose.a2 ?? 0}deg`, "--ex": `${leg.pose.ex ?? 0}%`, "--ey": `${leg.pose.ey ?? 0}%` } as CSSProperties) : {}), ...(leg.grabTo ? ({ "--sa": `${leg.grabTo.deg}deg`, "--ss": leg.grabTo.scale, "--sy": `${leg.grabTo.dy}%` } as CSSProperties) : {}), ...(leg.ghostOpacity ? ({ opacity: leg.ghostOpacity } as CSSProperties) : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
+          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.pose ? ({ transformOrigin: mimic ? leg.pose.origin : undefined, "--a1": `${leg.pose.a1}deg`, "--a2": `${leg.pose.a2 ?? 0}deg`, "--ex": `${leg.pose.ex ?? 0}%`, "--ey": `${leg.pose.ey ?? 0}%` } as CSSProperties) : {}), ...(leg.grab
+          ? ({
+              "--ga1": `${leg.grab.a[0]}deg`,
+              "--ga2": `${leg.grab.a[1]}deg`,
+              "--ga3": `${leg.grab.a[2]}deg`,
+              "--gp1x": `${leg.grab.p1[0]}%`,
+              "--gp1y": `${leg.grab.p1[1]}%`,
+              "--gp2x": `${leg.grab.p2[0]}%`,
+              "--gp2y": `${leg.grab.p2[1]}%`,
+              "--gp3x": `${leg.grab.p3[0]}%`,
+              "--gp3y": `${leg.grab.p3[1]}%`,
+            } as CSSProperties)
+          : {}), ...(leg.ghostOpacity ? ({ opacity: leg.ghostOpacity } as CSSProperties) : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
         />
       ))}
       {art.shine && shine && (

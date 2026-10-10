@@ -1192,21 +1192,25 @@ body {
   }
 }
 
-/* ハナたんの捕獲。折りたたんだカマが0.12秒で一気に外へ伸び(扇状に開き・大きく・下へ)、少し止まって、ゆっくり畳み直す(全体1.3秒)。 */
+/* ハナたんの捕獲。折りたたんだ(Z字の)カマが0.12秒で一気に開き、少し止まって、ゆっくり畳み直す(全体1.3秒)。
+   3関節チェーン: rotate(a1) translate(p1) rotate(a2) translate(p2) rotate(a3) translate(p3)。0%側は角度0(畳み)で、translateの合計は0になるので変形なし。 */
 @keyframes kuwagata-grab {
   0% {
-    transform: rotate(0deg) translateY(0) scale(1);
+    transform: rotate(0deg) translate(var(--gp1x, 0%), var(--gp1y, 0%)) rotate(0deg) translate(var(--gp2x, 0%), var(--gp2y, 0%)) rotate(0deg)
+      translate(var(--gp3x, 0%), var(--gp3y, 0%));
     animation-timing-function: cubic-bezier(0.1, 0.9, 0.2, 1);
   }
-  9.2% {
-    transform: rotate(var(--sa, 0deg)) translateY(var(--sy, 0%)) scale(var(--ss, 1));
+  9.2%,
+  45% {
+    transform: rotate(var(--ga1, 0deg)) translate(var(--gp1x, 0%), var(--gp1y, 0%)) rotate(var(--ga2, 0deg)) translate(var(--gp2x, 0%), var(--gp2y, 0%))
+      rotate(var(--ga3, 0deg)) translate(var(--gp3x, 0%), var(--gp3y, 0%));
   }
   45% {
-    transform: rotate(var(--sa, 0deg)) translateY(var(--sy, 0%)) scale(var(--ss, 1));
     animation-timing-function: ease-in-out;
   }
   100% {
-    transform: rotate(0deg) translateY(0) scale(1);
+    transform: rotate(0deg) translate(var(--gp1x, 0%), var(--gp1y, 0%)) rotate(0deg) translate(var(--gp2x, 0%), var(--gp2y, 0%)) rotate(0deg)
+      translate(var(--gp3x, 0%), var(--gp3y, 0%));
   }
 }
 
