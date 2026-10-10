@@ -753,7 +753,7 @@ function KnownCreatureSprite({
   ) : null;
 
   return (
-    <div className={`relative h-full w-full ${art.flying ? (isCurveFlight(code) || isDragonfly(code) ? "animate-kuwagata-glide" : "animate-kuwagata-flutter") : code === SCYTHE_SPECIES_CODE ? "animate-kuwagata-sway" : "animate-kuwagata-body"}`}>
+    <div className={`relative h-full w-full ${art.flying ? (isCurveFlight(code) || isDragonfly(code) ? "animate-kuwagata-glide" : "animate-kuwagata-flutter") : code === SCYTHE_SPECIES_CODE ? "animate-kuwagata-sway" : mimic ? "" : "animate-kuwagata-body"}`}>
       {art.glow && (
         // お腹の光。体の後ろ(奥)に置き、おしり側からはみ出して見える。ゆっくり明るくなって消えるのを繰り返す。
         <span
@@ -775,7 +775,7 @@ function KnownCreatureSprite({
           key={`behind${i}`}
           src={leg.src}
           alt=""
-          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp, strike, mimic ? leg.pose?.seg : undefined)}`}
+          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp, strike, mimic ? leg.pose?.seg : undefined, mimic)}`}
           style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.pose ? ({ transformOrigin: mimic ? leg.pose.origin : undefined, "--a1": `${leg.pose.a1}deg`, "--a2": `${leg.pose.a2 ?? 0}deg`, "--ex": `${leg.pose.ex ?? 0}%`, "--ey": `${leg.pose.ey ?? 0}%` } as CSSProperties) : {}), ...(leg.ghostOpacity ? ({ opacity: leg.ghostOpacity } as CSSProperties) : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
         />
       ))}
@@ -785,7 +785,7 @@ function KnownCreatureSprite({
           key={`front${i}`}
           src={leg.src}
           alt=""
-          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp, strike, mimic ? leg.pose?.seg : undefined)}`}
+          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp, strike, mimic ? leg.pose?.seg : undefined, mimic)}`}
           style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.pose ? ({ transformOrigin: mimic ? leg.pose.origin : undefined, "--a1": `${leg.pose.a1}deg`, "--a2": `${leg.pose.a2 ?? 0}deg`, "--ex": `${leg.pose.ex ?? 0}%`, "--ey": `${leg.pose.ey ?? 0}%` } as CSSProperties) : {}), ...(leg.ghostOpacity ? ({ opacity: leg.ghostOpacity } as CSSProperties) : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
         />
       ))}
@@ -827,8 +827,10 @@ function KnownCreatureSprite({
 }
 
 // 脚・羽根・カマのCSSクラス。カマは構えて振るとき(scythe)だけ動かす。
-function legClassName(kind: CreaturePartArt["kind"], code: string, scythe: boolean, chomp = false, strike = false, mimicSeg?: 1 | 2): string {
+function legClassName(kind: CreaturePartArt["kind"], code: string, scythe: boolean, chomp = false, strike = false, mimicSeg?: 1 | 2, still = false): string {
   if (mimicSeg) return mimicSeg === 1 ? "animate-kuwagata-mimic-1" : "animate-kuwagata-mimic-2";
+  // 擬態ポーズ中は、ほかの脚も歩かず完全に止まる。
+  if (still) return "";
   if (kind === "tail") return strike ? "animate-kuwagata-tail" : "";
   if (kind === "tail-ghost") return "animate-kuwagata-tail animate-kuwagata-tail-ghost";
   if (kind === "claw") return chomp ? "animate-kuwagata-claw" : "";
@@ -1363,7 +1365,7 @@ const HORN_DURATION_MS = 1600;
 const HORN_SPECIES_CODE = "KW-0014";
 // ナナたん(ナナフシ): 移動のたびに一定確率で、その場で止まって前脚(L1・R1)を頭方向へまっすぐ突き出す擬態ポーズ。
 const MIMIC_SPECIES_CODE = "KW-0035";
-const MIMIC_POSE_CHANCE = 0.3;
+const MIMIC_POSE_CHANCE = 0.4;
 const POSE_MS = 3200;
 // ツノたん(ツノゼミ): ツノを軽く振る(HORN_*と同じ)＋ときどき、溜め(体が赤くキラッ、キラッ)→跳ねる。
 const HORN_SPECIES_CODE_2 = "KW-0034";
