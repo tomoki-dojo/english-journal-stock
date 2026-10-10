@@ -934,6 +934,7 @@ body {
   .animate-kuwagata-shine,
   .animate-kuwagata-claw,
   .animate-kuwagata-charge,
+  .animate-kuwagata-stalk,
   .animate-kuwagata-mimic-1,
   .animate-kuwagata-mimic-2,
   .animate-kuwagata-red-flash,
@@ -1155,4 +1156,37 @@ body {
 
 .animate-kuwagata-mimic-2 {
   animation: kuwagata-mimic-2 6.6s ease-in-out both;
+}
+
+/* タランたんの待ち伏せ(ピタッ)。素早く少し沈んで、そのまま止まる。 */
+@keyframes kuwagata-stalk {
+  from {
+    transform: scale(1, 1);
+  }
+  to {
+    transform: scale(1.05, 0.92);
+  }
+}
+
+.animate-kuwagata-stalk {
+  transform-origin: 50% 100%;
+  animation: kuwagata-stalk 0.12s ease-out both;
+}
+
+/* タランたんの飛びつき(パッ)。低く短い弧で素早く跳び、着地で少し潰れる(横移動は別に行う)。 */
+@keyframes kuwagata-pounce {
+  0% {
+    transform: translateY(0) scale(1.05, 0.92);
+    animation-timing-function: ease-out;
+  }
+  45% {
+    transform: translateY(-30%) scale(0.97, 1.06);
+    animation-timing-function: ease-in;
+  }
+  88% {
+    transform: translateY(0) scale(1.06, 0.92);
+  }
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
 }
