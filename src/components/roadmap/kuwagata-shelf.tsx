@@ -2051,6 +2051,16 @@ function EnlargedTankVisual({
           />
         );
       })}
+      {/* 水の底の秘境: 手前ガラス・水面の透明レイヤーを生き物・置物の上に重ねて「水の中」に見せる */}
+      {isAquarium && (
+        <img
+          src="/roadmap/tank/tank_fg_aquarium.png"
+          alt=""
+          aria-hidden
+          draggable={false}
+          className="pointer-events-none absolute inset-0 h-full w-full select-none"
+        />
+      )}
     </div>
   );
 }
