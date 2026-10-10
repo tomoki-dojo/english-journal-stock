@@ -67,7 +67,9 @@ const KUWAGATA_ART_DIR = "/roadmap/kuwagata";
 // origin=肩、ex/ey=肩→ひじの差(キャンバスに対する%)。
 type MimicPose = { seg: 1 | 2; origin: string; a1: number; a2?: number; ex?: number; ey?: number };
 type CreaturePartArt = {
-  pose?: MimicPose; src: string; delay: string; kind?: "wing" | "scythe" | "claw" | "tail" | "tail-ghost"; origin?: string; baseRotateDeg?: number; shiftYPct?: number; squashAt?: { x: number; y: number }; clawDir?: 1 | -1; ghostOpacity?: number };
+  pose?: MimicPose;
+  // 獲物を捕まえる(grab)動き用: 肩(origin)を軸に回す角度(度)・拡大・下方向への移動(キャンバス高さ%)
+  grabTo?: { deg: number; scale: number; dy: number }; src: string; delay: string; kind?: "wing" | "scythe" | "claw" | "tail" | "tail-ghost" | "grab"; origin?: string; baseRotateDeg?: number; shiftYPct?: number; squashAt?: { x: number; y: number }; clawDir?: 1 | -1; ghostOpacity?: number };
 
 type KnownCreatureArt = {
   body: string;
@@ -210,6 +212,46 @@ function buildMantisArt(
         { src: file("back_leg_R2"), delay: "-0.3s" },
         { src: file("back_leg_R1"), delay: "0s" },
       ],
+    },
+  };
+}
+
+// ハナたん(ハナカマキリ): カマは左右それぞれ3パーツ(L1〜L3/R1〜R3)で、普段は折りたたんだまま。
+// grab: 肩を軸に3パーツを外へ扇状に開きながら少し大きく・下へ伸ばす(獲物を捕まえる)。パーツごとに回転角・拡大を変えて伸びる感じを出す。
+function buildOrchidMantisArt(
+  code: string,
+  shoulder: { front: { L: string; R: string }; back: { L: string; R: string } }
+): Partial<Record<Facing, KnownCreatureArt>> {
+  const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
+  // 外側へ開く向き: 見た目で右側=反時計回り(−)、左側=時計回り(+)。正面はL=右側、背面はL=左側。
+  const outward = { front: { L: -1, R: 1 }, back: { L: 1, R: -1 } } as const;
+  const steps = [
+    { deg: 8, scale: 1.0, dy: 3 },
+    { deg: 22, scale: 1.12, dy: 6 },
+    { deg: 40, scale: 1.22, dy: 9 },
+  ];
+  const scythes = (facing: "front" | "back"): CreaturePartArt[] =>
+    (["L", "R"] as const).flatMap((side) =>
+      steps.map((st, i) => ({
+        src: file(`${facing}_scythe_${side}${i + 1}`),
+        delay: "0s",
+        kind: "grab" as const,
+        origin: shoulder[facing][side],
+        grabTo: { deg: st.deg * outward[facing][side], scale: st.scale, dy: st.dy },
+      }))
+    );
+  return {
+    front: {
+      body: file("front_body"),
+      mandibles: {},
+      legsBehindBody: [{ src: file("front_leg_R1"), delay: "-0.3s" }],
+      legsInFrontOfBody: [{ src: file("front_leg_L2"), delay: "-0.15s" }, { src: file("front_leg_L1"), delay: "0s" }, ...scythes("front")],
+    },
+    back: {
+      body: file("back_body"),
+      mandibles: {},
+      legsBehindBody: [{ src: file("back_leg_L1"), delay: "-0.3s" }],
+      legsInFrontOfBody: [{ src: file("back_leg_R2"), delay: "-0.15s" }, { src: file("back_leg_R1"), delay: "0s" }, ...scythes("back")],
     },
   };
 }
@@ -527,6 +569,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0037": buildHerculesArt("KW-0037", { frontOrigin: "50% 70%", backOrigin: "68% 62%", backBehindBody: true }),
   // タランたん(タランチュラ。8本脚＝クモたんと同じ構成。ときどきピタッと止まってパッと飛びつく=POUNCE_*)
   "KW-0036": buildEightLegWalkerArt("KW-0036", { backLeftLeg: true }),
+  // ハナたん(ハナカマキリ。ゆらゆら揺れて動き回らず、ときどきカマを0.12秒で伸ばして獲物を捕まえる=GRAB_*)
+  "KW-0038": buildOrchidMantisArt("KW-0038", { front: { L: "52% 46%", R: "31% 46%" }, back: { L: "46% 41%", R: "64% 42%" } }),
   // アオたん(アオスジアゲハ。飛び方はチョウたんと同じ)
   "KW-0026": buildWingedFlyerArt("KW-0026", { front: "49% 58%", back: "40% 57%" }),
   // ハグロたん(ハグロトンボ。羽根は正面・背面とも体の手前。羽ばたきはチョウたんと同じヒラヒラ)
@@ -653,6 +697,7 @@ function KnownCreatureSprite({
   scythe = false,
   shine = false,
   strike = false,
+  grab = false,
 }: {
   code: string;
   facing: Facing;
@@ -674,6 +719,8 @@ function KnownCreatureSprite({
   scythe?: boolean;
   shine?: boolean;
   strike?: boolean;
+  // 獲物を捕まえる(ハナたん)。grab種別のカマが一気に伸びる。
+  grab?: boolean;
 }) {
   const stageArt = KNOWN_STAGE_ART[code];
 
@@ -760,7 +807,7 @@ function KnownCreatureSprite({
   ) : null;
 
   return (
-    <div className={`relative h-full w-full ${art.flying ? (isCurveFlight(code) || isDragonfly(code) ? "animate-kuwagata-glide" : "animate-kuwagata-flutter") : code === SCYTHE_SPECIES_CODE ? "animate-kuwagata-sway" : mimic || still ? "" : "animate-kuwagata-body"}`}>
+    <div className={`relative h-full w-full ${art.flying ? (isCurveFlight(code) || isDragonfly(code) ? "animate-kuwagata-glide" : "animate-kuwagata-flutter") : isMantis(code) ? "animate-kuwagata-sway" : mimic || still ? "" : "animate-kuwagata-body"}`}>
       {art.glow && (
         // お腹の光。体の後ろ(奥)に置き、おしり側からはみ出して見える。ゆっくり明るくなって消えるのを繰り返す。
         <span
@@ -782,8 +829,8 @@ function KnownCreatureSprite({
           key={`behind${i}`}
           src={leg.src}
           alt=""
-          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp, strike, mimic ? leg.pose?.seg : undefined, mimic || still)}`}
-          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.pose ? ({ transformOrigin: mimic ? leg.pose.origin : undefined, "--a1": `${leg.pose.a1}deg`, "--a2": `${leg.pose.a2 ?? 0}deg`, "--ex": `${leg.pose.ex ?? 0}%`, "--ey": `${leg.pose.ey ?? 0}%` } as CSSProperties) : {}), ...(leg.ghostOpacity ? ({ opacity: leg.ghostOpacity } as CSSProperties) : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
+          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp, strike, mimic ? leg.pose?.seg : undefined, mimic || still, grab)}`}
+          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.pose ? ({ transformOrigin: mimic ? leg.pose.origin : undefined, "--a1": `${leg.pose.a1}deg`, "--a2": `${leg.pose.a2 ?? 0}deg`, "--ex": `${leg.pose.ex ?? 0}%`, "--ey": `${leg.pose.ey ?? 0}%` } as CSSProperties) : {}), ...(leg.grabTo ? ({ "--sa": `${leg.grabTo.deg}deg`, "--ss": leg.grabTo.scale, "--sy": `${leg.grabTo.dy}%` } as CSSProperties) : {}), ...(leg.ghostOpacity ? ({ opacity: leg.ghostOpacity } as CSSProperties) : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
         />
       ))}
       <img src={art.body} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />
@@ -792,8 +839,8 @@ function KnownCreatureSprite({
           key={`front${i}`}
           src={leg.src}
           alt=""
-          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp, strike, mimic ? leg.pose?.seg : undefined, mimic || still)}`}
-          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.pose ? ({ transformOrigin: mimic ? leg.pose.origin : undefined, "--a1": `${leg.pose.a1}deg`, "--a2": `${leg.pose.a2 ?? 0}deg`, "--ex": `${leg.pose.ex ?? 0}%`, "--ey": `${leg.pose.ey ?? 0}%` } as CSSProperties) : {}), ...(leg.ghostOpacity ? ({ opacity: leg.ghostOpacity } as CSSProperties) : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
+          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp, strike, mimic ? leg.pose?.seg : undefined, mimic || still, grab)}`}
+          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.pose ? ({ transformOrigin: mimic ? leg.pose.origin : undefined, "--a1": `${leg.pose.a1}deg`, "--a2": `${leg.pose.a2 ?? 0}deg`, "--ex": `${leg.pose.ex ?? 0}%`, "--ey": `${leg.pose.ey ?? 0}%` } as CSSProperties) : {}), ...(leg.grabTo ? ({ "--sa": `${leg.grabTo.deg}deg`, "--ss": leg.grabTo.scale, "--sy": `${leg.grabTo.dy}%` } as CSSProperties) : {}), ...(leg.ghostOpacity ? ({ opacity: leg.ghostOpacity } as CSSProperties) : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
         />
       ))}
       {art.shine && shine && (
@@ -834,7 +881,8 @@ function KnownCreatureSprite({
 }
 
 // 脚・羽根・カマのCSSクラス。カマは構えて振るとき(scythe)だけ動かす。
-function legClassName(kind: CreaturePartArt["kind"], code: string, scythe: boolean, chomp = false, strike = false, mimicSeg?: 1 | 2, still = false): string {
+function legClassName(kind: CreaturePartArt["kind"], code: string, scythe: boolean, chomp = false, strike = false, mimicSeg?: 1 | 2, still = false, grab = false): string {
+  if (kind === "grab") return grab ? "animate-kuwagata-grab" : "";
   if (mimicSeg) return mimicSeg === 1 ? "animate-kuwagata-mimic-1" : "animate-kuwagata-mimic-2";
   // 擬態ポーズ中は、ほかの脚も歩かず完全に止まる。
   if (still) return "";
@@ -1424,6 +1472,11 @@ const SCYTHE_CYCLE_MS = 7000;
 const SCYTHE_DURATION_MS = 1800;
 const SCYTHE_SPECIES_CODE = "KW-0018";
 const SCYTHE_TRAVEL_SCALE = 2.2;
+// ハナたん(ハナカマキリ): カマキリたんと同じく、あまり動き回らずゆらゆら揺れる。ときどき折りたたんだカマを0.12秒で伸ばして獲物を捕まえる。
+const ORCHID_SPECIES_CODE = "KW-0038";
+const GRAB_CYCLE_MS = 6500;
+const GRAB_DURATION_MS = 1300;
+const isMantis = (code: string) => code === SCYTHE_SPECIES_CODE || code === ORCHID_SPECIES_CODE;
 const STINK_CYCLE_MS = 9000;
 const STINK_DURATION_MS = 2000;
 const STINK_SPECIES_CODE = "KW-0022";
@@ -1576,6 +1629,12 @@ function WanderingCreature({
     TAIL_STRIKE_CYCLE_MS,
     TAIL_STRIKE_DURATION_MS
   );
+  const grabbing = useTimedGesture(
+    speciesCode === ORCHID_SPECIES_CODE && growthStage === "成虫" && hasArt,
+    seedKey + ":grab",
+    GRAB_CYCLE_MS,
+    GRAB_DURATION_MS
+  );
   const sniffing = useTimedGesture(
     speciesCode === SNIFF_SPECIES_CODE && growthStage === "成虫" && hasArt,
     seedKey + ":sniff",
@@ -1602,7 +1661,7 @@ function WanderingCreature({
     moves,
     decorationSpots,
     positionsRef,
-    isDragonfly(speciesCode) ? DRAGONFLY_TRAVEL_SCALE : speciesCode === HORNET_SPECIES_CODE ? HORNET_TRAVEL_SCALE : speciesCode === SCYTHE_SPECIES_CODE ? SCYTHE_TRAVEL_SCALE : 1,
+    isDragonfly(speciesCode) ? DRAGONFLY_TRAVEL_SCALE : speciesCode === HORNET_SPECIES_CODE ? HORNET_TRAVEL_SCALE : isMantis(speciesCode) ? SCYTHE_TRAVEL_SCALE : 1,
     speciesCode === LEAP_SPECIES_CODE && growthStage === "成虫" ? LEAP_CHANCE : 0,
     growthStage === "成虫" ? (speciesCode === CHARGE_HOP_SPECIES_CODE ? CHARGE_HOP_CHANCE : speciesCode === POUNCE_SPECIES_CODE ? POUNCE_CHANCE : 0) : 0,
     speciesCode === MIMIC_SPECIES_CODE && growthStage === "成虫" ? MIMIC_POSE_CHANCE : 0,
@@ -1651,6 +1710,7 @@ function WanderingCreature({
             charge={charging}
             mimic={posing}
             still={charging && speciesCode === POUNCE_SPECIES_CODE}
+            grab={grabbing}
             chomp={chomping}
             sniff={sniffing}
             scythe={scything}

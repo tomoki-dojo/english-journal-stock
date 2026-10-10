@@ -934,6 +934,7 @@ body {
   .animate-kuwagata-shine,
   .animate-kuwagata-claw,
   .animate-kuwagata-charge,
+  .animate-kuwagata-grab,
   .animate-kuwagata-stalk,
   .animate-kuwagata-mimic-1,
   .animate-kuwagata-mimic-2,
@@ -1189,4 +1190,26 @@ body {
   100% {
     transform: translateY(0) scale(1, 1);
   }
+}
+
+/* ハナたんの捕獲。折りたたんだカマが0.12秒で一気に外へ伸び(扇状に開き・大きく・下へ)、少し止まって、ゆっくり畳み直す(全体1.3秒)。 */
+@keyframes kuwagata-grab {
+  0% {
+    transform: rotate(0deg) translateY(0) scale(1);
+    animation-timing-function: cubic-bezier(0.1, 0.9, 0.2, 1);
+  }
+  9.2% {
+    transform: rotate(var(--sa, 0deg)) translateY(var(--sy, 0%)) scale(var(--ss, 1));
+  }
+  45% {
+    transform: rotate(var(--sa, 0deg)) translateY(var(--sy, 0%)) scale(var(--ss, 1));
+    animation-timing-function: ease-in-out;
+  }
+  100% {
+    transform: rotate(0deg) translateY(0) scale(1);
+  }
+}
+
+.animate-kuwagata-grab {
+  animation: kuwagata-grab 1.3s linear both;
 }
