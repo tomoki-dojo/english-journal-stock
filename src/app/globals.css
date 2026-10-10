@@ -944,6 +944,7 @@ body {
   .animate-kuwagata-shine-jaw,
   .animate-kuwagata-glow,
   .animate-kuwagata-sway,
+  .animate-kuwagata-dangle,
   .animate-kuwagata-sway-wobble,
   .animate-kuwagata-scythe,
   .animate-kuwagata-stink,
@@ -1242,4 +1243,20 @@ body {
 .animate-kuwagata-sway-wobble {
   transform-origin: 50% 80%;
   animation: kuwagata-sway-wobble 5.5s ease-in-out infinite;
+}
+
+/* ミノたんのぶらぶら。糸の付け根(上端)を軸に、振り子のように左右へゆっくり大きく揺れる。 */
+@keyframes kuwagata-dangle {
+  0%,
+  100% {
+    transform: rotate(-8deg);
+  }
+  50% {
+    transform: rotate(8deg);
+  }
+}
+
+.animate-kuwagata-dangle {
+  transform-origin: 50% 1.5%;
+  animation: kuwagata-dangle 4s ease-in-out infinite;
 }

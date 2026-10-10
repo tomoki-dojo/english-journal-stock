@@ -577,6 +577,15 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0036": buildEightLegWalkerArt("KW-0036", { backLeftLeg: true }),
   // ハナたん(ハナカマキリ。ゆらゆら揺れて動き回らず、ときどきカマを0.12秒で伸ばして獲物を捕まえる=GRAB_*)
   "KW-0038": buildOrchidMantisArt("KW-0038"),
+  // ミノたん(ミノムシ。1枚絵。糸でぶら下がって動かず、糸の付け根を軸にぶらぶら揺れる=DANGLE)
+  "KW-0013": {
+    front: {
+      body: `${KUWAGATA_ART_DIR}/kuwagata_KW-0013_front_body.svg`,
+      mandibles: {},
+      legsBehindBody: [],
+      legsInFrontOfBody: [],
+    },
+  },
   // アオたん(アオスジアゲハ。飛び方はチョウたんと同じ)
   "KW-0026": buildWingedFlyerArt("KW-0026", { front: "49% 58%", back: "40% 57%" }),
   // ハグロたん(ハグロトンボ。羽根は正面・背面とも体の手前。羽ばたきはチョウたんと同じヒラヒラ)
@@ -672,6 +681,8 @@ function isStationaryStage(code: string, growthStage: KuwagataGrowthStage): bool
   const stageArt = KNOWN_STAGE_ART[code];
   if (growthStage === "卵") return Boolean(stageArt?.egg);
   if (growthStage === "蛹") return Boolean(stageArt?.pupa);
+  // ミノたん(成虫)は糸でぶら下がって動かない(ぶらぶら揺れるだけ)。
+  if (code === DANGLE_SPECIES_CODE) return true;
   return false;
 }
 
@@ -813,7 +824,7 @@ function KnownCreatureSprite({
   ) : null;
 
   return (
-    <div className={`relative h-full w-full ${art.flying ? (isCurveFlight(code) || isDragonfly(code) ? "animate-kuwagata-glide" : "animate-kuwagata-flutter") : code === ORCHID_SPECIES_CODE ? "animate-kuwagata-sway-wobble" : isMantis(code) ? "animate-kuwagata-sway" : mimic || still ? "" : "animate-kuwagata-body"}`}>
+    <div className={`relative h-full w-full ${art.flying ? (isCurveFlight(code) || isDragonfly(code) ? "animate-kuwagata-glide" : "animate-kuwagata-flutter") : code === DANGLE_SPECIES_CODE ? "animate-kuwagata-dangle" : code === ORCHID_SPECIES_CODE ? "animate-kuwagata-sway-wobble" : isMantis(code) ? "animate-kuwagata-sway" : mimic || still ? "" : "animate-kuwagata-body"}`}>
       {art.glow && (
         // お腹の光。体の後ろ(奥)に置き、おしり側からはみ出して見える。ゆっくり明るくなって消えるのを繰り返す。
         <span
@@ -1503,6 +1514,8 @@ const SCYTHE_CYCLE_MS = 7000;
 const SCYTHE_DURATION_MS = 1800;
 const SCYTHE_SPECIES_CODE = "KW-0018";
 const SCYTHE_TRAVEL_SCALE = 2.2;
+// ミノたん(ミノムシ): 動きの種類E。糸でぶら下がり、動き回らず、糸の付け根を軸に振り子のようにぶらぶら揺れる。
+const DANGLE_SPECIES_CODE = "KW-0013";
 // ハナたん(ハナカマキリ): カマキリたんと同じく、あまり動き回らずゆらゆら揺れる。ときどき折りたたんだカマを0.12秒で伸ばして獲物を捕まえる。
 const ORCHID_SPECIES_CODE = "KW-0038";
 const GRAB_CYCLE_MS = 16000;
