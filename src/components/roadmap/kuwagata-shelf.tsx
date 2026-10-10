@@ -1386,7 +1386,7 @@ const HORN_SPECIES_CODE = "KW-0014";
 const POUNCE_SPECIES_CODE = "KW-0036";
 const POUNCE_CHANCE = 0.4;
 const STALK_MS = 900;
-const POUNCE_MS = 220;
+const POUNCE_MS = 120;
 // 飛びつく距離の上限(棚の表面上の距離%)。短く。
 const POUNCE_MAX_DIST_PCT = 14;
 const MIMIC_SPECIES_CODE = "KW-0035";
