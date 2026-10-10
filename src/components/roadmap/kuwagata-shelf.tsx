@@ -63,7 +63,11 @@ const KUWAGATA_ART_DIR = "/roadmap/kuwagata";
 
 // kind: "wing"なら脚ではなく羽根として羽ばたかせる(originは羽根の付け根=回転・つぶれの軸、例: "52% 50%")。
 // baseRotateDeg: 羽根の基準姿勢の回転(付け根を軸、時計回りが正)。斜めに描かれた羽根を水平寄りに直すのに使う。
-type CreaturePartArt = { src: string; delay: string; kind?: "wing" | "scythe" | "claw" | "tail" | "tail-ghost"; origin?: string; baseRotateDeg?: number; shiftYPct?: number; squashAt?: { x: number; y: number }; clawDir?: 1 | -1; ghostOpacity?: number };
+// 擬態ポーズ(ナナたん)用: 2関節の脚。seg1=体側の脚(肩を軸にa1度回す)、seg2=その先の脚(肩のa1回転に加え、ひじを軸にa2度回す)。
+// origin=肩、ex/ey=肩→ひじの差(キャンバスに対する%)。
+type MimicPose = { seg: 1 | 2; origin: string; a1: number; a2?: number; ex?: number; ey?: number };
+type CreaturePartArt = {
+  pose?: MimicPose; src: string; delay: string; kind?: "wing" | "scythe" | "claw" | "tail" | "tail-ghost"; origin?: string; baseRotateDeg?: number; shiftYPct?: number; squashAt?: { x: number; y: number }; clawDir?: 1 | -1; ghostOpacity?: number };
 
 type KnownCreatureArt = {
   body: string;
@@ -336,6 +340,51 @@ function buildCrabArt(
   };
 }
 
+// ナナたん(ナナフシ): 正面・背面とも6脚がすべて見える(体の後ろに描く)。L1・R1は2関節(-1=体側/-2=先)。
+// 擬態ポーズ: L1・R1をまっすぐ頭方向へ突き出す(pose。肩・ひじ・回転角は絵から測った値)。
+function buildStickInsectArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
+  const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
+  type Joint = { s: [number, number]; e: [number, number]; a1: number; a2: number };
+  const two = (facing: "front" | "back", side: "L" | "R", j: Joint, delay: string): CreaturePartArt[] => {
+    const origin = `${((j.s[0] / 448) * 100).toFixed(1)}% ${((j.s[1] / 448) * 100).toFixed(1)}%`;
+    const ex = ((j.e[0] - j.s[0]) / 448) * 100;
+    const ey = ((j.e[1] - j.s[1]) / 448) * 100;
+    return [
+      { src: file(`${facing}_leg_${side}1-1`), delay, pose: { seg: 1, origin, a1: j.a1 } },
+      { src: file(`${facing}_leg_${side}1-2`), delay, pose: { seg: 2, origin, a1: j.a1, a2: j.a2, ex, ey } },
+    ];
+  };
+  const one = (facing: "front" | "back", n: string, delay: string): CreaturePartArt => ({ src: file(`${facing}_leg_${n}`), delay });
+  return {
+    front: {
+      body: file("front_body"),
+      mandibles: {},
+      legsBehindBody: [
+        one("front", "R3", "-0.3s"),
+        one("front", "L3", "0s"),
+        one("front", "R2", "0s"),
+        one("front", "L2", "-0.3s"),
+        ...two("front", "R", { s: [122, 302], e: [23, 306], a1: -43, a2: 87 }, "-0.3s"),
+        ...two("front", "L", { s: [145, 335], e: [176, 406], a1: 71, a2: -87 }, "0s"),
+      ],
+      legsInFrontOfBody: [],
+    },
+    back: {
+      body: file("back_body"),
+      mandibles: {},
+      legsBehindBody: [
+        one("back", "R3", "-0.3s"),
+        one("back", "L3", "0s"),
+        one("back", "R2", "0s"),
+        one("back", "L2", "-0.3s"),
+        ...two("back", "R", { s: [302, 140], e: [395, 165], a1: -62, a2: 80 }, "-0.3s"),
+        ...two("back", "L", { s: [275, 125], e: [215, 71], a1: 97, a2: -91 }, "0s"),
+      ],
+      legsInFrontOfBody: [],
+    },
+  };
+}
+
 // ヘラたん: 標準の歩く6脚(A)＋頭と一体のツノ(mandible_01)。体全体のキラッ(shine)に対応。
 function buildHerculesArt(code: string, origin: { frontOrigin: string; backOrigin: string; backBehindBody?: boolean }): Partial<Record<Facing, KnownCreatureArt>> {
   const art = buildNewSpeciesWalkerArt(code, origin);
@@ -472,6 +521,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0032": buildHerculesArt("KW-0032", { frontOrigin: "50% 80%", backOrigin: "62% 60%", backBehindBody: true }),
   // ツノたん(ツノゼミ。ツノ=mandible_01を付け根を軸に軽く振る=HORN_*。ときどき赤くキラッと溜めてから跳ねる=CHARGE_HOP_*)
   "KW-0034": buildNewSpeciesWalkerArt("KW-0034", { frontOrigin: "42% 52%", backOrigin: "54% 32%" }),
+  // ナナたん(ナナフシ。6脚すべて見える。L1・R1は2パーツで、ときどき頭方向へまっすぐ突き出す擬態ポーズ)
+  "KW-0035": buildStickInsectArt("KW-0035"),
   // アオたん(アオスジアゲハ。飛び方はチョウたんと同じ)
   "KW-0026": buildWingedFlyerArt("KW-0026", { front: "49% 58%", back: "40% 57%" }),
   // ハグロたん(ハグロトンボ。羽根は正面・背面とも体の手前。羽ばたきはチョウたんと同じヒラヒラ)
@@ -591,6 +642,7 @@ function KnownCreatureSprite({
   fighting = false,
   hornSwing = false,
   charge = false,
+  mimic = false,
   chomp = false,
   sniff = false,
   scythe = false,
@@ -608,6 +660,8 @@ function KnownCreatureSprite({
   hornSwing?: boolean;
   // 溜め中に体が赤くキラッ、キラッと光る(ツノたん)。
   charge?: boolean;
+  // 擬態ポーズ中(ナナたん)。pose付きの脚が、前脚を頭方向へまっすぐ突き出す。
+  mimic?: boolean;
   chomp?: boolean;
   sniff?: boolean;
   scythe?: boolean;
@@ -721,8 +775,8 @@ function KnownCreatureSprite({
           key={`behind${i}`}
           src={leg.src}
           alt=""
-          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp, strike)}`}
-          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.ghostOpacity ? ({ opacity: leg.ghostOpacity } as CSSProperties) : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
+          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp, strike, mimic ? leg.pose?.seg : undefined)}`}
+          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.pose ? ({ transformOrigin: mimic ? leg.pose.origin : undefined, "--a1": `${leg.pose.a1}deg`, "--a2": `${leg.pose.a2 ?? 0}deg`, "--ex": `${leg.pose.ex ?? 0}%`, "--ey": `${leg.pose.ey ?? 0}%` } as CSSProperties) : {}), ...(leg.ghostOpacity ? ({ opacity: leg.ghostOpacity } as CSSProperties) : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
         />
       ))}
       <img src={art.body} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />
@@ -731,8 +785,8 @@ function KnownCreatureSprite({
           key={`front${i}`}
           src={leg.src}
           alt=""
-          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp, strike)}`}
-          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.ghostOpacity ? ({ opacity: leg.ghostOpacity } as CSSProperties) : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
+          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp, strike, mimic ? leg.pose?.seg : undefined)}`}
+          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.pose ? ({ transformOrigin: mimic ? leg.pose.origin : undefined, "--a1": `${leg.pose.a1}deg`, "--a2": `${leg.pose.a2 ?? 0}deg`, "--ex": `${leg.pose.ex ?? 0}%`, "--ey": `${leg.pose.ey ?? 0}%` } as CSSProperties) : {}), ...(leg.ghostOpacity ? ({ opacity: leg.ghostOpacity } as CSSProperties) : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
         />
       ))}
       {art.shine && shine && (
@@ -773,7 +827,8 @@ function KnownCreatureSprite({
 }
 
 // 脚・羽根・カマのCSSクラス。カマは構えて振るとき(scythe)だけ動かす。
-function legClassName(kind: CreaturePartArt["kind"], code: string, scythe: boolean, chomp = false, strike = false): string {
+function legClassName(kind: CreaturePartArt["kind"], code: string, scythe: boolean, chomp = false, strike = false, mimicSeg?: 1 | 2): string {
+  if (mimicSeg) return mimicSeg === 1 ? "animate-kuwagata-mimic-1" : "animate-kuwagata-mimic-2";
   if (kind === "tail") return strike ? "animate-kuwagata-tail" : "";
   if (kind === "tail-ghost") return "animate-kuwagata-tail animate-kuwagata-tail-ghost";
   if (kind === "claw") return chomp ? "animate-kuwagata-claw" : "";
@@ -1005,8 +1060,9 @@ function useWander(
   positionsRef: { current: Record<string, { u: number; v: number; widthPct: number }> },
   travelScale = 1,
   leapChance = 0,
-  chargeHopChance = 0
-): { spot: { u: number; v: number }; facing: Facing; heading: Heading; travelMs: number; leaping: boolean; charging: boolean } {
+  chargeHopChance = 0,
+  poseChance = 0
+): { spot: { u: number; v: number }; facing: Facing; heading: Heading; travelMs: number; leaping: boolean; charging: boolean; posing: boolean } {
   const [state, setState] = useState<{
     spot: { u: number; v: number };
     facing: Facing;
@@ -1016,6 +1072,8 @@ function useWander(
     leaping: boolean;
     // その場で力を溜めている最中(ツノたん。溜め終わると跳ねて移動する)
     charging: boolean;
+    // 擬態ポーズ中(その場で止まって前脚を突き出す。ナナたん)
+    posing: boolean;
   }>({
     spot: initial,
     facing: "front",
@@ -1023,6 +1081,7 @@ function useWander(
     travelMs: MIN_TRAVEL_MS,
     leaping: false,
     charging: false,
+    posing: false,
   });
   const stateRef = useRef(state);
 
@@ -1041,6 +1100,7 @@ function useWander(
     let timer: ReturnType<typeof setTimeout>;
     let leapTimer: ReturnType<typeof setTimeout> | undefined;
     let chargeTimer: ReturnType<typeof setTimeout> | undefined;
+    let poseTimer: ReturnType<typeof setTimeout> | undefined;
     const ownRadius = spriteRadius(widthPct);
     const decorationPts = decorationSpots.map((spot) => ({ pt: surfacePoint(spot.u, spot.v), radius: spriteRadius(spot.widthPct) }));
 
@@ -1073,6 +1133,20 @@ function useWander(
       if (cancelled) return;
       // 更新関数の外で次の状態を決める(移動時間を、次のタイマーの待ち時間にも使うため)
       const prev = stateRef.current;
+      if (poseChance > 0 && Math.random() < poseChance) {
+        // その場で止まって擬態ポーズ(POSE_MS)。終わったら普通に歩き出す。
+        const posing = { ...prev, leaping: false, charging: false, posing: true };
+        stateRef.current = posing;
+        setState(posing);
+        poseTimer = setTimeout(() => {
+          if (cancelled) return;
+          const done = { ...stateRef.current, posing: false };
+          stateRef.current = done;
+          setState(done);
+        }, POSE_MS);
+        timer = setTimeout(goToNextSpot, POSE_MS + 1500 + Math.random() * 3000);
+        return;
+      }
       if (chargeHopChance > 0 && Math.random() < chargeHopChance) {
         // 近めの着地点を選ぶ(少し弧を描いて跳ねる距離)。その場で溜めてから跳ねる。
         const prevPt0 = surfacePoint(prev.spot.u, prev.spot.v);
@@ -1089,7 +1163,7 @@ function useWander(
           const hy = toPt.top - prevPt0.top;
           const hopFacing: Facing = Math.abs(hy) >= Math.abs(hx) ? (hy >= 0 ? "front" : "back") : hx <= 0 ? "front" : "back";
           const hopHeading: Heading = hx === 0 ? prev.heading : hx < 0 ? "left" : "right";
-          const hop = { spot: hopSpot, facing: hopFacing, heading: hopHeading, travelMs: HOP_MOVE_MS, leaping: true, charging: false };
+          const hop = { spot: hopSpot, facing: hopFacing, heading: hopHeading, travelMs: HOP_MOVE_MS, leaping: true, charging: false, posing: false };
           stateRef.current = hop;
           setState(hop);
           leapTimer = setTimeout(() => {
@@ -1119,7 +1193,7 @@ function useWander(
             MAX_TRAVEL_MS * travelScale,
             Math.max(MIN_TRAVEL_MS * travelScale, surfaceDistancePct(prevPt, nextPt) * TRAVEL_MS_PER_PCT * travelScale)
           );
-      const next = { spot: nextSpot, facing, heading, travelMs, leaping, charging: false };
+      const next = { spot: nextSpot, facing, heading, travelMs, leaping, charging: false, posing: false };
       stateRef.current = next;
       setState(next);
       if (leaping) {
@@ -1143,8 +1217,9 @@ function useWander(
       clearTimeout(timer);
       if (leapTimer) clearTimeout(leapTimer);
       if (chargeTimer) clearTimeout(chargeTimer);
+      if (poseTimer) clearTimeout(poseTimer);
     };
-  }, [seedKey, widthPct, moves, decorationSpots, positionsRef, travelScale, leapChance, chargeHopChance]);
+  }, [seedKey, widthPct, moves, decorationSpots, positionsRef, travelScale, leapChance, chargeHopChance, poseChance]);
 
   return state;
 }
@@ -1286,6 +1361,10 @@ const HOP_SPECIES_CODE = "KW-0009";
 const HORN_CYCLE_MS = 7000;
 const HORN_DURATION_MS = 1600;
 const HORN_SPECIES_CODE = "KW-0014";
+// ナナたん(ナナフシ): 移動のたびに一定確率で、その場で止まって前脚(L1・R1)を頭方向へまっすぐ突き出す擬態ポーズ。
+const MIMIC_SPECIES_CODE = "KW-0035";
+const MIMIC_POSE_CHANCE = 0.3;
+const POSE_MS = 3200;
 // ツノたん(ツノゼミ): ツノを軽く振る(HORN_*と同じ)＋ときどき、溜め(体が赤くキラッ、キラッ)→跳ねる。
 const HORN_SPECIES_CODE_2 = "KW-0034";
 const CHARGE_HOP_SPECIES_CODE = "KW-0034";
@@ -1486,7 +1565,7 @@ function WanderingCreature({
     STINK_DURATION_MS
   );
   const moves = !isStationaryStage(speciesCode, growthStage);
-  const { spot, facing, heading, travelMs, leaping, charging } = useWander(
+  const { spot, facing, heading, travelMs, leaping, charging, posing } = useWander(
     seedKey,
     initialSpot,
     widthPct,
@@ -1495,7 +1574,8 @@ function WanderingCreature({
     positionsRef,
     isDragonfly(speciesCode) ? DRAGONFLY_TRAVEL_SCALE : speciesCode === HORNET_SPECIES_CODE ? HORNET_TRAVEL_SCALE : speciesCode === SCYTHE_SPECIES_CODE ? SCYTHE_TRAVEL_SCALE : 1,
     speciesCode === LEAP_SPECIES_CODE && growthStage === "成虫" ? LEAP_CHANCE : 0,
-    speciesCode === CHARGE_HOP_SPECIES_CODE && growthStage === "成虫" ? CHARGE_HOP_CHANCE : 0
+    speciesCode === CHARGE_HOP_SPECIES_CODE && growthStage === "成虫" ? CHARGE_HOP_CHANCE : 0,
+    speciesCode === MIMIC_SPECIES_CODE && growthStage === "成虫" ? MIMIC_POSE_CHANCE : 0
   );
   const pt = surfacePoint(spot.u, spot.v);
   // 飛ぶ種は縦横で別のイージングにして、目的地まで直線ではなく滑らかな曲線(弧)を描いて飛ぶ。
@@ -1536,6 +1616,7 @@ function WanderingCreature({
             fighting={fighting}
             hornSwing={hornSwing}
             charge={charging}
+            mimic={posing}
             chomp={chomping}
             sniff={sniffing}
             scythe={scything}
