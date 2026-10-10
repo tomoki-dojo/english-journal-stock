@@ -813,7 +813,7 @@ function KnownCreatureSprite({
   ) : null;
 
   return (
-    <div className={`relative h-full w-full ${art.flying ? (isCurveFlight(code) || isDragonfly(code) ? "animate-kuwagata-glide" : "animate-kuwagata-flutter") : isMantis(code) ? "animate-kuwagata-sway" : mimic || still ? "" : "animate-kuwagata-body"}`}>
+    <div className={`relative h-full w-full ${art.flying ? (isCurveFlight(code) || isDragonfly(code) ? "animate-kuwagata-glide" : "animate-kuwagata-flutter") : code === ORCHID_SPECIES_CODE ? "animate-kuwagata-sway-wobble" : isMantis(code) ? "animate-kuwagata-sway" : mimic || still ? "" : "animate-kuwagata-body"}`}>
       {art.glow && (
         // お腹の光。体の後ろ(奥)に置き、おしり側からはみ出して見える。ゆっくり明るくなって消えるのを繰り返す。
         <span
@@ -1151,7 +1151,8 @@ function useWander(
   poseChance = 0,
   chargeMs = CHARGE_MS,
   hopMs = HOP_MOVE_MS,
-  hopMaxDistPct = 30
+  hopMaxDistPct = 30,
+  restScale = 1
 ): { spot: { u: number; v: number }; facing: Facing; heading: Heading; travelMs: number; leaping: boolean; charging: boolean; posing: boolean } {
   const [state, setState] = useState<{
     spot: { u: number; v: number };
@@ -1303,7 +1304,7 @@ function useWander(
         }, travelMs);
       }
       // 次の移動は、到着してからひと休みした後(休み2〜7秒)
-      timer = setTimeout(goToNextSpot, travelMs + 2000 + Math.random() * 5000);
+      timer = setTimeout(goToNextSpot, travelMs + (2000 + Math.random() * 5000) * restScale);
     };
 
     // 個体ごとに最初の移動タイミングをズラす(同期して動くのを防ぐ)
@@ -1317,7 +1318,7 @@ function useWander(
       if (chargeTimer) clearTimeout(chargeTimer);
       if (poseTimer) clearTimeout(poseTimer);
     };
-  }, [seedKey, widthPct, moves, decorationSpots, positionsRef, travelScale, leapChance, chargeHopChance, poseChance, chargeMs, hopMs, hopMaxDistPct]);
+  }, [seedKey, widthPct, moves, decorationSpots, positionsRef, travelScale, leapChance, chargeHopChance, poseChance, chargeMs, hopMs, hopMaxDistPct, restScale]);
 
   return state;
 }
@@ -1504,7 +1505,9 @@ const SCYTHE_SPECIES_CODE = "KW-0018";
 const SCYTHE_TRAVEL_SCALE = 2.2;
 // ハナたん(ハナカマキリ): カマキリたんと同じく、あまり動き回らずゆらゆら揺れる。ときどき折りたたんだカマを0.12秒で伸ばして獲物を捕まえる。
 const ORCHID_SPECIES_CODE = "KW-0038";
-const GRAB_CYCLE_MS = 6500;
+const GRAB_CYCLE_MS = 16000;
+// ハナたんは動く頻度を減らす(休みの長さを何倍にするか)。
+const ORCHID_REST_SCALE = 3.5;
 const GRAB_DURATION_MS = 1300;
 const isMantis = (code: string) => code === SCYTHE_SPECIES_CODE || code === ORCHID_SPECIES_CODE;
 const STINK_CYCLE_MS = 9000;
@@ -1697,7 +1700,8 @@ function WanderingCreature({
     speciesCode === MIMIC_SPECIES_CODE && growthStage === "成虫" ? MIMIC_POSE_CHANCE : 0,
     speciesCode === POUNCE_SPECIES_CODE ? STALK_MS : CHARGE_MS,
     speciesCode === POUNCE_SPECIES_CODE ? POUNCE_MS : HOP_MOVE_MS,
-    speciesCode === POUNCE_SPECIES_CODE ? POUNCE_MAX_DIST_PCT : 30
+    speciesCode === POUNCE_SPECIES_CODE ? POUNCE_MAX_DIST_PCT : 30,
+    speciesCode === ORCHID_SPECIES_CODE ? ORCHID_REST_SCALE : 1
   );
   const pt = surfacePoint(spot.u, spot.v);
   // 飛ぶ種は縦横で別のイージングにして、目的地まで直線ではなく滑らかな曲線(弧)を描いて飛ぶ。

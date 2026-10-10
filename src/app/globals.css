@@ -944,6 +944,7 @@ body {
   .animate-kuwagata-shine-jaw,
   .animate-kuwagata-glow,
   .animate-kuwagata-sway,
+  .animate-kuwagata-sway-wobble,
   .animate-kuwagata-scythe,
   .animate-kuwagata-stink,
   .animate-kuwagata-stink-puff,
@@ -1216,4 +1217,29 @@ body {
 
 .animate-kuwagata-grab {
   animation: kuwagata-grab 1.3s linear both;
+}
+
+/* ハナたんのふらふら。体の下の方を軸に、上の方(頭側)が左右に不規則にふらふら揺れる。 */
+@keyframes kuwagata-sway-wobble {
+  0%,
+  100% {
+    transform: rotate(-3deg);
+  }
+  20% {
+    transform: rotate(6deg);
+  }
+  42% {
+    transform: rotate(-5deg);
+  }
+  63% {
+    transform: rotate(4deg);
+  }
+  82% {
+    transform: rotate(-6deg);
+  }
+}
+
+.animate-kuwagata-sway-wobble {
+  transform-origin: 50% 80%;
+  animation: kuwagata-sway-wobble 5.5s ease-in-out infinite;
 }
