@@ -255,8 +255,9 @@ function buildOrchidMantisArt(code: string): Partial<Record<Facing, KnownCreatur
     back: {
       body: file("back_body"),
       mandibles: {},
-      legsBehindBody: [{ src: file("back_leg_L1"), delay: "-0.3s" }],
-      legsInFrontOfBody: [{ src: file("back_leg_R2"), delay: "-0.15s" }, { src: file("back_leg_R1"), delay: "0s" }, ...scythes("back")],
+      // 背面のカマは体の後ろ(背面側)に描く
+      legsBehindBody: [...scythes("back"), { src: file("back_leg_L1"), delay: "-0.3s" }],
+      legsInFrontOfBody: [{ src: file("back_leg_R2"), delay: "-0.15s" }, { src: file("back_leg_R1"), delay: "0s" }],
     },
   };
 }
