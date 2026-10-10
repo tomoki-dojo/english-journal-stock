@@ -190,7 +190,10 @@ function buildSwimmerArt(code: string): Partial<Record<Facing, KnownCreatureArt>
       body: file("front_body"),
       mandibles: {},
       swimming: true,
-      legsBehindBody: [{ src: file("front_leg_R2"), delay: "0s", kind: "paddle", origin: "37.4% 60.3%", paddleDir: 1 }],
+      legsBehindBody: [
+        { src: file("front_leg_R1"), delay: "-0.1s" },
+        { src: file("front_leg_R2"), delay: "0s", kind: "paddle", origin: "37.4% 60.3%", paddleDir: 1 },
+      ],
       legsInFrontOfBody: [
         { src: file("front_leg_L3"), delay: "0s", kind: "paddle", origin: "73% 68.9%", paddleDir: -1 },
         { src: file("front_leg_L2"), delay: "-0.2s" },
