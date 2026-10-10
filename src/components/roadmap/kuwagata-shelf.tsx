@@ -70,7 +70,7 @@ type CreaturePartArt = {
   pose?: MimicPose;
   // 獲物を捕まえる(grab)動き用の3関節チェーン。各パーツは肩(origin)を軸に、
   // rotate(a1) translate(p1) rotate(a2) translate(p2) rotate(a3) translate(p3) の順で変形する(角度は度、pはキャンバスに対する%)。
-  grab?: { a: [number, number, number]; p1: [number, number]; p2: [number, number]; p3: [number, number] }; src: string; delay: string; kind?: "wing" | "scythe" | "claw" | "tail" | "tail-ghost" | "grab"; origin?: string; baseRotateDeg?: number; shiftYPct?: number; squashAt?: { x: number; y: number }; clawDir?: 1 | -1; ghostOpacity?: number };
+  grab?: { a: [number, number, number]; p1: [number, number]; p2: [number, number]; p3: [number, number] }; src: string; delay: string; kind?: "wing" | "scythe" | "claw" | "tail" | "tail-ghost" | "grab" | "paddle"; origin?: string; baseRotateDeg?: number; shiftYPct?: number; squashAt?: { x: number; y: number }; clawDir?: 1 | -1; ghostOpacity?: number };
 
 type KnownCreatureArt = {
   body: string;
@@ -85,6 +85,8 @@ type KnownCreatureArt = {
   mandibleBehindBody?: boolean;
   // trueなら体全体がふわふわ上下に漂う(飛ぶ種。歩く種のbobの代わり)
   flying?: boolean;
+  // 水の中を泳ぐ種(動きの種類F)。後ろ足(kind:"paddle")が付け根を軸に水を掻く。
+  swimming?: boolean;
   // お腹(体の一部)がぼんやり光る種(ホタたん)。中心位置と直径は絵のキャンバスに対する%。
   glow?: { left: number; top: number; size: number };
   // trueなら体の形の中だけを光の帯が走る演出(ルリたん)に対応する種。
@@ -172,6 +174,38 @@ function buildLongicornArt(code: string, origin: { front: string; back: string }
       legsInFrontOfBody: art.front.legsInFrontOfBody.filter((leg) => !leg.src.endsWith("_front_leg_L2.svg")),
     },
     back: art.back,
+  };
+}
+
+// ゲンたん(ゲンゴロウ): 水の中を泳ぐ種(動きの種類F)。後ろ足は大きなオール状で、付け根(origin)を軸に水を掻く。
+// 描画順(奥→手前)は既存の規約どおり、正面はRが奥・Lが手前、背面はLが奥・Rが手前。
+// 付け根の位置は、脚パーツ画像の体側の端点から計算した値(キャンバスに対する%)。
+// 小さな脚は正面L1・L2、背面R2・R3(泳いでいる間だけ小さく動く)。
+function buildSwimmerArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
+  const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
+  return {
+    front: {
+      body: file("front_body"),
+      mandibles: {},
+      swimming: true,
+      legsBehindBody: [{ src: file("front_leg_R2"), delay: "0s", kind: "paddle", origin: "37.4% 60.3%" }],
+      legsInFrontOfBody: [
+        { src: file("front_leg_L3"), delay: "0s", kind: "paddle", origin: "73% 68.9%" },
+        { src: file("front_leg_L2"), delay: "-0.2s" },
+        { src: file("front_leg_L1"), delay: "0s" },
+      ],
+    },
+    back: {
+      body: file("back_body"),
+      mandibles: {},
+      swimming: true,
+      legsBehindBody: [{ src: file("back_leg_L1"), delay: "0s", kind: "paddle", origin: "31.5% 53.3%" }],
+      legsInFrontOfBody: [
+        { src: file("back_leg_R3"), delay: "-0.2s" },
+        { src: file("back_leg_R2"), delay: "-0.1s" },
+        { src: file("back_leg_R1"), delay: "0s", kind: "paddle", origin: "57.5% 62.8%" },
+      ],
+    },
   };
 }
 
@@ -577,6 +611,9 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0036": buildEightLegWalkerArt("KW-0036", { backLeftLeg: true }),
   // ハナたん(ハナカマキリ。ゆらゆら揺れて動き回らず、ときどきカマを0.12秒で伸ばして獲物を捕まえる=GRAB_*)
   "KW-0038": buildOrchidMantisArt("KW-0038"),
+  // ゲンたん(ゲンゴロウ。動きの種類F=泳ぐ。後ろ足(正面L3・R2、背面R1・L1)が付け根を軸に水を掻く。
+  // 水槽の中を3次元(底〜水面)に泳ぎ回り、ときどき息継ぎに水面まで上がる=useSwim)
+  "KW-0039": buildSwimmerArt("KW-0039"),
   // ミノたん(ミノムシ。1枚絵。糸でぶら下がって動かず、糸の付け根を軸にぶらぶら揺れる=DANGLE)
   "KW-0013": {
     front: {
@@ -715,6 +752,7 @@ function KnownCreatureSprite({
   shine = false,
   strike = false,
   grab = false,
+  swim = false,
 }: {
   code: string;
   facing: Facing;
@@ -738,6 +776,8 @@ function KnownCreatureSprite({
   strike?: boolean;
   // 獲物を捕まえる(ハナたん)。grab種別のカマが一気に伸びる。
   grab?: boolean;
+  // 泳いで移動している最中(ゲンたん)。後ろ足で水を掻き、体も泳ぎに合わせて動く。
+  swim?: boolean;
 }) {
   const stageArt = KNOWN_STAGE_ART[code];
 
@@ -824,7 +864,7 @@ function KnownCreatureSprite({
   ) : null;
 
   return (
-    <div className={`relative h-full w-full ${art.flying ? (isCurveFlight(code) || isDragonfly(code) ? "animate-kuwagata-glide" : "animate-kuwagata-flutter") : code === DANGLE_SPECIES_CODE ? "animate-kuwagata-dangle" : code === ORCHID_SPECIES_CODE ? "animate-kuwagata-sway-wobble" : isMantis(code) ? "animate-kuwagata-sway" : mimic || still ? "" : "animate-kuwagata-body"}`}>
+    <div className={`relative h-full w-full ${art.swimming ? (swim ? "animate-kuwagata-swim-go" : "animate-kuwagata-swim-idle") : art.flying ? (isCurveFlight(code) || isDragonfly(code) ? "animate-kuwagata-glide" : "animate-kuwagata-flutter") : code === DANGLE_SPECIES_CODE ? "animate-kuwagata-dangle" : code === ORCHID_SPECIES_CODE ? "animate-kuwagata-sway-wobble" : isMantis(code) ? "animate-kuwagata-sway" : mimic || still ? "" : "animate-kuwagata-body"}`}>
       {art.glow && (
         // お腹の光。体の後ろ(奥)に置き、おしり側からはみ出して見える。ゆっくり明るくなって消えるのを繰り返す。
         <span
@@ -846,7 +886,7 @@ function KnownCreatureSprite({
           key={`behind${i}`}
           src={leg.src}
           alt=""
-          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp, strike, mimic ? leg.pose?.seg : undefined, mimic || still, grab)}`}
+          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp, strike, mimic ? leg.pose?.seg : undefined, mimic || still, grab, swim)}`}
           style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.pose ? ({ transformOrigin: mimic ? leg.pose.origin : undefined, "--a1": `${leg.pose.a1}deg`, "--a2": `${leg.pose.a2 ?? 0}deg`, "--ex": `${leg.pose.ex ?? 0}%`, "--ey": `${leg.pose.ey ?? 0}%` } as CSSProperties) : {}), ...(leg.grab
           ? ({
               "--ga1": `${leg.grab.a[0]}deg`,
@@ -868,7 +908,7 @@ function KnownCreatureSprite({
           key={`front${i}`}
           src={leg.src}
           alt=""
-          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp, strike, mimic ? leg.pose?.seg : undefined, mimic || still, grab)}`}
+          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp, strike, mimic ? leg.pose?.seg : undefined, mimic || still, grab, swim)}`}
           style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.pose ? ({ transformOrigin: mimic ? leg.pose.origin : undefined, "--a1": `${leg.pose.a1}deg`, "--a2": `${leg.pose.a2 ?? 0}deg`, "--ex": `${leg.pose.ex ?? 0}%`, "--ey": `${leg.pose.ey ?? 0}%` } as CSSProperties) : {}), ...(leg.grab
           ? ({
               "--ga1": `${leg.grab.a[0]}deg`,
@@ -922,7 +962,10 @@ function KnownCreatureSprite({
 }
 
 // 脚・羽根・カマのCSSクラス。カマは構えて振るとき(scythe)だけ動かす。
-function legClassName(kind: CreaturePartArt["kind"], code: string, scythe: boolean, chomp = false, strike = false, mimicSeg?: 1 | 2, still = false, grab = false): string {
+function legClassName(kind: CreaturePartArt["kind"], code: string, scythe: boolean, chomp = false, strike = false, mimicSeg?: 1 | 2, still = false, grab = false, swim = false): string {
+  // 泳ぐ種: 後ろ足は、移動中は強く水を掻き、止まっている間はゆっくり揺らす。ほかの小さな脚は移動中だけ動く。
+  if (kind === "paddle") return swim ? "animate-kuwagata-paddle" : "animate-kuwagata-paddle-idle";
+  if (isSwimmer(code) && !kind) return swim ? "animate-kuwagata-leg" : "";
   if (kind === "grab") return grab ? "animate-kuwagata-grab" : "";
   if (mimicSeg) return mimicSeg === 1 ? "animate-kuwagata-mimic-1" : "animate-kuwagata-mimic-2";
   // 擬態ポーズ中は、ほかの脚も歩かず完全に止まる。
@@ -1068,12 +1111,36 @@ const TANK_SURFACE = {
   left: { left: 1.9, top: 55.2 },
 };
 
-// 平行四辺形なので back + u*(right-back) + v*(left-back) で天面内の任意の点が求まる。
+// 水槽の「立体」の実測。底の面(back/right/left=平行四辺形の3頂点)に加えて、その面を真上に
+// heightPct(コンテナの縦幅に対する%)だけ持ち上げたところが水面。テラリウムは水がないので0。
+// 水の中を泳ぐ種は、底の面の点(u,v)に高さw(0=底〜1=水面)を足して3次元の位置を表す。
+type TankGeometry = {
+  back: { left: number; top: number };
+  right: { left: number; top: number };
+  left: { left: number; top: number };
+  heightPct: number;
+};
+
+const TERRARIUM_GEOMETRY: TankGeometry = { ...TANK_SURFACE, heightPct: 0 };
+
+// 水を張った水槽(tank_bg_aquarium.png＋tank_fg_aquarium.png)の実測座標。
+// 底の砂利の天面は、奥の画像の砂利(明るい色の面)の連結領域から4頂点を抽出した平行四辺形
+// (奥=back・右=right・左=left。手前の頂点はright+left-back)。水面は、手前の画像の水面(半透明の菱形)の
+// 4頂点を抽出し、底の面を真上に持ち上げたものと一致するので、持ち上げ量(底と水面の縦の差)
+// 27.3%(約141px/516px)をheightPctとしている。
+const AQUARIUM_GEOMETRY: TankGeometry = {
+  back: { left: 26.7, top: 31.0 },
+  right: { left: 97.7, top: 60.1 },
+  left: { left: 1.7, top: 62.4 },
+  heightPct: 27.3,
+};
+
+// 平行四辺形なので back + u*(right-back) + v*(left-back) で底の面内の任意の点が求まる。
 // u, vは0〜1だが、スプライトの見た目の大きさ分の余白を持たせるため呼び出し側では
-// 0.12〜0.88程度の範囲に収めて「安全地帯」を作る。
-function surfacePoint(u: number, v: number): { left: number; top: number } {
-  const left = TANK_SURFACE.back.left + u * (TANK_SURFACE.right.left - TANK_SURFACE.back.left) + v * (TANK_SURFACE.left.left - TANK_SURFACE.back.left);
-  const top = TANK_SURFACE.back.top + u * (TANK_SURFACE.right.top - TANK_SURFACE.back.top) + v * (TANK_SURFACE.left.top - TANK_SURFACE.back.top);
+// 0.12〜0.88程度の範囲に収めて「安全地帯」を作る。wは水中の高さ(0=底〜1=水面)。
+function surfacePoint(u: number, v: number, geo: TankGeometry = TERRARIUM_GEOMETRY, w = 0): { left: number; top: number } {
+  const left = geo.back.left + u * (geo.right.left - geo.back.left) + v * (geo.left.left - geo.back.left);
+  const top = geo.back.top + u * (geo.right.top - geo.back.top) + v * (geo.left.top - geo.back.top) - w * geo.heightPct;
   return { left, top };
 }
 
@@ -1082,14 +1149,14 @@ function surfacePoint(u: number, v: number): { left: number; top: number } {
 // 「虫の幅の約35%」以上内側に制限する(大きい虫ほど左右の端に寄れない)。
 // 奥・手前の縁は、虫が縁の上に立って見えるだけなので制限しない。
 const SPOT_EDGE_MARGIN = 0.08;
-function pickRandomSpot(widthPct: number, random: () => number): { u: number; v: number } {
+function pickRandomSpot(widthPct: number, random: () => number, geo: TankGeometry = TERRARIUM_GEOMETRY): { u: number; v: number } {
   const halfWidth = widthPct * 0.35;
   for (let attempt = 0; attempt < 20; attempt++) {
     const candidate = {
       u: SPOT_EDGE_MARGIN + random() * (1 - 2 * SPOT_EDGE_MARGIN),
       v: SPOT_EDGE_MARGIN + random() * (1 - 2 * SPOT_EDGE_MARGIN),
     };
-    const { left } = surfacePoint(candidate.u, candidate.v);
+    const { left } = surfacePoint(candidate.u, candidate.v, geo);
     if (left >= halfWidth + 1 && left <= 99 - halfWidth) return candidate;
   }
   return { u: 0.5, v: 0.5 };
@@ -1163,7 +1230,8 @@ function useWander(
   chargeMs = CHARGE_MS,
   hopMs = HOP_MOVE_MS,
   hopMaxDistPct = 30,
-  restScale = 1
+  restScale = 1,
+  geo: TankGeometry = TERRARIUM_GEOMETRY
 ): { spot: { u: number; v: number }; facing: Facing; heading: Heading; travelMs: number; leaping: boolean; charging: boolean; posing: boolean } {
   const [state, setState] = useState<{
     spot: { u: number; v: number };
@@ -1204,15 +1272,15 @@ function useWander(
     let chargeTimer: ReturnType<typeof setTimeout> | undefined;
     let poseTimer: ReturnType<typeof setTimeout> | undefined;
     const ownRadius = spriteRadius(widthPct);
-    const decorationPts = decorationSpots.map((spot) => ({ pt: surfacePoint(spot.u, spot.v), radius: spriteRadius(spot.widthPct) }));
+    const decorationPts = decorationSpots.map((spot) => ({ pt: surfacePoint(spot.u, spot.v, geo), radius: spriteRadius(spot.widthPct) }));
 
     const pickNextSpot = () => {
       const others = Object.entries(positionsRef.current).filter(([id]) => id !== seedKey);
-      let best = pickRandomSpot(widthPct, Math.random);
+      let best = pickRandomSpot(widthPct, Math.random, geo);
       let bestSlack = -Infinity;
       for (let attempt = 0; attempt < SPOT_PICK_ATTEMPTS; attempt++) {
-        const candidate = pickRandomSpot(widthPct, Math.random);
-        const pt = surfacePoint(candidate.u, candidate.v);
+        const candidate = pickRandomSpot(widthPct, Math.random, geo);
+        const pt = surfacePoint(candidate.u, candidate.v, geo);
         // スコア=一番近い障害物との余裕(距離-必要距離)の最小値。プラスなら衝突なし、
         // マイナスでも値が大きい(=0に近い)ほど「まだマシな重なり方」として優先される。
         let slack = Infinity;
@@ -1220,7 +1288,7 @@ function useWander(
           slack = Math.min(slack, surfaceDistancePct(pt, d.pt) - (ownRadius + d.radius));
         }
         for (const [, other] of others) {
-          slack = Math.min(slack, surfaceDistancePct(pt, surfacePoint(other.u, other.v)) - (ownRadius + spriteRadius(other.widthPct)));
+          slack = Math.min(slack, surfaceDistancePct(pt, surfacePoint(other.u, other.v, geo)) - (ownRadius + spriteRadius(other.widthPct)));
         }
         if (slack > bestSlack) {
           bestSlack = slack;
@@ -1251,12 +1319,12 @@ function useWander(
       }
       if (chargeHopChance > 0 && Math.random() < chargeHopChance) {
         // 近めの着地点を選ぶ(少し弧を描いて跳ねる距離)。その場で溜めてから跳ねる。
-        const prevPt0 = surfacePoint(prev.spot.u, prev.spot.v);
+        const prevPt0 = surfacePoint(prev.spot.u, prev.spot.v, geo);
         let hopSpot = pickNextSpot();
-        let hopDist = surfaceDistancePct(prevPt0, surfacePoint(hopSpot.u, hopSpot.v));
+        let hopDist = surfaceDistancePct(prevPt0, surfacePoint(hopSpot.u, hopSpot.v, geo));
         for (let i = 0; i < 14 && hopDist > hopMaxDistPct; i++) {
           const cand = pickNextSpot();
-          const d = surfaceDistancePct(prevPt0, surfacePoint(cand.u, cand.v));
+          const d = surfaceDistancePct(prevPt0, surfacePoint(cand.u, cand.v, geo));
           if (d < hopDist) {
             hopSpot = cand;
             hopDist = d;
@@ -1268,7 +1336,7 @@ function useWander(
         chargeTimer = setTimeout(() => {
           if (cancelled) return;
           positionsRef.current[seedKey] = { ...hopSpot, widthPct };
-          const toPt = surfacePoint(hopSpot.u, hopSpot.v);
+          const toPt = surfacePoint(hopSpot.u, hopSpot.v, geo);
           const hx = toPt.left - prevPt0.left;
           const hy = toPt.top - prevPt0.top;
           const hopFacing: Facing = Math.abs(hy) >= Math.abs(hx) ? (hy >= 0 ? "front" : "back") : hx <= 0 ? "front" : "back";
@@ -1288,8 +1356,8 @@ function useWander(
       }
       const nextSpot = pickNextSpot();
       positionsRef.current[seedKey] = { ...nextSpot, widthPct };
-      const prevPt = surfacePoint(prev.spot.u, prev.spot.v);
-      const nextPt = surfacePoint(nextSpot.u, nextSpot.v);
+      const prevPt = surfacePoint(prev.spot.u, prev.spot.v, geo);
+      const nextPt = surfacePoint(nextSpot.u, nextSpot.v, geo);
       const dx = nextPt.left - prevPt.left;
       const dy = nextPt.top - prevPt.top;
       const facing: Facing = Math.abs(dy) >= Math.abs(dx) ? (dy >= 0 ? "front" : "back") : dx <= 0 ? "front" : "back";
@@ -1329,7 +1397,122 @@ function useWander(
       if (chargeTimer) clearTimeout(chargeTimer);
       if (poseTimer) clearTimeout(poseTimer);
     };
-  }, [seedKey, widthPct, moves, decorationSpots, positionsRef, travelScale, leapChance, chargeHopChance, poseChance, chargeMs, hopMs, hopMaxDistPct, restScale]);
+  }, [seedKey, widthPct, moves, decorationSpots, positionsRef, travelScale, leapChance, chargeHopChance, poseChance, chargeMs, hopMs, hopMaxDistPct, restScale, geo]);
+
+  return state;
+}
+
+// 水の中を泳ぐ種(動きの種類F)。ゲンたん。
+const SWIMMER_SPECIES_CODES = ["KW-0039"];
+const isSwimmer = (code: string) => SWIMMER_SPECIES_CODES.includes(code);
+// 泳ぐ速さ(移動距離%あたりの時間)と、移動1回の時間の下限・上限。歩くより速い。
+const SWIM_MS_PER_PCT = 330;
+const MIN_SWIM_MS = 2600;
+const MAX_SWIM_MS = 9000;
+// 水面まで上がって息継ぎする確率(次の行き先が水面近くになる)。
+const SWIM_SURFACE_CHANCE = 0.2;
+// 底まで潜る確率(砂利のすぐ上を泳ぐ)。
+const SWIM_BOTTOM_CHANCE = 0.2;
+
+// 泳ぐ高さwの上限。スプライトの体が水面から出ないように、スプライトの高さ(コンテナの縦幅に対する%)から決める。
+function swimMaxHeight(widthPct: number, geo: TankGeometry): number {
+  const spriteHeightPct = widthPct * (4 / 3);
+  return Math.min(0.9, Math.max(0.2, 1 - (spriteHeightPct * 0.6) / geo.heightPct));
+}
+
+type SwimSpot = { u: number; v: number; w: number };
+
+// 水の中を泳ぎ回るためのフック。底の面(u,v)に高さw(0=底〜1=水面)を足した3次元の行き先を、
+// 他の個体とぶつからない場所から選び、CSSのtransition(left/top)でそこまで滑るように泳がせる。
+// 移動中だけmoving=trueになる(後ろ足の掻きはこの間だけ強く動かし、止まっている間はゆっくり揺らす)。
+// 行き先はときどき水面(息継ぎ)や底のすぐ上になる。
+function useSwim(
+  seedKey: string,
+  initial: { u: number; v: number },
+  widthPct: number,
+  enabled: boolean,
+  positionsRef: { current: Record<string, { u: number; v: number; widthPct: number; w?: number }> },
+  geo: TankGeometry
+): { spot: SwimSpot; facing: Facing; heading: Heading; travelMs: number; moving: boolean } {
+  const [state, setState] = useState<{ spot: SwimSpot; facing: Facing; heading: Heading; travelMs: number; moving: boolean }>({
+    spot: { ...initial, w: swimMaxHeight(widthPct, geo) * 0.5 },
+    facing: "front",
+    heading: "left",
+    travelMs: MIN_SWIM_MS,
+    moving: false,
+  });
+  const stateRef = useRef(state);
+
+  useEffect(() => {
+    if (!enabled) return;
+    const positions = positionsRef.current;
+    const wMax = swimMaxHeight(widthPct, geo);
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    let stopTimer: ReturnType<typeof setTimeout> | undefined;
+    const ownRadius = spriteRadius(widthPct);
+    const spriteHeightPct = widthPct * (4 / 3);
+    const point = (s: SwimSpot) => surfacePoint(s.u, s.v, geo, s.w);
+    positions[seedKey] = { ...stateRef.current.spot, widthPct };
+
+    const pickNextSpot = (): SwimSpot => {
+      const others = Object.entries(positions).filter(([id]) => id !== seedKey);
+      let best: SwimSpot = stateRef.current.spot;
+      let bestSlack = -Infinity;
+      for (let attempt = 0; attempt < SPOT_PICK_ATTEMPTS; attempt++) {
+        const uv = pickRandomSpot(widthPct, Math.random, geo);
+        const roll = Math.random();
+        const w = roll < SWIM_SURFACE_CHANCE ? wMax : roll < SWIM_SURFACE_CHANCE + SWIM_BOTTOM_CHANCE ? 0.04 : 0.1 + Math.random() * (wMax - 0.1);
+        const candidate: SwimSpot = { ...uv, w };
+        const pt = point(candidate);
+        // 体の上端が画像の上にはみ出さない高さに限る。
+        if (pt.top - spriteHeightPct * 0.9 < 1) continue;
+        let slack = Infinity;
+        for (const [, other] of others) {
+          slack = Math.min(slack, surfaceDistancePct(pt, surfacePoint(other.u, other.v, geo, other.w ?? 0)) - (ownRadius + spriteRadius(other.widthPct)));
+        }
+        if (slack > bestSlack) {
+          bestSlack = slack;
+          best = candidate;
+        }
+        if (bestSlack >= 0) break;
+      }
+      return best;
+    };
+
+    const swimToNextSpot = () => {
+      if (cancelled) return;
+      const prev = stateRef.current;
+      const next = pickNextSpot();
+      positions[seedKey] = { ...next, widthPct };
+      const prevPt = point(prev.spot);
+      const nextPt = point(next);
+      const dx = nextPt.left - prevPt.left;
+      const dy = nextPt.top - prevPt.top;
+      const facing: Facing = Math.abs(dy) >= Math.abs(dx) ? (dy >= 0 ? "front" : "back") : dx <= 0 ? "front" : "back";
+      const heading: Heading = dx === 0 ? prev.heading : dx < 0 ? "left" : "right";
+      const travelMs = Math.min(MAX_SWIM_MS, Math.max(MIN_SWIM_MS, surfaceDistancePct(prevPt, nextPt) * SWIM_MS_PER_PCT));
+      const moving = { spot: next, facing, heading, travelMs, moving: true };
+      stateRef.current = moving;
+      setState(moving);
+      stopTimer = setTimeout(() => {
+        if (cancelled) return;
+        const arrived = { ...stateRef.current, moving: false };
+        stateRef.current = arrived;
+        setState(arrived);
+      }, travelMs);
+      // 着いたら少しだけ漂ってから、次へ。
+      timer = setTimeout(swimToNextSpot, travelMs + 800 + Math.random() * 2200);
+    };
+
+    timer = setTimeout(swimToNextSpot, 400 + (hashHue(seedKey) % 1800));
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      if (stopTimer) clearTimeout(stopTimer);
+      delete positions[seedKey];
+    };
+  }, [seedKey, widthPct, enabled, positionsRef, geo]);
 
   return state;
 }
@@ -1358,15 +1541,16 @@ function pickStationarySpot(
   widthPct: number,
   decorationSpots: { u: number; v: number; widthPct: number }[],
   taken: { u: number; v: number; widthPct: number }[],
+  geo: TankGeometry = TERRARIUM_GEOMETRY,
 ): { u: number; v: number } {
   const random = seededRandom(seedKey);
   const ownRadius = spriteRadius(widthPct);
-  const obstacles = [...decorationSpots, ...taken].map((o) => ({ pt: surfacePoint(o.u, o.v), radius: spriteRadius(o.widthPct) }));
+  const obstacles = [...decorationSpots, ...taken].map((o) => ({ pt: surfacePoint(o.u, o.v, geo), radius: spriteRadius(o.widthPct) }));
   let best = { u: 0.5, v: 0.5 };
   let bestSlack = -Infinity;
   for (let attempt = 0; attempt < SPOT_PICK_ATTEMPTS * 2; attempt++) {
-    const candidate = pickRandomSpot(widthPct, random);
-    const pt = surfacePoint(candidate.u, candidate.v);
+    const candidate = pickRandomSpot(widthPct, random, geo);
+    const pt = surfacePoint(candidate.u, candidate.v, geo);
     let slack = Infinity;
     for (const o of obstacles) {
       slack = Math.min(slack, surfaceDistancePct(pt, o.pt) - (ownRadius + o.radius));
@@ -1588,6 +1772,7 @@ function WanderingCreature({
   decorationSpots,
   positionsRef,
   hasCompanions,
+  geo,
 }: {
   seedKey: string;
   initialSpot: { u: number; v: number };
@@ -1600,9 +1785,11 @@ function WanderingCreature({
   color: string;
   mirror: boolean;
   decorationSpots: { u: number; v: number; widthPct: number }[];
-  positionsRef: { current: Record<string, { u: number; v: number; widthPct: number }> };
+  positionsRef: { current: Record<string, { u: number; v: number; widthPct: number; w?: number }> };
   // 同じ水槽に自分以外の個体がいるか(シャベクワたんの「喋る仕草」の条件)
   hasCompanions: boolean;
+  // この水槽の立体の実測(底の面と水面の高さ)。テラリウムとアクアリウムで違う。
+  geo: TankGeometry;
 }) {
   const chatterBubble = useChatter(
     hasCompanions && speciesCode === CHATTER_SPECIES_CODE && growthStage === "成虫" && hasArt,
@@ -1700,11 +1887,12 @@ function WanderingCreature({
     STINK_DURATION_MS
   );
   const moves = !isStationaryStage(speciesCode, growthStage);
-  const { spot, facing, heading, travelMs, leaping, charging, posing } = useWander(
+  const swimmer = isSwimmer(speciesCode) && growthStage === "成虫";
+  const walk = useWander(
     seedKey,
     initialSpot,
     widthPct,
-    moves,
+    moves && !swimmer,
     decorationSpots,
     positionsRef,
     isDragonfly(speciesCode) ? DRAGONFLY_TRAVEL_SCALE : speciesCode === HORNET_SPECIES_CODE ? HORNET_TRAVEL_SCALE : isMantis(speciesCode) ? SCYTHE_TRAVEL_SCALE : 1,
@@ -1714,15 +1902,25 @@ function WanderingCreature({
     speciesCode === POUNCE_SPECIES_CODE ? STALK_MS : CHARGE_MS,
     speciesCode === POUNCE_SPECIES_CODE ? POUNCE_MS : HOP_MOVE_MS,
     speciesCode === POUNCE_SPECIES_CODE ? POUNCE_MAX_DIST_PCT : 30,
-    speciesCode === ORCHID_SPECIES_CODE ? ORCHID_REST_SCALE : 1
+    speciesCode === ORCHID_SPECIES_CODE ? ORCHID_REST_SCALE : 1,
+    geo
   );
-  const pt = surfacePoint(spot.u, spot.v);
+  // 水中を泳ぐ種は、歩く代わりに3次元(底〜水面)を泳ぎ回る。
+  const swim = useSwim(seedKey, initialSpot, widthPct, moves && swimmer, positionsRef, geo);
+  const { facing, heading, leaping, charging, posing } = swimmer ? { ...walk, ...swim, leaping: false, charging: false, posing: false } : walk;
+  const spot = swimmer ? swim.spot : walk.spot;
+  const travelMs = swimmer ? swim.travelMs : walk.travelMs;
+  const swimming = swimmer && swim.moving;
+  const pt = surfacePoint(spot.u, spot.v, geo, swimmer ? swim.spot.w : 0);
   // 飛ぶ種は縦横で別のイージングにして、目的地まで直線ではなく滑らかな曲線(弧)を描いて飛ぶ。
   // 弧の向き(上に膨らむ/下に膨らむ)は目的地ごとに決まる。
   const flyingCurve = isCurveFlight(speciesCode) && growthStage === "成虫";
   const arcUp = Math.round(spot.u * 100 + spot.v * 100) % 2 === 0;
   const straightFlight = isDragonfly(speciesCode) && growthStage === "成虫";
-  const moveTransition = leaping
+  // 泳ぐ種は、掻いて勢いよく出て、だんだん減速して止まる(ゆっくり漂うように着く)。
+  const moveTransition = swimmer
+    ? `left ${travelMs}ms cubic-bezier(0.25, 0.6, 0.3, 1), top ${travelMs}ms cubic-bezier(0.25, 0.6, 0.3, 1)`
+    : leaping
     ? `left ${travelMs}ms linear, top ${travelMs}ms linear`
     : straightFlight
     ? `left ${travelMs}ms linear, top ${travelMs}ms linear`
@@ -1763,6 +1961,7 @@ function WanderingCreature({
             scythe={scything}
             shine={shining || (isHera(speciesCode) && proud)}
             strike={striking}
+            swim={swimming}
             code={speciesCode}
             facing={facing}
             mandibleVariant={mandibleVariant}
@@ -1906,12 +2105,12 @@ const DECORATION_SPOTS: { u: number; v: number }[] = [
   { u: 0.5, v: 0.7 },
 ];
 
-// アクアリウムはまだ実アート未着手のため、天面の実測座標がない。既存の簡易な泡配置だけ残す。
-const AQUARIUM_BUBBLES: { left: string; bottom: number; size: number }[] = [
-  { left: "20%", bottom: 10, size: 5 },
-  { left: "50%", bottom: 60, size: 4 },
-  { left: "75%", bottom: 25, size: 6 },
-  { left: "85%", bottom: 90, size: 3 },
+// 水の中の泡。水槽の立体(底の面のu,v＋高さw)で置く。
+const AQUARIUM_BUBBLES: { u: number; v: number; w: number; size: number }[] = [
+  { u: 0.18, v: 0.3, w: 0.15, size: 5 },
+  { u: 0.55, v: 0.2, w: 0.7, size: 4 },
+  { u: 0.8, v: 0.6, w: 0.35, size: 6 },
+  { u: 0.4, v: 0.75, w: 0.85, size: 3 },
 ];
 
 // 水槽内デコレーション（置物）。brand/kuwagata-asset-spec.mdの方針どおり、
@@ -1965,7 +2164,9 @@ function EnlargedTankVisual({
   // するためのref(Reactのstateにはしない=位置が変わってもこの水槽全体が再レンダー
   // されない)。モーダルを閉じるとEnlargedTankVisual自体がアンマウントされるので、
   // 次に開いたときは自動的に空の状態から始まる。
-  const positionsRef = useRef<Record<string, { u: number; v: number; widthPct: number }>>({});
+  const positionsRef = useRef<Record<string, { u: number; v: number; widthPct: number; w?: number }>>({});
+  // この水槽の立体の実測。水を張ったアクアリウムは、底の砂利の面と、そこから水面までの高さを持つ。
+  const geo = isAquarium ? AQUARIUM_GEOMETRY : TERRARIUM_GEOMETRY;
   // デコレーションは水槽(tankId)ごとに決定的なので、個体の衝突回避にも
   // そのまま使い回す(描画用の配置情報と衝突回避用の座標リストを二重管理しない)。
   // widthPctも一緒に持たせ、衝突判定側でアイテムごとの実際の大きさを加味できるようにする。
@@ -1981,12 +2182,12 @@ function EnlargedTankVisual({
     for (const individual of tank.individuals) {
       if (!isStationaryStage(individual.speciesCode, individual.growthStage)) continue;
       const widthPct = creatureWidthPct(individual.sizeScale);
-      const spot = pickStationarySpot(individual.id, widthPct, decorationSpots, taken);
+      const spot = pickStationarySpot(individual.id, widthPct, decorationSpots, taken, geo);
       spots[individual.id] = spot;
       taken.push({ ...spot, widthPct });
     }
     return spots;
-  }, [tank, decorationSpots]);
+  }, [tank, decorationSpots, geo]);
 
   return (
     <div
@@ -1994,16 +2195,19 @@ function EnlargedTankVisual({
       style={tankBgStyle(isAquarium)}
     >
       {isAquarium &&
-        AQUARIUM_BUBBLES.map((bubble, i) => (
-          <div
-            key={i}
-            className="absolute rounded-full bg-white/50"
-            style={{ left: bubble.left, bottom: bubble.bottom, width: bubble.size, height: bubble.size }}
-          />
-        ))}
+        AQUARIUM_BUBBLES.map((bubble, i) => {
+          const pt = surfacePoint(bubble.u, bubble.v, geo, bubble.w);
+          return (
+            <div
+              key={i}
+              className="absolute rounded-full bg-white/60"
+              style={{ left: `${pt.left}%`, top: `${pt.top}%`, width: bubble.size, height: bubble.size }}
+            />
+          );
+        })}
       {!isAquarium &&
         decorations.map((deco, index) => {
-          const pt = surfacePoint(deco.spot.u, deco.spot.v);
+          const pt = surfacePoint(deco.spot.u, deco.spot.v, geo);
           return (
             <div
               key={index}
@@ -2015,8 +2219,8 @@ function EnlargedTankVisual({
           );
         })}
       {tank.individuals.map((individual, index) => {
-        if (isAquarium) {
-          // アクアリウムは実アート未着手のため、従来どおりの簡易配置のまま
+        if (isAquarium && !KNOWN_CREATURE_ART[individual.speciesCode]) {
+          // 実アートが無いアクアリウムの種は、従来どおりの簡易配置のまま
           const left = ["62%", "28%", "45%", "78%", "15%"][index % 5];
           const bottom = [56, 52, 64, 50, 60][index % 5];
           return (
@@ -2048,6 +2252,7 @@ function EnlargedTankVisual({
             decorationSpots={decorationSpots}
             positionsRef={positionsRef}
             hasCompanions={tank.individuals.length > 1}
+            geo={geo}
           />
         );
       })}
