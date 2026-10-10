@@ -924,30 +924,31 @@ body {
   animation: kuwagata-flutter 2.2s ease-in-out infinite;
 }
 
-/* ゲンたん(ゲンゴロウ)の泳ぎ。後ろ足(kind:"paddle")は付け根(transform-origin)を軸に、素早く後ろへ掻き(0〜28%)、
-   ゆっくり前へ戻す(28〜100%)。体は掻く瞬間にぐっと前へ出て、戻す間に少し沈む。
+/* ゲンたん(ゲンゴロウ)の泳ぎ。後ろ足(kind:"paddle")は付け根(transform-origin)を軸に、平泳ぎのように左右対称に動く。
+   2本の足は、素早く「閉じて」水を掻き(0〜28%)、ゆっくり「開いて」戻る(28〜100%)。左右で回転の向きが逆になるよう、
+   --paddle-dir(+1/-1)を角度に掛ける。体は掻く瞬間にぐっと前へ出て、戻す間に少し沈む。
    止まっている間(idle)は、足を小さくゆっくり揺らし、体もふわっと漂う。 */
 @keyframes kuwagata-paddle {
   0% {
-    transform: rotate(-22deg);
+    transform: rotate(calc(var(--paddle-dir, 1) * -20deg));
     animation-timing-function: cubic-bezier(0.2, 0.75, 0.3, 1);
   }
   28% {
-    transform: rotate(26deg);
+    transform: rotate(calc(var(--paddle-dir, 1) * 24deg));
     animation-timing-function: ease-in-out;
   }
   100% {
-    transform: rotate(-22deg);
+    transform: rotate(calc(var(--paddle-dir, 1) * -20deg));
   }
 }
 
 @keyframes kuwagata-paddle-idle {
   0%,
   100% {
-    transform: rotate(-14deg);
+    transform: rotate(calc(var(--paddle-dir, 1) * -12deg));
   }
   50% {
-    transform: rotate(-4deg);
+    transform: rotate(calc(var(--paddle-dir, 1) * -3deg));
   }
 }
 

@@ -70,7 +70,7 @@ type CreaturePartArt = {
   pose?: MimicPose;
   // 獲物を捕まえる(grab)動き用の3関節チェーン。各パーツは肩(origin)を軸に、
   // rotate(a1) translate(p1) rotate(a2) translate(p2) rotate(a3) translate(p3) の順で変形する(角度は度、pはキャンバスに対する%)。
-  grab?: { a: [number, number, number]; p1: [number, number]; p2: [number, number]; p3: [number, number] }; src: string; delay: string; kind?: "wing" | "scythe" | "claw" | "tail" | "tail-ghost" | "grab" | "paddle"; origin?: string; baseRotateDeg?: number; shiftYPct?: number; squashAt?: { x: number; y: number }; clawDir?: 1 | -1; ghostOpacity?: number };
+  grab?: { a: [number, number, number]; p1: [number, number]; p2: [number, number]; p3: [number, number] }; src: string; delay: string; kind?: "wing" | "scythe" | "claw" | "tail" | "tail-ghost" | "grab" | "paddle"; origin?: string; baseRotateDeg?: number; shiftYPct?: number; squashAt?: { x: number; y: number }; clawDir?: 1 | -1; ghostOpacity?: number; paddleDir?: 1 | -1 };
 
 type KnownCreatureArt = {
   body: string;
@@ -178,7 +178,9 @@ function buildLongicornArt(code: string, origin: { front: string; back: string }
 }
 
 // ゲンたん(ゲンゴロウ): 水の中を泳ぐ種(動きの種類F)。後ろ足は大きなオール状で、付け根(origin)を軸に水を掻く。
-// 描画順(奥→手前)は既存の規約どおり、正面はRが奥・Lが手前、背面はLが奥・Rが手前。
+// 平泳ぎのように左右対称に動かす: 2本の後ろ足は、同時に「開く→ぐっと閉じる(掻く)」を逆向きの回転で行う
+// (paddleDir=+1/-1。+1は時計回りに閉じ、-1は反時計回りに閉じる。向き合う2本の足先が近づく側が「閉じる」)。
+// 描画順(奥→手前): 正面はRが奥・Lが手前。背面は脚がすべて体の奥。
 // 付け根の位置は、脚パーツ画像の体側の端点から計算した値(キャンバスに対する%)。
 // 小さな脚は正面L1・L2、背面R2・R3(泳いでいる間だけ小さく動く)。
 function buildSwimmerArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
@@ -188,9 +190,9 @@ function buildSwimmerArt(code: string): Partial<Record<Facing, KnownCreatureArt>
       body: file("front_body"),
       mandibles: {},
       swimming: true,
-      legsBehindBody: [{ src: file("front_leg_R2"), delay: "0s", kind: "paddle", origin: "37.4% 60.3%" }],
+      legsBehindBody: [{ src: file("front_leg_R2"), delay: "0s", kind: "paddle", origin: "37.4% 60.3%", paddleDir: 1 }],
       legsInFrontOfBody: [
-        { src: file("front_leg_L3"), delay: "0s", kind: "paddle", origin: "73% 68.9%" },
+        { src: file("front_leg_L3"), delay: "0s", kind: "paddle", origin: "73% 68.9%", paddleDir: -1 },
         { src: file("front_leg_L2"), delay: "-0.2s" },
         { src: file("front_leg_L1"), delay: "0s" },
       ],
@@ -199,12 +201,14 @@ function buildSwimmerArt(code: string): Partial<Record<Facing, KnownCreatureArt>
       body: file("back_body"),
       mandibles: {},
       swimming: true,
-      legsBehindBody: [{ src: file("back_leg_L1"), delay: "0s", kind: "paddle", origin: "31.5% 53.3%" }],
-      legsInFrontOfBody: [
+      // 背面は、後ろ足も小さな脚もすべて体の奥(体より先に描く)
+      legsBehindBody: [
+        { src: file("back_leg_L1"), delay: "0s", kind: "paddle", origin: "31.5% 53.3%", paddleDir: -1 },
         { src: file("back_leg_R3"), delay: "-0.2s" },
         { src: file("back_leg_R2"), delay: "-0.1s" },
-        { src: file("back_leg_R1"), delay: "0s", kind: "paddle", origin: "57.5% 62.8%" },
+        { src: file("back_leg_R1"), delay: "0s", kind: "paddle", origin: "57.5% 62.8%", paddleDir: 1 },
       ],
+      legsInFrontOfBody: [],
     },
   };
 }
@@ -899,7 +903,7 @@ function KnownCreatureSprite({
               "--gp3x": `${leg.grab.p3[0]}%`,
               "--gp3y": `${leg.grab.p3[1]}%`,
             } as CSSProperties)
-          : {}), ...(leg.ghostOpacity ? ({ opacity: leg.ghostOpacity } as CSSProperties) : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
+          : {}), ...(leg.ghostOpacity ? ({ opacity: leg.ghostOpacity } as CSSProperties) : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.paddleDir ? ({ "--paddle-dir": leg.paddleDir } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
         />
       ))}
       <img src={art.body} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />
@@ -921,7 +925,7 @@ function KnownCreatureSprite({
               "--gp3x": `${leg.grab.p3[0]}%`,
               "--gp3y": `${leg.grab.p3[1]}%`,
             } as CSSProperties)
-          : {}), ...(leg.ghostOpacity ? ({ opacity: leg.ghostOpacity } as CSSProperties) : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
+          : {}), ...(leg.ghostOpacity ? ({ opacity: leg.ghostOpacity } as CSSProperties) : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.paddleDir ? ({ "--paddle-dir": leg.paddleDir } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
         />
       ))}
       {art.shine && shine && (
