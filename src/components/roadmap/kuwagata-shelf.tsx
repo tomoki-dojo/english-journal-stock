@@ -1366,7 +1366,8 @@ const HORN_SPECIES_CODE = "KW-0014";
 // ナナたん(ナナフシ): 移動のたびに一定確率で、その場で止まって前脚(L1・R1)を頭方向へまっすぐ突き出す擬態ポーズ。
 const MIMIC_SPECIES_CODE = "KW-0035";
 const MIMIC_POSE_CHANCE = 0.4;
-const POSE_MS = 3200;
+// 出す0.8秒＋キープ5秒＋戻す0.8秒
+const POSE_MS = 6600;
 // ツノたん(ツノゼミ): ツノを軽く振る(HORN_*と同じ)＋ときどき、溜め(体が赤くキラッ、キラッ)→跳ねる。
 const HORN_SPECIES_CODE_2 = "KW-0034";
 const CHARGE_HOP_SPECIES_CODE = "KW-0034";
