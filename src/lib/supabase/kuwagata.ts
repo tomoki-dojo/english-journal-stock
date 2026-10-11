@@ -704,7 +704,8 @@ export async function getUnlockedAreas(userId: string): Promise<KuwagataAreaCode
 
   const mainAreas = KUWAGATA_AREA_ORDER.filter((area) => unlocked.has(area) && isAreaReleased(species, area));
 
-  return plan === "free" ? mainAreas : [...mainAreas, AQUARIUM_AREA_CODE];
+  // Pro限定の水の底(aquarium)は、新種が公開されているときだけ出す（下書きの間は出さない）。
+  return plan === "free" || !isAreaReleased(species, AQUARIUM_AREA_CODE) ? mainAreas : [...mainAreas, AQUARIUM_AREA_CODE];
 }
 
 export async function getKuwagataAreaProgress(userId: string): Promise<KuwagataAreaProgress[]> {
@@ -784,7 +785,7 @@ export async function getKuwagataEncyclopedia(userId: string): Promise<KuwagataE
   const unlockedSet = new Set(unlockedAreas);
   const areaCodesWithAquarium: KuwagataAreaCode[] = [
     ...KUWAGATA_AREA_ORDER.filter((areaCode) => isAreaReleased(species, areaCode)),
-    AQUARIUM_AREA_CODE,
+    ...(isAreaReleased(species, AQUARIUM_AREA_CODE) ? [AQUARIUM_AREA_CODE] : []),
   ];
   const areas: KuwagataEncyclopediaArea[] = areaCodesWithAquarium.map((areaCode) => {
     const entries = species.filter((s) => s.kind === "new" && s.areaCode === areaCode).map(toEntry);
