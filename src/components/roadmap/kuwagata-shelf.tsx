@@ -621,7 +621,10 @@ const isCurveFlight = (code: string) => code === CURVE_FLIGHT_SPECIES_CODE || co
 const DRAGONFLY_SPECIES_CODE = "KW-0016";
 // オニたん(オニヤンマ): 動きはトンたんと同じ(速い直線移動・常に小さく素早く羽ばたく)。
 const DRAGONFLY_SPECIES_CODE_2 = "KW-0028";
+// ユキたん: 羽ばたきはトンたん風(素早く小さく)。移動は直線にせず、ふわっと漂う。
+const SNOW_FLYER_SPECIES_CODE = "KW-0045";
 const isDragonfly = (code: string) => code === DRAGONFLY_SPECIES_CODE || code === DRAGONFLY_SPECIES_CODE_2;
+const isFastFlap = (code: string) => isDragonfly(code) || code === HORNET_SPECIES_CODE || code === SNOW_FLYER_SPECIES_CODE;
 const DRAGONFLY_TRAVEL_SCALE = 0.1125;
 
 const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCreatureArt>>>> = {
@@ -676,6 +679,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   // ハグロたん(ハグロトンボ。羽根は正面・背面とも体の手前。羽ばたきはチョウたんと同じヒラヒラ)
   "KW-0025": buildWingedFlyerArt("KW-0025", { front: "43% 64%", back: "44% 55%" }, { frontWingsInFront: true }),
   // トンたん(シオカラトンボ。飛ぶが、羽ばたきは常に素早く小さめ。直線的に速く移動=DRAGONFLY_*)
+  // ユキたん(綿毛の虫)。羽根は体の手前(正面は奥)、羽ばたきはトンたん風
+  "KW-0045": buildWingedFlyerArt("KW-0045", { front: "50% 50%", back: "52% 46%" }),
   "KW-0016": buildWingedFlyerArt("KW-0016", { front: "47% 45%", back: "56% 46%" }, { frontWingsInFront: true }),
   "KW-0012": buildWingedFlyerArt("KW-0012", { front: "46% 31%", back: "54% 28%" }),
   // スズたん(スズメバチ。ミツたんと同じ曲線飛行を速く。大顎mandible_01をガチガチ=CHOMP_*)
@@ -1027,7 +1032,7 @@ function legClassName(kind: CreaturePartArt["kind"], code: string, scythe: boole
   if (kind === "tail") return strike ? "animate-kuwagata-tail" : "";
   if (kind === "tail-ghost") return "animate-kuwagata-tail animate-kuwagata-tail-ghost";
   if (kind === "claw") return chomp ? "animate-kuwagata-claw" : "";
-  if (kind === "wing") return isDragonfly(code) || code === HORNET_SPECIES_CODE ? "animate-kuwagata-wing-dragonfly" : "animate-kuwagata-wing";
+  if (kind === "wing") return isFastFlap(code) ?"animate-kuwagata-wing-dragonfly" : "animate-kuwagata-wing";
   if (kind === "scythe") return scythe ? "animate-kuwagata-scythe" : "";
   return "animate-kuwagata-leg";
 }
