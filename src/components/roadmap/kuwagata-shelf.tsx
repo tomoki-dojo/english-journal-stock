@@ -217,7 +217,7 @@ function buildSwimmerArt(code: string): Partial<Record<Facing, KnownCreatureArt>
 }
 
 // ウマたん(カマドウマ): ジャンプする6脚の歩行種。一番うしろの脚(正面L3・R2、背面L1・R3)は2パーツ(-1と-2)に分かれ、
-// ふだんは歩かず畳んだまま。ジャンプ(HOP_*)のときだけ、2関節の脚として動く。
+// ふだんは歩くときに付け根を軸に前後に小さく揺れ(kuwagata-hind-walk-*)、ジャンプ(HOP_*)のときは2関節の脚として大きく動く。
 //   -1(thigh)=もも: 下端が体との接続(付け根=hip)、上端がひざ。
 //   -2(shin)=すね: 上端が-1の上端(ひざ)との接続、下端が足先。
 // thighは付け根を軸に回し、shinは「付け根を軸にthighと同じだけ回す→ひざを軸にさらに回す」(CSSのkuwagata-hind-*)。
@@ -225,18 +225,18 @@ function buildSwimmerArt(code: string): Partial<Record<Facing, KnownCreatureArt>
 // 値はパーツ画像の端点から計算(正面は右へ、背面は左へ傾いて描かれている)。
 function buildJumperArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
   const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
-  const hindLeg = (name: string, hip: string, knee: [number, number], dir: 1 | -1): CreaturePartArt[] => [
-    { src: file(`${name}-1`), delay: "0s", kind: "hind-thigh", origin: hip, hind: { knee, dir } },
-    { src: file(`${name}-2`), delay: "0s", kind: "hind-shin", origin: hip, hind: { knee, dir } },
+  const hindLeg = (name: string, hip: string, knee: [number, number], dir: 1 | -1, delay: string): CreaturePartArt[] => [
+    { src: file(`${name}-1`), delay, kind: "hind-thigh", origin: hip, hind: { knee, dir } },
+    { src: file(`${name}-2`), delay, kind: "hind-shin", origin: hip, hind: { knee, dir } },
   ];
   return {
     front: {
       body: file("front_body"),
       mandibles: {},
       // 奥側(R)は体の奥、手前側(L)は体の手前。一番手前に重ねたいL1を配列の末尾に置く。
-      legsBehindBody: [{ src: file("front_leg_R1"), delay: "-0.55s" }, ...hindLeg("front_leg_R2", "48.21% 77.23%", [6.52, -35.71], 1)],
+      legsBehindBody: [{ src: file("front_leg_R1"), delay: "-0.55s" }, ...hindLeg("front_leg_R2", "48.21% 77.23%", [6.52, -35.71], 1, "-0.55s")],
       legsInFrontOfBody: [
-        ...hindLeg("front_leg_L3", "69.55% 79.91%", [9.02, -37.05], 1),
+        ...hindLeg("front_leg_L3", "69.55% 79.91%", [9.02, -37.05], 1, "0s"),
         { src: file("front_leg_L2"), delay: "-0.15s" },
         { src: file("front_leg_L1"), delay: "0s" },
       ],
@@ -245,9 +245,9 @@ function buildJumperArt(code: string): Partial<Record<Facing, KnownCreatureArt>>
       body: file("back_body"),
       mandibles: {},
       // 背面は、左のうしろ脚(L1)だけ体の奥。ほかは体の手前。
-      legsBehindBody: hindLeg("back_leg_L1", "28.57% 82.59%", [-8.48, -37.95], -1),
+      legsBehindBody: hindLeg("back_leg_L1", "28.57% 82.59%", [-8.48, -37.95], -1, "-0.55s"),
       legsInFrontOfBody: [
-        ...hindLeg("back_leg_R3", "43.75% 83.48%", [-8.13, -37.77], -1),
+        ...hindLeg("back_leg_R3", "43.75% 83.48%", [-8.13, -37.77], -1, "0s"),
         { src: file("back_leg_R2"), delay: "-0.15s" },
         { src: file("back_leg_R1"), delay: "0s" },
       ],
@@ -938,7 +938,7 @@ function KnownCreatureSprite({
           src={leg.src}
           alt=""
           className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp, strike, mimic ? leg.pose?.seg : undefined, mimic || still, grab, swim, hop)}`}
-          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.pose ? ({ transformOrigin: mimic ? leg.pose.origin : undefined, "--a1": `${leg.pose.a1}deg`, "--a2": `${leg.pose.a2 ?? 0}deg`, "--ex": `${leg.pose.ex ?? 0}%`, "--ey": `${leg.pose.ey ?? 0}%` } as CSSProperties) : {}), ...(leg.grab
+          style={{ animationDelay: hop && leg.hind ? "0s" : leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.pose ? ({ transformOrigin: mimic ? leg.pose.origin : undefined, "--a1": `${leg.pose.a1}deg`, "--a2": `${leg.pose.a2 ?? 0}deg`, "--ex": `${leg.pose.ex ?? 0}%`, "--ey": `${leg.pose.ey ?? 0}%` } as CSSProperties) : {}), ...(leg.grab
           ? ({
               "--ga1": `${leg.grab.a[0]}deg`,
               "--ga2": `${leg.grab.a[1]}deg`,
@@ -960,7 +960,7 @@ function KnownCreatureSprite({
           src={leg.src}
           alt=""
           className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp, strike, mimic ? leg.pose?.seg : undefined, mimic || still, grab, swim, hop)}`}
-          style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.pose ? ({ transformOrigin: mimic ? leg.pose.origin : undefined, "--a1": `${leg.pose.a1}deg`, "--a2": `${leg.pose.a2 ?? 0}deg`, "--ex": `${leg.pose.ex ?? 0}%`, "--ey": `${leg.pose.ey ?? 0}%` } as CSSProperties) : {}), ...(leg.grab
+          style={{ animationDelay: hop && leg.hind ? "0s" : leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.pose ? ({ transformOrigin: mimic ? leg.pose.origin : undefined, "--a1": `${leg.pose.a1}deg`, "--a2": `${leg.pose.a2 ?? 0}deg`, "--ex": `${leg.pose.ex ?? 0}%`, "--ey": `${leg.pose.ey ?? 0}%` } as CSSProperties) : {}), ...(leg.grab
           ? ({
               "--ga1": `${leg.grab.a[0]}deg`,
               "--ga2": `${leg.grab.a[1]}deg`,
@@ -1015,8 +1015,8 @@ function KnownCreatureSprite({
 // 脚・羽根・カマのCSSクラス。カマは構えて振るとき(scythe)だけ動かす。
 function legClassName(kind: CreaturePartArt["kind"], code: string, scythe: boolean, chomp = false, strike = false, mimicSeg?: 1 | 2, still = false, grab = false, swim = false, hop = false): string {
   // ウマたんのうしろ脚(2パーツ)。ジャンプ中だけ動き、ふだんは畳んだまま。
-  if (kind === "hind-thigh") return hop ? "animate-kuwagata-hind-thigh" : "";
-  if (kind === "hind-shin") return hop ? "animate-kuwagata-hind-shin" : "";
+  if (kind === "hind-thigh") return hop ? "animate-kuwagata-hind-thigh" : still ? "" : "animate-kuwagata-hind-walk-thigh";
+  if (kind === "hind-shin") return hop ? "animate-kuwagata-hind-shin" : still ? "" : "animate-kuwagata-hind-walk-shin";
   // 泳ぐ種: 後ろ足は、移動中は強く水を掻き、止まっている間はゆっくり揺らす。ほかの小さな脚は移動中だけ動く。
   if (kind === "paddle") return swim ? "animate-kuwagata-paddle" : "animate-kuwagata-paddle-idle";
   if (isSwimmer(code) && !kind) return swim ? "animate-kuwagata-leg" : "";

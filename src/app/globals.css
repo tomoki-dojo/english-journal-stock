@@ -740,6 +740,36 @@ body {
   }
 }
 
+/* ウマたんのうしろ脚(2パーツ)の歩き。ふだんは付け根を軸にもも(thigh)が前後に小さく振れ、すね(shin)はそれに追従しつつ逆向きに少し曲がる
+   (ひざで折れた脚がそのまま前後に揺れる)。ほかの脚と同じ1.1秒周期で、左右の脚は位相をずらす(inlineのanimation-delay。もも・すねは同じ値)。 */
+@keyframes kuwagata-hind-walk-thigh {
+  0%,
+  100% {
+    transform: rotate(calc(var(--hd, 1) * -5deg));
+  }
+  50% {
+    transform: rotate(calc(var(--hd, 1) * 5deg));
+  }
+}
+
+@keyframes kuwagata-hind-walk-shin {
+  0%,
+  100% {
+    transform: rotate(calc(var(--hd, 1) * -5deg)) translate(var(--kx, 0%), var(--ky, 0%)) rotate(calc(var(--hd, 1) * 3deg)) translate(calc(var(--kx, 0%) * -1), calc(var(--ky, 0%) * -1));
+  }
+  50% {
+    transform: rotate(calc(var(--hd, 1) * 5deg)) translate(var(--kx, 0%), var(--ky, 0%)) rotate(calc(var(--hd, 1) * -3deg)) translate(calc(var(--kx, 0%) * -1), calc(var(--ky, 0%) * -1));
+  }
+}
+
+.animate-kuwagata-hind-walk-thigh {
+  animation: kuwagata-hind-walk-thigh 1.1s ease-in-out infinite;
+}
+
+.animate-kuwagata-hind-walk-shin {
+  animation: kuwagata-hind-walk-shin 1.1s ease-in-out infinite;
+}
+
 .animate-kuwagata-hind-thigh {
   animation: kuwagata-hind-thigh 1.4s ease-in-out;
 }
@@ -1127,6 +1157,8 @@ body {
   .animate-kuwagata-hop-high,
   .animate-kuwagata-hind-thigh,
   .animate-kuwagata-hind-shin,
+  .animate-kuwagata-hind-walk-thigh,
+  .animate-kuwagata-hind-walk-shin,
   .animate-kuwagata-proud,
   .animate-kuwagata-sparkle-burst,
   .animate-kuwagata-chat,
