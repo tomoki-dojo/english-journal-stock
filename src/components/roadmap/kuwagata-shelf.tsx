@@ -70,7 +70,7 @@ type CreaturePartArt = {
   pose?: MimicPose;
   // 獲物を捕まえる(grab)動き用の3関節チェーン。各パーツは肩(origin)を軸に、
   // rotate(a1) translate(p1) rotate(a2) translate(p2) rotate(a3) translate(p3) の順で変形する(角度は度、pはキャンバスに対する%)。
-  grab?: { a: [number, number, number]; p1: [number, number]; p2: [number, number]; p3: [number, number] }; src: string; delay: string; kind?: "wing" | "scythe" | "claw" | "tail" | "tail-ghost" | "grab" | "paddle"; origin?: string; baseRotateDeg?: number; shiftYPct?: number; squashAt?: { x: number; y: number }; clawDir?: 1 | -1; ghostOpacity?: number; paddleDir?: 1 | -1 };
+  grab?: { a: [number, number, number]; p1: [number, number]; p2: [number, number]; p3: [number, number] }; src: string; delay: string; kind?: "wing" | "scythe" | "claw" | "tail" | "tail-ghost" | "grab" | "paddle" | "hind-thigh" | "hind-shin"; hind?: { knee: [number, number]; dir: 1 | -1 }; origin?: string; baseRotateDeg?: number; shiftYPct?: number; squashAt?: { x: number; y: number }; clawDir?: 1 | -1; ghostOpacity?: number; paddleDir?: 1 | -1 };
 
 type KnownCreatureArt = {
   body: string;
@@ -212,6 +212,45 @@ function buildSwimmerArt(code: string): Partial<Record<Facing, KnownCreatureArt>
         { src: file("back_leg_R1"), delay: "0s", kind: "paddle", origin: "57.5% 62.8%", paddleDir: 1 },
       ],
       legsInFrontOfBody: [],
+    },
+  };
+}
+
+// ウマたん(カマドウマ): ジャンプする6脚の歩行種。一番うしろの脚(正面L3・R2、背面L1・R3)は2パーツ(-1と-2)に分かれ、
+// ふだんは歩かず畳んだまま。ジャンプ(HOP_*)のときだけ、2関節の脚として動く。
+//   -1(thigh)=もも: 下端が体との接続(付け根=hip)、上端がひざ。
+//   -2(shin)=すね: 上端が-1の上端(ひざ)との接続、下端が足先。
+// thighは付け根を軸に回し、shinは「付け根を軸にthighと同じだけ回す→ひざを軸にさらに回す」(CSSのkuwagata-hind-*)。
+// hip=付け根(origin)、knee=付け根→ひざの差(キャンバスに対する%)、dir=外側へ開く向き(+1=時計回りで外側/下へ、-1=反時計回り)。
+// 値はパーツ画像の端点から計算(正面は右へ、背面は左へ傾いて描かれている)。
+function buildJumperArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
+  const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
+  const hindLeg = (name: string, hip: string, knee: [number, number], dir: 1 | -1): CreaturePartArt[] => [
+    { src: file(`${name}-1`), delay: "0s", kind: "hind-thigh", origin: hip, hind: { knee, dir } },
+    { src: file(`${name}-2`), delay: "0s", kind: "hind-shin", origin: hip, hind: { knee, dir } },
+  ];
+  return {
+    front: {
+      body: file("front_body"),
+      mandibles: {},
+      // 奥側(R)は体の奥、手前側(L)は体の手前。一番手前に重ねたいL1を配列の末尾に置く。
+      legsBehindBody: [{ src: file("front_leg_R1"), delay: "-0.55s" }, ...hindLeg("front_leg_R2", "48.21% 77.23%", [6.52, -35.71], 1)],
+      legsInFrontOfBody: [
+        ...hindLeg("front_leg_L3", "69.55% 79.91%", [9.02, -37.05], 1),
+        { src: file("front_leg_L2"), delay: "-0.15s" },
+        { src: file("front_leg_L1"), delay: "0s" },
+      ],
+    },
+    back: {
+      body: file("back_body"),
+      mandibles: {},
+      // 背面は、左のうしろ脚(L1)だけ体の奥。ほかは体の手前。
+      legsBehindBody: hindLeg("back_leg_L1", "28.57% 82.59%", [-8.48, -37.95], -1),
+      legsInFrontOfBody: [
+        ...hindLeg("back_leg_R3", "43.75% 83.48%", [-8.13, -37.77], -1),
+        { src: file("back_leg_R2"), delay: "-0.15s" },
+        { src: file("back_leg_R1"), delay: "0s" },
+      ],
     },
   };
 }
@@ -594,6 +633,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0007": buildNewSpeciesWalkerArt("KW-0007"),
   // バッたん(トノサマバッタ。ときどき跳ねる＝WanderingCreatureのHOP_*)
   "KW-0009": buildNewSpeciesWalkerArt("KW-0009"),
+  // ウマたん(カマドウマ。うしろ脚が2パーツで、ジャンプ=HOP_*のときに2関節で蹴り出す=buildJumperArt)
+  "KW-0046": buildJumperArt("KW-0046"),
   // クモたん(ジョロウグモ。8本脚＝buildEightLegWalkerArt。背面は左の脚1本も動く)
   "KW-0010": buildEightLegWalkerArt("KW-0010", { backLeftLeg: true }),
   // チョウたん(アゲハチョウ。飛ぶ＝buildWingedFlyerArt。羽根の付け根を軸にヒラヒラ)
@@ -760,6 +801,7 @@ function KnownCreatureSprite({
   strike = false,
   grab = false,
   swim = false,
+  hop = false,
 }: {
   code: string;
   facing: Facing;
@@ -785,6 +827,8 @@ function KnownCreatureSprite({
   grab?: boolean;
   // 泳いで移動している最中(ゲンたん)。後ろ足で水を掻き、体も泳ぎに合わせて動く。
   swim?: boolean;
+  // ジャンプ中(バッたん・ウマたん)。ウマたんのうしろ脚(hind-thigh/hind-shin)が蹴り出す。
+  hop?: boolean;
 }) {
   const stageArt = KNOWN_STAGE_ART[code];
 
@@ -893,7 +937,7 @@ function KnownCreatureSprite({
           key={`behind${i}`}
           src={leg.src}
           alt=""
-          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp, strike, mimic ? leg.pose?.seg : undefined, mimic || still, grab, swim)}`}
+          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp, strike, mimic ? leg.pose?.seg : undefined, mimic || still, grab, swim, hop)}`}
           style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.pose ? ({ transformOrigin: mimic ? leg.pose.origin : undefined, "--a1": `${leg.pose.a1}deg`, "--a2": `${leg.pose.a2 ?? 0}deg`, "--ex": `${leg.pose.ex ?? 0}%`, "--ey": `${leg.pose.ey ?? 0}%` } as CSSProperties) : {}), ...(leg.grab
           ? ({
               "--ga1": `${leg.grab.a[0]}deg`,
@@ -906,7 +950,7 @@ function KnownCreatureSprite({
               "--gp3x": `${leg.grab.p3[0]}%`,
               "--gp3y": `${leg.grab.p3[1]}%`,
             } as CSSProperties)
-          : {}), ...(leg.ghostOpacity ? ({ opacity: leg.ghostOpacity } as CSSProperties) : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.paddleDir ? ({ "--paddle-dir": leg.paddleDir } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
+          : {}), ...(leg.ghostOpacity ? ({ opacity: leg.ghostOpacity } as CSSProperties) : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.paddleDir ? ({ "--paddle-dir": leg.paddleDir } as CSSProperties) : {}), ...(leg.hind ? ({ "--hd": leg.hind.dir, "--kx": `${leg.hind.knee[0]}%`, "--ky": `${leg.hind.knee[1]}%` } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
         />
       ))}
       <img src={art.body} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />
@@ -915,7 +959,7 @@ function KnownCreatureSprite({
           key={`front${i}`}
           src={leg.src}
           alt=""
-          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp, strike, mimic ? leg.pose?.seg : undefined, mimic || still, grab, swim)}`}
+          className={`absolute inset-0 h-full w-full ${legClassName(leg.kind, code, scythe, chomp, strike, mimic ? leg.pose?.seg : undefined, mimic || still, grab, swim, hop)}`}
           style={{ animationDelay: leg.delay, transformOrigin: leg.origin, ...(leg.baseRotateDeg ? ({ "--base-rot": `${leg.baseRotateDeg}deg` } as CSSProperties) : {}), ...(leg.shiftYPct ? { translate: `0 ${leg.shiftYPct}%` } : {}), ...(leg.pose ? ({ transformOrigin: mimic ? leg.pose.origin : undefined, "--a1": `${leg.pose.a1}deg`, "--a2": `${leg.pose.a2 ?? 0}deg`, "--ex": `${leg.pose.ex ?? 0}%`, "--ey": `${leg.pose.ey ?? 0}%` } as CSSProperties) : {}), ...(leg.grab
           ? ({
               "--ga1": `${leg.grab.a[0]}deg`,
@@ -928,7 +972,7 @@ function KnownCreatureSprite({
               "--gp3x": `${leg.grab.p3[0]}%`,
               "--gp3y": `${leg.grab.p3[1]}%`,
             } as CSSProperties)
-          : {}), ...(leg.ghostOpacity ? ({ opacity: leg.ghostOpacity } as CSSProperties) : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.paddleDir ? ({ "--paddle-dir": leg.paddleDir } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
+          : {}), ...(leg.ghostOpacity ? ({ opacity: leg.ghostOpacity } as CSSProperties) : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.paddleDir ? ({ "--paddle-dir": leg.paddleDir } as CSSProperties) : {}), ...(leg.hind ? ({ "--hd": leg.hind.dir, "--kx": `${leg.hind.knee[0]}%`, "--ky": `${leg.hind.knee[1]}%` } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
         />
       ))}
       {art.shine && shine && (
@@ -969,7 +1013,10 @@ function KnownCreatureSprite({
 }
 
 // 脚・羽根・カマのCSSクラス。カマは構えて振るとき(scythe)だけ動かす。
-function legClassName(kind: CreaturePartArt["kind"], code: string, scythe: boolean, chomp = false, strike = false, mimicSeg?: 1 | 2, still = false, grab = false, swim = false): string {
+function legClassName(kind: CreaturePartArt["kind"], code: string, scythe: boolean, chomp = false, strike = false, mimicSeg?: 1 | 2, still = false, grab = false, swim = false, hop = false): string {
+  // ウマたんのうしろ脚(2パーツ)。ジャンプ中だけ動き、ふだんは畳んだまま。
+  if (kind === "hind-thigh") return hop ? "animate-kuwagata-hind-thigh" : "";
+  if (kind === "hind-shin") return hop ? "animate-kuwagata-hind-shin" : "";
   // 泳ぐ種: 後ろ足は、移動中は強く水を掻き、止まっている間はゆっくり揺らす。ほかの小さな脚は移動中だけ動く。
   if (kind === "paddle") return swim ? "animate-kuwagata-paddle" : "animate-kuwagata-paddle-idle";
   if (isSwimmer(code) && !kind) return swim ? "animate-kuwagata-leg" : "";
@@ -1656,6 +1703,8 @@ const RAINBOW_SPARKLE_COLORS = ["#facc15", "#a3e635", "#22c55e", "#a855f7", "#d9
 const HOP_CYCLE_MS = 8000;
 const HOP_DURATION_MS = 1100;
 const HOP_SPECIES_CODE = "KW-0009";
+// ウマたん(KW-0046)もジャンプする。うしろ脚(2パーツ)が2関節で蹴り出す。
+const HOP_SPECIES_CODES = [HOP_SPECIES_CODE, "KW-0046"];
 
 // カブたん(KW-0014)の「ツノ振り」。7秒に1回・1.6秒間、立派なツノを付け根を軸にゆっくり
 // 振り上げて戻す(力強さのアピール)。個体ごとに開始をずらす。
@@ -1840,7 +1889,7 @@ function WanderingCreature({
     );
   }, [proud, rainbowSparkle]);
   const hopping = useTimedGesture(
-    speciesCode === HOP_SPECIES_CODE && growthStage === "成虫" && hasArt,
+    HOP_SPECIES_CODES.includes(speciesCode) && growthStage === "成虫" && hasArt,
     seedKey + ":hop",
     HOP_CYCLE_MS,
     HOP_DURATION_MS
@@ -1969,6 +2018,7 @@ function WanderingCreature({
             shine={shining || (isHera(speciesCode) && proud)}
             strike={striking}
             swim={swimming}
+            hop={hopping}
             code={speciesCode}
             facing={facing}
             mandibleVariant={mandibleVariant}

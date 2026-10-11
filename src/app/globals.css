@@ -651,6 +651,56 @@ body {
   animation: kuwagata-hop 1.1s ease-in-out;
 }
 
+/* ウマたんのうしろ脚(2パーツ)のジャンプ。体のhop(1.1s)と同じ時間割で、18%=かがんで溜め・45%=跳ね上がりで蹴り出し(まっすぐ下へ伸びる)・
+   70%=空中で少し畳み始める・86%=着地で畳む。thigh(もも)は付け根(transform-originはインラインで指定)を軸に回す。
+   shin(すね)は「付け根を軸にthighと同じだけ回す→ひざ(付け根からの差=--kx/--ky)を軸にさらに回す」。
+   --hdは外側へ開く向き(+1/-1)。角度は(thigh, shin)=(0,0)→(-12,25)→(135,-145)→(90,-95)→(-8,15)→(0,0)。 */
+@keyframes kuwagata-hind-thigh {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  18% {
+    transform: rotate(calc(var(--hd, 1) * -12deg));
+  }
+  45% {
+    transform: rotate(calc(var(--hd, 1) * 135deg));
+  }
+  70% {
+    transform: rotate(calc(var(--hd, 1) * 90deg));
+  }
+  86% {
+    transform: rotate(calc(var(--hd, 1) * -8deg));
+  }
+}
+
+@keyframes kuwagata-hind-shin {
+  0%,
+  100% {
+    transform: rotate(0deg) translate(var(--kx, 0%), var(--ky, 0%)) rotate(0deg) translate(calc(var(--kx, 0%) * -1), calc(var(--ky, 0%) * -1));
+  }
+  18% {
+    transform: rotate(calc(var(--hd, 1) * -12deg)) translate(var(--kx, 0%), var(--ky, 0%)) rotate(calc(var(--hd, 1) * 25deg)) translate(calc(var(--kx, 0%) * -1), calc(var(--ky, 0%) * -1));
+  }
+  45% {
+    transform: rotate(calc(var(--hd, 1) * 135deg)) translate(var(--kx, 0%), var(--ky, 0%)) rotate(calc(var(--hd, 1) * -145deg)) translate(calc(var(--kx, 0%) * -1), calc(var(--ky, 0%) * -1));
+  }
+  70% {
+    transform: rotate(calc(var(--hd, 1) * 90deg)) translate(var(--kx, 0%), var(--ky, 0%)) rotate(calc(var(--hd, 1) * -95deg)) translate(calc(var(--kx, 0%) * -1), calc(var(--ky, 0%) * -1));
+  }
+  86% {
+    transform: rotate(calc(var(--hd, 1) * -8deg)) translate(var(--kx, 0%), var(--ky, 0%)) rotate(calc(var(--hd, 1) * 15deg)) translate(calc(var(--kx, 0%) * -1), calc(var(--ky, 0%) * -1));
+  }
+}
+
+.animate-kuwagata-hind-thigh {
+  animation: kuwagata-hind-thigh 1.1s ease-in-out;
+}
+
+.animate-kuwagata-hind-shin {
+  animation: kuwagata-hind-shin 1.1s ease-in-out;
+}
+
 /* カブたんの「ツノ振り」。付け根(transform-originはインラインで指定)を軸に、ぐっと振り上げて小さく揺り戻し、戻る。 */
 @keyframes kuwagata-horn {
   0%,
@@ -1027,6 +1077,8 @@ body {
   .animate-kuwagata-stink-puff,
   .animate-kuwagata-sniff,
   .animate-kuwagata-hop,
+  .animate-kuwagata-hind-thigh,
+  .animate-kuwagata-hind-shin,
   .animate-kuwagata-proud,
   .animate-kuwagata-sparkle-burst,
   .animate-kuwagata-chat,
