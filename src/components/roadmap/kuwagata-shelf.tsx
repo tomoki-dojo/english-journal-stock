@@ -679,8 +679,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   // ハグロたん(ハグロトンボ。羽根は正面・背面とも体の手前。羽ばたきはチョウたんと同じヒラヒラ)
   "KW-0025": buildWingedFlyerArt("KW-0025", { front: "43% 64%", back: "44% 55%" }, { frontWingsInFront: true }),
   // トンたん(シオカラトンボ。飛ぶが、羽ばたきは常に素早く小さめ。直線的に速く移動=DRAGONFLY_*)
-  // ユキたん(綿毛の虫)。羽根は体の手前(正面は奥)、羽ばたきはトンたん風
-  "KW-0045": buildWingedFlyerArt("KW-0045", { front: "50% 50%", back: "52% 46%" }),
+  // ユキたん(綿毛の虫)。羽根は正面・背面とも体の手前、羽ばたきはトンたん風
+  "KW-0045": buildWingedFlyerArt("KW-0045", { front: "50% 50%", back: "52% 46%" }, { frontWingsInFront: true }),
   "KW-0016": buildWingedFlyerArt("KW-0016", { front: "47% 45%", back: "56% 46%" }, { frontWingsInFront: true }),
   "KW-0012": buildWingedFlyerArt("KW-0012", { front: "46% 31%", back: "54% 28%" }),
   // スズたん(スズメバチ。ミツたんと同じ曲線飛行を速く。大顎mandible_01をガチガチ=CHOMP_*)
