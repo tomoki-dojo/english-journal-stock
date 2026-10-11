@@ -6,7 +6,7 @@ import { startMinigameSession } from "@/lib/kuwagata-minigame";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-const AREA_CODES: KuwagataAreaCode[] = ["area1", "area2", "area3", "area4", "area5", "aquarium"];
+const AREA_CODES: KuwagataAreaCode[] = ["area1", "area2", "area3", "area4", "area5", "aquarium", "ancient"];
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();

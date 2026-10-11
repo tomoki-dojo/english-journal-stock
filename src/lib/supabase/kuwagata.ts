@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { getPlan } from "@/lib/supabase/profile";
 import { describeEggEvent, type RoadmapStageUp } from "@/lib/roadmap-notices";
 
-export type KuwagataAreaCode = "area1" | "area2" | "area3" | "area4" | "area5" | "aquarium";
+export type KuwagataAreaCode = "area1" | "area2" | "area3" | "area4" | "area5" | "aquarium" | "ancient";
 
 export const KUWAGATA_AREA_ORDER: KuwagataAreaCode[] = ["area1", "area2", "area3", "area4", "area5"];
 
@@ -18,6 +18,12 @@ function isAreaReleased(species: KuwagataSpecies[], areaCode: KuwagataAreaCode):
 }
 
 export const AQUARIUM_AREA_CODE: KuwagataAreaCode = "aquarium";
+
+// Pro限定の古代の森。水の底(aquarium)と同じく、本編の解放の連鎖には含めず、Pro会員には常に解放済み。
+export const ANCIENT_AREA_CODE: KuwagataAreaCode = "ancient";
+
+// Pro会員にだけ、新種が公開されている間は常に出す独立枠のエリア。
+const PRO_ONLY_AREA_CODES: KuwagataAreaCode[] = [AQUARIUM_AREA_CODE, ANCIENT_AREA_CODE];
 
 const AREA_KNOWN_SPECIES_STAGE_TRIGGER: Partial<Record<KuwagataAreaCode, number>> = {
   area1: 1,
@@ -704,8 +710,10 @@ export async function getUnlockedAreas(userId: string): Promise<KuwagataAreaCode
 
   const mainAreas = KUWAGATA_AREA_ORDER.filter((area) => unlocked.has(area) && isAreaReleased(species, area));
 
-  // Pro限定の水の底(aquarium)は、新種が公開されているときだけ出す（下書きの間は出さない）。
-  return plan === "free" || !isAreaReleased(species, AQUARIUM_AREA_CODE) ? mainAreas : [...mainAreas, AQUARIUM_AREA_CODE];
+  // Pro限定の独立枠(水の底・古代の森)は、新種が公開されているときだけ出す（下書きの間は出さない）。
+  return plan === "free"
+    ? mainAreas
+    : [...mainAreas, ...PRO_ONLY_AREA_CODES.filter((area) => isAreaReleased(species, area))];
 }
 
 export async function getKuwagataAreaProgress(userId: string): Promise<KuwagataAreaProgress[]> {
@@ -785,7 +793,7 @@ export async function getKuwagataEncyclopedia(userId: string): Promise<KuwagataE
   const unlockedSet = new Set(unlockedAreas);
   const areaCodesWithAquarium: KuwagataAreaCode[] = [
     ...KUWAGATA_AREA_ORDER.filter((areaCode) => isAreaReleased(species, areaCode)),
-    ...(isAreaReleased(species, AQUARIUM_AREA_CODE) ? [AQUARIUM_AREA_CODE] : []),
+    ...PRO_ONLY_AREA_CODES.filter((areaCode) => isAreaReleased(species, areaCode)),
   ];
   const areas: KuwagataEncyclopediaArea[] = areaCodesWithAquarium.map((areaCode) => {
     const entries = species.filter((s) => s.kind === "new" && s.areaCode === areaCode).map(toEntry);

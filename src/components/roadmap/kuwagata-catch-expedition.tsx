@@ -15,6 +15,7 @@ const AREA_LABEL: Record<KuwagataAreaCode, string> = {
   area4: "ジャングル・秘境",
   area5: "山岳",
   aquarium: "水の底の秘境（Pro限定）",
+  ancient: "古代の森（Pro限定）",
 };
 
 type CatchResponse = {

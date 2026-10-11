@@ -12,6 +12,7 @@ const AREA_DIFFICULTY_RANGE: Record<KuwagataAreaCode, [number, number]> = {
   area4: [4, 5],
   area5: [4, 5],
   aquarium: [3, 5],
+  ancient: [4, 5],
 };
 
 export const MINIGAME_QUESTION_COUNT = 30;

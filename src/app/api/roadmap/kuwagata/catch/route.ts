@@ -11,7 +11,7 @@ import {
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-const AREA_CODES: KuwagataAreaCode[] = ["area1", "area2", "area3", "area4", "area5", "aquarium"];
+const AREA_CODES: KuwagataAreaCode[] = ["area1", "area2", "area3", "area4", "area5", "aquarium", "ancient"];
 
 function isAreaCode(value: unknown): value is KuwagataAreaCode {
   return typeof value === "string" && (AREA_CODES as string[]).includes(value);
