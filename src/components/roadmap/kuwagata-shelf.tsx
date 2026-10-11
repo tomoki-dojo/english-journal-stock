@@ -634,11 +634,13 @@ function buildSnakeflyArt(): Partial<Record<Facing, KnownCreatureArt>> {
       body: file("back_body"),
       mandibles: { 1: file("back_mandible_01") },
       mandibleOrigin: "89% 40%",
-      legsBehindBody: [{ src: file("back_leg_L1-2"), delay: "-0.7s" }],
+      legsBehindBody: [],
       legsInFrontOfBody: [
         { src: file("back_leg_R3"), delay: "-0.3s" },
         { src: file("back_leg_R2"), delay: "-0.15s" },
         { src: file("back_leg_R1"), delay: "0s" },
+        // back_leg_L1-2.svg は中身が左の羽根(脚ではない)。右羽根と同じく体の手前に出して羽ばたかせる。
+        { src: file("back_leg_L1-2"), delay: "0s", kind: "wing", origin: "50% 47%", flapDir: -1 },
         { src: file("back_wing_R"), delay: "0s", kind: "wing", origin: "58% 58%", flapDir: 1 },
       ],
     },
