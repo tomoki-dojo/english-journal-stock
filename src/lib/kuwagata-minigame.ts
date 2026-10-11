@@ -10,6 +10,7 @@ const AREA_DIFFICULTY_RANGE: Record<KuwagataAreaCode, [number, number]> = {
   area2: [2, 3],
   area3: [3, 4],
   area4: [4, 5],
+  area5: [4, 5],
   aquarium: [3, 5],
 };
 

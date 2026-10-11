@@ -3,9 +3,19 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { getPlan } from "@/lib/supabase/profile";
 import { describeEggEvent, type RoadmapStageUp } from "@/lib/roadmap-notices";
 
-export type KuwagataAreaCode = "area1" | "area2" | "area3" | "area4" | "aquarium";
+export type KuwagataAreaCode = "area1" | "area2" | "area3" | "area4" | "area5" | "aquarium";
 
-export const KUWAGATA_AREA_ORDER: KuwagataAreaCode[] = ["area1", "area2", "area3", "area4"];
+export const KUWAGATA_AREA_ORDER: KuwagataAreaCode[] = ["area1", "area2", "area3", "area4", "area5"];
+
+// エリア解放条件：「対応するStageの解放」かつ「前エリアの新種をこの数だけ発見」。
+// 前エリアの新種数がこれより少ない場合（Freeの絞り込み後など）は、その総数で足りる。
+export const AREA_UNLOCK_PREV_AREA_NEW_SPECIES = 3;
+
+// 新種が1種もDBに入っていないエリア（エリア5の準備中など）は、解放条件を満たしても出さない。
+function isAreaReleased(species: KuwagataSpecies[], areaCode: KuwagataAreaCode): boolean {
+  if (areaCode === "area1") return true;
+  return species.some((s) => s.kind === "new" && s.areaCode === areaCode);
+}
 
 export const AQUARIUM_AREA_CODE: KuwagataAreaCode = "aquarium";
 
@@ -627,10 +637,29 @@ export async function setIndividualNickname(
   return (data ?? []).length > 0;
 }
 
+// エリアNの解放に必要な「Stage側」の条件。エリア1は最初から開いている。
+// speaking-roadmap.tsがこのファイルをimportしているため、循環importを避けて動的に読み込む。
+async function getAreaStageGates(userId: string): Promise<Partial<Record<KuwagataAreaCode, boolean>>> {
+  const { getRoadmapStageReadiness } = await import("@/lib/supabase/speaking-roadmap");
+  const readiness = await getRoadmapStageReadiness(userId);
+  return {
+    area2: readiness.stage2Ready,
+    area3: readiness.stage3Ready,
+    area4: readiness.stage4Ready,
+    area5: readiness.stage5DailyReady || readiness.stage5BusinessReady,
+  };
+}
+
+// 解放済みエリアは保存済みの行を正とし（一度開いたら閉じない）、未解放のエリアは読み取りのたびに
+// 「Stage解放 かつ 前エリアの新種をAREA_UNLOCK_PREV_AREA_NEW_SPECIES種発見」を判定して、満たしたら保存する。
+// 採集時だけでなくStage側が後から満たされた場合にも、次に開いた時点で解放される。
 export async function getUnlockedAreas(userId: string): Promise<KuwagataAreaCode[]> {
-  const [{ data, error }, plan] = await Promise.all([
+  const [{ data, error }, plan, species, individuals, stageGates] = await Promise.all([
     supabaseAdmin.from("kuwagata_area_unlocks").select("area_code").eq("user_id", userId),
     getPlan(userId),
+    getKuwagataSpeciesList(),
+    getUserKuwagataIndividuals(userId),
+    getAreaStageGates(userId),
   ]);
 
   if (error) {
@@ -638,7 +667,39 @@ export async function getUnlockedAreas(userId: string): Promise<KuwagataAreaCode
   }
 
   const unlocked = new Set<string>(["area1", ...(data ?? []).map((r) => r.area_code as string)]);
-  const mainAreas = KUWAGATA_AREA_ORDER.filter((area) => unlocked.has(area));
+  const discoveredSpeciesIds = new Set(individuals.map((i) => i.speciesId));
+  const newlyUnlocked: KuwagataAreaCode[] = [];
+
+  for (let i = 1; i < KUWAGATA_AREA_ORDER.length; i++) {
+    const area = KUWAGATA_AREA_ORDER[i];
+    const prevArea = KUWAGATA_AREA_ORDER[i - 1];
+    if (unlocked.has(area) || !unlocked.has(prevArea)) continue;
+    if (!isAreaReleased(species, area) || !stageGates[area]) continue;
+
+    const prevAreaSpecies = species.filter(
+      (s) => s.kind === "new" && s.areaCode === prevArea && (plan !== "free" || s.minPlan === "free")
+    );
+    const required = Math.min(AREA_UNLOCK_PREV_AREA_NEW_SPECIES, prevAreaSpecies.length);
+    const discoveredCount = prevAreaSpecies.filter((s) => discoveredSpeciesIds.has(s.id)).length;
+    if (discoveredCount < required) continue;
+
+    unlocked.add(area);
+    newlyUnlocked.push(area);
+  }
+
+  if (newlyUnlocked.length > 0) {
+    const { error: upsertError } = await supabaseAdmin
+      .from("kuwagata_area_unlocks")
+      .upsert(
+        newlyUnlocked.map((area) => ({ user_id: userId, area_code: area })),
+        { onConflict: "user_id,area_code" }
+      );
+    if (upsertError) {
+      throw new Error(`エリア解放の登録に失敗しました: ${upsertError.message}`);
+    }
+  }
+
+  const mainAreas = KUWAGATA_AREA_ORDER.filter((area) => unlocked.has(area) && isAreaReleased(species, area));
 
   return plan === "free" ? mainAreas : [...mainAreas, AQUARIUM_AREA_CODE];
 }
@@ -654,7 +715,7 @@ export async function getKuwagataAreaProgress(userId: string): Promise<KuwagataA
   const discoveredSpeciesIds = new Set(individuals.map((i) => i.speciesId));
   const unlockedSet = new Set(unlockedAreas);
 
-  return KUWAGATA_AREA_ORDER.map((areaCode) => {
+  return KUWAGATA_AREA_ORDER.filter((areaCode) => isAreaReleased(species, areaCode)).map((areaCode) => {
     const areaNewSpecies = species.filter(
       (s) => s.kind === "new" && s.areaCode === areaCode && (plan !== "free" || s.minPlan === "free")
     );
@@ -718,7 +779,10 @@ export async function getKuwagataEncyclopedia(userId: string): Promise<KuwagataE
   const known = species.filter((s) => s.kind === "known").map(toEntry);
 
   const unlockedSet = new Set(unlockedAreas);
-  const areaCodesWithAquarium: KuwagataAreaCode[] = [...KUWAGATA_AREA_ORDER, AQUARIUM_AREA_CODE];
+  const areaCodesWithAquarium: KuwagataAreaCode[] = [
+    ...KUWAGATA_AREA_ORDER.filter((areaCode) => isAreaReleased(species, areaCode)),
+    AQUARIUM_AREA_CODE,
+  ];
   const areas: KuwagataEncyclopediaArea[] = areaCodesWithAquarium.map((areaCode) => {
     const entries = species.filter((s) => s.kind === "new" && s.areaCode === areaCode).map(toEntry);
     const countable = entries.filter((e) => !e.proLocked);
@@ -975,31 +1039,7 @@ export async function goCatchInArea(
     throw new Error(`採集の登録に失敗しました: ${insertError.message}`);
   }
 
-  await maybeUnlockNextArea(userId, picked.areaCode);
-
   return { species: picked, guaranteedRare: guaranteedRare && rarePool.length > 0 };
-}
-
-async function maybeUnlockNextArea(userId: string, justCaughtAreaCode: KuwagataAreaCode | null): Promise<void> {
-  if (!justCaughtAreaCode) return;
-  if (!KUWAGATA_AREA_ORDER.includes(justCaughtAreaCode)) return;
-
-  const areaIndex = KUWAGATA_AREA_ORDER.indexOf(justCaughtAreaCode);
-  const nextArea = KUWAGATA_AREA_ORDER[areaIndex + 1];
-  if (!nextArea) return; // 最終エリア。
-
-  const progress = await getKuwagataAreaProgress(userId);
-  const current = progress.find((p) => p.areaCode === justCaughtAreaCode);
-  if (!current || current.totalNewSpeciesCount === 0) return;
-  if (current.discoveredNewSpeciesCount < current.totalNewSpeciesCount) return; // まだコンプリートしていない。
-
-  const { error } = await supabaseAdmin
-    .from("kuwagata_area_unlocks")
-    .upsert({ user_id: userId, area_code: nextArea }, { onConflict: "user_id,area_code" });
-
-  if (error) {
-    throw new Error(`エリア解放の登録に失敗しました: ${error.message}`);
-  }
 }
 
 export type KuwagataPendingCatchState = {

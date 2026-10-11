@@ -13,6 +13,7 @@ const AREA_LABEL: Record<KuwagataAreaCode, string> = {
   area2: "里山・雑木林",
   area3: "川",
   area4: "ジャングル・秘境",
+  area5: "山岳",
   aquarium: "水の底の秘境（Pro限定）",
 };
 
