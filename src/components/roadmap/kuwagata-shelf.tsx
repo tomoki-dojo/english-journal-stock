@@ -1705,6 +1705,9 @@ const HOP_DURATION_MS = 1100;
 const HOP_SPECIES_CODE = "KW-0009";
 // ウマたん(KW-0046)もジャンプする。うしろ脚(2パーツ)が2関節で蹴り出す。
 const HOP_SPECIES_CODES = [HOP_SPECIES_CODE, "KW-0046"];
+// ウマたんは、体の高さの約2倍まで跳ね上がる高いジャンプ(1.4秒。kuwagata-hop-high)。
+const HIGH_HOP_SPECIES_CODE = "KW-0046";
+const HIGH_HOP_DURATION_MS = 1400;
 
 // カブたん(KW-0014)の「ツノ振り」。7秒に1回・1.6秒間、立派なツノを付け根を軸にゆっくり
 // 振り上げて戻す(力強さのアピール)。個体ごとに開始をずらす。
@@ -1892,7 +1895,7 @@ function WanderingCreature({
     HOP_SPECIES_CODES.includes(speciesCode) && growthStage === "成虫" && hasArt,
     seedKey + ":hop",
     HOP_CYCLE_MS,
-    HOP_DURATION_MS
+    speciesCode === HIGH_HOP_SPECIES_CODE ? HIGH_HOP_DURATION_MS : HOP_DURATION_MS
   );
   const hornSwing = useTimedGesture(
     (speciesCode === HORN_SPECIES_CODE || speciesCode === HORN_SPECIES_CODE_2) && growthStage === "成虫" && hasArt,
@@ -2002,7 +2005,7 @@ function WanderingCreature({
     >
       {hasArt ? (
         <div
-          className={`h-full w-full ${chatting ? "animate-kuwagata-chat" : ""} ${fighting ? "animate-kuwagata-fight" : ""} ${proud ? "animate-kuwagata-proud" : ""} ${hopping ? "animate-kuwagata-hop" : ""} ${charging ? (speciesCode === POUNCE_SPECIES_CODE ? "animate-kuwagata-stalk" : "animate-kuwagata-charge") : ""} ${stinking ? "animate-kuwagata-stink" : ""}`}
+          className={`h-full w-full ${chatting ? "animate-kuwagata-chat" : ""} ${fighting ? "animate-kuwagata-fight" : ""} ${proud ? "animate-kuwagata-proud" : ""} ${hopping ? (speciesCode === HIGH_HOP_SPECIES_CODE ? "animate-kuwagata-hop-high" : "animate-kuwagata-hop") : ""} ${charging ? (speciesCode === POUNCE_SPECIES_CODE ? "animate-kuwagata-stalk" : "animate-kuwagata-charge") : ""} ${stinking ? "animate-kuwagata-stink" : ""}`}
           style={leaping ? { animation: `${speciesCode === POUNCE_SPECIES_CODE ? "kuwagata-pounce" : "kuwagata-leap"} ${travelMs}ms linear` } : undefined}
         >
           <KnownCreatureSprite
