@@ -977,6 +977,32 @@ body {
   }
 }
 
+/* ヘビたんが飛ぶ間(短い距離)。ふわっと浮いて降りる。 */
+@keyframes kuwagata-fly-short {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-40%) rotate(-4deg);
+  }
+}
+
+/* ヘビたんの羽根。付け根(transform-origin)を軸に、素早く上下(--fdで向きを反転)に羽ばたく。 */
+@keyframes kuwagata-wing-flap-snakefly {
+  0%,
+  100% {
+    transform: rotate(calc(var(--fd, 1) * 8deg));
+  }
+  50% {
+    transform: rotate(calc(var(--fd, 1) * -10deg));
+  }
+}
+
+.animate-kuwagata-wing-snakefly {
+  animation: kuwagata-wing-flap-snakefly 0.12s ease-in-out infinite;
+}
+
 .animate-kuwagata-chomp {
   animation: kuwagata-chomp 1.5s ease-in-out;
 }
@@ -1130,6 +1156,7 @@ body {
   .animate-kuwagata-swim-go,
   .animate-kuwagata-swim-idle,
   .animate-kuwagata-wing-dragonfly,
+  .animate-kuwagata-wing-snakefly,
   .animate-kuwagata-flutter,
   .animate-kuwagata-glide,
   .animate-kuwagata-horn,
