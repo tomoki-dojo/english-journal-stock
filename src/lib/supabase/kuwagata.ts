@@ -654,12 +654,11 @@ async function getAreaStageGates(userId: string): Promise<Partial<Record<Kuwagat
 // 「Stage解放 かつ 前エリアの新種をAREA_UNLOCK_PREV_AREA_NEW_SPECIES種発見」を判定して、満たしたら保存する。
 // 採集時だけでなくStage側が後から満たされた場合にも、次に開いた時点で解放される。
 export async function getUnlockedAreas(userId: string): Promise<KuwagataAreaCode[]> {
-  const [{ data, error }, plan, species, individuals, stageGates] = await Promise.all([
+  const [{ data, error }, plan, species, individuals] = await Promise.all([
     supabaseAdmin.from("kuwagata_area_unlocks").select("area_code").eq("user_id", userId),
     getPlan(userId),
     getKuwagataSpeciesList(),
     getUserKuwagataIndividuals(userId),
-    getAreaStageGates(userId),
   ]);
 
   if (error) {
@@ -667,6 +666,10 @@ export async function getUnlockedAreas(userId: string): Promise<KuwagataAreaCode
   }
 
   const unlocked = new Set<string>(["area1", ...(data ?? []).map((r) => r.area_code as string)]);
+  const hasPendingArea = KUWAGATA_AREA_ORDER.some(
+    (area, i) => i > 0 && !unlocked.has(area) && unlocked.has(KUWAGATA_AREA_ORDER[i - 1]) && isAreaReleased(species, area)
+  );
+  const stageGates = hasPendingArea ? await getAreaStageGates(userId) : {};
   const discoveredSpeciesIds = new Set(individuals.map((i) => i.speciesId));
   const newlyUnlocked: KuwagataAreaCode[] = [];
 
@@ -862,6 +865,7 @@ export async function getUncelebratedHatches(
     .select("id, mandible_variant, hatched_from, kuwagata_species!inner(code, name, stage_trigger)")
     .eq("user_id", userId)
     .eq("kuwagata_species.stage_trigger", 5)
+    .eq("obtained_via", "stage_clear")
     .not("hatched_at", "is", null)
     .is("hatch_celebrated_at", null)
     .order("hatched_at", { ascending: true });
@@ -1119,7 +1123,25 @@ export async function consumePendingCatch(
     throw new Error(`採集チャンスの消費に失敗しました: ${updateError.message}`);
   }
 
-  return goCatchInArea(userId, areaCode, useGuaranteedRare, rareBoost);
+  // 採集の抽選に失敗した（エラー・プールが空）ときは、消費した採集チャンスを戻す。
+  const refund = async () => {
+    await supabaseAdmin
+      .from("user_roadmap_state")
+      .update({
+        pending_catch_count: state.pendingCatchCount,
+        pending_guaranteed_rare_catch_count: state.pendingGuaranteedRareCatchCount,
+      })
+      .eq("user_id", userId);
+  };
+
+  try {
+    const result = await goCatchInArea(userId, areaCode, useGuaranteedRare, rareBoost);
+    if (!result) await refund();
+    return result;
+  } catch (err) {
+    await refund();
+    throw err;
+  }
 }
 
 export async function forceHatchTeppenToAdult(userId: string): Promise<void> {
