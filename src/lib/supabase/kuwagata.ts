@@ -1075,27 +1075,14 @@ export async function stockCatchChanceOnMasteredCountUpdate(userId: string, newT
 
   const isGuaranteedRareMilestone = newTotal % KUWAGATA_RARE_GUARANTEE_MILESTONE === 0;
 
-  const { data, error: fetchError } = await supabaseAdmin
-    .from("user_roadmap_state")
-    .select("pending_catch_count, pending_guaranteed_rare_catch_count")
-    .eq("user_id", userId)
-    .maybeSingle();
+  // 読んで書くと同時実行で加算が失われるため、DB側で1回のSQLとして加算する。
+  const { error } = await supabaseAdmin.rpc("add_kuwagata_catch_chance", {
+    p_user_id: userId,
+    p_guaranteed: isGuaranteedRareMilestone,
+  });
 
-  if (fetchError) {
-    throw new Error(`採集チャンスの取得に失敗しました: ${fetchError.message}`);
-  }
-
-  const { error: updateError } = await supabaseAdmin
-    .from("user_roadmap_state")
-    .update({
-      pending_catch_count: (data?.pending_catch_count ?? 0) + 1,
-      pending_guaranteed_rare_catch_count:
-        (data?.pending_guaranteed_rare_catch_count ?? 0) + (isGuaranteedRareMilestone ? 1 : 0),
-    })
-    .eq("user_id", userId);
-
-  if (updateError) {
-    throw new Error(`採集チャンスの更新に失敗しました: ${updateError.message}`);
+  if (error) {
+    throw new Error(`採集チャンスの更新に失敗しました: ${error.message}`);
   }
 }
 
@@ -1104,38 +1091,22 @@ export async function consumePendingCatch(
   areaCode: KuwagataAreaCode,
   rareBoost = 1
 ): Promise<KuwagataCatchResult | null> {
-  const state = await getPendingCatchState(userId);
-  if (state.pendingCatchCount <= 0) return null;
-
-  const useGuaranteedRare = state.pendingGuaranteedRareCatchCount > 0;
-
-  const { error: updateError } = await supabaseAdmin
-    .from("user_roadmap_state")
-    .update({
-      pending_catch_count: state.pendingCatchCount - 1,
-      pending_guaranteed_rare_catch_count: useGuaranteedRare
-        ? state.pendingGuaranteedRareCatchCount - 1
-        : state.pendingGuaranteedRareCatchCount,
-    })
-    .eq("user_id", userId);
-
-  if (updateError) {
-    throw new Error(`採集チャンスの消費に失敗しました: ${updateError.message}`);
+  // 残りの確認と消費を1回のSQLで行う（同時に2回送られても、消費できるのは片方だけ）。
+  const { data, error: consumeError } = await supabaseAdmin.rpc("consume_kuwagata_catch", { p_user_id: userId });
+  if (consumeError) {
+    throw new Error(`採集チャンスの消費に失敗しました: ${consumeError.message}`);
   }
+
+  const consumed = (Array.isArray(data) ? data[0] : data) as { consumed: boolean; guaranteed: boolean } | null;
+  if (!consumed?.consumed) return null;
 
   // 採集の抽選に失敗した（エラー・プールが空）ときは、消費した採集チャンスを戻す。
   const refund = async () => {
-    await supabaseAdmin
-      .from("user_roadmap_state")
-      .update({
-        pending_catch_count: state.pendingCatchCount,
-        pending_guaranteed_rare_catch_count: state.pendingGuaranteedRareCatchCount,
-      })
-      .eq("user_id", userId);
+    await supabaseAdmin.rpc("add_kuwagata_catch_chance", { p_user_id: userId, p_guaranteed: consumed.guaranteed });
   };
 
   try {
-    const result = await goCatchInArea(userId, areaCode, useGuaranteedRare, rareBoost);
+    const result = await goCatchInArea(userId, areaCode, consumed.guaranteed, rareBoost);
     if (!result) await refund();
     return result;
   } catch (err) {
