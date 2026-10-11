@@ -621,28 +621,25 @@ function buildSnakeflyArt(): Partial<Record<Facing, KnownCreatureArt>> {
       body: file("front_body"),
       mandibles: { 1: file("front_mandible_01") },
       mandibleOrigin: "25% 85%",
-      legsBehindBody: [
-        { src: file("front_wing_L"), delay: "0s", kind: "wing", origin: "50% 55%", flapDir: 1 },
-        { src: file("front_wing_R"), delay: "0s", kind: "wing", origin: "40% 50%", flapDir: -1 },
-        { src: file("front_leg_R1"), delay: "-0.55s" },
-      ],
+      legsBehindBody: [{ src: file("front_leg_R1"), delay: "-0.55s" }],
+      // 羽根は正面・背面とも体の手前
       legsInFrontOfBody: [
         { src: file("front_leg_L3"), delay: "-0.3s" },
         { src: file("front_leg_L1"), delay: "0s" },
+        { src: file("front_wing_L"), delay: "0s", kind: "wing", origin: "50% 55%", flapDir: 1 },
+        { src: file("front_wing_R"), delay: "0s", kind: "wing", origin: "40% 50%", flapDir: -1 },
       ],
     },
     back: {
       body: file("back_body"),
       mandibles: { 1: file("back_mandible_01") },
       mandibleOrigin: "89% 40%",
-      legsBehindBody: [
-        { src: file("back_wing_R"), delay: "0s", kind: "wing", origin: "58% 58%", flapDir: 1 },
-        { src: file("back_leg_L1-2"), delay: "-0.7s" },
-      ],
+      legsBehindBody: [{ src: file("back_leg_L1-2"), delay: "-0.7s" }],
       legsInFrontOfBody: [
         { src: file("back_leg_R3"), delay: "-0.3s" },
         { src: file("back_leg_R2"), delay: "-0.15s" },
         { src: file("back_leg_R1"), delay: "0s" },
+        { src: file("back_wing_R"), delay: "0s", kind: "wing", origin: "58% 58%", flapDir: 1 },
       ],
     },
   };
@@ -930,7 +927,7 @@ function KnownCreatureSprite({
 
   // 大顎(ツノ)。既定は一番手前、mandibleBehindBodyの向きは最背面(本体より奥)に描く。
   const heraShow = isHera(code) && shine;
-  const jawClassName = `absolute inset-0 h-full w-full ${heraShow ? "animate-kuwagata-nod" : ""} ${fighting ? "animate-kuwagata-fight-jaw" : ""} ${hornSwing && art.mandibleOrigin ? "animate-kuwagata-horn" : ""} ${chomp && art.mandibleOrigin ? "animate-kuwagata-chomp" : ""} ${sniff && art.mandibleOrigin ? "animate-kuwagata-sniff" : ""}`;
+  const jawClassName = `absolute inset-0 h-full w-full ${heraShow ? "animate-kuwagata-nod" : ""} ${fighting ? "animate-kuwagata-fight-jaw" : ""} ${hornSwing && art.mandibleOrigin ? "animate-kuwagata-horn" : ""} ${chomp && art.mandibleOrigin ? (code === SNAKEFLY_SPECIES_CODE ? "animate-kuwagata-chomp-big" : "animate-kuwagata-chomp") : ""} ${sniff && art.mandibleOrigin ? "animate-kuwagata-sniff" : ""}`;
   // グンたん: ガチガチの間、大顎の形でくり抜いた光がキラッと走る(大顎と一緒に動く)。
   const jawShine = (((code === JAW_SHINE_SPECIES_CODE || code === SNAKEFLY_SPECIES_CODE) && chomp) || heraShow) && mandible;
   const mandibleEl = mandible ? (
