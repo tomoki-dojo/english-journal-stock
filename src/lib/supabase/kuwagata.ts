@@ -1002,8 +1002,8 @@ export async function goCatchInArea(
     if (hasFirstIndividual) pool.push(knownSpecies);
   }
 
-  // テッペンクワたんは激レア枠としてarea4に入る（Stage5を卒業して、最初のタマゴが羽化した人だけ）。
-  if (areaCode === "area4") {
+  // テッペンクワたんは激レア枠としてarea5に入る（Stage5を卒業して、最初のタマゴが羽化した人だけ）。
+  if (areaCode === "area5") {
     const teppen = species.find((s) => s.code === TEPPEN_SPECIES_CODE);
     if (
       teppen &&
