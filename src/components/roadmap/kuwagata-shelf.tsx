@@ -951,8 +951,10 @@ function KnownCreatureSprite({
 
   if (flipped && art.flippedSrc) {
     return (
-      <div className="relative h-full w-full animate-kuwagata-flip-wiggle">
-        <img src={art.flippedSrc} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />
+      <div className="relative h-full w-full animate-kuwagata-flip-hit">
+        <div className="relative h-full w-full animate-kuwagata-flip-wiggle">
+          <img src={art.flippedSrc} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />
+        </div>
       </div>
     );
   }
@@ -1340,7 +1342,12 @@ const CLICK_BEETLE_SPECIES_CODE = "KW-0048";
 const CLICK_FLIP_MS = 1800;
 const CLICK_HOP_MS = 1000;
 const CLICK_HOP_MAX_DIST_PCT = 20;
-const CLICK_MIN_WALK_MS = 2500;
+const CLICK_MIN_WALK_MS = 1200;
+// ぶつかる地点へは、ふだんより速く突っ込む(距離1%あたりのms)。当たった勢いで少し弾き返される(CLICK_RECOIL_MS)。
+const CLICK_DASH_MS_PER_PCT = 400;
+const CLICK_RECOIL_MS = 260;
+// 円の半径の和に対する「ぶつかった」とみなす距離の比。小さいほど、絵が実際に触れるくらいまで近づく。
+const CLICK_CONTACT_FACTOR = 0.6;
 const MIN_TRAVEL_MS = 7000;
 const MAX_TRAVEL_MS = 30000;
 
@@ -1535,29 +1542,35 @@ function useWander(
           ...Object.entries(positionsRef.current)
             .filter(([id]) => id !== seedKey)
             .map(([, other]) => ({ pt: surfacePoint(other.u, other.v, geo), radius: spriteRadius(other.widthPct) })),
-        ].filter((o) => surfaceDistancePct(prevPt, o.pt) >= ownRadius * 0.7 + o.radius);
-        const STEPS = 24;
+        ].filter((o) => surfaceDistancePct(prevPt, o.pt) >= (ownRadius + o.radius) * CLICK_CONTACT_FACTOR);
+        const STEPS = 48;
         let hitStep = -1;
         for (let k = 1; k <= STEPS && hitStep < 0; k++) {
           const t = k / STEPS;
           const pt = { left: prevPt.left + (nextPt.left - prevPt.left) * t, top: prevPt.top + (nextPt.top - prevPt.top) * t };
-          if (obstacles.some((o) => surfaceDistancePct(pt, o.pt) < ownRadius * 0.7 + o.radius)) hitStep = k;
+          if (obstacles.some((o) => surfaceDistancePct(pt, o.pt) < (ownRadius + o.radius) * CLICK_CONTACT_FACTOR)) hitStep = k;
         }
-        if (hitStep >= 3) {
-          const tc = (hitStep - 1) / STEPS;
+        if (hitStep >= 4) {
+          const tc = hitStep / STEPS;
           const contactSpot = {
             u: prev.spot.u + (nextSpot.u - prev.spot.u) * tc,
             v: prev.spot.v + (nextSpot.v - prev.spot.v) * tc,
           };
           const contactPt = surfacePoint(contactSpot.u, contactSpot.v, geo);
           positionsRef.current[seedKey] = { ...contactSpot, widthPct };
-          const walkMs = Math.max(CLICK_MIN_WALK_MS, surfaceDistancePct(prevPt, contactPt) * TRAVEL_MS_PER_PCT * travelScale);
+          const walkMs = Math.max(CLICK_MIN_WALK_MS, surfaceDistancePct(prevPt, contactPt) * CLICK_DASH_MS_PER_PCT * travelScale);
           const approach = { spot: contactSpot, facing, heading, travelMs: walkMs, leaping: false, charging: false, posing: false, hitting: true, flipped: false };
           stateRef.current = approach;
           setState(approach);
           flipTimer = setTimeout(() => {
             if (cancelled) return;
-            const flippedState = { ...stateRef.current, hitting: false, flipped: true };
+            // 当たった勢いで、来た道を少し弾き返されながら裏返る。
+            const rb = Math.min(0.12, tc * 0.5);
+            const recoilSpot = {
+              u: prev.spot.u + (nextSpot.u - prev.spot.u) * (tc - rb),
+              v: prev.spot.v + (nextSpot.v - prev.spot.v) * (tc - rb),
+            };
+            const flippedState = { ...stateRef.current, spot: recoilSpot, travelMs: CLICK_RECOIL_MS, hitting: false, flipped: true };
             stateRef.current = flippedState;
             setState(flippedState);
             flipTimer = setTimeout(() => {
@@ -2162,6 +2175,8 @@ function WanderingCreature({
   // 泳ぐ種は、掻いて勢いよく出て、だんだん減速して止まる(ゆっくり漂うように着く)。
   const moveTransition = swimmer
     ? `left ${travelMs}ms cubic-bezier(0.25, 0.6, 0.3, 1), top ${travelMs}ms cubic-bezier(0.25, 0.6, 0.3, 1)`
+    : flipped
+    ? `left ${travelMs}ms ease-out, top ${travelMs}ms ease-out`
     : leaping || hitting
     ? `left ${travelMs}ms linear, top ${travelMs}ms linear`
     : straightFlight

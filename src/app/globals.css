@@ -1019,6 +1019,27 @@ body {
   animation: kuwagata-flip-wiggle 0.22s ease-in-out infinite;
 }
 
+/* コメたんが当たった瞬間。ガツンと衝撃で少し跳ね上がって、ぺしゃっと潰れてから落ち着く。 */
+@keyframes kuwagata-flip-hit {
+  0% {
+    transform: translateY(0) scale(1.12, 0.85);
+  }
+  35% {
+    transform: translateY(-18%) scale(0.95, 1.08);
+  }
+  70% {
+    transform: translateY(0) scale(1.06, 0.92);
+  }
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+}
+
+.animate-kuwagata-flip-hit {
+  transform-origin: 50% 100%;
+  animation: kuwagata-flip-hit 0.4s ease-out;
+}
+
 /* コメたんのパチン。裏返しから勢いよく跳ね上がり、空中でくるっと1回転して着地する。 */
 @keyframes kuwagata-click-leap {
   0% {
@@ -1216,6 +1237,7 @@ body {
   .animate-kuwagata-horn,
   .animate-kuwagata-chomp,
   .animate-kuwagata-flip-wiggle,
+  .animate-kuwagata-flip-hit,
   .animate-kuwagata-chomp-big,
   .animate-kuwagata-shine,
   .animate-kuwagata-claw,
