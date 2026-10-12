@@ -2747,6 +2747,27 @@ const SAND_STYLE: CSSProperties = {
   borderTop: "2px solid #c9b27a",
 };
 
+const ANCIENT_SOIL_STYLE: CSSProperties = {
+  backgroundColor: "#6f6a3a",
+  backgroundImage:
+    "radial-gradient(circle at 20% 35%, #4d4a28 1px, transparent 1.6px), radial-gradient(circle at 60% 65%, #9a9552 1px, transparent 1.6px), radial-gradient(circle at 82% 28%, #3f6b3a 1.2px, transparent 1.8px)",
+  backgroundSize: "13px 11px, 10px 9px, 17px 13px",
+  borderTop: "2px solid #3f6b3a",
+};
+
+// 古代の森の小さな水槽の遠景(火山とシダの影)。他の水槽と同じくコードだけで描く。
+function AncientBackdrop() {
+  return (
+    <svg className="pointer-events-none absolute inset-x-0 bottom-[40px] h-[52px] w-full" viewBox="0 0 100 52" preserveAspectRatio="none" aria-hidden>
+      <polygon points="52,52 66,14 72,14 88,52" fill="#a7c4a0" />
+      <polygon points="64,14 74,14 72,18 66,18" fill="#f59e0b" opacity="0.8" />
+      <polygon points="0,52 14,30 26,52" fill="#86b98a" />
+      <polygon points="18,52 34,22 48,52" fill="#74ab7c" />
+      <path d="M6 52 Q8 38 2 32 M6 52 Q10 40 16 36 M6 52 Q4 42 10 38" stroke="#3f7a47" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 const RACK_CELL_CLASS = "relative px-1.5 pb-3 pt-3";
 const RACK_SHELF_CLASS = "absolute inset-x-0 bottom-0 h-3 border-y border-zinc-400";
 
@@ -2818,21 +2839,16 @@ function TankButton({
   const ancient = variant === "ancient";
   const known = variant === "known";
   const frame = known ? "border-amber-300" : aquarium ? "border-cyan-200" : ancient ? "border-emerald-200" : "border-white";
-  const air = aquarium ? "from-cyan-100/90 to-cyan-200/80" : "from-sky-50/80 to-white/50";
+  const air = aquarium ? "from-cyan-100/90 to-cyan-200/80" : ancient ? "from-cyan-50 to-emerald-100" : "from-sky-50/80 to-white/50";
   return (
     <button
       type="button"
       onClick={onClick}
       className={`relative block h-[114px] w-full overflow-hidden rounded-t-md border-2 border-b-0 bg-gradient-to-b shadow-inner ring-1 ring-zinc-300 transition-transform hover:scale-[1.03] active:scale-95 ${frame} ${air}`}
-      // 古代の森は、拡大表示と同じ背景絵(木々・岩・火山・川)を、棚の小さな水槽の背景にする(地面の土は絵の中のものを使う)。
-      style={
-        ancient
-          ? { backgroundImage: 'url(/roadmap/tank/tank_bg_ancient.png), linear-gradient(to bottom, #ecfeff, #bbf7d0)', backgroundSize: "cover", backgroundPosition: "center 62%" }
-          : undefined
-      }
     >
       <div className="absolute inset-x-0 top-0 h-1 bg-zinc-300/80" />
-      {!ancient && <div className="absolute inset-x-0 bottom-0 h-[46px]" style={aquarium ? SAND_STYLE : SOIL_STYLE} />}
+      {ancient && <AncientBackdrop />}
+      <div className="absolute inset-x-0 bottom-0 h-[46px]" style={aquarium ? SAND_STYLE : ancient ? ANCIENT_SOIL_STYLE : SOIL_STYLE} />
       <div className="absolute inset-x-0 bottom-[40px] flex justify-center">{children}</div>
       <div className="absolute inset-x-0 bottom-1.5 flex justify-center">
         <div
