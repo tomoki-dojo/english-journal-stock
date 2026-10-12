@@ -1019,6 +1019,49 @@ body {
   animation: kuwagata-flip-wiggle 0.22s ease-in-out infinite;
 }
 
+/* クジャクたんの求愛ダンス。機敏に、お腹の模様を付け根を軸に左右へ素早く振り、脚は水平より少し斜め上(--cb)を中心に振る。 */
+@keyframes kuwagata-court-fan {
+  0%,
+  100% {
+    transform: rotate(-16deg);
+  }
+  50% {
+    transform: rotate(16deg);
+  }
+}
+
+.animate-kuwagata-court-fan {
+  animation: kuwagata-court-fan 0.3s ease-in-out infinite;
+}
+
+@keyframes kuwagata-court-leg {
+  0%,
+  100% {
+    transform: rotate(calc(var(--cb, 0deg) - 14deg));
+  }
+  50% {
+    transform: rotate(calc(var(--cb, 0deg) + 14deg));
+  }
+}
+
+.animate-kuwagata-court-leg {
+  animation: kuwagata-court-leg 0.22s ease-in-out infinite;
+}
+
+@keyframes kuwagata-court-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2.5%);
+  }
+}
+
+.animate-kuwagata-court-bounce {
+  animation: kuwagata-court-bounce 0.3s ease-in-out infinite;
+}
+
 /* コメたんが当たった瞬間。ガツンと衝撃で少し跳ね上がって、ぺしゃっと潰れてから落ち着く。 */
 @keyframes kuwagata-flip-hit {
   0% {
@@ -1237,6 +1280,9 @@ body {
   .animate-kuwagata-horn,
   .animate-kuwagata-chomp,
   .animate-kuwagata-flip-wiggle,
+  .animate-kuwagata-court-fan,
+  .animate-kuwagata-court-leg,
+  .animate-kuwagata-court-bounce,
   .animate-kuwagata-flip-hit,
   .animate-kuwagata-chomp-big,
   .animate-kuwagata-shine,

@@ -93,6 +93,15 @@ type KnownCreatureArt = {
   shine?: boolean;
   // 裏返しの姿(コメたん)。ぶつかって裏返っている間は、体・脚のパーツの代わりにこの1枚を出す。
   flippedSrc?: string;
+  // 求愛ダンスの姿(クジャクたん)。正面向き専用。body1=ダンス中の体(脚つき)、body2=持ち上げた模様のお腹(付け根fanOriginを軸に左右に振る)、
+  // legL・legR=縦長に描いた振り上げる脚(下の付け根を軸に、水平から少し斜め上を基準にして振る)。
+  courtship?: {
+    body1: string;
+    body2: string;
+    fanOrigin: string;
+    legL: { src: string; origin: string; baseDeg: number };
+    legR: { src: string; origin: string; baseDeg: number };
+  };
   legsBehindBody: CreaturePartArt[];
   legsInFrontOfBody: CreaturePartArt[];
 };
@@ -639,6 +648,27 @@ function buildJumpingSpiderArt(code: string, skip: string[] = []): Partial<Recor
   };
 }
 
+// クジャクたん(クジャクスパイダー): 8脚で歩く(ヒマたんと同じ構成、正面R4なし)+求愛ダンス。
+// 求愛ダンスは、動きと動きの間に一定確率で、その場で正面を向いて(COURT_MS)お腹の模様を振り、脚を振り上げる。
+function buildPeacockSpiderArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
+  const art = buildJumpingSpiderArt(code, ["front_leg_R4"]);
+  const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
+  return {
+    front: art.front && {
+      ...art.front,
+      courtship: {
+        body1: file("courtship_body1"),
+        body2: file("courtship_body2"),
+        fanOrigin: "42% 52%",
+        // 縦長の脚を、付け根(下端)を軸に回して「水平から少し斜め上」にする。左脚は反時計回り、右脚は時計回り。
+        legL: { src: file("courtship_leg_L"), origin: "31% 67%", baseDeg: -44 },
+        legR: { src: file("courtship_leg_R"), origin: "65% 72%", baseDeg: 40 },
+      },
+    },
+    back: art.back,
+  };
+}
+
 // コメたん(コメツキムシ): 歩く6脚+裏返し(flipped1=正面向き・flipped2=背面向き)。
 // 置物や他の個体にぶつかると裏返ってじたばたし、パチンと跳ねて元に戻る(useWanderのflipTrap)。
 function buildClickBeetleArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
@@ -789,7 +819,7 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   // ヒマたん(ヒマラヤジャンピングスパイダー。8脚。ときどきピタッと止まってパッと飛びつく=POUNCE_*、タランたんの使い回しで距離は長め)
   "KW-0050": buildJumpingSpiderArt("KW-0050"),
   // クジャクたん(クジャクスパイダー。8脚＝ヒマたんと同じ構成で、正面のR4は素材なし。普通に歩く)
-  "KW-0052": buildJumpingSpiderArt("KW-0052", ["front_leg_R4"]),
+  "KW-0052": buildPeacockSpiderArt("KW-0052"),
   // コメたん(コメツキムシ。置物・他の個体にぶつかると裏返ってじたばた→パチンと跳ねる=CLICK_*)
   "KW-0048": buildClickBeetleArt("KW-0048"),
   // ヘビたん(ヘビトンボ。大顎をガチガチ+大顎がキラッ=CHOMP_*。たまに羽ばたいて短い距離を飛ぶ=SNAKEFLY_*)
@@ -898,6 +928,7 @@ function KnownCreatureSprite({
   hop = false,
   airborne = false,
   flipped = false,
+  courting = false,
 }: {
   code: string;
   facing: Facing;
@@ -929,6 +960,8 @@ function KnownCreatureSprite({
   airborne?: boolean;
   // ぶつかって裏返っている最中(コメたん)。flippedSrcの1枚をじたばたさせて出す。
   flipped?: boolean;
+  // 求愛ダンス中(クジャクたん)。courtshipの絵に切り替え、お腹と脚を振る。
+  courting?: boolean;
 }) {
   const stageArt = KNOWN_STAGE_ART[code];
 
@@ -980,6 +1013,20 @@ function KnownCreatureSprite({
   const art = artSet?.[facing] ?? artSet?.front;
   if (!art) return null;
   const mandible = art.mandibles[mandibleVariant] ?? art.mandibles[1];
+
+  if (courting && art.courtship) {
+    const c = art.courtship;
+    const legStyle = (leg: { origin: string; baseDeg: number }, delay: string): CSSProperties =>
+      ({ transformOrigin: leg.origin, "--cb": `${leg.baseDeg}deg`, animationDelay: delay }) as CSSProperties;
+    return (
+      <div className="relative h-full w-full animate-kuwagata-court-bounce">
+        <img src={c.body1} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />
+        <img src={c.body2} alt="" className="animate-kuwagata-court-fan absolute inset-0 h-full w-full" style={{ transformOrigin: c.fanOrigin }} />
+        <img src={c.legL.src} alt="" className="animate-kuwagata-court-leg absolute inset-0 h-full w-full" style={legStyle(c.legL, "0s")} />
+        <img src={c.legR.src} alt="" className="animate-kuwagata-court-leg absolute inset-0 h-full w-full" style={legStyle(c.legR, "-0.11s")} />
+      </div>
+    );
+  }
 
   if (flipped && art.flippedSrc) {
     return (
@@ -1380,6 +1427,10 @@ const CLICK_DASH_MS_PER_PCT = 400;
 const CLICK_RECOIL_MS = 260;
 // 円の半径の和に対する「ぶつかった」とみなす距離の比。小さいほど、絵が実際に触れるくらいまで近づく。
 const CLICK_CONTACT_FACTOR = 0.6;
+// クジャクたん: 移動と移動の間に一定確率で、その場で正面を向いて求愛ダンス(COURT_MS)をする。
+const COURT_SPECIES_CODE = "KW-0052";
+const COURT_CHANCE = 0.4;
+const COURT_MS = 4500;
 const MIN_TRAVEL_MS = 7000;
 const MAX_TRAVEL_MS = 30000;
 
@@ -1417,8 +1468,9 @@ function useWander(
   geo: TankGeometry = TERRARIUM_GEOMETRY,
   leapMs = LEAP_MS,
   leapMaxDistPct = Infinity,
-  flipTrap = false
-): { spot: { u: number; v: number }; facing: Facing; heading: Heading; travelMs: number; leaping: boolean; charging: boolean; posing: boolean; flipped?: boolean; hitting?: boolean } {
+  flipTrap = false,
+  courtChance = 0
+): { spot: { u: number; v: number }; facing: Facing; heading: Heading; travelMs: number; leaping: boolean; charging: boolean; posing: boolean; flipped?: boolean; hitting?: boolean; courting?: boolean } {
   const [state, setState] = useState<{
     spot: { u: number; v: number };
     facing: Facing;
@@ -1434,6 +1486,8 @@ function useWander(
     hitting?: boolean;
     // ぶつかって裏返っている最中(コメたん)
     flipped?: boolean;
+    // 求愛ダンス中(クジャクたん。その場で正面を向く)
+    courting?: boolean;
   }>({
     spot: initial,
     facing: "front",
@@ -1506,6 +1560,20 @@ function useWander(
           setState(done);
         }, POSE_MS);
         timer = setTimeout(goToNextSpot, POSE_MS + 1500 + Math.random() * 3000);
+        return;
+      }
+      if (courtChance > 0 && Math.random() < courtChance) {
+        // 求愛ダンス: その場で正面を向いて止まり(COURT_MS)、終わったら普通に歩き出す。
+        const courting = { ...prev, facing: "front" as Facing, leaping: false, charging: false, posing: false, hitting: false, flipped: false, courting: true };
+        stateRef.current = courting;
+        setState(courting);
+        flipTimer = setTimeout(() => {
+          if (cancelled) return;
+          const done = { ...stateRef.current, courting: false };
+          stateRef.current = done;
+          setState(done);
+        }, COURT_MS);
+        timer = setTimeout(goToNextSpot, COURT_MS + 1500 + Math.random() * 3000);
         return;
       }
       if (chargeHopChance > 0 && Math.random() < chargeHopChance) {
@@ -1674,7 +1742,7 @@ function useWander(
       if (poseTimer) clearTimeout(poseTimer);
       if (flipTimer) clearTimeout(flipTimer);
     };
-  }, [seedKey, widthPct, moves, decorationSpots, positionsRef, travelScale, leapChance, chargeHopChance, poseChance, chargeMs, hopMs, hopMaxDistPct, restScale, geo, leapMs, leapMaxDistPct, flipTrap]);
+  }, [seedKey, widthPct, moves, decorationSpots, positionsRef, travelScale, leapChance, chargeHopChance, poseChance, chargeMs, hopMs, hopMaxDistPct, restScale, geo, leapMs, leapMaxDistPct, flipTrap, courtChance]);
 
   return state;
 }
@@ -2193,13 +2261,15 @@ function WanderingCreature({
     geo,
     speciesCode === SNAKEFLY_SPECIES_CODE ? SNAKEFLY_MS : LEAP_MS,
     speciesCode === SNAKEFLY_SPECIES_CODE ? SNAKEFLY_MAX_DIST_PCT : Infinity,
-    speciesCode === CLICK_BEETLE_SPECIES_CODE && growthStage === "成虫"
+    speciesCode === CLICK_BEETLE_SPECIES_CODE && growthStage === "成虫",
+    speciesCode === COURT_SPECIES_CODE && growthStage === "成虫" ? COURT_CHANCE : 0
   );
   // 水中を泳ぐ種は、歩く代わりに3次元(底〜水面)を泳ぎ回る。
   const swim = useSwim(seedKey, initialSpot, widthPct, moves && swimmer, positionsRef, geo);
   const { facing, heading, leaping, charging, posing } = swimmer ? { ...walk, ...swim, leaping: false, charging: false, posing: false } : walk;
   const flipped = !swimmer && !!walk.flipped;
   const hitting = !swimmer && !!walk.hitting;
+  const courting = !swimmer && !!walk.courting;
   const spot = swimmer ? swim.spot : walk.spot;
   const travelMs = swimmer ? swim.travelMs : walk.travelMs;
   const swimming = swimmer && swim.moving;
@@ -2259,6 +2329,7 @@ function WanderingCreature({
             hop={hopping}
             airborne={leaping}
             flipped={flipped}
+            courting={courting}
             code={speciesCode}
             facing={facing}
             mandibleVariant={mandibleVariant}
