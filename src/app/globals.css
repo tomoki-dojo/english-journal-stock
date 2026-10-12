@@ -1003,6 +1003,37 @@ body {
   animation: kuwagata-wing-flap-snakefly 0.12s ease-in-out infinite;
 }
 
+/* コメたんの裏返り。足元(下端中央)を軸に、小刻みにじたばたと左右に揺れる。 */
+@keyframes kuwagata-flip-wiggle {
+  0%,
+  100% {
+    transform: rotate(-5deg);
+  }
+  50% {
+    transform: rotate(5deg);
+  }
+}
+
+.animate-kuwagata-flip-wiggle {
+  transform-origin: 50% 90%;
+  animation: kuwagata-flip-wiggle 0.22s ease-in-out infinite;
+}
+
+/* コメたんのパチン。裏返しから勢いよく跳ね上がり、空中でくるっと1回転して着地する。 */
+@keyframes kuwagata-click-leap {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1);
+  }
+  50% {
+    transform: translateY(-110%) rotate(-180deg);
+    animation-timing-function: cubic-bezier(0.6, 0, 0.8, 0.3);
+  }
+  100% {
+    transform: translateY(0) rotate(-360deg);
+  }
+}
+
 .animate-kuwagata-chomp {
   animation: kuwagata-chomp 1.5s ease-in-out;
 }
@@ -1184,6 +1215,7 @@ body {
   .animate-kuwagata-glide,
   .animate-kuwagata-horn,
   .animate-kuwagata-chomp,
+  .animate-kuwagata-flip-wiggle,
   .animate-kuwagata-chomp-big,
   .animate-kuwagata-shine,
   .animate-kuwagata-claw,

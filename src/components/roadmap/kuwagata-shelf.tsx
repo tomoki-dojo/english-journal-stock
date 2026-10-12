@@ -91,6 +91,8 @@ type KnownCreatureArt = {
   glow?: { left: number; top: number; size: number };
   // trueなら体の形の中だけを光の帯が走る演出(ルリたん)に対応する種。
   shine?: boolean;
+  // 裏返しの姿(コメたん)。ぶつかって裏返っている間は、体・脚のパーツの代わりにこの1枚を出す。
+  flippedSrc?: string;
   legsBehindBody: CreaturePartArt[];
   legsInFrontOfBody: CreaturePartArt[];
 };
@@ -611,6 +613,17 @@ function buildWingedFlyerArt(
   };
 }
 
+// コメたん(コメツキムシ): 歩く6脚+裏返し(flipped1=正面向き・flipped2=背面向き)。
+// 置物や他の個体にぶつかると裏返ってじたばたし、パチンと跳ねて元に戻る(useWanderのflipTrap)。
+function buildClickBeetleArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
+  const art = buildNewSpeciesWalkerArt(code);
+  const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
+  return {
+    front: art.front && { ...art.front, flippedSrc: file("flipped1") },
+    back: art.back && { ...art.back, flippedSrc: file("flipped2") },
+  };
+}
+
 // ヘビたん(ヘビトンボ): 歩く6脚+大顎(mandible_01、ガチガチ+キラッ)+羽根。羽根は付け根を軸に、飛んでいる間だけ素早く羽ばたく。
 // 正面の脚は L1・L3・R1(R1は体の奥)、背面は R1〜R3(手前)と L1-2(体の奥)。
 function buildSnakeflyArt(): Partial<Record<Facing, KnownCreatureArt>> {
@@ -743,6 +756,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0021": buildNewSpeciesWalkerArt("KW-0021", { frontOrigin: "23% 70%", backOrigin: "80% 60%", backBehindBody: true }),
   // モンたん(エサキモンキツノカメムシ。歩く6脚・大顎なし・脚は正面/背面ともすべて体の後ろ。ときどき体をぷるぷる震わせて臭いガスをぷしゅっと出す=STINK_*)
   "KW-0022": buildWalkerLegsBehindBodyArt("KW-0022"),
+  // コメたん(コメツキムシ。置物・他の個体にぶつかると裏返ってじたばた→パチンと跳ねる=CLICK_*)
+  "KW-0048": buildClickBeetleArt("KW-0048"),
   // ヘビたん(ヘビトンボ。大顎をガチガチ+大顎がキラッ=CHOMP_*。たまに羽ばたいて短い距離を飛ぶ=SNAKEFLY_*)
   "KW-0047": buildSnakeflyArt(),
   // ハンたん(ハンミョウ。大顎をガチガチ=CHOMP_*。たまに弧を描いて素早く飛んで移動=LEAP_*)
@@ -848,6 +863,7 @@ function KnownCreatureSprite({
   swim = false,
   hop = false,
   airborne = false,
+  flipped = false,
 }: {
   code: string;
   facing: Facing;
@@ -877,6 +893,8 @@ function KnownCreatureSprite({
   hop?: boolean;
   // 飛んで移動している最中(ヘビたん)。羽根が羽ばたく。
   airborne?: boolean;
+  // ぶつかって裏返っている最中(コメたん)。flippedSrcの1枚をじたばたさせて出す。
+  flipped?: boolean;
 }) {
   const stageArt = KNOWN_STAGE_ART[code];
 
@@ -928,6 +946,14 @@ function KnownCreatureSprite({
   const art = artSet?.[facing] ?? artSet?.front;
   if (!art) return null;
   const mandible = art.mandibles[mandibleVariant] ?? art.mandibles[1];
+
+  if (flipped && art.flippedSrc) {
+    return (
+      <div className="relative h-full w-full animate-kuwagata-flip-wiggle">
+        <img src={art.flippedSrc} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />
+      </div>
+    );
+  }
 
   // 大顎(ツノ)。既定は一番手前、mandibleBehindBodyの向きは最背面(本体より奥)に描く。
   const heraShow = isHera(code) && shine;
@@ -1306,6 +1332,13 @@ const SNAKEFLY_SPECIES_CODE = "KW-0047";
 const SNAKEFLY_CHANCE = 0.4;
 const SNAKEFLY_MS = 1800;
 const SNAKEFLY_MAX_DIST_PCT = 30;
+// コメたん: 歩いている途中で置物や他の個体にぶつかったら、その場で裏返ってじたばた(CLICK_FLIP_MS)し、
+// パチンと跳ねて(CLICK_HOP_MS)近くに着地する。ぶつからない移動のときは普通に歩くだけ。
+const CLICK_BEETLE_SPECIES_CODE = "KW-0048";
+const CLICK_FLIP_MS = 1800;
+const CLICK_HOP_MS = 1000;
+const CLICK_HOP_MAX_DIST_PCT = 20;
+const CLICK_MIN_WALK_MS = 2500;
 const MIN_TRAVEL_MS = 7000;
 const MAX_TRAVEL_MS = 30000;
 
@@ -1342,8 +1375,9 @@ function useWander(
   restScale = 1,
   geo: TankGeometry = TERRARIUM_GEOMETRY,
   leapMs = LEAP_MS,
-  leapMaxDistPct = Infinity
-): { spot: { u: number; v: number }; facing: Facing; heading: Heading; travelMs: number; leaping: boolean; charging: boolean; posing: boolean } {
+  leapMaxDistPct = Infinity,
+  flipTrap = false
+): { spot: { u: number; v: number }; facing: Facing; heading: Heading; travelMs: number; leaping: boolean; charging: boolean; posing: boolean; flipped?: boolean; hitting?: boolean } {
   const [state, setState] = useState<{
     spot: { u: number; v: number };
     facing: Facing;
@@ -1355,6 +1389,10 @@ function useWander(
     charging: boolean;
     // 擬態ポーズ中(その場で止まって前脚を突き出す。ナナたん)
     posing: boolean;
+    // ぶつかる地点へ向かって歩いている最中(コメたん。一定の速さで進む)
+    hitting?: boolean;
+    // ぶつかって裏返っている最中(コメたん)
+    flipped?: boolean;
   }>({
     spot: initial,
     facing: "front",
@@ -1382,6 +1420,7 @@ function useWander(
     let leapTimer: ReturnType<typeof setTimeout> | undefined;
     let chargeTimer: ReturnType<typeof setTimeout> | undefined;
     let poseTimer: ReturnType<typeof setTimeout> | undefined;
+    let flipTimer: ReturnType<typeof setTimeout> | undefined;
     const ownRadius = spriteRadius(widthPct);
     const decorationPts = decorationSpots.map((spot) => ({ pt: surfacePoint(spot.u, spot.v, geo), radius: spriteRadius(spot.widthPct) }));
 
@@ -1486,6 +1525,73 @@ function useWander(
       const dy = nextPt.top - prevPt.top;
       const facing: Facing = Math.abs(dy) >= Math.abs(dx) ? (dy >= 0 ? "front" : "back") : dx <= 0 ? "front" : "back";
       const heading: Heading = dx === 0 ? prev.heading : dx < 0 ? "left" : "right";
+      if (flipTrap && !leaping) {
+        // コメたん: 目的地までの直線が置物・他の個体の円と交わるなら、交わる手前まで歩いてぶつかり、
+        // 裏返ってじたばた→パチンと跳ねて近くに着地する。動く相手は出発時の位置で判定する。
+        const obstacles = [
+          ...decorationPts,
+          ...Object.entries(positionsRef.current)
+            .filter(([id]) => id !== seedKey)
+            .map(([, other]) => ({ pt: surfacePoint(other.u, other.v, geo), radius: spriteRadius(other.widthPct) })),
+        ].filter((o) => surfaceDistancePct(prevPt, o.pt) >= ownRadius * 0.7 + o.radius);
+        const STEPS = 24;
+        let hitStep = -1;
+        for (let k = 1; k <= STEPS && hitStep < 0; k++) {
+          const t = k / STEPS;
+          const pt = { left: prevPt.left + (nextPt.left - prevPt.left) * t, top: prevPt.top + (nextPt.top - prevPt.top) * t };
+          if (obstacles.some((o) => surfaceDistancePct(pt, o.pt) < ownRadius * 0.7 + o.radius)) hitStep = k;
+        }
+        if (hitStep >= 3) {
+          const tc = (hitStep - 1) / STEPS;
+          const contactSpot = {
+            u: prev.spot.u + (nextSpot.u - prev.spot.u) * tc,
+            v: prev.spot.v + (nextSpot.v - prev.spot.v) * tc,
+          };
+          const contactPt = surfacePoint(contactSpot.u, contactSpot.v, geo);
+          positionsRef.current[seedKey] = { ...contactSpot, widthPct };
+          const walkMs = Math.max(CLICK_MIN_WALK_MS, surfaceDistancePct(prevPt, contactPt) * TRAVEL_MS_PER_PCT * travelScale);
+          const approach = { spot: contactSpot, facing, heading, travelMs: walkMs, leaping: false, charging: false, posing: false, hitting: true, flipped: false };
+          stateRef.current = approach;
+          setState(approach);
+          flipTimer = setTimeout(() => {
+            if (cancelled) return;
+            const flippedState = { ...stateRef.current, hitting: false, flipped: true };
+            stateRef.current = flippedState;
+            setState(flippedState);
+            flipTimer = setTimeout(() => {
+              if (cancelled) return;
+              // パチン: 近めの着地点へ跳ねる(裏返しから元の姿に戻る)。
+              let landing = pickNextSpot();
+              let landDist = surfaceDistancePct(contactPt, surfacePoint(landing.u, landing.v, geo));
+              for (let i = 0; i < 14 && landDist > CLICK_HOP_MAX_DIST_PCT; i++) {
+                const cand = pickNextSpot();
+                const d = surfaceDistancePct(contactPt, surfacePoint(cand.u, cand.v, geo));
+                if (d < landDist) {
+                  landing = cand;
+                  landDist = d;
+                }
+              }
+              positionsRef.current[seedKey] = { ...landing, widthPct };
+              const landPt = surfacePoint(landing.u, landing.v, geo);
+              const lx = landPt.left - contactPt.left;
+              const ly = landPt.top - contactPt.top;
+              const landFacing: Facing = Math.abs(ly) >= Math.abs(lx) ? (ly >= 0 ? "front" : "back") : lx <= 0 ? "front" : "back";
+              const landHeading: Heading = lx === 0 ? heading : lx < 0 ? "left" : "right";
+              const clicked = { spot: landing, facing: landFacing, heading: landHeading, travelMs: CLICK_HOP_MS, leaping: true, charging: false, posing: false, hitting: false, flipped: false };
+              stateRef.current = clicked;
+              setState(clicked);
+              leapTimer = setTimeout(() => {
+                if (cancelled) return;
+                const landed = { ...stateRef.current, leaping: false };
+                stateRef.current = landed;
+                setState(landed);
+              }, CLICK_HOP_MS);
+            }, CLICK_FLIP_MS);
+          }, walkMs);
+          timer = setTimeout(goToNextSpot, walkMs + CLICK_FLIP_MS + CLICK_HOP_MS + 2000 + Math.random() * 5000);
+          return;
+        }
+      }
       // 移動時間は距離に比例(歩く速さを一定に保つ)。移動範囲が広くても速くならない。
       // たまに(leapChance)、歩かずに速く弧を描いて飛んで移動する(着地まで LEAP_MS)。
       const travelMs = leaping
@@ -1519,8 +1625,9 @@ function useWander(
       if (leapTimer) clearTimeout(leapTimer);
       if (chargeTimer) clearTimeout(chargeTimer);
       if (poseTimer) clearTimeout(poseTimer);
+      if (flipTimer) clearTimeout(flipTimer);
     };
-  }, [seedKey, widthPct, moves, decorationSpots, positionsRef, travelScale, leapChance, chargeHopChance, poseChance, chargeMs, hopMs, hopMaxDistPct, restScale, geo, leapMs, leapMaxDistPct]);
+  }, [seedKey, widthPct, moves, decorationSpots, positionsRef, travelScale, leapChance, chargeHopChance, poseChance, chargeMs, hopMs, hopMaxDistPct, restScale, geo, leapMs, leapMaxDistPct, flipTrap]);
 
   return state;
 }
@@ -2033,11 +2140,14 @@ function WanderingCreature({
     speciesCode === ORCHID_SPECIES_CODE ? ORCHID_REST_SCALE : 1,
     geo,
     speciesCode === SNAKEFLY_SPECIES_CODE ? SNAKEFLY_MS : LEAP_MS,
-    speciesCode === SNAKEFLY_SPECIES_CODE ? SNAKEFLY_MAX_DIST_PCT : Infinity
+    speciesCode === SNAKEFLY_SPECIES_CODE ? SNAKEFLY_MAX_DIST_PCT : Infinity,
+    speciesCode === CLICK_BEETLE_SPECIES_CODE && growthStage === "成虫"
   );
   // 水中を泳ぐ種は、歩く代わりに3次元(底〜水面)を泳ぎ回る。
   const swim = useSwim(seedKey, initialSpot, widthPct, moves && swimmer, positionsRef, geo);
   const { facing, heading, leaping, charging, posing } = swimmer ? { ...walk, ...swim, leaping: false, charging: false, posing: false } : walk;
+  const flipped = !swimmer && !!walk.flipped;
+  const hitting = !swimmer && !!walk.hitting;
   const spot = swimmer ? swim.spot : walk.spot;
   const travelMs = swimmer ? swim.travelMs : walk.travelMs;
   const swimming = swimmer && swim.moving;
@@ -2050,7 +2160,7 @@ function WanderingCreature({
   // 泳ぐ種は、掻いて勢いよく出て、だんだん減速して止まる(ゆっくり漂うように着く)。
   const moveTransition = swimmer
     ? `left ${travelMs}ms cubic-bezier(0.25, 0.6, 0.3, 1), top ${travelMs}ms cubic-bezier(0.25, 0.6, 0.3, 1)`
-    : leaping
+    : leaping || hitting
     ? `left ${travelMs}ms linear, top ${travelMs}ms linear`
     : straightFlight
     ? `left ${travelMs}ms linear, top ${travelMs}ms linear`
@@ -2077,7 +2187,7 @@ function WanderingCreature({
       {hasArt ? (
         <div
           className={`h-full w-full ${chatting ? "animate-kuwagata-chat" : ""} ${fighting ? "animate-kuwagata-fight" : ""} ${proud ? "animate-kuwagata-proud" : ""} ${hopping ? (speciesCode === HIGH_HOP_SPECIES_CODE ? "animate-kuwagata-hop-high" : "animate-kuwagata-hop") : ""} ${charging ? (speciesCode === POUNCE_SPECIES_CODE ? "animate-kuwagata-stalk" : "animate-kuwagata-charge") : ""} ${stinking ? "animate-kuwagata-stink" : ""}`}
-          style={leaping ? { animation: `${speciesCode === POUNCE_SPECIES_CODE ? "kuwagata-pounce" : speciesCode === SNAKEFLY_SPECIES_CODE ? "kuwagata-fly-short" : "kuwagata-leap"} ${travelMs}ms linear` } : undefined}
+          style={leaping ? { animation: `${speciesCode === POUNCE_SPECIES_CODE ? "kuwagata-pounce" : speciesCode === SNAKEFLY_SPECIES_CODE ? "kuwagata-fly-short" : speciesCode === CLICK_BEETLE_SPECIES_CODE ? "kuwagata-click-leap" : "kuwagata-leap"} ${travelMs}ms linear` } : undefined}
         >
           <KnownCreatureSprite
             fighting={fighting}
@@ -2094,6 +2204,7 @@ function WanderingCreature({
             swim={swimming}
             hop={hopping}
             airborne={leaping}
+            flipped={flipped}
             code={speciesCode}
             facing={facing}
             mandibleVariant={mandibleVariant}
