@@ -1021,9 +1021,9 @@ function KnownCreatureSprite({
     return (
       <div className="relative h-full w-full animate-kuwagata-court-bounce">
         <img src={c.body2} alt="" className="animate-kuwagata-court-fan absolute inset-0 h-full w-full" style={{ transformOrigin: c.fanOrigin }} />
-        <img src={c.body1} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />
         <img src={c.legL.src} alt="" className="animate-kuwagata-court-leg absolute inset-0 h-full w-full" style={legStyle(c.legL, "0s")} />
         <img src={c.legR.src} alt="" className="animate-kuwagata-court-leg absolute inset-0 h-full w-full" style={legStyle(c.legR, "-0.11s")} />
+        <img src={c.body1} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />
       </div>
     );
   }
