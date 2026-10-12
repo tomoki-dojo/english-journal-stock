@@ -319,7 +319,7 @@ public/roadmap/room/room_item_shelf.svg         棚
 
 public/roadmap/tank/tank_bg_terrarium.png       通常の水槽背景
 public/roadmap/tank/tank_bg_aquarium.png        水中アクアリウムの水槽背景
-public/roadmap/tank/tank_bg_ancient.png         古代の森（Pro限定）の水槽背景（制作済み・コード対応済み。ファイル配置待ち）
+public/roadmap/tank/tank_bg_ancient.png         古代の森（Pro限定）の水槽背景（配置済み・コード対応済み）
 ```
 
 既知種・新種の生き物（パーツ分解されたSVG一式）は、エークワたん（KW-0001）だけ実装側に結線済み（`kuwagata-shelf.tsx`の`KNOWN_CREATURE_ART`・`KNOWN_STAGE_ART`）。同じファイル名で差し替えれば自動反映される。他の種は絵を作ったあと、この2つのテーブルに追記して結線する（新種の描画コード実装タスクで対応）。
