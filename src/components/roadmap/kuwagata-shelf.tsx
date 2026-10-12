@@ -748,6 +748,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   // ハンたん(ハンミョウ。大顎をガチガチ=CHOMP_*。たまに弧を描いて素早く飛んで移動=LEAP_*)
   "KW-0027": buildNewSpeciesWalkerArt("KW-0027", { frontOrigin: "30% 88%", backOrigin: "90% 60%" }),
   // カミたん(カミキリムシ。大顎mandible_01をときどきガチガチ=CHOMP_*)
+  // オサたん(オサムシ。カミたんと同じ脚構成。大顎mandible_01をガチガチ=CHOMP_*)
+  "KW-0044": buildLongicornArt("KW-0044", { front: "38% 82%", back: "90% 66%" }),
   "KW-0017": buildLongicornArt("KW-0017", { front: "31% 85%", back: "90% 58%" }),
   // カブたん(カブトムシ。ツノはmandible_01、付け根を軸にときどき首振り＝HORN_*)
   "KW-0014": buildNewSpeciesWalkerArt("KW-0014", {
@@ -1971,7 +1973,7 @@ function WanderingCreature({
     HORN_DURATION_MS
   );
   const chomping = useTimedGesture(
-    (speciesCode === CHOMP_SPECIES_CODE || speciesCode === CHOMP_SPECIES_CODE_2 || speciesCode === CHOMP_SPECIES_CODE_3 || speciesCode === HORNET_SPECIES_CODE || speciesCode === "KW-0024" || speciesCode === "KW-0033" || speciesCode === SNAKEFLY_SPECIES_CODE || speciesCode === TAIL_STRIKE_SPECIES_CODE) && growthStage === "成虫" && hasArt,
+    (speciesCode === CHOMP_SPECIES_CODE || speciesCode === CHOMP_SPECIES_CODE_2 || speciesCode === CHOMP_SPECIES_CODE_3 || speciesCode === HORNET_SPECIES_CODE || speciesCode === "KW-0024" || speciesCode === "KW-0044" || speciesCode === "KW-0033" || speciesCode === SNAKEFLY_SPECIES_CODE || speciesCode === TAIL_STRIKE_SPECIES_CODE) && growthStage === "成虫" && hasArt,
     seedKey + ":chomp",
     CHOMP_CYCLE_MS,
     CHOMP_DURATION_MS
