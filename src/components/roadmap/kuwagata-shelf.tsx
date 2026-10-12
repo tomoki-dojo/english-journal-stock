@@ -690,6 +690,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   // クモたん(ジョロウグモ。8本脚＝buildEightLegWalkerArt。背面は左の脚1本も動く)
   "KW-0010": buildEightLegWalkerArt("KW-0010", { backLeftLeg: true }),
   // チョウたん(アゲハチョウ。飛ぶ＝buildWingedFlyerArt。羽根の付け根を軸にヒラヒラ)
+  // アポたん(アポロチョウ。チョウたんと同じ飛ぶ動き。ヒラヒラ＋ふわふわ上下)
+  "KW-0049": buildWingedFlyerArt("KW-0049", { front: "53% 55%", back: "46% 54%" }),
   "KW-0011": buildWingedFlyerArt("KW-0011", { front: "52% 50%", back: "54% 52%" }),
   // オニたん(オニヤンマ。動きはトンたんと同じ。斜めに描かれた羽根は基準姿勢を回して水平寄りにする=wingTilt)
   "KW-0028": buildWingedFlyerArt("KW-0028", { front: "45% 50%", back: "45% 47%" }, { frontWingsInFront: true, wingTilt: { front: { L: 30, R: -35 }, back: { L: -30, R: 30 } }, wingShiftY: { front: { R: -10 } }, wingSquashAt: { front: { R: { x: -12, y: 7 } } } }),
