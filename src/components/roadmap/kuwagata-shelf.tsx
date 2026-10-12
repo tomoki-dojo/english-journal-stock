@@ -94,8 +94,8 @@ type KnownCreatureArt = {
   // 裏返しの姿(コメたん)。ぶつかって裏返っている間は、体・脚のパーツの代わりにこの1枚を出す。
   flippedSrc?: string;
   // 2本の大顎(ヘルたん)。それぞれ付け根(origin)を軸に、ガチガチの間は「上回転」(dir=+1は時計回り、-1は反時計回り=先端が上へ上がる向き)で
-  // 開閉しながら大きくなり、大顎の形でくり抜いた光がキラッと走り、まわりに星(✦)が瞬く。
-  jaws?: { src: string; origin: string; dir: 1 | -1 }[];
+  // 開閉しながら大きくなり、大顎の形でくり抜いた光がキラッと走る。behindBodyなら体の奥に描く(背面の左大顎)。
+  jaws?: { src: string; origin: string; dir: 1 | -1; behindBody?: boolean }[];
   // 求愛ダンスの姿(クジャクたん)。正面向き専用。body1=ダンス中の体(脚つき)、body2=持ち上げた模様のお腹(付け根fanOriginを軸に左右に振る)、
   // legL・legR=縦長に描いた振り上げる脚(下の付け根を軸に、水平から少し斜め上を基準にして振る)。
   courtship?: {
@@ -688,7 +688,7 @@ function buildHellAntArt(code: string): Partial<Record<Facing, KnownCreatureArt>
     back: art.back && {
       ...art.back,
       jaws: [
-        { src: file("back_mandible_02"), origin: "45% 60%", dir: -1 },
+        { src: file("back_mandible_02"), origin: "45% 60%", dir: -1, behindBody: true },
         { src: file("back_mandible_01"), origin: "68% 62%", dir: -1 },
       ],
     },
@@ -1071,6 +1071,30 @@ function KnownCreatureSprite({
   const jawClassName = `absolute inset-0 h-full w-full ${heraShow ? "animate-kuwagata-nod" : ""} ${fighting ? "animate-kuwagata-fight-jaw" : ""} ${hornSwing && art.mandibleOrigin ? "animate-kuwagata-horn" : ""} ${chomp && art.mandibleOrigin ? (code === SNAKEFLY_SPECIES_CODE ? "animate-kuwagata-chomp-big" : "animate-kuwagata-chomp") : ""} ${sniff && art.mandibleOrigin ? "animate-kuwagata-sniff" : ""}`;
   // グンたん: ガチガチの間、大顎の形でくり抜いた光がキラッと走る(大顎と一緒に動く)。
   const jawShine = (((code === JAW_SHINE_SPECIES_CODE || code === SNAKEFLY_SPECIES_CODE) && chomp) || heraShow) && mandible;
+  // ヘルたんの大顎(jaws)。ガチガチの間は上回転で開閉し、大きくなり、大顎の形にそって光が走る。
+  const renderJaw = (jaw: NonNullable<KnownCreatureArt["jaws"]>[number], i: number) => (
+    <div
+      key={`jaw${i}`}
+      className={`absolute inset-0 h-full w-full ${chomp ? "animate-kuwagata-chomp-jaw" : ""}`}
+      style={{ transformOrigin: jaw.origin, "--jd": jaw.dir } as CSSProperties}
+    >
+      <img src={jaw.src} alt="" className="absolute inset-0 h-full w-full" />
+      {chomp &&
+        [0.1, 0.85].map((delay) => (
+          <span
+            key={delay}
+            className="animate-kuwagata-shine-jaw pointer-events-none absolute inset-0"
+            style={{
+              animationDelay: `${delay}s`,
+              WebkitMaskImage: `url(${jaw.src})`,
+              maskImage: `url(${jaw.src})`,
+              WebkitMaskSize: "100% 100%",
+              maskSize: "100% 100%",
+            }}
+          />
+        ))}
+    </div>
+  );
   const mandibleEl = mandible ? (
     jawShine ? (
       <div
@@ -1117,6 +1141,7 @@ function KnownCreatureSprite({
         />
       )}
       {art.mandibleBehindBody && mandibleEl}
+      {art.jaws?.filter((jaw) => jaw.behindBody).map(renderJaw)}
       {art.legsBehindBody.map((leg, i) => leg.kind === "tail-ghost" && !strike ? null : (
         <img
           key={`behind${i}`}
@@ -1174,51 +1199,7 @@ function KnownCreatureSprite({
         />
       )}
       {!art.mandibleBehindBody && mandibleEl}
-      {art.jaws?.map((jaw, i) => (
-        <div
-          key={`jaw${i}`}
-          className={`absolute inset-0 h-full w-full ${chomp ? "animate-kuwagata-chomp-jaw" : ""}`}
-          style={{ transformOrigin: jaw.origin, "--jd": jaw.dir } as CSSProperties}
-        >
-          <img src={jaw.src} alt="" className="absolute inset-0 h-full w-full" />
-          {chomp &&
-            [0.1, 0.85].map((delay) => (
-              <span
-                key={delay}
-                className="animate-kuwagata-shine-jaw pointer-events-none absolute inset-0"
-                style={{
-                  animationDelay: `${delay}s`,
-                  WebkitMaskImage: `url(${jaw.src})`,
-                  maskImage: `url(${jaw.src})`,
-                  WebkitMaskSize: "100% 100%",
-                  maskSize: "100% 100%",
-                }}
-              />
-            ))}
-        </div>
-      ))}
-      {chomp &&
-        art.jaws?.flatMap((jaw, i) => {
-          const [ox, oy] = jaw.origin.split(" ").map((v) => parseFloat(v));
-          return [
-            { dx: -9 * jaw.dir, dy: -6, delay: 0.1 },
-            { dx: 4, dy: -14, delay: 0.5 },
-            { dx: -2 * jaw.dir, dy: 8, delay: 0.9 },
-          ].map((st, j) => (
-            <span
-              key={`star${i}-${j}`}
-              className="animate-egg-twinkle pointer-events-none absolute z-20 text-[16px] leading-none text-amber-300"
-              style={{
-                left: `${ox + st.dx}%`,
-                top: `${oy + st.dy}%`,
-                animationDelay: `${st.delay}s`,
-                textShadow: "0 0 3px #b45309, 0 0 1px #b45309",
-              }}
-            >
-              ✦
-            </span>
-          ));
-        })}
+      {art.jaws?.filter((jaw) => !jaw.behindBody).map(renderJaw)}
       {charge && code === CHARGE_HOP_SPECIES_CODE && (
         // 溜めの赤いキラッ。体とツノの形でくり抜いた赤い光を、2回ぴかっと光らせる。
         <>
