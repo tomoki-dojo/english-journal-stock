@@ -613,6 +613,28 @@ function buildWingedFlyerArt(
   };
 }
 
+// ヒマたん(ヒマラヤジャンピングスパイダー): 歩く8脚(L1〜L4・R1〜R4が正面・背面とも揃う)。
+// 正面はRが体の奥・Lが手前、背面はLが体の奥・Rが手前。
+function buildJumpingSpiderArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
+  const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
+  const set = (facing: string, side: "L" | "R", base: number) =>
+    [4, 3, 2, 1].map((n, i) => ({ src: file(`${facing}_leg_${side}${n}`), delay: `${(base - 0.15 * (3 - i)).toFixed(2)}s` }));
+  return {
+    front: {
+      body: file("front_body"),
+      mandibles: {},
+      legsBehindBody: set("front", "R", -0.55),
+      legsInFrontOfBody: set("front", "L", 0),
+    },
+    back: {
+      body: file("back_body"),
+      mandibles: {},
+      legsBehindBody: set("back", "L", -0.7),
+      legsInFrontOfBody: set("back", "R", 0),
+    },
+  };
+}
+
 // コメたん(コメツキムシ): 歩く6脚+裏返し(flipped1=正面向き・flipped2=背面向き)。
 // 置物や他の個体にぶつかると裏返ってじたばたし、パチンと跳ねて元に戻る(useWanderのflipTrap)。
 function buildClickBeetleArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
@@ -760,6 +782,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0021": buildNewSpeciesWalkerArt("KW-0021", { frontOrigin: "23% 70%", backOrigin: "80% 60%", backBehindBody: true }),
   // モンたん(エサキモンキツノカメムシ。歩く6脚・大顎なし・脚は正面/背面ともすべて体の後ろ。ときどき体をぷるぷる震わせて臭いガスをぷしゅっと出す=STINK_*)
   "KW-0022": buildWalkerLegsBehindBodyArt("KW-0022"),
+  // ヒマたん(ヒマラヤジャンピングスパイダー。8脚。ときどきピタッと止まってパッと飛びつく=POUNCE_*、タランたんの使い回しで距離は長め)
+  "KW-0050": buildJumpingSpiderArt("KW-0050"),
   // コメたん(コメツキムシ。置物・他の個体にぶつかると裏返ってじたばた→パチンと跳ねる=CLICK_*)
   "KW-0048": buildClickBeetleArt("KW-0048"),
   // ヘビたん(ヘビトンボ。大顎をガチガチ+大顎がキラッ=CHOMP_*。たまに羽ばたいて短い距離を飛ぶ=SNAKEFLY_*)
@@ -1915,6 +1939,11 @@ const STALK_MS = 900;
 const POUNCE_MS = 120;
 // 飛びつく距離の上限(棚の表面上の距離%)。短く。
 const POUNCE_MAX_DIST_PCT = 14;
+// ヒマたん(ヒマラヤジャンピングスパイダー): タランたんの待ち伏せ→飛びつきを使い回し、距離だけ少し長く(飛ぶ時間もそれに合わせて少し長く)。
+const JUMPING_SPIDER_SPECIES_CODE = "KW-0050";
+const JUMPING_SPIDER_MAX_DIST_PCT = 26;
+const JUMPING_SPIDER_POUNCE_MS = 220;
+const isPounce = (code: string) => code === POUNCE_SPECIES_CODE || code === JUMPING_SPIDER_SPECIES_CODE;
 const MIMIC_SPECIES_CODE = "KW-0035";
 const MIMIC_POSE_CHANCE = 0.4;
 // 出す0.8秒＋キープ5秒＋戻す0.8秒
@@ -2149,11 +2178,11 @@ function WanderingCreature({
     positionsRef,
     isDragonfly(speciesCode) ? DRAGONFLY_TRAVEL_SCALE : speciesCode === HORNET_SPECIES_CODE ? HORNET_TRAVEL_SCALE : isMantis(speciesCode) ? SCYTHE_TRAVEL_SCALE : 1,
     speciesCode === LEAP_SPECIES_CODE && growthStage === "成虫" ? LEAP_CHANCE : speciesCode === SNAKEFLY_SPECIES_CODE && growthStage === "成虫" ? SNAKEFLY_CHANCE : 0,
-    growthStage === "成虫" ? (speciesCode === CHARGE_HOP_SPECIES_CODE ? CHARGE_HOP_CHANCE : speciesCode === POUNCE_SPECIES_CODE ? POUNCE_CHANCE : 0) : 0,
+    growthStage === "成虫" ? (speciesCode === CHARGE_HOP_SPECIES_CODE ? CHARGE_HOP_CHANCE : isPounce(speciesCode) ? POUNCE_CHANCE : 0) : 0,
     speciesCode === MIMIC_SPECIES_CODE && growthStage === "成虫" ? MIMIC_POSE_CHANCE : 0,
-    speciesCode === POUNCE_SPECIES_CODE ? STALK_MS : CHARGE_MS,
-    speciesCode === POUNCE_SPECIES_CODE ? POUNCE_MS : HOP_MOVE_MS,
-    speciesCode === POUNCE_SPECIES_CODE ? POUNCE_MAX_DIST_PCT : 30,
+    isPounce(speciesCode) ? STALK_MS : CHARGE_MS,
+    speciesCode === JUMPING_SPIDER_SPECIES_CODE ? JUMPING_SPIDER_POUNCE_MS : speciesCode === POUNCE_SPECIES_CODE ? POUNCE_MS : HOP_MOVE_MS,
+    speciesCode === JUMPING_SPIDER_SPECIES_CODE ? JUMPING_SPIDER_MAX_DIST_PCT : speciesCode === POUNCE_SPECIES_CODE ? POUNCE_MAX_DIST_PCT : 30,
     speciesCode === ORCHID_SPECIES_CODE ? ORCHID_REST_SCALE : 1,
     geo,
     speciesCode === SNAKEFLY_SPECIES_CODE ? SNAKEFLY_MS : LEAP_MS,
@@ -2205,15 +2234,15 @@ function WanderingCreature({
     >
       {hasArt ? (
         <div
-          className={`h-full w-full ${chatting ? "animate-kuwagata-chat" : ""} ${fighting ? "animate-kuwagata-fight" : ""} ${proud ? "animate-kuwagata-proud" : ""} ${hopping ? (speciesCode === HIGH_HOP_SPECIES_CODE ? "animate-kuwagata-hop-high" : "animate-kuwagata-hop") : ""} ${charging ? (speciesCode === POUNCE_SPECIES_CODE ? "animate-kuwagata-stalk" : "animate-kuwagata-charge") : ""} ${stinking ? "animate-kuwagata-stink" : ""}`}
-          style={leaping ? { animation: `${speciesCode === POUNCE_SPECIES_CODE ? "kuwagata-pounce" : speciesCode === SNAKEFLY_SPECIES_CODE ? "kuwagata-fly-short" : speciesCode === CLICK_BEETLE_SPECIES_CODE ? "kuwagata-click-leap" : "kuwagata-leap"} ${travelMs}ms linear` } : undefined}
+          className={`h-full w-full ${chatting ? "animate-kuwagata-chat" : ""} ${fighting ? "animate-kuwagata-fight" : ""} ${proud ? "animate-kuwagata-proud" : ""} ${hopping ? (speciesCode === HIGH_HOP_SPECIES_CODE ? "animate-kuwagata-hop-high" : "animate-kuwagata-hop") : ""} ${charging ? (isPounce(speciesCode) ? "animate-kuwagata-stalk" : "animate-kuwagata-charge") : ""} ${stinking ? "animate-kuwagata-stink" : ""}`}
+          style={leaping ? { animation: `${isPounce(speciesCode) ? "kuwagata-pounce" : speciesCode === SNAKEFLY_SPECIES_CODE ? "kuwagata-fly-short" : speciesCode === CLICK_BEETLE_SPECIES_CODE ? "kuwagata-click-leap" : "kuwagata-leap"} ${travelMs}ms linear` } : undefined}
         >
           <KnownCreatureSprite
             fighting={fighting}
             hornSwing={hornSwing}
             charge={charging}
             mimic={posing}
-            still={charging && speciesCode === POUNCE_SPECIES_CODE}
+            still={charging && isPounce(speciesCode)}
             grab={grabbing}
             chomp={chomping}
             sniff={sniffing}
