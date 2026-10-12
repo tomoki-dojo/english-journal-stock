@@ -615,10 +615,14 @@ function buildWingedFlyerArt(
 
 // ヒマたん(ヒマラヤジャンピングスパイダー): 歩く8脚(L1〜L4・R1〜R4が正面・背面とも揃う)。
 // 正面はRが体の奥・Lが手前、背面はLが体の奥・Rが手前。
-function buildJumpingSpiderArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
+// skip: 素材が無い脚(例: "front_leg_R4")。
+function buildJumpingSpiderArt(code: string, skip: string[] = []): Partial<Record<Facing, KnownCreatureArt>> {
   const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
   const set = (facing: string, side: "L" | "R", base: number) =>
-    [4, 3, 2, 1].map((n, i) => ({ src: file(`${facing}_leg_${side}${n}`), delay: `${(base - 0.15 * (3 - i)).toFixed(2)}s` }));
+    [4, 3, 2, 1]
+      .map((n, i) => ({ part: `${facing}_leg_${side}${n}`, delay: `${(base - 0.15 * (3 - i)).toFixed(2)}s` }))
+      .filter((leg) => !skip.includes(leg.part))
+      .map((leg) => ({ src: file(leg.part), delay: leg.delay }));
   return {
     front: {
       body: file("front_body"),
@@ -784,6 +788,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0022": buildWalkerLegsBehindBodyArt("KW-0022"),
   // ヒマたん(ヒマラヤジャンピングスパイダー。8脚。ときどきピタッと止まってパッと飛びつく=POUNCE_*、タランたんの使い回しで距離は長め)
   "KW-0050": buildJumpingSpiderArt("KW-0050"),
+  // クジャクたん(クジャクスパイダー。8脚＝ヒマたんと同じ構成で、正面のR4は素材なし。普通に歩く)
+  "KW-0052": buildJumpingSpiderArt("KW-0052", ["front_leg_R4"]),
   // コメたん(コメツキムシ。置物・他の個体にぶつかると裏返ってじたばた→パチンと跳ねる=CLICK_*)
   "KW-0048": buildClickBeetleArt("KW-0048"),
   // ヘビたん(ヘビトンボ。大顎をガチガチ+大顎がキラッ=CHOMP_*。たまに羽ばたいて短い距離を飛ぶ=SNAKEFLY_*)
