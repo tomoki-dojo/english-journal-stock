@@ -1348,6 +1348,22 @@ const AQUARIUM_GEOMETRY: TankGeometry = {
   heightPct: 27.3,
 };
 
+// 古代の森(tank_bg_ancient.png)。水は張らず(heightPct=0)、地面の天面の実測は、水を張った水槽の底と同じ座標で描いてある。
+const ANCIENT_GEOMETRY: TankGeometry = { ...AQUARIUM_GEOMETRY, heightPct: 0 };
+
+// 古代の森の背景絵の中の障害物(川・倒木・岩・シダ)。生き物が川や倒木の上に立たないよう、置物と同じ扱いで避ける。
+// 位置は背景絵(688×516px)の見た目の位置から、底の面の(u,v)に換算した値。widthPctは避ける大きさの目安(置物と同じ単位)。
+const ANCIENT_OBSTACLES: { u: number; v: number; widthPct: number }[] = [
+  { u: 0.7, v: 0.84, widthPct: 14 }, // 川(手前〜左端)
+  { u: 0.79, v: 0.53, widthPct: 14 }, // 川(中ほど)
+  { u: 0.89, v: 0.22, widthPct: 14 }, // 川(奥側)
+  { u: 0.97, v: 0.05, widthPct: 12 }, // 川(右端)
+  { u: 0.24, v: 0.7, widthPct: 14 }, // 倒木
+  { u: 0.645, v: 0.36, widthPct: 8 }, // 岩
+  { u: 0.93, v: 0.86, widthPct: 7 }, // 手前の小さな岩
+  { u: 0.39, v: 0.81, widthPct: 8 }, // 丸まったシダ
+];
+
 // 平行四辺形なので back + u*(right-back) + v*(left-back) で底の面内の任意の点が求まる。
 // u, vは0〜1だが、スプライトの見た目の大きさ分の余白を持たせるため呼び出し側では
 // 0.12〜0.88程度の範囲に収めて「安全地帯」を作る。wは水中の高さ(0=底〜1=水面)。
@@ -2509,12 +2525,20 @@ function pickDecorations(tank: KuwagataShelfTank): { file: string; widthPct: num
 // public/roadmap/tank/tank_bg_terrarium.png・tank_bg_aquarium.pngを置くだけで反映される。
 // ファイルが無い間は404になるが、2枚目のCSSグラデーションが代わりに表示されるので崩れない
 // （roadmap-room.tsxの部屋背景と同じ、背景レイヤーを重ねる方式）。
-function tankBgStyle(isAquarium: boolean): CSSProperties {
-  const url = isAquarium ? "/roadmap/tank/tank_bg_aquarium.png" : "/roadmap/tank/tank_bg_terrarium.png";
+function tankBgStyle(isAquarium: boolean, isAncient = false): CSSProperties {
+  const url = isAncient
+    ? "/roadmap/tank/tank_bg_ancient.png"
+    : isAquarium
+    ? "/roadmap/tank/tank_bg_aquarium.png"
+    : "/roadmap/tank/tank_bg_terrarium.png";
   // background-imageのレイヤーには単色(#hexなど)を指定できない(CSS的に無効な値になり、
   // レイヤーリスト全体が無効化されて1枚目のurl()ごと効かなくなる)ため、フォールバックは
   // 単色ではなく必ずグラデーションにする(room_bg.pngと同じ考え方)。
-  const fallback = isAquarium ? "linear-gradient(to bottom, #a5f3fc, #0ea5e9)" : "linear-gradient(to bottom, #e0f2fe, #ffffff)";
+  const fallback = isAquarium
+    ? "linear-gradient(to bottom, #a5f3fc, #0ea5e9)"
+    : isAncient
+    ? "linear-gradient(to bottom, #ecfeff, #bbf7d0)"
+    : "linear-gradient(to bottom, #e0f2fe, #ffffff)";
   return { backgroundImage: `url(${url}), ${fallback}` };
 }
 
@@ -2528,20 +2552,22 @@ function EnlargedTankVisual({
   nicknameOf: (individual: { id: string; nickname: string | null }) => string | null;
 }) {
   const isAquarium = tank.speciesAreaCode === "aquarium";
+  const isAncient = tank.speciesAreaCode === "ancient";
   // 水槽内の「現在、他の個体がどこにいるか」を各WanderingCreatureが共有で読み書き
   // するためのref(Reactのstateにはしない=位置が変わってもこの水槽全体が再レンダー
   // されない)。モーダルを閉じるとEnlargedTankVisual自体がアンマウントされるので、
   // 次に開いたときは自動的に空の状態から始まる。
   const positionsRef = useRef<Record<string, { u: number; v: number; widthPct: number; w?: number }>>({});
   // この水槽の立体の実測。水を張ったアクアリウムは、底の砂利の面と、そこから水面までの高さを持つ。
-  const geo = isAquarium ? AQUARIUM_GEOMETRY : TERRARIUM_GEOMETRY;
+  const geo = isAquarium ? AQUARIUM_GEOMETRY : isAncient ? ANCIENT_GEOMETRY : TERRARIUM_GEOMETRY;
   // デコレーションは水槽(tankId)ごとに決定的なので、個体の衝突回避にも
   // そのまま使い回す(描画用の配置情報と衝突回避用の座標リストを二重管理しない)。
   // widthPctも一緒に持たせ、衝突判定側でアイテムごとの実際の大きさを加味できるようにする。
-  const decorations = useMemo(() => (isAquarium ? [] : pickDecorations(tank)), [tank, isAquarium]);
+  // 古代の森は背景絵に置物が描き込んであるので、置物は出さず、背景の障害物(ANCIENT_OBSTACLES)を避けさせる。
+  const decorations = useMemo(() => (isAquarium || isAncient ? [] : pickDecorations(tank)), [tank, isAquarium, isAncient]);
   const decorationSpots = useMemo(
-    () => decorations.map((d) => ({ u: d.spot.u, v: d.spot.v, widthPct: d.widthPct })),
-    [decorations],
+    () => (isAncient ? ANCIENT_OBSTACLES : decorations.map((d) => ({ u: d.spot.u, v: d.spot.v, widthPct: d.widthPct }))),
+    [decorations, isAncient],
   );
   // 卵・蛹(動かない個体)の置き場所。置物や、先に置いた他の動かない個体を避けて1回だけ決める。
   const stationarySpots = useMemo(() => {
@@ -2560,7 +2586,7 @@ function EnlargedTankVisual({
   return (
     <div
       className="relative mb-3.5 aspect-[4/3] w-full overflow-hidden rounded-lg border border-zinc-200 bg-cover bg-center"
-      style={tankBgStyle(isAquarium)}
+      style={tankBgStyle(isAquarium, isAncient)}
     >
       {isAquarium &&
         AQUARIUM_BUBBLES.map((bubble, i) => {
