@@ -1098,6 +1098,31 @@ body {
   }
 }
 
+/* ヘルたんの大顎2本。付け根を軸に、先端が上がる向き(--jd)へ大きく開いて(上回転)、素早く閉じるのを繰り返す(ガチガチ)。
+   ガチガチの間は大顎を大きくする(閉じても1.25倍、開くと1.45倍)。開くときは先端が上を向くまで(54°)回す。 */
+@keyframes kuwagata-chomp-jaw {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+  8%,
+  32%,
+  56%,
+  80% {
+    transform: scale(1.45) rotate(calc(var(--jd, 1) * 54deg));
+  }
+  20%,
+  44%,
+  68%,
+  92% {
+    transform: scale(1.25) rotate(calc(var(--jd, 1) * -6deg));
+  }
+}
+
+.animate-kuwagata-chomp-jaw {
+  animation: kuwagata-chomp-jaw 1.5s ease-in-out;
+}
+
 .animate-kuwagata-chomp {
   animation: kuwagata-chomp 1.5s ease-in-out;
 }
@@ -1279,6 +1304,7 @@ body {
   .animate-kuwagata-glide,
   .animate-kuwagata-horn,
   .animate-kuwagata-chomp,
+  .animate-kuwagata-chomp-jaw,
   .animate-kuwagata-flip-wiggle,
   .animate-kuwagata-court-fan,
   .animate-kuwagata-court-leg,

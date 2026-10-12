@@ -93,6 +93,9 @@ type KnownCreatureArt = {
   shine?: boolean;
   // 裏返しの姿(コメたん)。ぶつかって裏返っている間は、体・脚のパーツの代わりにこの1枚を出す。
   flippedSrc?: string;
+  // 2本の大顎(ヘルたん)。それぞれ付け根(origin)を軸に、ガチガチの間は「上回転」(dir=+1は時計回り、-1は反時計回り=先端が上へ上がる向き)で
+  // 開閉しながら大きくなり、大顎の形でくり抜いた光がキラッと走り、まわりに星(✦)が瞬く。
+  jaws?: { src: string; origin: string; dir: 1 | -1 }[];
   // 求愛ダンスの姿(クジャクたん)。正面向き専用。body1=ダンス中の体(脚つき)、body2=持ち上げた模様のお腹(付け根fanOriginを軸に左右に振る)、
   // legL・legR=縦長に描いた振り上げる脚(下の付け根を軸に、水平から少し斜め上を基準にして振る)。
   courtship?: {
@@ -669,6 +672,29 @@ function buildPeacockSpiderArt(code: string): Partial<Record<Facing, KnownCreatu
   };
 }
 
+// ヘルたん(ヘルアント): 歩く6脚(正面はL1〜L3・R1、背面はR1〜R3)+2本の大顎。正面・背面とも大顎は mandible_01・02 の2枚で、
+// 体の手前に重ねて描く。正面は大顎の先が左を向く(時計回りで上へ)、背面は右を向く(反時計回りで上へ)。
+function buildHellAntArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
+  const art = buildNewSpeciesWalkerArt(code);
+  const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
+  return {
+    front: art.front && {
+      ...art.front,
+      jaws: [
+        { src: file("front_mandible_02"), origin: "24% 70%", dir: 1 },
+        { src: file("front_mandible_01"), origin: "47% 70%", dir: 1 },
+      ],
+    },
+    back: art.back && {
+      ...art.back,
+      jaws: [
+        { src: file("back_mandible_02"), origin: "45% 60%", dir: -1 },
+        { src: file("back_mandible_01"), origin: "68% 62%", dir: -1 },
+      ],
+    },
+  };
+}
+
 // コメたん(コメツキムシ): 歩く6脚+裏返し(flipped1=正面向き・flipped2=背面向き)。
 // 置物や他の個体にぶつかると裏返ってじたばたし、パチンと跳ねて元に戻る(useWanderのflipTrap)。
 function buildClickBeetleArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
@@ -820,6 +846,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0050": buildJumpingSpiderArt("KW-0050"),
   // クジャクたん(クジャクスパイダー。8脚＝ヒマたんと同じ構成で、正面のR4は素材なし。普通に歩く)
   "KW-0052": buildPeacockSpiderArt("KW-0052"),
+  // ヘルたん(ヘルアント。大顎2本が上回転でガチガチ＋大きくなる＋キラッ＋星=CHOMP_*。古代の森の種は大きく表示)
+  "KW-0055": buildHellAntArt("KW-0055"),
   // コメたん(コメツキムシ。置物・他の個体にぶつかると裏返ってじたばた→パチンと跳ねる=CLICK_*)
   "KW-0048": buildClickBeetleArt("KW-0048"),
   // ヘビたん(ヘビトンボ。大顎をガチガチ+大顎がキラッ=CHOMP_*。たまに羽ばたいて短い距離を飛ぶ=SNAKEFLY_*)
@@ -1146,6 +1174,51 @@ function KnownCreatureSprite({
         />
       )}
       {!art.mandibleBehindBody && mandibleEl}
+      {art.jaws?.map((jaw, i) => (
+        <div
+          key={`jaw${i}`}
+          className={`absolute inset-0 h-full w-full ${chomp ? "animate-kuwagata-chomp-jaw" : ""}`}
+          style={{ transformOrigin: jaw.origin, "--jd": jaw.dir } as CSSProperties}
+        >
+          <img src={jaw.src} alt="" className="absolute inset-0 h-full w-full" />
+          {chomp &&
+            [0.1, 0.85].map((delay) => (
+              <span
+                key={delay}
+                className="animate-kuwagata-shine-jaw pointer-events-none absolute inset-0"
+                style={{
+                  animationDelay: `${delay}s`,
+                  WebkitMaskImage: `url(${jaw.src})`,
+                  maskImage: `url(${jaw.src})`,
+                  WebkitMaskSize: "100% 100%",
+                  maskSize: "100% 100%",
+                }}
+              />
+            ))}
+        </div>
+      ))}
+      {chomp &&
+        art.jaws?.flatMap((jaw, i) => {
+          const [ox, oy] = jaw.origin.split(" ").map((v) => parseFloat(v));
+          return [
+            { dx: -9 * jaw.dir, dy: -6, delay: 0.1 },
+            { dx: 4, dy: -14, delay: 0.5 },
+            { dx: -2 * jaw.dir, dy: 8, delay: 0.9 },
+          ].map((st, j) => (
+            <span
+              key={`star${i}-${j}`}
+              className="animate-egg-twinkle pointer-events-none absolute z-20 text-[16px] leading-none text-amber-300"
+              style={{
+                left: `${ox + st.dx}%`,
+                top: `${oy + st.dy}%`,
+                animationDelay: `${st.delay}s`,
+                textShadow: "0 0 3px #b45309, 0 0 1px #b45309",
+              }}
+            >
+              ✦
+            </span>
+          ));
+        })}
       {charge && code === CHARGE_HOP_SPECIES_CODE && (
         // 溜めの赤いキラッ。体とツノの形でくり抜いた赤い光を、2回ぴかっと光らせる。
         <>
@@ -2216,7 +2289,7 @@ function WanderingCreature({
     HORN_DURATION_MS
   );
   const chomping = useTimedGesture(
-    (speciesCode === CHOMP_SPECIES_CODE || speciesCode === CHOMP_SPECIES_CODE_2 || speciesCode === CHOMP_SPECIES_CODE_3 || speciesCode === HORNET_SPECIES_CODE || speciesCode === "KW-0024" || speciesCode === "KW-0044" || speciesCode === "KW-0033" || speciesCode === SNAKEFLY_SPECIES_CODE || speciesCode === TAIL_STRIKE_SPECIES_CODE) && growthStage === "成虫" && hasArt,
+    (speciesCode === CHOMP_SPECIES_CODE || speciesCode === CHOMP_SPECIES_CODE_2 || speciesCode === CHOMP_SPECIES_CODE_3 || speciesCode === HORNET_SPECIES_CODE || speciesCode === "KW-0024" || speciesCode === "KW-0044" || speciesCode === "KW-0055" || speciesCode === "KW-0033" || speciesCode === SNAKEFLY_SPECIES_CODE || speciesCode === TAIL_STRIKE_SPECIES_CODE) && growthStage === "成虫" && hasArt,
     seedKey + ":chomp",
     CHOMP_CYCLE_MS,
     CHOMP_DURATION_MS
