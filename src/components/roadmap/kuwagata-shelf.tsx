@@ -2809,23 +2809,30 @@ function TankButton({
   children,
 }: {
   onClick: () => void;
-  variant: "known" | "terrarium" | "aquarium";
+  variant: "known" | "terrarium" | "aquarium" | "ancient";
   name: string;
   sub: string;
   children: React.ReactNode;
 }) {
   const aquarium = variant === "aquarium";
+  const ancient = variant === "ancient";
   const known = variant === "known";
-  const frame = known ? "border-amber-300" : aquarium ? "border-cyan-200" : "border-white";
+  const frame = known ? "border-amber-300" : aquarium ? "border-cyan-200" : ancient ? "border-emerald-200" : "border-white";
   const air = aquarium ? "from-cyan-100/90 to-cyan-200/80" : "from-sky-50/80 to-white/50";
   return (
     <button
       type="button"
       onClick={onClick}
       className={`relative block h-[114px] w-full overflow-hidden rounded-t-md border-2 border-b-0 bg-gradient-to-b shadow-inner ring-1 ring-zinc-300 transition-transform hover:scale-[1.03] active:scale-95 ${frame} ${air}`}
+      // 古代の森は、拡大表示と同じ背景絵(木々・岩・火山・川)を、棚の小さな水槽の背景にする(地面の土は絵の中のものを使う)。
+      style={
+        ancient
+          ? { backgroundImage: 'url(/roadmap/tank/tank_bg_ancient.png), linear-gradient(to bottom, #ecfeff, #bbf7d0)', backgroundSize: "cover", backgroundPosition: "center 62%" }
+          : undefined
+      }
     >
       <div className="absolute inset-x-0 top-0 h-1 bg-zinc-300/80" />
-      <div className="absolute inset-x-0 bottom-0 h-[46px]" style={aquarium ? SAND_STYLE : SOIL_STYLE} />
+      {!ancient && <div className="absolute inset-x-0 bottom-0 h-[46px]" style={aquarium ? SAND_STYLE : SOIL_STYLE} />}
       <div className="absolute inset-x-0 bottom-[40px] flex justify-center">{children}</div>
       <div className="absolute inset-x-0 bottom-1.5 flex justify-center">
         <div
@@ -2997,7 +3004,7 @@ export function KuwagataShelf({
                       <RackCell key={tank.speciesId} plate={`棚${tank.tankNumber}`}>
                         <TankButton
                           onClick={() => setSelectedTankId(tank.tankId)}
-                          variant={tank.speciesAreaCode === "aquarium" ? "aquarium" : "terrarium"}
+                          variant={tank.speciesAreaCode === "aquarium" ? "aquarium" : tank.speciesAreaCode === "ancient" ? "ancient" : "terrarium"}
                           name={tank.speciesName}
                           sub={count > 1 ? `${count}匹` : GROWTH_STAGE_LABEL[representative.growthStage]}
                         >
