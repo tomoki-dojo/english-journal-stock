@@ -2593,9 +2593,7 @@ function tankBgStyle(isAquarium: boolean, isAncient = false): CSSProperties {
     : isAncient
     ? "linear-gradient(to bottom, #ecfeff, #bbf7d0)"
     : "linear-gradient(to bottom, #e0f2fe, #ffffff)";
-  // 古代の森は絵のオブジェが多いので、薄い白を被せて生きものを見やすくする。
-  const veil = isAncient ? "linear-gradient(rgba(255,255,255,0.45), rgba(255,255,255,0.45)), " : "";
-  return { backgroundImage: `${veil}url(${url}), ${fallback}` };
+  return { backgroundImage: `url(${url}), ${fallback}` };
 }
 
 function EnlargedTankVisual({
