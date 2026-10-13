@@ -1119,10 +1119,10 @@ async function listStage3ContentPool(userId: string, knownGraduatedIds?: Set<str
 
 async function getStage3ProgressMap(
   userId: string
-): Promise<Map<string, { status: string; correct_streak: number }>> {
+): Promise<Map<string, { status: string; correct_streak: number; last_practiced_at: string | null }>> {
   const { data, error } = await supabaseAdmin
     .from("speaking_stage_progress")
-    .select("phrase_id, status, correct_streak")
+    .select("phrase_id, status, correct_streak, last_practiced_at")
     .eq("user_id", userId)
     .eq("stage", 3)
     .eq("phrase_source", "expression");
@@ -1131,11 +1131,12 @@ async function getStage3ProgressMap(
     throw new Error(`Stage3進捗の取得に失敗しました: ${error.message}`);
   }
 
-  const map = new Map<string, { status: string; correct_streak: number }>();
+  const map = new Map<string, { status: string; correct_streak: number; last_practiced_at: string | null }>();
   for (const row of data ?? []) {
     map.set(row.phrase_id as string, {
       status: row.status as string,
       correct_streak: row.correct_streak as number,
+      last_practiced_at: (row.last_practiced_at as string | null) ?? null,
     });
   }
   return map;
@@ -1303,12 +1304,25 @@ export async function getStage3Session(userId: string, plan: Plan): Promise<Stag
   const activeSet = pool
     .filter((row) => progressMap.get(row.id)?.status !== "習得済み")
     .slice(0, STAGE3_ACTIVE_SET_SIZE)
-    .map((row) => ({ ...row, streak: progressMap.get(row.id)?.correct_streak ?? 0 }));
+    .map((row) => ({
+      ...row,
+      streak: progressMap.get(row.id)?.correct_streak ?? 0,
+      lastPracticedAt: progressMap.get(row.id)?.last_practiced_at ?? null,
+    }));
   if (activeSet.length === 0) {
     return { status: "done", totalCount };
   }
 
-  const current = activeSet[0];
+  // 同じ表現が続かないよう、アクティブセットの中で「最後に練習してから一番時間が経っている」
+  // ものを出す（未練習は最優先）。同順ならプールの並び（日常会話優先）のまま。
+  // Array.prototype.sortは安定ソートなので、同値のときは元の順序が保たれる。
+  const byLeastRecent = [...activeSet].sort((a, b) => {
+    if (a.lastPracticedAt === b.lastPracticedAt) return 0;
+    if (a.lastPracticedAt === null) return -1;
+    if (b.lastPracticedAt === null) return 1;
+    return a.lastPracticedAt < b.lastPracticedAt ? -1 : 1;
+  });
+  const current = byLeastRecent[0];
   const subStep = getStage3SubStep(current.streak);
 
   // 「ヒント付き言い換え」のときだけ穴埋めヒントが必要（他のサブステップでは呼ばずAI呼び出しを
