@@ -105,10 +105,13 @@ export async function judgeStage3Answer(params: JudgeStage3AnswerParams): Promis
   const userPrompt = buildStage3UserPrompt(params);
 
   try {
+    const aiStartedAt = Date.now();
     const raw =
       provider === "anthropic"
         ? await callAnthropic(systemPrompt, userPrompt, model)
         : await callGemini(systemPrompt, userPrompt, model);
+    // 体感の遅さの切り分け用(AI本体の所要時間)。サーバーのターミナルに出る。
+    console.log(`[stage3] AI判定 ${provider}/${model}: ${Date.now() - aiStartedAt}ms`);
 
     if (!params.skipUsageCount) {
       await incrementStage3Usage(params.userId, usage.currentCount);

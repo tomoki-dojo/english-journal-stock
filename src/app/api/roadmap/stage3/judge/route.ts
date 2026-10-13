@@ -18,6 +18,7 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 export async function POST(request: Request) {
+  const startedAt = Date.now();
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "この機能を利用するにはログインが必要です" }, { status: 401 });
@@ -60,6 +61,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: outcome.message }, { status: 502 });
     }
 
+    console.log(`[stage3] 判定API全体: ${Date.now() - startedAt}ms`);
     return NextResponse.json(outcome.result, { headers: { "Cache-Control": "no-store, must-revalidate" } });
   } catch (err) {
     const message = err instanceof Error ? err.message : "判定処理に失敗しました";
