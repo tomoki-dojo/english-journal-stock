@@ -1627,7 +1627,7 @@ body {
     opacity: 0.6;
   }
   100% {
-    transform: translate(calc(-50% + var(--gx, 30vw)), calc(-50% + 66vh)) scale(1.9);
+    transform: translate(calc(-50% + var(--gx, 30vw)), calc(-50% + 14vh)) scale(1.6);
     opacity: 0;
   }
 }
