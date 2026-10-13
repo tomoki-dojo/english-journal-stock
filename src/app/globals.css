@@ -1404,10 +1404,10 @@ body {
 @keyframes kuwagata-segment {
   0%,
   100% {
-    transform: translateX(-1.6%) rotate(-10deg);
+    transform: translateX(-3.5%) rotate(-10deg);
   }
   50% {
-    transform: translateX(1.6%) rotate(10deg);
+    transform: translateX(3.5%) rotate(10deg);
   }
 }
 
