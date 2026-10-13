@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ArthurAvatar, type ArthurMood } from "./arthur";
+import { CatchArthurRun, SWING_TOTAL_MS } from "./catch-arthur-run";
 import type { KuwagataAreaCode } from "@/lib/supabase/kuwagata";
 
 type Question = { word: string; choices: string[] };
@@ -26,7 +27,7 @@ export function KuwagataWordChallenge({
   onFinish: (sessionId: string, answers: number[]) => void;
   onCancel: () => void;
 }) {
-  const [phase, setPhase] = useState<"intro" | "loading" | "countdown" | "playing">("intro");
+  const [phase, setPhase] = useState<"intro" | "loading" | "countdown" | "playing" | "swing">("intro");
   const [error, setError] = useState<string | null>(null);
   const [count, setCount] = useState(COUNTDOWN_FROM);
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -34,6 +35,12 @@ export function KuwagataWordChallenge({
   const sessionRef = useRef<StartResponse | null>(null);
   const answersRef = useRef<number[]>([]);
   const finishedRef = useRef(false);
+  const finishTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 振り下ろし演出の待ち時間タイマーは、画面を離れるときだけ止める。
+  useEffect(() => () => {
+    if (finishTimerRef.current) clearTimeout(finishTimerRef.current);
+  }, []);
 
   async function handleStart() {
     setPhase("loading");
@@ -83,7 +90,9 @@ export function KuwagataWordChallenge({
       if (left <= 0 && !finishedRef.current) {
         finishedRef.current = true;
         clearInterval(timer);
-        onFinish(session.sessionId, answersRef.current);
+        // 時間切れ: アーサーが網を振り下ろし、ホワイトアウトしてから結果へ。
+        setPhase("swing");
+        finishTimerRef.current = setTimeout(() => onFinish(session.sessionId, answersRef.current), SWING_TOTAL_MS);
       }
     }, 50);
     return () => clearInterval(timer);
@@ -107,6 +116,9 @@ export function KuwagataWordChallenge({
     >
       {/* 暗転は他の演出(CelebrationOverlay)と同じ暗さ */}
       <div className="absolute inset-0 bg-black/75" />
+      {phase === "countdown" && <CatchArthurRun mode="far" />}
+      {phase === "playing" && <CatchArthurRun mode="approach" durationSec={sessionRef.current?.durationSec ?? 10} />}
+      {phase === "swing" && <CatchArthurRun mode="swing" />}
       <div className="relative z-10 flex w-full max-w-md flex-col items-center gap-6">
         {(phase === "intro" || phase === "loading") && (
           <>
@@ -137,7 +149,6 @@ export function KuwagataWordChallenge({
 
         {phase === "countdown" && (
           <>
-            <CatchArthur size={140} mood="idle" />
             <span key={count} className="animate-question-card-enter text-8xl font-black text-amber-300">
               {count}
             </span>
@@ -146,7 +157,6 @@ export function KuwagataWordChallenge({
 
         {phase === "playing" && question && (
           <>
-            <CatchArthur size={72} mood="idle" />
             <div className="h-2 w-full overflow-hidden rounded-full bg-white/20">
               <div
                 className="h-full rounded-full bg-amber-400"

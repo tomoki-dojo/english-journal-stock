@@ -1314,6 +1314,15 @@ body {
   .animate-kuwagata-shine,
   .animate-kuwagata-claw,
   .animate-kuwagata-arm,
+  .catch-arthur-hat-fly,
+  .catch-arthur-hat-hop,
+  .catch-hat-swap-b,
+  .catch-hat-swap-a,
+  .catch-arthur-swap-b,
+  .catch-arthur-swap-a,
+  .catch-arthur-bounce,
+  .catch-arthur-swing,
+  .catch-arthur-approach,
   .animate-kuwagata-wing-wave,
   .animate-kuwagata-segment,
   .animate-kuwagata-charge,
@@ -1429,6 +1438,141 @@ body {
 
 .animate-kuwagata-wing-wave {
   animation: kuwagata-wing-wave 2.1s ease-in-out infinite;
+}
+
+/* ---- 採集ミニゲームのアーサー(catch-arthur-run.tsx) ----
+   640×960の同じキャンバスの絵を重ねて切り替える。足元(絵の下寄り中央)を基準に、遠景の小ささから手前の大きさまで近づく。 */
+.catch-arthur {
+  --aw: clamp(220px, 60vw, 380px);
+  width: var(--aw);
+  height: calc(var(--aw) * 1.5);
+  /* 足元が画面の34%の高さ(消失点)に来る位置から始める */
+  top: calc(34vh - var(--aw) * 1.215);
+  transform-origin: 50% 81%;
+}
+
+.catch-arthur-far {
+  transform: translate(-50%, 0) scale(0.18);
+}
+
+@keyframes catch-arthur-approach {
+  0% {
+    transform: translate(-50%, 0) scale(0.18);
+  }
+  100% {
+    transform: translate(-50%, 26vh) scale(1.3);
+  }
+}
+
+/* 遠くはゆっくり、最後に一気に迫ってくる */
+.catch-arthur-approach {
+  animation: catch-arthur-approach 10s cubic-bezier(0.55, 0, 0.9, 0.6) forwards;
+}
+
+@keyframes catch-arthur-lunge {
+  0% {
+    transform: translate(-50%, 26vh) scale(1.3);
+  }
+  100% {
+    transform: translate(-50%, 30vh) scale(1.6);
+  }
+}
+
+.catch-arthur-swing {
+  animation: catch-arthur-lunge 0.4s ease-out forwards;
+}
+
+/* 激しく走る: 素早く上下に跳ね、少し左右に傾く */
+@keyframes catch-arthur-bounce {
+  0%,
+  50%,
+  100% {
+    transform: translateY(0) rotate(-1.5deg);
+  }
+  25%,
+  75% {
+    transform: translateY(-3.5%) rotate(1.5deg);
+  }
+}
+
+.catch-arthur-bounce {
+  animation: catch-arthur-bounce 0.24s linear infinite;
+}
+
+/* 走り1・2を交互に表示 */
+@keyframes catch-arthur-swap {
+  0%,
+  49.99% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.catch-arthur-swap-a {
+  animation: catch-arthur-swap 0.24s steps(1, end) infinite;
+}
+
+.catch-arthur-swap-b {
+  animation: catch-arthur-swap 0.24s steps(1, end) infinite -0.12s;
+}
+
+/* 帽子1・2は、体より速いテンポで交互に切り替わる */
+.catch-hat-swap-a {
+  animation: catch-arthur-swap 0.18s steps(1, end) infinite;
+}
+
+.catch-hat-swap-b {
+  animation: catch-arthur-swap 0.18s steps(1, end) infinite -0.09s;
+}
+
+/* 帽子は体の跳ねより遅れて、頭の上でふわっと浮く */
+@keyframes catch-arthur-hat-hop {
+  0%,
+  50%,
+  100% {
+    transform: translateY(0) rotate(-3deg);
+  }
+  35%,
+  85% {
+    transform: translateY(-5%) rotate(4deg);
+  }
+}
+
+.catch-arthur-hat-hop {
+  animation: catch-arthur-hat-hop 0.24s ease-in-out infinite -0.06s;
+}
+
+/* 振り下ろしで帽子が飛んでいく */
+@keyframes catch-arthur-hat-fly {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(32%, -55%) rotate(40deg);
+    opacity: 0.9;
+  }
+}
+
+.catch-arthur-hat-fly {
+  animation: catch-arthur-hat-fly 0.7s ease-out forwards;
+}
+
+@keyframes catch-whiteout {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.catch-whiteout {
+  opacity: 0;
+  animation: catch-whiteout 0.45s ease-in forwards;
 }
 
 /* サワたんのハサミ。付け根を軸に、開いて(外へ)→閉じる(内へ)を数回。左右は--claw-dirで向きを反転し、時間差で交互に動く。 */

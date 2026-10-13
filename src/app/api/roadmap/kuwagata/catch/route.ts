@@ -89,6 +89,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         ok: true,
+        speciesCode: result.species.code,
         speciesName: result.species.name,
         speciesKind: result.species.kind,
         rarity: result.species.rarity,

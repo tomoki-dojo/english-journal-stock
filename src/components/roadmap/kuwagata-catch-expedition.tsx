@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Sparkles, ArrowRight } from "lucide-react";
 import { CelebrationOverlay } from "./celebration-overlay";
+import { TankOccupant } from "./kuwagata-shelf";
 import { KuwagataWordChallenge } from "./kuwagata-word-challenge";
 import type { KuwagataAreaCode } from "@/lib/supabase/kuwagata";
 
@@ -19,6 +20,7 @@ const AREA_LABEL: Record<KuwagataAreaCode, string> = {
 };
 
 type CatchResponse = {
+  speciesCode: string;
   speciesName: string;
   speciesKind: "known" | "new";
   rarity: "コモン" | "レア" | "激レア";
@@ -158,6 +160,11 @@ export function KuwagataCatchExpedition({
             RARITY_STYLE[result.rarity].label
               ? `${RARITY_STYLE[result.rarity].label}が出た！`
               : undefined
+          }
+          art={
+            <div className="flex h-28 w-28 items-center justify-center">
+              <TankOccupant color="#f59e0b" sizeScale={4} speciesCode={result.speciesCode} growthStage="成虫" />
+            </div>
           }
           message={`${result.speciesName}をゲットした！`}
           description={result.flavorTextJa}
