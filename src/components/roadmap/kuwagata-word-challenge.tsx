@@ -163,9 +163,11 @@ export function KuwagataWordChallenge({
             />
             <span
               key={count}
-              className="catch-count-pop font-black italic leading-none"
+              className="catch-count-pop inline-block font-black italic leading-none"
               style={{
                 fontSize: COUNTDOWN_STYLE[count].size,
+                // 斜体・縁取りの外側までグラデーションを敷く(文字の右上が欠けるのを防ぐ)
+                padding: "0.12em 0.25em",
                 backgroundImage: COUNTDOWN_STYLE[count].gradient,
                 WebkitBackgroundClip: "text",
                 backgroundClip: "text",
