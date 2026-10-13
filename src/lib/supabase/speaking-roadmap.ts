@@ -1091,8 +1091,8 @@ type Stage3PoolRow = {
 // （sortDailyFirst）が入っていたが、Stage3のプールだけこの対応が漏れており、単純にcode昇順の
 // ままだった。ビジネス表現の方が先に投入されておりcodeが若いため、Stage1をどんな順で卒業しても
 // Stage3の出題は常にビジネス表現から先に出てしまっていた（実機フィードバックで発覚）。
-async function listStage3ContentPool(userId: string): Promise<Stage3PoolRow[]> {
-  const graduatedIds = await getStage1GraduatedExpressionIds(userId);
+async function listStage3ContentPool(userId: string, knownGraduatedIds?: Set<string>): Promise<Stage3PoolRow[]> {
+  const graduatedIds = knownGraduatedIds ?? (await getStage1GraduatedExpressionIds(userId));
   if (graduatedIds.size === 0) return [];
 
   const { data, error } = await supabaseAdmin
@@ -1139,28 +1139,6 @@ async function getStage3ProgressMap(
     });
   }
   return map;
-}
-
-// Stage3のアクティブセット（未卒業フレーズの先頭からSTAGE3_ACTIVE_SET_SIZE件）を計算する。
-// Stage1・2と同じく新しい状態は持たず、毎回動的に計算する。
-async function getStage3ActiveSet(userId: string): Promise<{
-  activeSet: (Stage3PoolRow & { streak: number })[];
-  totalCount: number;
-  remainingCount: number;
-}> {
-  const pool = await listStage3ContentPool(userId);
-  const progressMap = await getStage3ProgressMap(userId);
-
-  const totalCount = pool.length;
-  const nonGraduated = pool.filter((row) => progressMap.get(row.id)?.status !== "習得済み");
-  const remainingCount = nonGraduated.length;
-
-  const activeSet = nonGraduated.slice(0, STAGE3_ACTIVE_SET_SIZE).map((row) => ({
-    ...row,
-    streak: progressMap.get(row.id)?.correct_streak ?? 0,
-  }));
-
-  return { activeSet, totalCount, remainingCount };
 }
 
 // 箱庭地図（RoadmapMap）でStage2・Stage3を「解放済み」として表示してよいかを判定する。
@@ -1302,7 +1280,13 @@ export async function getStage3Session(userId: string, plan: Plan): Promise<Stag
   // Stage3の出題プールはStage1卒業フレーズそのものから作られるため実質「Stage1を1個卒業すれば
   // 即解放」も同然で、Stage2解放（7個）よりゆるい基準になっていた。Stage1卒業の累計数が
   // STAGE3_UNLOCK_STAGE1_GRADUATIONSに届くまでは、AI判定コストを払う前に弾く。
-  const graduatedStage1Ids = await getStage1GraduatedExpressionIds(userId);
+  // 互いに独立した問い合わせ(卒業済みの取得・今日の利用回数・Stage3の進捗)は並列に実行する。
+  // 判定の順序(not_ready→limit_exceeded→出題)は従来どおり。
+  const [graduatedStage1Ids, usageCheck, progressMap] = await Promise.all([
+    getStage1GraduatedExpressionIds(userId),
+    checkStage3Usage(userId, plan),
+    getStage3ProgressMap(userId),
+  ]);
   if (graduatedStage1Ids.size < STAGE3_UNLOCK_STAGE1_GRADUATIONS) {
     return {
       status: "not_ready",
@@ -1310,12 +1294,16 @@ export async function getStage3Session(userId: string, plan: Plan): Promise<Stag
     };
   }
 
-  const usageCheck = await checkStage3Usage(userId, plan);
   if (!usageCheck.allowed) {
     return { status: "limit_exceeded", limit: usageCheck.limit };
   }
 
-  const { activeSet, totalCount } = await getStage3ActiveSet(userId);
+  const pool = await listStage3ContentPool(userId, graduatedStage1Ids);
+  const totalCount = pool.length;
+  const activeSet = pool
+    .filter((row) => progressMap.get(row.id)?.status !== "習得済み")
+    .slice(0, STAGE3_ACTIVE_SET_SIZE)
+    .map((row) => ({ ...row, streak: progressMap.get(row.id)?.correct_streak ?? 0 }));
   if (activeSet.length === 0) {
     return { status: "done", totalCount };
   }
