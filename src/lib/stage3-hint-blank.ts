@@ -8,7 +8,7 @@
 // （2026-09-11の「ヒントを出すボタン」化に続く追加改善。2026-09-13 実機フィードバック）。
 
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { callGemini, DEFAULT_GEMINI_MODEL } from "@/lib/ai-writing";
+import { callAnthropic, callGemini, DEFAULT_ANTHROPIC_MODEL, DEFAULT_GEMINI_MODEL } from "@/lib/ai-writing";
 import {
   buildHintBlankSystemPrompt,
   buildHintBlankUserPrompt,
@@ -27,15 +27,18 @@ export async function getOrGenerateStage3HintBlank(params: {
   }
 
   try {
-    const raw = await callGemini(
-      buildHintBlankSystemPrompt(),
-      buildHintBlankUserPrompt({ expressionEn: params.expressionEn, meaningJa: params.meaningJa }),
-      DEFAULT_GEMINI_MODEL,
-      1024,
-      // 画面の読み込み中に呼ばれるので、Geminiが重いときに待たせない(失敗時は元の英文で続行し、
-      // キャッシュしないので次回また試す)。
-      { timeoutMs: 6000, retry: false }
-    );
+    const systemPrompt = buildHintBlankSystemPrompt();
+    const userPrompt = buildHintBlankUserPrompt({ expressionEn: params.expressionEn, meaningJa: params.meaningJa });
+    let raw: string;
+    try {
+      // 画面の読み込み中に呼ばれるので、Geminiが重いときに待たせない(6秒・リトライなしで見切る)。
+      raw = await callGemini(systemPrompt, userPrompt, DEFAULT_GEMINI_MODEL, 1024, { timeoutMs: 6000, retry: false });
+    } catch (geminiError) {
+      // Geminiが使えないときはClaude(Haiku)で生成する。キーが無ければ従来どおり下のcatchで元の英文にする。
+      if (!process.env.ANTHROPIC_API_KEY) throw geminiError;
+      console.log("[stage3] ヒント生成: Geminiが使えないためClaudeで生成します");
+      raw = await callAnthropic(systemPrompt, userPrompt, DEFAULT_ANTHROPIC_MODEL);
+    }
     const blankedEn = parseHintBlankJson(raw, params.expressionEn);
 
     if (!blankedEn) {
