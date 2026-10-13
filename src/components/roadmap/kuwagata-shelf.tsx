@@ -464,7 +464,7 @@ function buildMilliArt(code: string): Partial<Record<Facing, KnownCreatureArt>> 
 }
 
 // パレオたん(ハネカクシ系の古代昆虫): 歩きながら、左右3枚ずつの羽根(wing_L1〜3・R1〜3)をゆっくり波打つように羽ばたかせる。
-// 羽根は体の奥。3枚の位相を120度(周期の1/3)ずつずらす。羽根ごとの付け根(origin)は絵から目測。
+// 羽根は正面・背面とも体の最前面。3枚の位相を120度(周期の1/3)ずつずらす。羽根ごとの付け根(origin)は絵から目測。
 // clawDirは羽ばたきの向き(羽根が右へ伸びる側が-1、左へ伸びる側が+1。左右で同時に上下する)。
 function buildPaleoWingArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
   const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
@@ -480,8 +480,8 @@ function buildPaleoWingArt(code: string): Partial<Record<Facing, KnownCreatureAr
     front: {
       body: file("front_body"),
       mandibles: {},
-      // 奥から手前へ 3→2→1
-      legsBehindBody: [
+      // 奥から手前へ 3→2→1(すべて体の手前)
+      legsInFrontOfBody: [
         wing("front", "L3", 2, "54% 45%", -1),
         wing("front", "R3", 2, "38% 57%", 1),
         wing("front", "L2", 1, "54% 58%", -1),
@@ -489,12 +489,12 @@ function buildPaleoWingArt(code: string): Partial<Record<Facing, KnownCreatureAr
         wing("front", "L1", 0, "51% 74%", -1),
         wing("front", "R1", 0, "24% 69%", 1),
       ],
-      legsInFrontOfBody: [],
+      legsBehindBody: [],
     },
     back: {
       body: file("back_body"),
       mandibles: {},
-      legsBehindBody: [
+      legsInFrontOfBody: [
         wing("back", "L3", 2, "56% 45%", 1),
         wing("back", "R3", 2, "83% 60%", -1),
         wing("back", "L2", 1, "55% 42%", 1),
@@ -502,7 +502,7 @@ function buildPaleoWingArt(code: string): Partial<Record<Facing, KnownCreatureAr
         wing("back", "L1", 0, "54% 45%", 1),
         wing("back", "R1", 0, "61% 51%", -1),
       ],
-      legsInFrontOfBody: [],
+      legsBehindBody: [],
     },
   };
 }
