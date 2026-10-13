@@ -443,7 +443,7 @@ function buildMilliArt(code: string): Partial<Record<Facing, KnownCreatureArt>> 
   const segments = (facing: "front" | "back"): CreaturePartArt[] =>
     (Object.entries(centers[facing]) as [string, string][])
       .sort((a, b) => Number(b[0]) - Number(a[0]))
-      .map(([n, origin]) => ({ src: file(`${facing}_body${n}`), delay: `-${((6 - Number(n)) * 0.22).toFixed(2)}s`, kind: "segment" as const, origin }));
+      .map(([n, origin]) => ({ src: file(`${facing}_body${n}`), delay: `-${((6 - Number(n)) * 0.3).toFixed(2)}s`, kind: "segment" as const, origin }));
   return {
     front: {
       body: file("front_head"),
@@ -455,8 +455,9 @@ function buildMilliArt(code: string): Partial<Record<Facing, KnownCreatureArt>> 
     back: {
       body: file("back_head"),
       mandibles: {},
-      legsBehindBody: [{ src: file("back_leg_R2"), delay: "-0.4s" }, ...segments("back")],
-      legsInFrontOfBody: [],
+      legsBehindBody: [{ src: file("back_leg_R2"), delay: "-0.4s" }],
+      // 背面は頭が最背面、体節は番号が小さいほど手前(body2が最前面)。
+      legsInFrontOfBody: segments("back"),
       jaws: [{ src: file("back_mandible"), origin: "84% 44%", dir: 0, behindBody: true }],
     },
   };
