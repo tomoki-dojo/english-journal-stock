@@ -70,7 +70,7 @@ type CreaturePartArt = {
   pose?: MimicPose;
   // 獲物を捕まえる(grab)動き用の3関節チェーン。各パーツは肩(origin)を軸に、
   // rotate(a1) translate(p1) rotate(a2) translate(p2) rotate(a3) translate(p3) の順で変形する(角度は度、pはキャンバスに対する%)。
-  grab?: { a: [number, number, number]; p1: [number, number]; p2: [number, number]; p3: [number, number] }; src: string; delay: string; kind?: "wing" | "scythe" | "claw" | "tail" | "tail-ghost" | "grab" | "paddle" | "hind-thigh" | "hind-shin"; hind?: { knee: [number, number]; dir: 1 | -1 }; origin?: string; baseRotateDeg?: number; shiftYPct?: number; squashAt?: { x: number; y: number }; clawDir?: 1 | -1; ghostOpacity?: number; paddleDir?: 1 | -1; flapDir?: 1 | -1 };
+  grab?: { a: [number, number, number]; p1: [number, number]; p2: [number, number]; p3: [number, number] }; src: string; delay: string; kind?: "wing" | "scythe" | "claw" | "arm" | "tail" | "tail-ghost" | "grab" | "paddle" | "hind-thigh" | "hind-shin"; hind?: { knee: [number, number]; dir: 1 | -1 }; origin?: string; baseRotateDeg?: number; shiftYPct?: number; squashAt?: { x: number; y: number }; clawDir?: 1 | -1; ghostOpacity?: number; paddleDir?: 1 | -1; flapDir?: 1 | -1 };
 
 type KnownCreatureArt = {
   body: string;
@@ -445,6 +445,25 @@ function buildEightLegWalkerArt(
         { src: file("back_leg_R1"), delay: "0s" },
       ],
     },
+  };
+}
+
+// ユーたん(ホウネンエビ): 脚は体の後ろ。横の腕(mandible_L/R。左右はファイル名の左右)も体の後ろに置き、付け根を軸にゆらゆら揺らす。
+// 脚は正面 L1・L3・R1、背面 R1〜R3 (素材にある分だけ)。
+function buildFairyShrimpArt(
+  code: string,
+  origin: { front: { L: string; R: string }; back: { L: string; R: string } }
+): Partial<Record<Facing, KnownCreatureArt>> {
+  const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
+  const arms = (facing: "front" | "back"): CreaturePartArt[] => [
+    { src: file(`${facing}_mandible_L`), delay: "0s", kind: "arm", origin: origin[facing].L, clawDir: 1 },
+    { src: file(`${facing}_mandible_R`), delay: "-0.8s", kind: "arm", origin: origin[facing].R, clawDir: -1 },
+  ];
+  const legs = (facing: "front" | "back", names: string[]): CreaturePartArt[] =>
+    names.map((n, i) => ({ src: file(`${facing}_leg_${n}`), delay: `-${(i * 0.3).toFixed(2)}s` }));
+  return {
+    front: { body: file("front_body"), mandibles: {}, legsBehindBody: [...arms("front"), ...legs("front", ["R1", "L1", "L3"])], legsInFrontOfBody: [] },
+    back: { body: file("back_body"), mandibles: {}, legsBehindBody: [...arms("back"), ...legs("back", ["R3", "R2", "R1"])], legsInFrontOfBody: [] },
   };
 }
 
@@ -858,6 +877,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0027": buildNewSpeciesWalkerArt("KW-0027", { frontOrigin: "30% 88%", backOrigin: "90% 60%" }),
   // カミたん(カミキリムシ。大顎mandible_01をときどきガチガチ=CHOMP_*)
   // オサたん(オサムシ。標準の歩く6脚＋大顎。大顎mandible_01をガチガチ=CHOMP_*)
+  // ユーたん(ホウネンエビ。歩く。横の腕=mandibleをゆらゆら揺らす)
+  "KW-0056": buildFairyShrimpArt("KW-0056", { front: { L: "61% 77%", R: "21% 62%" }, back: { L: "50% 37%", R: "78% 64%" } }),
   "KW-0044": buildNewSpeciesWalkerArt("KW-0044", { frontOrigin: "38% 82%", backOrigin: "90% 66%" }),
   "KW-0017": buildLongicornArt("KW-0017", { front: "31% 85%", back: "90% 58%" }),
   // カブたん(カブトムシ。ツノはmandible_01、付け根を軸にときどき首振り＝HORN_*)
@@ -1240,6 +1261,8 @@ function legClassName(kind: CreaturePartArt["kind"], code: string, scythe: boole
   if (kind === "tail") return strike ? "animate-kuwagata-tail" : "";
   if (kind === "tail-ghost") return "animate-kuwagata-tail animate-kuwagata-tail-ghost";
   if (kind === "claw") return chomp ? "animate-kuwagata-claw" : "";
+  // ユーたんの横の腕(大顎)。歩いている間、付け根を軸にずっとゆらゆら揺らす。
+  if (kind === "arm") return "animate-kuwagata-arm";
   // ヘビたんの羽根は、飛んでいる間だけ羽ばたく。
   if (kind === "wing" && code === SNAKEFLY_SPECIES_CODE) return airborne ? "animate-kuwagata-wing-snakefly" : "";
   if (kind === "wing") return isFastFlap(code) ?"animate-kuwagata-wing-dragonfly" : "animate-kuwagata-wing";

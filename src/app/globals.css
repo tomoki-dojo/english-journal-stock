@@ -1313,6 +1313,7 @@ body {
   .animate-kuwagata-chomp-big,
   .animate-kuwagata-shine,
   .animate-kuwagata-claw,
+  .animate-kuwagata-arm,
   .animate-kuwagata-charge,
   .animate-kuwagata-grab,
   .animate-kuwagata-stalk,
@@ -1381,6 +1382,21 @@ body {
   );
   background-size: 300% 100%;
   animation: kuwagata-shine 0.75s ease-in-out 0.1s both;
+}
+
+/* ユーたんの横の腕。付け根を軸に、ゆらゆらと左右に揺れ続ける。左右は--claw-dirで向きを反転。 */
+@keyframes kuwagata-arm {
+  0%,
+  100% {
+    transform: rotate(calc(var(--claw-dir, 1) * -9deg));
+  }
+  50% {
+    transform: rotate(calc(var(--claw-dir, 1) * 9deg));
+  }
+}
+
+.animate-kuwagata-arm {
+  animation: kuwagata-arm 1.6s ease-in-out infinite;
 }
 
 /* サワたんのハサミ。付け根を軸に、開いて(外へ)→閉じる(内へ)を数回。左右は--claw-dirで向きを反転し、時間差で交互に動く。 */
