@@ -411,6 +411,27 @@ function buildShineBeetleArt(code: string, origin: { front: string; back: string
   };
 }
 
+// キメたん(キメラ): 8脚歩行(正面 L1〜L4+R1、背面 R1〜R4)に、サソたんと同じ尻尾のシュシュッ(mandible_01=尻尾。付け根を軸に打ち下ろす)を足す。
+// 尻尾は正面・背面とも体の奥。残像用の半透明コピーを時間差で重ねる。
+function buildChimeraArt(
+  code: string,
+  origin: { front: string; back: string }
+): Partial<Record<Facing, KnownCreatureArt>> {
+  const base = buildEightLegWalkerArt(code);
+  const tail = (facing: "front" | "back", o: string, dir: 1 | -1): CreaturePartArt[] => {
+    const src = `${KUWAGATA_ART_DIR}/kuwagata_${code}_${facing}_mandible_01.svg`;
+    return [
+      { src, delay: "0.09s", kind: "tail-ghost", origin: o, clawDir: dir, ghostOpacity: 0.22 },
+      { src, delay: "0.045s", kind: "tail-ghost", origin: o, clawDir: dir, ghostOpacity: 0.4 },
+      { src, delay: "0s", kind: "tail", origin: o, clawDir: dir },
+    ];
+  };
+  return {
+    front: base.front && { ...base.front, legsBehindBody: [...tail("front", origin.front, -1), ...base.front.legsBehindBody] },
+    back: base.back && { ...base.back, legsBehindBody: [...tail("back", origin.back, 1), ...base.back.legsBehindBody] },
+  };
+}
+
 // 新種(動きの種類B=歩く8脚)の成虫アート。クモなど。ファイルは
 //   正面: front_body / front_leg_L1〜L4(手前脚4本) / front_leg_R1(奥脚1本)
 //   背面: back_body / back_leg_R1〜R4(脚4本) / back_leg_L1(左側にちらっと見える脚1本。種によっては無い)
@@ -879,6 +900,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   // オサたん(オサムシ。標準の歩く6脚＋大顎。大顎mandible_01をガチガチ=CHOMP_*)
   // ユーたん(ホウネンエビ。歩く。横の腕=mandibleをゆらゆら揺らす)
   "KW-0056": buildFairyShrimpArt("KW-0056", { front: { L: "61% 77%", R: "21% 62%" }, back: { L: "50% 37%", R: "78% 64%" } }),
+  // キメたん(キメラ。8脚歩行＋尻尾のシュシュッ)
+  "KW-0058": buildChimeraArt("KW-0058", { front: "86% 37%", back: "16% 74%" }),
   "KW-0044": buildNewSpeciesWalkerArt("KW-0044", { frontOrigin: "38% 82%", backOrigin: "90% 66%" }),
   "KW-0017": buildLongicornArt("KW-0017", { front: "31% 85%", back: "90% 58%" }),
   // カブたん(カブトムシ。ツノはmandible_01、付け根を軸にときどき首振り＝HORN_*)
@@ -2130,6 +2153,7 @@ const CHOMP_SPECIES_CODE = "KW-0017";
 const CHOMP_SPECIES_CODE_2 = "KW-0027"; // ハンたんも大顎をガチガチさせる
 // サソたん: 尻尾(tale)をシュシュッ! と素早く打ち下ろす(残像つき)。ハサミ(claw)は左右交互にパクパク。
 const TAIL_STRIKE_SPECIES_CODE = "KW-0031";
+const TAIL_STRIKE_SPECIES_CODE_2 = "KW-0058";
 const TAIL_STRIKE_CYCLE_MS = 5000;
 const TAIL_STRIKE_DURATION_MS = 900;
 // ヘラたん: ときどき大きくなり(テッペンクワたんと同じ=proud)、頭ごとツノを上下にガチガチ振り、体全体をキラッと光が走る。
@@ -2307,7 +2331,7 @@ function WanderingCreature({
     SHINE_DURATION_MS
   );
   const striking = useTimedGesture(
-    speciesCode === TAIL_STRIKE_SPECIES_CODE && growthStage === "成虫" && hasArt,
+    (speciesCode === TAIL_STRIKE_SPECIES_CODE || speciesCode === TAIL_STRIKE_SPECIES_CODE_2) && growthStage === "成虫" && hasArt,
     seedKey + ":strike",
     TAIL_STRIKE_CYCLE_MS,
     TAIL_STRIKE_DURATION_MS
