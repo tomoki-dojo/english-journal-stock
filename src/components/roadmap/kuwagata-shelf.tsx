@@ -70,7 +70,7 @@ type CreaturePartArt = {
   pose?: MimicPose;
   // 獲物を捕まえる(grab)動き用の3関節チェーン。各パーツは肩(origin)を軸に、
   // rotate(a1) translate(p1) rotate(a2) translate(p2) rotate(a3) translate(p3) の順で変形する(角度は度、pはキャンバスに対する%)。
-  grab?: { a: [number, number, number]; p1: [number, number]; p2: [number, number]; p3: [number, number] }; src: string; delay: string; kind?: "wing" | "scythe" | "claw" | "arm" | "segment" | "tail" | "tail-ghost" | "grab" | "paddle" | "hind-thigh" | "hind-shin"; hind?: { knee: [number, number]; dir: 1 | -1 }; origin?: string; baseRotateDeg?: number; shiftYPct?: number; squashAt?: { x: number; y: number }; clawDir?: 1 | -1; ghostOpacity?: number; paddleDir?: 1 | -1; flapDir?: 1 | -1 };
+  grab?: { a: [number, number, number]; p1: [number, number]; p2: [number, number]; p3: [number, number] }; src: string; delay: string; kind?: "wing" | "scythe" | "claw" | "arm" | "segment" | "wave" | "tail" | "tail-ghost" | "grab" | "paddle" | "hind-thigh" | "hind-shin"; hind?: { knee: [number, number]; dir: 1 | -1 }; origin?: string; baseRotateDeg?: number; shiftYPct?: number; squashAt?: { x: number; y: number }; clawDir?: 1 | -1; ghostOpacity?: number; paddleDir?: 1 | -1; flapDir?: 1 | -1 };
 
 type KnownCreatureArt = {
   body: string;
@@ -459,6 +459,50 @@ function buildMilliArt(code: string): Partial<Record<Facing, KnownCreatureArt>> 
       // 背面は頭が最背面、体節は番号が小さいほど手前。body1にあたる体節のファイル名が back_leg_R2 のため、それを最前面の体節として振る。
       legsInFrontOfBody: [...segments("back"), { src: file("back_leg_R2"), delay: "-1.5s", kind: "segment" as const, origin: "19% 68%" }],
       jaws: [{ src: file("back_mandible"), origin: "84% 44%", dir: 0, behindBody: true }],
+    },
+  };
+}
+
+// パレオたん(ハネカクシ系の古代昆虫): 歩きながら、左右3枚ずつの羽根(wing_L1〜3・R1〜3)をゆっくり波打つように羽ばたかせる。
+// 羽根は体の奥。3枚の位相を120度(周期の1/3)ずつずらす。羽根ごとの付け根(origin)は絵から目測。
+// clawDirは羽ばたきの向き(羽根が右へ伸びる側が-1、左へ伸びる側が+1。左右で同時に上下する)。
+function buildPaleoWingArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
+  const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
+  const PERIOD = 2.1;
+  const wing = (facing: "front" | "back", name: string, i: number, origin: string, dir: 1 | -1): CreaturePartArt => ({
+    src: file(`${facing}_wing_${name}`),
+    delay: `-${((i * PERIOD) / 3).toFixed(2)}s`,
+    kind: "wave",
+    origin,
+    clawDir: dir,
+  });
+  return {
+    front: {
+      body: file("front_body"),
+      mandibles: {},
+      // 奥から手前へ 3→2→1
+      legsBehindBody: [
+        wing("front", "L3", 2, "54% 45%", -1),
+        wing("front", "R3", 2, "38% 57%", 1),
+        wing("front", "L2", 1, "54% 58%", -1),
+        wing("front", "R2", 1, "36% 60%", 1),
+        wing("front", "L1", 0, "51% 74%", -1),
+        wing("front", "R1", 0, "24% 69%", 1),
+      ],
+      legsInFrontOfBody: [],
+    },
+    back: {
+      body: file("back_body"),
+      mandibles: {},
+      legsBehindBody: [
+        wing("back", "L3", 2, "56% 45%", 1),
+        wing("back", "R3", 2, "83% 60%", -1),
+        wing("back", "L2", 1, "55% 42%", 1),
+        wing("back", "R2", 1, "62% 47%", -1),
+        wing("back", "L1", 0, "54% 45%", 1),
+        wing("back", "R1", 0, "61% 51%", -1),
+      ],
+      legsInFrontOfBody: [],
     },
   };
 }
@@ -935,6 +979,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0058": buildChimeraArt("KW-0058", { front: "86% 37%", back: "16% 74%" }),
   // トゲたん(ヤスデ。体節をウネウネ＋大顎ガチガチ・キラリ)
   "KW-0054": buildMilliArt("KW-0054"),
+  // パレオたん(羽根3枚ずつをゆっくり波打たせる)
+  "KW-0057": buildPaleoWingArt("KW-0057"),
   "KW-0044": buildNewSpeciesWalkerArt("KW-0044", { frontOrigin: "38% 82%", backOrigin: "90% 66%" }),
   "KW-0017": buildLongicornArt("KW-0017", { front: "31% 85%", back: "90% 58%" }),
   // カブたん(カブトムシ。ツノはmandible_01、付け根を軸にときどき首振り＝HORN_*)
@@ -1321,6 +1367,8 @@ function legClassName(kind: CreaturePartArt["kind"], code: string, scythe: boole
   if (kind === "arm") return "animate-kuwagata-arm";
   // トゲたんの体節。それぞれの中心を軸に左右へ少し振り続ける(時間差でウネウネ)。
   if (kind === "segment") return "animate-kuwagata-segment";
+  // パレオたんの羽根(左右3枚ずつ)。ゆっくり、3枚の位相を120度ずつずらして波打つように羽ばたく。
+  if (kind === "wave") return "animate-kuwagata-wing-wave";
   // ヘビたんの羽根は、飛んでいる間だけ羽ばたく。
   if (kind === "wing" && code === SNAKEFLY_SPECIES_CODE) return airborne ? "animate-kuwagata-wing-snakefly" : "";
   if (kind === "wing") return isFastFlap(code) ?"animate-kuwagata-wing-dragonfly" : "animate-kuwagata-wing";
