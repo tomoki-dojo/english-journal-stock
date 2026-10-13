@@ -433,7 +433,7 @@ function buildChimeraArt(
 }
 
 // トゲたん(ヤスデ): 体節 body1〜6 を1枚ずつ、それぞれの中心を軸に左右へ少し振ってウネウネさせる(時間差つき)。
-// 正面は head+body1〜6、背面は head+body2〜6(+脚R2)。前(頭に近い)ほど手前。大顎(mandible)は左右ペアの1枚で、ガチガチ時は大きくなって光が走る(回転なし)。
+// 正面は head+body1〜6、背面は head+body2〜6+body1(ファイル名は back_leg_R2)。前(頭に近い)ほど手前。大顎(mandible)は左右ペアの1枚で、ガチガチ時は大きくなって光が走る(回転なし)。
 function buildMilliArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
   const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
   const centers = {
@@ -455,9 +455,9 @@ function buildMilliArt(code: string): Partial<Record<Facing, KnownCreatureArt>> 
     back: {
       body: file("back_head"),
       mandibles: {},
-      legsBehindBody: [{ src: file("back_leg_R2"), delay: "-0.4s" }],
-      // 背面は頭が最背面、体節は番号が小さいほど手前(body2が最前面)。
-      legsInFrontOfBody: segments("back"),
+      legsBehindBody: [],
+      // 背面は頭が最背面、体節は番号が小さいほど手前。body1にあたる体節のファイル名が back_leg_R2 のため、それを最前面の体節として振る。
+      legsInFrontOfBody: [...segments("back"), { src: file("back_leg_R2"), delay: "-1.5s", kind: "segment" as const, origin: "19% 68%" }],
       jaws: [{ src: file("back_mandible"), origin: "84% 44%", dir: 0, behindBody: true }],
     },
   };
