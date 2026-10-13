@@ -108,17 +108,15 @@ export function CatchArthurTalk({ size = 200 }: { size?: number }) {
   );
 }
 
-// 道の両脇の草。消失点から左右に広がりながら、どんどん大きくなって手前へ流れ(疾走感)、画面の外へ消える。
+// 道の両脇の草(補助役)。数は4つ、アーサーの幅くらいの狭い間隔で、1.2秒周期で流れる。
+// 流れる向きは GRASS_REVERSE で切り替え(true=手前から奥の消失点へ。false=消失点から手前へ)。
 const GRASS_CYCLE_SEC = 1.2;
+const GRASS_REVERSE = true;
 const GRASS = [
-  { side: "left", gx: -34, delay: 0 },
-  { side: "right", gx: 40, delay: 0.1 },
-  { side: "left", gx: -46, delay: 0.3 },
-  { side: "right", gx: 30, delay: 0.4 },
-  { side: "left", gx: -28, delay: 0.6 },
-  { side: "right", gx: 48, delay: 0.7 },
-  { side: "left", gx: -40, delay: 0.9 },
-  { side: "right", gx: 36, delay: 1.0 },
+  { side: "left", gx: -24, delay: 0 },
+  { side: "right", gx: 26, delay: 0.3 },
+  { side: "left", gx: -20, delay: 0.6 },
+  { side: "right", gx: 22, delay: 0.9 },
 ] as const;
 
 export function CatchGrass() {
@@ -135,7 +133,8 @@ export function CatchGrass() {
           style={
             {
               "--gx": `${g.gx}vw`,
-              "--gx0": `${g.gx > 0 ? 5 : -5}vw`,
+              "--gx0": `${g.gx > 0 ? 4 : -4}vw`,
+              animationDirection: GRASS_REVERSE ? "reverse" : "normal",
               animationDuration: `${GRASS_CYCLE_SEC}s`,
               animationDelay: `-${g.delay}s`,
             } as React.CSSProperties

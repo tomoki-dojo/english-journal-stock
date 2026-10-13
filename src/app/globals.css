@@ -1623,12 +1623,12 @@ body {
     transform: translate(calc(-50% + var(--gx0, 0vw)), -50%) scale(0.05);
     opacity: 0;
   }
-  12% {
-    opacity: 1;
+  20% {
+    opacity: 0.6;
   }
   100% {
     transform: translate(calc(-50% + var(--gx, 30vw)), calc(-50% + 66vh)) scale(1.9);
-    opacity: 1;
+    opacity: 0;
   }
 }
 
