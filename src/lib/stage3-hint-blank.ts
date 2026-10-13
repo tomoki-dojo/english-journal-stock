@@ -30,7 +30,11 @@ export async function getOrGenerateStage3HintBlank(params: {
     const raw = await callGemini(
       buildHintBlankSystemPrompt(),
       buildHintBlankUserPrompt({ expressionEn: params.expressionEn, meaningJa: params.meaningJa }),
-      DEFAULT_GEMINI_MODEL
+      DEFAULT_GEMINI_MODEL,
+      1024,
+      // 画面の読み込み中に呼ばれるので、Geminiが重いときに待たせない(失敗時は元の英文で続行し、
+      // キャッシュしないので次回また試す)。
+      { timeoutMs: 6000, retry: false }
     );
     const blankedEn = parseHintBlankJson(raw, params.expressionEn);
 
