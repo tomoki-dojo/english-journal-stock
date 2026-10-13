@@ -13,6 +13,7 @@ import { callAnthropic, callGemini, DEFAULT_ANTHROPIC_MODEL, DEFAULT_GEMINI_MODE
 import {
   buildStage3SystemPrompt,
   buildStage3UserPrompt,
+  isExactModelAnswer,
   parseStage3JudgmentJson,
   type JudgeStage3Input,
   type ParsedStage3Judgment,
@@ -92,6 +93,39 @@ export async function judgeStage3Answer(params: JudgeStage3AnswerParams): Promis
       : null;
   if (!usage) {
     return { ok: false, reason: "limit_exceeded", limit: checked.limit };
+  }
+
+  // お手本と完全に一致しているときは、AIを呼ばずその場で正解にする（待ち時間ゼロ・コストゼロ）。
+  // 相手の返答の生成が要るミニ拡張と、返事の判定（followUp）は対象外。利用枠は従来どおり1回分として数える。
+  if (
+    params.phase !== "followUp" &&
+    params.subStep !== "ミニ拡張" &&
+    isExactModelAnswer(params.userSpokenText, params.expressionEn)
+  ) {
+    console.log("[stage3] お手本と完全一致のためAI判定を省略");
+    if (!params.skipUsageCount) {
+      try {
+        await incrementStage3Usage(params.userId, usage.currentCount);
+      } catch (error) {
+        return {
+          ok: false,
+          reason: "provider_error",
+          message: error instanceof Error ? error.message : "利用回数の更新に失敗しました",
+        };
+      }
+    }
+    return {
+      ok: true,
+      judgment: {
+        correct: true,
+        errorTags: [],
+        feedbackJa: "お手本どおりに言えています。次は、お手本を見ずに自分の言葉でも言ってみましょう。",
+      },
+      usage: {
+        remaining: params.skipUsageCount ? Math.max(usage.remaining + (checked.allowed ? 1 : 0), 0) : usage.remaining,
+        limit: usage.limit,
+      },
+    };
   }
 
   const provider: AiWritingProvider =

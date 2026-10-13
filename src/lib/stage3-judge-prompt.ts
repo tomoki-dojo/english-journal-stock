@@ -74,6 +74,26 @@ ${input.userSpokenText}
 この発話を判定してください。`;
 }
 
+// 大文字小文字・句読点・引用符の違いを無視するための正規化（音声認識の書き起こしは
+// 大文字化・句読点の付き方が揺れるため）。アポストロフィは単語の一部として残す。
+function normalizeForExactMatch(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[‘’ʼ`]/g, "'")
+    .replace(/[^a-z0-9'\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// 学習者の発話が、お手本の英文と（大文字小文字・句読点を除いて）完全に一致しているか。
+// 一致していればAIに聞くまでもなく正解なので、AI呼び出しを省いて即座に判定できる。
+// 「...」や「〜」を含むお手本は、後ろに続きを言う前提の表現なので対象外（AIに任せる）。
+export function isExactModelAnswer(userSpokenText: string, expressionEn: string): boolean {
+  if (/\.\.\.|…|〜|~/.test(expressionEn)) return false;
+  const user = normalizeForExactMatch(userSpokenText);
+  return user.length > 0 && user === normalizeForExactMatch(expressionEn);
+}
+
 function stripCodeFence(raw: string): string {
   const trimmed = raw.trim();
   const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
