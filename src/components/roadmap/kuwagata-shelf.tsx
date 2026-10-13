@@ -70,7 +70,7 @@ type CreaturePartArt = {
   pose?: MimicPose;
   // 獲物を捕まえる(grab)動き用の3関節チェーン。各パーツは肩(origin)を軸に、
   // rotate(a1) translate(p1) rotate(a2) translate(p2) rotate(a3) translate(p3) の順で変形する(角度は度、pはキャンバスに対する%)。
-  grab?: { a: [number, number, number]; p1: [number, number]; p2: [number, number]; p3: [number, number] }; src: string; delay: string; kind?: "wing" | "scythe" | "claw" | "arm" | "tail" | "tail-ghost" | "grab" | "paddle" | "hind-thigh" | "hind-shin"; hind?: { knee: [number, number]; dir: 1 | -1 }; origin?: string; baseRotateDeg?: number; shiftYPct?: number; squashAt?: { x: number; y: number }; clawDir?: 1 | -1; ghostOpacity?: number; paddleDir?: 1 | -1; flapDir?: 1 | -1 };
+  grab?: { a: [number, number, number]; p1: [number, number]; p2: [number, number]; p3: [number, number] }; src: string; delay: string; kind?: "wing" | "scythe" | "claw" | "arm" | "segment" | "tail" | "tail-ghost" | "grab" | "paddle" | "hind-thigh" | "hind-shin"; hind?: { knee: [number, number]; dir: 1 | -1 }; origin?: string; baseRotateDeg?: number; shiftYPct?: number; squashAt?: { x: number; y: number }; clawDir?: 1 | -1; ghostOpacity?: number; paddleDir?: 1 | -1; flapDir?: 1 | -1 };
 
 type KnownCreatureArt = {
   body: string;
@@ -95,7 +95,7 @@ type KnownCreatureArt = {
   flippedSrc?: string;
   // 2本の大顎(ヘルたん)。それぞれ付け根(origin)を軸に、ガチガチの間は「上回転」(dir=+1は時計回り、-1は反時計回り=先端が上へ上がる向き)で
   // 開閉しながら大きくなり、大顎の形でくり抜いた光がキラッと走る。behindBodyなら体の奥に描く(背面の左大顎)。
-  jaws?: { src: string; origin: string; dir: 1 | -1; behindBody?: boolean }[];
+  jaws?: { src: string; origin: string; dir: 1 | -1 | 0; behindBody?: boolean }[];
   // 求愛ダンスの姿(クジャクたん)。正面向き専用。body1=ダンス中の体(脚つき)、body2=持ち上げた模様のお腹(付け根fanOriginを軸に左右に振る)、
   // legL・legR=縦長に描いた振り上げる脚(下の付け根を軸に、水平から少し斜め上を基準にして振る)。
   courtship?: {
@@ -429,6 +429,36 @@ function buildChimeraArt(
   return {
     front: base.front && { ...base.front, legsInFrontOfBody: [...tail("front", origin.front, -1), ...base.front.legsInFrontOfBody] },
     back: base.back && { ...base.back, legsInFrontOfBody: [...tail("back", origin.back, 1), ...base.back.legsInFrontOfBody] },
+  };
+}
+
+// トゲたん(ヤスデ): 体節 body1〜6 を1枚ずつ、それぞれの中心を軸に左右へ少し振ってウネウネさせる(時間差つき)。
+// 正面は head+body1〜6、背面は head+body2〜6(+脚R2)。前(頭に近い)ほど手前。大顎(mandible)は左右ペアの1枚で、ガチガチ時は大きくなって光が走る(回転なし)。
+function buildMilliArt(code: string): Partial<Record<Facing, KnownCreatureArt>> {
+  const file = (part: string) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${part}.svg`;
+  const centers = {
+    front: { 1: "38% 59%", 2: "47% 52%", 3: "55% 46%", 4: "63% 40%", 5: "72% 37%", 6: "80% 31%" },
+    back: { 2: "30% 60%", 3: "38% 54%", 4: "47% 48%", 5: "55% 43%", 6: "63% 37%" },
+  } as const;
+  const segments = (facing: "front" | "back"): CreaturePartArt[] =>
+    (Object.entries(centers[facing]) as [string, string][])
+      .sort((a, b) => Number(b[0]) - Number(a[0]))
+      .map(([n, origin]) => ({ src: file(`${facing}_body${n}`), delay: `-${((6 - Number(n)) * 0.22).toFixed(2)}s`, kind: "segment" as const, origin }));
+  return {
+    front: {
+      body: file("front_head"),
+      mandibles: {},
+      legsBehindBody: segments("front"),
+      legsInFrontOfBody: [],
+      jaws: [{ src: file("front_mandible"), origin: "27% 83%", dir: 0 }],
+    },
+    back: {
+      body: file("back_head"),
+      mandibles: {},
+      legsBehindBody: [{ src: file("back_leg_R2"), delay: "-0.4s" }, ...segments("back")],
+      legsInFrontOfBody: [],
+      jaws: [{ src: file("back_mandible"), origin: "84% 44%", dir: 0, behindBody: true }],
+    },
   };
 }
 
@@ -902,6 +932,8 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0056": buildFairyShrimpArt("KW-0056", { front: { L: "61% 77%", R: "21% 62%" }, back: { L: "50% 37%", R: "78% 64%" } }),
   // キメたん(キメラ。8脚歩行＋尻尾のシュシュッ)
   "KW-0058": buildChimeraArt("KW-0058", { front: "86% 37%", back: "16% 74%" }),
+  // トゲたん(ヤスデ。体節をウネウネ＋大顎ガチガチ・キラリ)
+  "KW-0054": buildMilliArt("KW-0054"),
   "KW-0044": buildNewSpeciesWalkerArt("KW-0044", { frontOrigin: "38% 82%", backOrigin: "90% 66%" }),
   "KW-0017": buildLongicornArt("KW-0017", { front: "31% 85%", back: "90% 58%" }),
   // カブたん(カブトムシ。ツノはmandible_01、付け根を軸にときどき首振り＝HORN_*)
@@ -1286,6 +1318,8 @@ function legClassName(kind: CreaturePartArt["kind"], code: string, scythe: boole
   if (kind === "claw") return chomp ? "animate-kuwagata-claw" : "";
   // ユーたんの横の腕(大顎)。歩いている間、付け根を軸にずっとゆらゆら揺らす。
   if (kind === "arm") return "animate-kuwagata-arm";
+  // トゲたんの体節。それぞれの中心を軸に左右へ少し振り続ける(時間差でウネウネ)。
+  if (kind === "segment") return "animate-kuwagata-segment";
   // ヘビたんの羽根は、飛んでいる間だけ羽ばたく。
   if (kind === "wing" && code === SNAKEFLY_SPECIES_CODE) return airborne ? "animate-kuwagata-wing-snakefly" : "";
   if (kind === "wing") return isFastFlap(code) ?"animate-kuwagata-wing-dragonfly" : "animate-kuwagata-wing";
@@ -2319,7 +2353,7 @@ function WanderingCreature({
     HORN_DURATION_MS
   );
   const chomping = useTimedGesture(
-    (speciesCode === CHOMP_SPECIES_CODE || speciesCode === CHOMP_SPECIES_CODE_2 || speciesCode === CHOMP_SPECIES_CODE_3 || speciesCode === HORNET_SPECIES_CODE || speciesCode === "KW-0024" || speciesCode === "KW-0044" || speciesCode === "KW-0055" || speciesCode === "KW-0033" || speciesCode === SNAKEFLY_SPECIES_CODE || speciesCode === TAIL_STRIKE_SPECIES_CODE) && growthStage === "成虫" && hasArt,
+    (speciesCode === CHOMP_SPECIES_CODE || speciesCode === CHOMP_SPECIES_CODE_2 || speciesCode === CHOMP_SPECIES_CODE_3 || speciesCode === HORNET_SPECIES_CODE || speciesCode === "KW-0024" || speciesCode === "KW-0044" || speciesCode === "KW-0055" || speciesCode === "KW-0054" || speciesCode === "KW-0033" || speciesCode === SNAKEFLY_SPECIES_CODE || speciesCode === TAIL_STRIKE_SPECIES_CODE) && growthStage === "成虫" && hasArt,
     seedKey + ":chomp",
     CHOMP_CYCLE_MS,
     CHOMP_DURATION_MS

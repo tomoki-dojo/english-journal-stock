@@ -1314,6 +1314,7 @@ body {
   .animate-kuwagata-shine,
   .animate-kuwagata-claw,
   .animate-kuwagata-arm,
+  .animate-kuwagata-segment,
   .animate-kuwagata-charge,
   .animate-kuwagata-grab,
   .animate-kuwagata-stalk,
@@ -1397,6 +1398,21 @@ body {
 
 .animate-kuwagata-arm {
   animation: kuwagata-arm 1.6s ease-in-out infinite;
+}
+
+/* トゲたんの体節。それぞれの中心を軸に、左右へ少し振り続ける。時間差(animation-delay)でウネウネして見える。 */
+@keyframes kuwagata-segment {
+  0%,
+  100% {
+    transform: rotate(-5deg);
+  }
+  50% {
+    transform: rotate(5deg);
+  }
+}
+
+.animate-kuwagata-segment {
+  animation: kuwagata-segment 1.3s ease-in-out infinite;
 }
 
 /* サワたんのハサミ。付け根を軸に、開いて(外へ)→閉じる(内へ)を数回。左右は--claw-dirで向きを反転し、時間差で交互に動く。 */
