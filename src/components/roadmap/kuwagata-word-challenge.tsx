@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArthurAvatar, type ArthurMood } from "./arthur";
-import { CatchArthurRun, SWING_TOTAL_MS } from "./catch-arthur-run";
+import { CatchArthurRun, CatchArthurTalk, SWING_TOTAL_MS } from "./catch-arthur-run";
 import type { KuwagataAreaCode } from "@/lib/supabase/kuwagata";
 
 type Question = { word: string; choices: string[] };
@@ -10,10 +9,14 @@ type StartResponse = { sessionId: string; questions: Question[]; durationSec: nu
 
 const COUNTDOWN_FROM = 3;
 
-// ミニゲームに出るアーサー。あとで「採集スタイルのアーサー」の絵ができたら、ここだけ差し替える。
-function CatchArthur({ size, mood }: { size: number; mood: ArthurMood }) {
-  return <ArthurAvatar bare animated size={size} mood={mood} />;
-}
+// カウントダウン「3→2→1→GO!」。だんだん大きく、派手な色になる(count=0がGO!)。
+const COUNTDOWN_STYLE: Record<number, { label: string; size: string; gradient: string; glow: string }> = {
+  3: { label: "3", size: "clamp(7rem, 38vw, 10rem)", gradient: "linear-gradient(180deg,#e0f2fe 0%,#38bdf8 55%,#0ea5e9 100%)", glow: "#38bdf8" },
+  2: { label: "2", size: "clamp(8.5rem, 46vw, 12.5rem)", gradient: "linear-gradient(180deg,#fef9c3 0%,#facc15 50%,#f59e0b 100%)", glow: "#facc15" },
+  1: { label: "1", size: "clamp(10rem, 56vw, 15rem)", gradient: "linear-gradient(180deg,#ffe4e6 0%,#fb7185 50%,#e11d48 100%)", glow: "#fb7185" },
+  0: { label: "GO!", size: "clamp(7rem, 40vw, 11rem)", gradient: "linear-gradient(180deg,#fef08a 0%,#fb923c 45%,#ef4444 100%)", glow: "#f97316" },
+};
+const GO_MS = 700;
 
 // 採集ミニゲーム「10秒単語チャレンジ」。説明(暗転)→OK→3秒カウントダウン→10秒で英単語→日本語の4択にどんどん答える。
 // 正解の判定と採集確率のブーストはサーバーで行うので、ここでは選んだ選択肢の番号を記録して返すだけ。
@@ -69,10 +72,13 @@ export function KuwagataWordChallenge({
   // カウントダウン(1秒ごと)
   useEffect(() => {
     if (phase !== "countdown") return;
-    const timer = setTimeout(() => {
-      if (count > 1) setCount(count - 1);
-      else setPhase("playing");
-    }, 1000);
+    const timer = setTimeout(
+      () => {
+        if (count > 0) setCount(count - 1);
+        else setPhase("playing");
+      },
+      count > 0 ? 1000 : GO_MS
+    );
     return () => clearTimeout(timer);
   }, [phase, count]);
 
@@ -122,7 +128,7 @@ export function KuwagataWordChallenge({
       <div className="relative z-10 flex w-full max-w-md flex-col items-center gap-6">
         {(phase === "intro" || phase === "loading") && (
           <>
-            <CatchArthur size={140} mood="point" />
+            <CatchArthurTalk size={200} />
             <p className="text-xl font-bold leading-relaxed text-white">
               10秒で単語の意味をできるだけ沢山答えろ！
               <br />
@@ -148,11 +154,30 @@ export function KuwagataWordChallenge({
         )}
 
         {phase === "countdown" && (
-          <>
-            <span key={count} className="animate-question-card-enter text-8xl font-black text-amber-300">
-              {count}
+          <div className="relative flex h-64 w-full items-center justify-center">
+            {/* 数字ごとに広がる光の輪 */}
+            <span
+              key={`ring-${count}`}
+              className="catch-count-ring pointer-events-none absolute left-1/2 top-1/2 h-40 w-40 rounded-full"
+              style={{ borderColor: COUNTDOWN_STYLE[count].glow }}
+            />
+            <span
+              key={count}
+              className="catch-count-pop font-black italic leading-none"
+              style={{
+                fontSize: COUNTDOWN_STYLE[count].size,
+                backgroundImage: COUNTDOWN_STYLE[count].gradient,
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                color: "transparent",
+                WebkitTextStroke: "0.06em #1c1917",
+                paintOrder: "stroke fill",
+                filter: `drop-shadow(0 0 0.2em ${COUNTDOWN_STYLE[count].glow}) drop-shadow(0 0.06em 0 rgba(0,0,0,0.5))`,
+              }}
+            >
+              {COUNTDOWN_STYLE[count].label}
             </span>
-          </>
+          </div>
         )}
 
         {phase === "playing" && question && (

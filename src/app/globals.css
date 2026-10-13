@@ -1314,6 +1314,8 @@ body {
   .animate-kuwagata-shine,
   .animate-kuwagata-claw,
   .animate-kuwagata-arm,
+  .catch-count-pop,
+  .catch-count-ring,
   .catch-arthur-hat-fly,
   .catch-arthur-hat-hop,
   .catch-hat-swap-b,
@@ -1573,6 +1575,45 @@ body {
 .catch-whiteout {
   opacity: 0;
   animation: catch-whiteout 0.45s ease-in forwards;
+}
+
+/* 採集ミニゲームのカウントダウン(3→2→1→GO!)。数字は勢いよく飛び出して少し弾み、光の輪が広がる。 */
+@keyframes catch-count-pop {
+  0% {
+    transform: scale(0.2) rotate(-10deg);
+    opacity: 0;
+  }
+  45% {
+    transform: scale(1.25) rotate(4deg);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(0.95) rotate(-2deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.catch-count-pop {
+  animation: catch-count-pop 0.5s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+@keyframes catch-count-ring {
+  0% {
+    transform: translate(-50%, -50%) scale(0.4);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(3.2);
+    opacity: 0;
+  }
+}
+
+.catch-count-ring {
+  border-width: 6px;
+  animation: catch-count-ring 0.7s ease-out both;
 }
 
 /* サワたんのハサミ。付け根を軸に、開いて(外へ)→閉じる(内へ)を数回。左右は--claw-dirで向きを反転し、時間差で交互に動く。 */

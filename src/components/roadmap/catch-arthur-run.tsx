@@ -81,3 +81,29 @@ export function CatchArthurRun({
     </div>
   );
 }
+
+// 説明画面の「採集アーサー」(バストアップ512×512)。口パクで話す。frame1=前歯が大きく見える、2=前歯が小さい、3=口を開けて歯が見えない。
+const TALK_FRAMES = [3, 2, 1, 2];
+
+export function CatchArthurTalk({ size = 200 }: { size?: number }) {
+  const [index, setIndex] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setIndex((i) => (i + 1) % TALK_FRAMES.length), 140);
+    return () => clearInterval(timer);
+  }, []);
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      {[1, 2, 3].map((frame) => (
+        // eslint-disable-next-line @next/next/no-img-element -- ミニゲーム用の1枚絵
+        <img
+          key={frame}
+          src={`${DIR}/arthur_catch_${frame}.png`}
+          alt=""
+          draggable={false}
+          className="absolute inset-0 h-full w-full select-none"
+          style={{ opacity: TALK_FRAMES[index] === frame ? 1 : 0 }}
+        />
+      ))}
+    </div>
+  );
+}
