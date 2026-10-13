@@ -161,14 +161,25 @@ export async function callGemini(
   if (!apiKey) throw new Error("GEMINI_API_KEYが設定されていません");
 
   const client = new GoogleGenAI({ apiKey });
-  const response = await client.models.generateContent({
-    model,
-    contents: userText,
-    // Claude側のmax_tokens: 1024と揃えて、1回あたりのコスト上限を必ず設ける。
-    config: { systemInstruction: systemPrompt, maxOutputTokens },
-  });
-
-  return response.text ?? "";
+  // Geminiは混雑時に503(UNAVAILABLE)や429を返すことがある(一時的)。その場合だけ、間を置いて最大2回やり直す。
+  const RETRY_WAITS_MS = [800, 1800];
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const response = await client.models.generateContent({
+        model,
+        contents: userText,
+        // Claude側のmax_tokens: 1024と揃えて、1回あたりのコスト上限を必ず設ける。
+        config: { systemInstruction: systemPrompt, maxOutputTokens },
+      });
+      return response.text ?? "";
+    } catch (error) {
+      const status = (error as { status?: number }).status;
+      const message = error instanceof Error ? error.message : String(error);
+      const temporary = status === 503 || status === 429 || /"code":\s*(503|429)|UNAVAILABLE/.test(message);
+      if (!temporary || attempt >= RETRY_WAITS_MS.length) throw error;
+      await new Promise((resolve) => setTimeout(resolve, RETRY_WAITS_MS[attempt]));
+    }
+  }
 }
 
 export type GetWritingFeedbackParams = {
