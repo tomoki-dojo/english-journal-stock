@@ -11,7 +11,7 @@
 
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getTodayDateKey } from "@/lib/daily-rotation";
-import { callAnthropic, callGemini, DEFAULT_ANTHROPIC_MODEL, DEFAULT_GEMINI_MODEL, type AiWritingProvider } from "@/lib/ai-writing";
+import { callAiWithFallback, DEFAULT_ANTHROPIC_MODEL, DEFAULT_GEMINI_MODEL, type AiWritingProvider } from "@/lib/ai-writing";
 import {
   buildStage5SystemPrompt,
   buildStage5UserPrompt,
@@ -115,10 +115,13 @@ export async function judgeStage5Turn(params: JudgeStage5TurnParams): Promise<Ju
   const userPrompt = buildStage5UserPrompt(params);
 
   try {
-    const raw =
-      provider === "anthropic"
-        ? await callAnthropic(systemPrompt, userPrompt, model)
-        : await callGemini(systemPrompt, userPrompt, model);
+    // 会話の返答は判定より出力が長いので、主プロバイダのタイムアウトは10秒。失敗時はもう一方に切り替える。
+    const raw = await callAiWithFallback(systemPrompt, userPrompt, {
+      provider,
+      model,
+      logTag: "stage5",
+      primaryTimeoutMs: 10000,
+    });
 
     if (isSessionStart && usageCheckForIncrement && usageCheckForIncrement.allowed) {
       await incrementStage5Usage(params.userId, usageCheckForIncrement.currentCount);

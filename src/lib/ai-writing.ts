@@ -135,17 +135,30 @@ async function listRecentVocabForPrompt(userId: string, limit = 5): Promise<Rece
 
 // Stage3のAI意味判定（stage3-ai.ts）からも同じClaude/Gemini呼び出しロジックを再利用するため、
 // exportしておく（プロンプト内容はai-writing-prompt.ts/stage3-judge-prompt.tsで別々に持つ）。
-export async function callAnthropic(systemPrompt: string, userText: string, model: string): Promise<string> {
+export async function callAnthropic(
+  systemPrompt: string,
+  userText: string,
+  model: string,
+  options: { timeoutMs?: number; retry?: boolean } = {}
+): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEYが設定されていません");
 
   const client = new Anthropic({ apiKey });
-  const message = await client.messages.create({
-    model,
-    max_tokens: 1024,
-    system: systemPrompt,
-    messages: [{ role: "user", content: userText }],
-  });
+  const message = await client.messages.create(
+    {
+      model,
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userText }],
+    },
+    // 既定(タイムアウト10分・自動リトライ2回)のままだと、障害時に何十秒も待たされるため、
+    // 呼び出し側が指定したときだけ短くする。
+    {
+      ...(options.timeoutMs !== undefined ? { timeout: options.timeoutMs } : {}),
+      ...(options.retry === false ? { maxRetries: 0 } : {}),
+    }
+  );
 
   const block = message.content[0];
   return block?.type === "text" ? block.text : "";
@@ -189,6 +202,56 @@ export async function callGemini(
       if (!temporary || attempt >= RETRY_WAITS_MS.length) throw error;
       await new Promise((resolve) => setTimeout(resolve, RETRY_WAITS_MS[attempt]));
     }
+  }
+}
+
+// Stage3〜5など、ユーザーを待たせたくない呼び出し用の共通入口。主プロバイダを短いタイムアウト・
+// リトライなしで呼び、失敗したらもう一方のプロバイダに切り替える（キーがある場合のみ）。
+// 実測（2026/10、有料枠）：Gemini 3.5 Flash-Liteは中央値約1秒、Haiku 4.5は約1.8秒。
+// どちらかの障害・レート制限があっても、待ち時間は「主のタイムアウト＋予備の応答時間」で収まる。
+export async function callAiWithFallback(
+  systemPrompt: string,
+  userText: string,
+  options: {
+    provider: AiWritingProvider;
+    model: string;
+    logTag: string;
+    primaryTimeoutMs?: number;
+    fallbackTimeoutMs?: number;
+  }
+): Promise<string> {
+  const { provider, model, logTag } = options;
+  const primaryTimeoutMs = options.primaryTimeoutMs ?? 8000;
+  const fallbackTimeoutMs = options.fallbackTimeoutMs ?? 15000;
+  const startedAt = Date.now();
+
+  const callPrimary = () =>
+    provider === "anthropic"
+      ? callAnthropic(systemPrompt, userText, model, { timeoutMs: primaryTimeoutMs, retry: false })
+      : callGemini(systemPrompt, userText, model, 1024, { timeoutMs: primaryTimeoutMs, retry: false });
+
+  try {
+    const raw = await callPrimary();
+    console.log(`[${logTag}] AI ${provider}/${model}: ${Date.now() - startedAt}ms`);
+    return raw;
+  } catch (primaryError) {
+    const fallbackProvider: AiWritingProvider = provider === "anthropic" ? "gemini" : "anthropic";
+    const fallbackKey = fallbackProvider === "anthropic" ? process.env.ANTHROPIC_API_KEY : process.env.GEMINI_API_KEY;
+    if (!fallbackKey) throw primaryError;
+
+    console.log(`[${logTag}] ${provider}が使えないため${fallbackProvider}に切り替えます (${Date.now() - startedAt}ms経過)`);
+    const raw =
+      fallbackProvider === "anthropic"
+        ? await callAnthropic(systemPrompt, userText, DEFAULT_ANTHROPIC_MODEL, {
+            timeoutMs: fallbackTimeoutMs,
+            retry: false,
+          })
+        : await callGemini(systemPrompt, userText, DEFAULT_GEMINI_MODEL, 1024, {
+            timeoutMs: fallbackTimeoutMs,
+            retry: false,
+          });
+    console.log(`[${logTag}] AI(予備) ${fallbackProvider}: 合計${Date.now() - startedAt}ms`);
+    return raw;
   }
 }
 

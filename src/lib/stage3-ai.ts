@@ -9,7 +9,7 @@
 
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getTodayDateKey } from "@/lib/daily-rotation";
-import { callAnthropic, callGemini, DEFAULT_ANTHROPIC_MODEL, DEFAULT_GEMINI_MODEL, type AiWritingProvider } from "@/lib/ai-writing";
+import { callAiWithFallback, DEFAULT_ANTHROPIC_MODEL, DEFAULT_GEMINI_MODEL, type AiWritingProvider } from "@/lib/ai-writing";
 import {
   buildStage3SystemPrompt,
   buildStage3UserPrompt,
@@ -139,23 +139,13 @@ export async function judgeStage3Answer(params: JudgeStage3AnswerParams): Promis
   const userPrompt = buildStage3UserPrompt(params);
 
   try {
-    const aiStartedAt = Date.now();
-    let raw: string;
-    if (provider === "anthropic") {
-      raw = await callAnthropic(systemPrompt, userPrompt, model);
-    } else {
-      try {
-        // Claudeへのフォールバックがあるので、Geminiは8秒でタイムアウト・リトライなしで見切る。
-        raw = await callGemini(systemPrompt, userPrompt, model, 1024, { timeoutMs: 8000, retry: false });
-      } catch (geminiError) {
-        // Geminiが混雑・遅延で使えないときは、Claude(Haiku)で判定して止まらないようにする。
-        if (!process.env.ANTHROPIC_API_KEY) throw geminiError;
-        console.log("[stage3] Geminiが使えないためClaudeで判定します");
-        raw = await callAnthropic(systemPrompt, userPrompt, DEFAULT_ANTHROPIC_MODEL);
-      }
-    }
-    // 体感の遅さの切り分け用(AI本体の所要時間)。サーバーのターミナルに出る。
-    console.log(`[stage3] AI判定 ${provider}/${model}: ${Date.now() - aiStartedAt}ms`);
+    // 主プロバイダを8秒・リトライなしで見切り、失敗したらもう一方に切り替える(所要時間はログに出る)。
+    const raw = await callAiWithFallback(systemPrompt, userPrompt, {
+      provider,
+      model,
+      logTag: "stage3",
+      primaryTimeoutMs: 8000,
+    });
 
     if (!params.skipUsageCount) {
       await incrementStage3Usage(params.userId, usage.currentCount);
