@@ -107,3 +107,41 @@ export function CatchArthurTalk({ size = 200 }: { size?: number }) {
     </div>
   );
 }
+
+// 道の両脇の草。消失点から左右に広がりながら、どんどん大きくなって手前へ流れ(疾走感)、画面の外へ消える。
+const GRASS_CYCLE_SEC = 1.2;
+const GRASS = [
+  { side: "left", gx: -34, delay: 0 },
+  { side: "right", gx: 40, delay: 0.1 },
+  { side: "left", gx: -46, delay: 0.3 },
+  { side: "right", gx: 30, delay: 0.4 },
+  { side: "left", gx: -28, delay: 0.6 },
+  { side: "right", gx: 48, delay: 0.7 },
+  { side: "left", gx: -40, delay: 0.9 },
+  { side: "right", gx: 36, delay: 1.0 },
+] as const;
+
+export function CatchGrass() {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-[4] overflow-hidden">
+      {GRASS.map((g, i) => (
+        // eslint-disable-next-line @next/next/no-img-element -- ミニゲーム用の1枚絵
+        <img
+          key={i}
+          src={`${DIR}/grass_${g.side}.png`}
+          alt=""
+          draggable={false}
+          className="catch-grass absolute"
+          style={
+            {
+              "--gx": `${g.gx}vw`,
+              "--gx0": `${g.gx > 0 ? 5 : -5}vw`,
+              animationDuration: `${GRASS_CYCLE_SEC}s`,
+              animationDelay: `-${g.delay}s`,
+            } as React.CSSProperties
+          }
+        />
+      ))}
+    </div>
+  );
+}

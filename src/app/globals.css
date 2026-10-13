@@ -1314,6 +1314,7 @@ body {
   .animate-kuwagata-shine,
   .animate-kuwagata-claw,
   .animate-kuwagata-arm,
+  .catch-grass,
   .catch-count-pop,
   .catch-count-ring,
   .catch-arthur-hat-fly,
@@ -1614,6 +1615,29 @@ body {
 .catch-count-ring {
   border-width: 6px;
   animation: catch-count-ring 0.7s ease-out both;
+}
+
+/* 道の両脇の草。消失点から左右に広がりながら大きくなって手前へ流れる(疾走感)。 */
+@keyframes catch-grass-run {
+  0% {
+    transform: translate(calc(-50% + var(--gx0, 0vw)), -50%) scale(0.05);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--gx, 30vw)), calc(-50% + 66vh)) scale(1.9);
+    opacity: 1;
+  }
+}
+
+.catch-grass {
+  left: 50%;
+  top: 34vh;
+  width: 120px;
+  height: 120px;
+  animation: catch-grass-run 1.2s cubic-bezier(0.55, 0, 0.85, 0.7) infinite;
 }
 
 /* サワたんのハサミ。付け根を軸に、開いて(外へ)→閉じる(内へ)を数回。左右は--claw-dirで向きを反転し、時間差で交互に動く。 */

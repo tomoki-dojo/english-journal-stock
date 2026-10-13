@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CatchArthurRun, CatchArthurTalk, SWING_TOTAL_MS } from "./catch-arthur-run";
+import { CatchArthurRun, CatchArthurTalk, CatchGrass, SWING_TOTAL_MS } from "./catch-arthur-run";
 import type { KuwagataAreaCode } from "@/lib/supabase/kuwagata";
 
 type Question = { word: string; choices: string[] };
@@ -123,6 +123,7 @@ export function KuwagataWordChallenge({
       {/* 暗転は他の演出(CelebrationOverlay)と同じ暗さ */}
       <div className="absolute inset-0 bg-black/75" />
       {phase === "countdown" && <CatchArthurRun mode="far" />}
+      {phase === "playing" && <CatchGrass />}
       {phase === "playing" && <CatchArthurRun mode="approach" durationSec={sessionRef.current?.durationSec ?? 10} />}
       {phase === "swing" && <CatchArthurRun mode="swing" />}
       <div className="relative z-10 flex w-full max-w-md flex-col items-center gap-6">
@@ -190,14 +191,23 @@ export function KuwagataWordChallenge({
                 style={{ width: `${(remainingMs / durationMs) * 100}%` }}
               />
             </div>
-            <p className="text-4xl font-black tracking-wide text-white">{question.word}</p>
-            <div className="grid w-full grid-cols-2 gap-3">
+            <p
+              className="text-5xl font-black tracking-wide text-white"
+              style={{
+                WebkitTextStroke: "0.14em #1c1917",
+                paintOrder: "stroke fill",
+                textShadow: "0 0.08em 0 #1c1917, 0 0 0.35em rgba(251,191,36,0.9)",
+              }}
+            >
+              {question.word}
+            </p>
+            <div className="flex w-full flex-col gap-2.5">
               {question.choices.map((choice, i) => (
                 <button
                   key={`${questionIndex}-${i}`}
                   type="button"
                   onClick={() => handleChoose(i)}
-                  className="rounded-2xl bg-white/90 px-2 py-4 text-base font-bold text-zinc-800 transition-transform active:scale-95"
+                  className="rounded-2xl border-2 border-zinc-900 bg-white px-4 py-3.5 text-lg font-bold text-zinc-800 transition-transform active:scale-95"
                 >
                   {choice}
                 </button>
