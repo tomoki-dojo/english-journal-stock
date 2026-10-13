@@ -323,7 +323,7 @@ export type Stage3Question = {
 export type Stage3UsageInfo = { remaining: number; limit: number };
 
 export type Stage3SessionResponse =
-  | { status: "session"; question: Stage3Question; usage: Stage3UsageInfo }
+  | { status: "session"; question: Stage3Question; usage: Stage3UsageInfo; poolSize: number }
   | { status: "not_ready"; remainingToUnlock: number }
   | { status: "done"; totalCount: number }
   | { status: "limit_exceeded"; limit: number };

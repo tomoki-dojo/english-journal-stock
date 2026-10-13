@@ -1335,6 +1335,7 @@ export async function getStage3Session(userId: string, plan: Plan): Promise<Stag
       warmth: computeWarmth(current.streak, STAGE3_GRADUATE_STREAK),
     },
     usage: { remaining: usageCheck.remaining, limit: usageCheck.limit },
+    poolSize: totalCount,
   };
 }
 

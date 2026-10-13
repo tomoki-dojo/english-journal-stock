@@ -8,6 +8,8 @@ type RoundHeaderProps = {
   stage: 0 | 1 | 2 | 3 | 4 | 5;
   // Stage2の出題形式（穴埋め／文選択／微改変）を表す小タグ。Stage1・Stage0では未指定。
   subFormatLabel?: string;
+  // サブ形式の隣に出す補足の小タグ(Stage3の「Stage1卒業 ◯個から出題」など)。
+  poolLabel?: string;
   // アーサーの表情。未指定なら問題の切り替わりで口パクする
   arthurMood?: ArthurMood;
 } & (
@@ -40,7 +42,7 @@ const STAGE_META = {
   5: { label: "Stage5", icon: RadioTower },
 } as const;
 
-export function RoundHeader({ stage, subFormatLabel, arthurMood, current, total, usageLabel }: RoundHeaderProps) {
+export function RoundHeader({ stage, subFormatLabel, poolLabel, arthurMood, current, total, usageLabel }: RoundHeaderProps) {
   const meta = STAGE_META[stage];
   const Icon = meta.icon;
   const color = STAGE_COLORS[stage];
@@ -59,6 +61,11 @@ export function RoundHeader({ stage, subFormatLabel, arthurMood, current, total,
           {subFormatLabel && (
             <span className="rounded-full bg-zinc-200/70 px-2 py-1 text-xs font-medium text-zinc-600">
               {subFormatLabel}
+            </span>
+          )}
+          {poolLabel && (
+            <span className="rounded-full bg-zinc-200/70 px-2 py-1 text-xs font-medium text-zinc-600">
+              {poolLabel}
             </span>
           )}
         </div>
