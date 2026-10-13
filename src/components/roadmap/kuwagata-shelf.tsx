@@ -449,7 +449,7 @@ function buildEightLegWalkerArt(
 }
 
 // ユーたん(ホウネンエビ): 脚は体の後ろ。横の腕(mandible_L/R。左右はファイル名の左右)も体の後ろに置き、付け根を軸にゆらゆら揺らす。
-// 脚は正面 L1・L3・R1、背面 R1〜R3 (素材にある分だけ)。
+// 脚は正面 L1〜L3・R1、背面 R1〜R3。
 function buildFairyShrimpArt(
   code: string,
   origin: { front: { L: string; R: string }; back: { L: string; R: string } }
@@ -462,7 +462,7 @@ function buildFairyShrimpArt(
   const legs = (facing: "front" | "back", names: string[]): CreaturePartArt[] =>
     names.map((n, i) => ({ src: file(`${facing}_leg_${n}`), delay: `-${(i * 0.3).toFixed(2)}s` }));
   return {
-    front: { body: file("front_body"), mandibles: {}, legsBehindBody: [...arms("front"), ...legs("front", ["R1", "L1", "L3"])], legsInFrontOfBody: [] },
+    front: { body: file("front_body"), mandibles: {}, legsBehindBody: [...arms("front"), ...legs("front", ["R1", "L1", "L2", "L3"])], legsInFrontOfBody: [] },
     back: { body: file("back_body"), mandibles: {}, legsBehindBody: [...arms("back"), ...legs("back", ["R3", "R2", "R1"])], legsInFrontOfBody: [] },
   };
 }
