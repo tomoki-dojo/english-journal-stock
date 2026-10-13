@@ -106,10 +106,19 @@ export async function judgeStage3Answer(params: JudgeStage3AnswerParams): Promis
 
   try {
     const aiStartedAt = Date.now();
-    const raw =
-      provider === "anthropic"
-        ? await callAnthropic(systemPrompt, userPrompt, model)
-        : await callGemini(systemPrompt, userPrompt, model);
+    let raw: string;
+    if (provider === "anthropic") {
+      raw = await callAnthropic(systemPrompt, userPrompt, model);
+    } else {
+      try {
+        raw = await callGemini(systemPrompt, userPrompt, model);
+      } catch (geminiError) {
+        // Geminiが混雑・遅延で使えないときは、Claude(Haiku)で判定して止まらないようにする。
+        if (!process.env.ANTHROPIC_API_KEY) throw geminiError;
+        console.log("[stage3] Geminiが使えないためClaudeで判定します");
+        raw = await callAnthropic(systemPrompt, userPrompt, DEFAULT_ANTHROPIC_MODEL);
+      }
+    }
     // 体感の遅さの切り分け用(AI本体の所要時間)。サーバーのターミナルに出る。
     console.log(`[stage3] AI判定 ${provider}/${model}: ${Date.now() - aiStartedAt}ms`);
 
