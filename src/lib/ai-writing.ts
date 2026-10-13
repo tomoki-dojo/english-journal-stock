@@ -155,16 +155,18 @@ export async function callGemini(
   systemPrompt: string,
   userText: string,
   model: string,
-  maxOutputTokens = 1024
+  maxOutputTokens = 1024,
+  options: { timeoutMs?: number; retry?: boolean } = {}
 ): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEYが設定されていません");
 
   const client = new GoogleGenAI({ apiKey });
   // Geminiは混雑時に503(UNAVAILABLE)や429を返したり、応答が極端に遅くなる(数十秒)ことがある。
-  // 1回ごとに15秒でタイムアウトし、一時的なエラー・タイムアウトのときだけ間を置いて1回やり直す。
-  const ATTEMPT_TIMEOUT_MS = 15000;
-  const RETRY_WAITS_MS = [800];
+  // 既定は1回ごとに15秒でタイムアウトし、一時的なエラー・タイムアウトのときだけ間を置いて1回やり直す。
+  // フォールバック先(Claude)があって待たせたくない呼び出しは、短いタイムアウト・リトライなしを指定する。
+  const ATTEMPT_TIMEOUT_MS = options.timeoutMs ?? 15000;
+  const RETRY_WAITS_MS = options.retry === false ? [] : [800];
   for (let attempt = 0; ; attempt++) {
     const startedAt = Date.now();
     try {

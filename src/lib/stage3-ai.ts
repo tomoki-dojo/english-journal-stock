@@ -111,7 +111,8 @@ export async function judgeStage3Answer(params: JudgeStage3AnswerParams): Promis
       raw = await callAnthropic(systemPrompt, userPrompt, model);
     } else {
       try {
-        raw = await callGemini(systemPrompt, userPrompt, model);
+        // Claudeへのフォールバックがあるので、Geminiは8秒でタイムアウト・リトライなしで見切る。
+        raw = await callGemini(systemPrompt, userPrompt, model, 1024, { timeoutMs: 8000, retry: false });
       } catch (geminiError) {
         // Geminiが混雑・遅延で使えないときは、Claude(Haiku)で判定して止まらないようにする。
         if (!process.env.ANTHROPIC_API_KEY) throw geminiError;
