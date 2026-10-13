@@ -412,7 +412,7 @@ function buildShineBeetleArt(code: string, origin: { front: string; back: string
 }
 
 // キメたん(キメラ): 8脚歩行(正面 L1〜L4+R1、背面 R1〜R4)に、サソたんと同じ尻尾のシュシュッ(mandible_01=尻尾。付け根を軸に打ち下ろす)を足す。
-// 尻尾は正面・背面とも体の奥。残像用の半透明コピーを時間差で重ねる。
+// 尻尾は正面が体の奥、背面は体の手前。残像用の半透明コピーを時間差で重ねる。
 function buildChimeraArt(
   code: string,
   origin: { front: string; back: string }
@@ -428,7 +428,7 @@ function buildChimeraArt(
   };
   return {
     front: base.front && { ...base.front, legsBehindBody: [...tail("front", origin.front, -1), ...base.front.legsBehindBody] },
-    back: base.back && { ...base.back, legsBehindBody: [...tail("back", origin.back, 1), ...base.back.legsBehindBody] },
+    back: base.back && { ...base.back, legsInFrontOfBody: [...tail("back", origin.back, 1), ...base.back.legsInFrontOfBody] },
   };
 }
 
