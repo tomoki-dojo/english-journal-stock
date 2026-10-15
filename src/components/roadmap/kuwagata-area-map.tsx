@@ -56,7 +56,7 @@ type Cloud = { key: string; src: string; x: number; y: number; w: number; h: num
 
 const CLOUD_GRID = 110; // 雲を置く間隔
 
-// 未解放エリアの形の上に雲を敷き詰める（「何かある」と見せる）。解放済みエリアの絵の上には、縁に少しかかる程度。
+// 未解放エリアの形の上に雲を敷き詰める（「何かある」と見せる）。解放済みエリアの絵にはかけない。
 // isLocked: その座標が未解放エリアの絵の不透明部分か / isOpen: 解放済みエリアの絵の不透明部分か
 function buildClouds(
   view: View,
@@ -87,12 +87,21 @@ function buildClouds(
       const scale = (type.w > 500 ? 0.55 : 0.8) + hash(i, j, 4) * 0.35;
       const w = type.w * scale;
       const h = type.h * scale;
-      // 解放済みエリアの絵には、縁に少しかかる程度まで。雲の幅の内側が2点以上絵に入るものは置かない。
-      const hw = w * 0.35;
-      const hh = h * 0.35;
-      const overlap =
-        Number(isOpen(cx - hw, cy)) + Number(isOpen(cx + hw, cy)) + Number(isOpen(cx, cy - hh)) + Number(isOpen(cx, cy + hh));
-      if (overlap >= 2) continue;
+      // 解放済みエリアの絵には一切かからないよう、雲の輪郭付近のどこかが絵に入るものは置かない。
+      const hw = w * 0.5;
+      const hh = h * 0.5;
+      const cw = w * 0.32;
+      const ch = h * 0.32;
+      const touchesOpen =
+        isOpen(cx - hw, cy) ||
+        isOpen(cx + hw, cy) ||
+        isOpen(cx, cy - hh) ||
+        isOpen(cx, cy + hh) ||
+        isOpen(cx - cw, cy - ch) ||
+        isOpen(cx + cw, cy - ch) ||
+        isOpen(cx - cw, cy + ch) ||
+        isOpen(cx + cw, cy + ch);
+      if (touchesOpen) continue;
       clouds.push({ key: `${i},${j}`, src: type.src, x: cx - w / 2, y: cy - h / 2, w, h });
     }
   }
