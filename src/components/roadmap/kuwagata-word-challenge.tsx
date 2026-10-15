@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CatchArthurRun, CatchArthurTalk, CatchGrass, SWING_TOTAL_MS } from "./catch-arthur-run";
+import { useMinigameBgm } from "./roadmap-sound";
 import type { KuwagataAreaCode } from "@/lib/supabase/kuwagata";
 
 type Question = { word: string; choices: string[] };
@@ -30,6 +31,7 @@ export function KuwagataWordChallenge({
   onFinish: (sessionId: string, answers: number[]) => void;
   onCancel: () => void;
 }) {
+  useMinigameBgm();
   const [phase, setPhase] = useState<"intro" | "loading" | "countdown" | "playing" | "swing">("intro");
   const [error, setError] = useState<string | null>(null);
   const [count, setCount] = useState(COUNTDOWN_FROM);

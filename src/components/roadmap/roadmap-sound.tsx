@@ -19,6 +19,8 @@ const BGM_VOLUME = 0.15;
 const TAP_VOLUME = 0.05;
 const PAGE_SRC = "/roadmap/sound/se_page.mp3";
 const PAGE_VOLUME = 0.2;
+const MINIGAME_BGM_SRC = "/roadmap/sound/bgm_minigame.mp3";
+const MINIGAME_BGM_VOLUME = 0.25;
 const STORAGE_KEY = "roadmap_sound_enabled";
 
 // BGMを流す画面（部屋・棚・図鑑）。Stageの練習画面などでは止める。
@@ -32,6 +34,7 @@ type SoundContextValue = {
   enabled: boolean;
   toggle: () => void;
   playPage: () => void;
+  setMinigameActive: (active: boolean) => void;
 };
 const SoundContext = createContext<SoundContextValue | null>(null);
 
@@ -112,9 +115,30 @@ export function RoadmapSoundProvider({
     void pageRef.current.play().catch(() => {});
   }, []);
 
+  // ミニゲームのBGM：ミニゲーム中は部屋のBGMを止めて、こちらを頭から流す。
+  const [minigameActive, setMinigameActive] = useState(false);
+  const minigameBgmRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => {
+    const shouldPlay = enabled && interacted && minigameActive;
+    if (!minigameBgmRef.current) {
+      if (!shouldPlay) return;
+      const audio = new Audio(MINIGAME_BGM_SRC);
+      audio.loop = true;
+      audio.volume = MINIGAME_BGM_VOLUME;
+      minigameBgmRef.current = audio;
+    }
+    const audio = minigameBgmRef.current;
+    if (shouldPlay) {
+      void audio.play().catch(() => {});
+    } else {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+  }, [enabled, interacted, minigameActive]);
+
   // BGM：部屋・棚・図鑑でだけ、ONかつ最初のタップ後に流す。ページ移動をまたいでも途切れない。
   useEffect(() => {
-    const shouldPlay = enabled && interacted && BGM_PATHS.has(pathname);
+    const shouldPlay = enabled && interacted && !minigameActive && BGM_PATHS.has(pathname);
 
     if (!bgmRef.current) {
       if (!shouldPlay || bgmMissing.current) return;
@@ -130,16 +154,17 @@ export function RoadmapSoundProvider({
     const audio = bgmRef.current;
     if (shouldPlay) void audio.play().catch(() => {});
     else audio.pause();
-  }, [enabled, interacted, pathname]);
+  }, [enabled, interacted, minigameActive, pathname]);
 
   useEffect(() => {
     return () => {
       bgmRef.current?.pause();
+      minigameBgmRef.current?.pause();
     };
   }, []);
 
   return (
-    <SoundContext.Provider value={{ enabled, toggle, playPage }}>
+    <SoundContext.Provider value={{ enabled, toggle, playPage, setMinigameActive }}>
       {children}
     </SoundContext.Provider>
   );
@@ -147,6 +172,16 @@ export function RoadmapSoundProvider({
 
 export function usePagePlayer() {
   return useContext(SoundContext)?.playPage ?? (() => {});
+}
+
+// ミニゲームの画面が出ている間だけ、ミニゲームのBGMを流す（説明の表示から終了まで）。
+export function useMinigameBgm() {
+  const setActive = useContext(SoundContext)?.setMinigameActive;
+  useEffect(() => {
+    if (!setActive) return;
+    setActive(true);
+    return () => setActive(false);
+  }, [setActive]);
 }
 
 // 画面上部に置く、ワンタップのON/OFFボタン（アイコンのみ）。
