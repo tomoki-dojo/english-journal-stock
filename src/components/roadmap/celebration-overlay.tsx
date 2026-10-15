@@ -72,6 +72,60 @@ const TWINKLES = [
   { left: 70, top: 88, size: 14, delay: 1.3 },
 ];
 
+// 光・紙吹雪・瞬く星。親要素（position: relative）の中央から広がる。
+export function CelebrationBurst() {
+  return (
+    <>
+      <div className="animate-egg-glow absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(253,230,138,0.85)_0%,rgba(251,191,36,0.35)_45%,rgba(251,191,36,0)_70%)]" />
+      {CONFETTI.map((c) => (
+        <span
+          key={c.id}
+          className="animate-egg-confetti pointer-events-none absolute left-1/2 top-1/2 flex items-center justify-center leading-none"
+          style={
+            {
+              "--cx": `${c.x}px`,
+              "--cy-peak": `${c.peak}px`,
+              "--cy-end": `${c.peak + c.fall}px`,
+              "--rot": `${c.rot}deg`,
+              animationDelay: `${c.delay}s`,
+              animationDuration: `${c.duration}s`,
+              width: c.size,
+              height: c.shape === "rect" ? c.size * 1.6 : c.size,
+              marginLeft: -c.size / 2,
+              marginTop: -c.size / 2,
+              backgroundColor: c.shape === "star" ? undefined : c.color,
+              borderRadius:
+                c.shape === "circle"
+                  ? "9999px"
+                  : c.shape === "rect"
+                    ? 1
+                    : undefined,
+              color: c.color,
+              fontSize: c.size * 1.6,
+            } as CSSProperties
+          }
+        >
+          {c.shape === "star" ? "✦" : null}
+        </span>
+      ))}
+      {TWINKLES.map((t, i) => (
+        <span
+          key={`twinkle-${i}`}
+          className="animate-egg-twinkle pointer-events-none absolute leading-none text-amber-200"
+          style={{
+            left: `${t.left}%`,
+            top: `${t.top}%`,
+            fontSize: t.size,
+            animationDelay: `${t.delay}s`,
+          }}
+        >
+          ✦
+        </span>
+      ))}
+    </>
+  );
+}
+
 // タマゴ入手・採集などの「ゲットした！」演出。暗転した背景に、光・クラッカー風の紙吹雪・瞬く星を出す。
 // 絵（artSrc）が無い／読み込めないときはBugアイコンで代用する。
 export function CelebrationOverlay({
@@ -100,52 +154,7 @@ export function CelebrationOverlay({
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 overflow-hidden bg-black/75 px-8 text-center">
       <div className="relative flex h-56 w-56 items-center justify-center">
-        <div className="animate-egg-glow absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(253,230,138,0.85)_0%,rgba(251,191,36,0.35)_45%,rgba(251,191,36,0)_70%)]" />
-        {CONFETTI.map((c) => (
-          <span
-            key={c.id}
-            className="animate-egg-confetti pointer-events-none absolute left-1/2 top-1/2 flex items-center justify-center leading-none"
-            style={
-              {
-                "--cx": `${c.x}px`,
-                "--cy-peak": `${c.peak}px`,
-                "--cy-end": `${c.peak + c.fall}px`,
-                "--rot": `${c.rot}deg`,
-                animationDelay: `${c.delay}s`,
-                animationDuration: `${c.duration}s`,
-                width: c.size,
-                height: c.shape === "rect" ? c.size * 1.6 : c.size,
-                marginLeft: -c.size / 2,
-                marginTop: -c.size / 2,
-                backgroundColor: c.shape === "star" ? undefined : c.color,
-                borderRadius:
-                  c.shape === "circle"
-                    ? "9999px"
-                    : c.shape === "rect"
-                      ? 1
-                      : undefined,
-                color: c.color,
-                fontSize: c.size * 1.6,
-              } as CSSProperties
-            }
-          >
-            {c.shape === "star" ? "✦" : null}
-          </span>
-        ))}
-        {TWINKLES.map((t, i) => (
-          <span
-            key={`twinkle-${i}`}
-            className="animate-egg-twinkle pointer-events-none absolute leading-none text-amber-200"
-            style={{
-              left: `${t.left}%`,
-              top: `${t.top}%`,
-              fontSize: t.size,
-              animationDelay: `${t.delay}s`,
-            }}
-          >
-            ✦
-          </span>
-        ))}
+        <CelebrationBurst />
         {art ? (
           <div className={`animate-egg-reveal relative drop-shadow-lg ${artClassName ?? ""}`}>{art}</div>
         ) : showArt ? (

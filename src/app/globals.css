@@ -1318,6 +1318,9 @@ body {
   .catch-count-pop,
   .catch-count-ring,
   .catch-cta,
+  .unlock-rays,
+  .unlock-flash,
+  .unlock-title,
   .catch-cta::after,
   .catch-cta-icon,
   .catch-arthur-hat-fly,
@@ -1964,4 +1967,62 @@ body {
 
 .catch-cta-icon {
   animation: catch-cta-icon 1.2s ease-in-out infinite;
+}
+
+/* エリア解放演出: 背後で回る光の筋、雲が晴れる瞬間の白フラッシュ、タイトルの登場 */
+@keyframes unlock-rays-spin {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+.unlock-rays {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 190vmax;
+  height: 190vmax;
+  transform: translate(-50%, -50%);
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(253, 224, 71, 0.22) 0deg 8deg,
+    rgba(253, 224, 71, 0) 8deg 24deg
+  );
+  -webkit-mask-image: radial-gradient(circle, #000 0%, transparent 38%);
+  mask-image: radial-gradient(circle, #000 0%, transparent 38%);
+  animation: unlock-rays-spin 40s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes unlock-flash {
+  0% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.unlock-flash {
+  animation: unlock-flash 0.9s ease-out both;
+  pointer-events: none;
+}
+
+@keyframes unlock-title {
+  0% {
+    transform: scale(0.2) rotate(-8deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.18) rotate(2deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+}
+
+.unlock-title {
+  animation: unlock-title 0.7s cubic-bezier(0.2, 0.9, 0.3, 1) both;
 }

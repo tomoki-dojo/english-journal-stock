@@ -133,6 +133,7 @@ export function KuwagataAreaMap({
   onSelect,
   disabled,
   revealAreas,
+  onRevealed,
 }: {
   unlockedAreas: KuwagataAreaCode[];
   labels: Record<KuwagataAreaCode, string>;
@@ -140,6 +141,8 @@ export function KuwagataAreaMap({
   disabled?: boolean;
   // 指定したエリアは、最初は雲に覆われていて、少し待つと雲が晴れて現れる（解放演出用。unlockedAreasに含めておく）。
   revealAreas?: KuwagataAreaCode[];
+  // 雲が晴れ始めた瞬間に呼ばれる（演出の紙吹雪などを重ねる用）
+  onRevealed?: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   // 透明部分をクリックしても下のエリアに届くよう、画像のアルファ値でクリック判定する。
@@ -164,6 +167,10 @@ export function KuwagataAreaMap({
   const [revealed, setRevealed] = useState(revealList.length === 0);
   const masksReady = maskTick >= MAP_AREAS.length;
   useEffect(() => {
+    if (revealed && revealList.length > 0) onRevealed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [revealed]);
+  useEffect(() => {
     if (revealed || !masksReady) return;
     const timer = setTimeout(() => setRevealed(true), REVEAL_DELAY_MS);
     return () => clearTimeout(timer);
@@ -171,32 +178,39 @@ export function KuwagataAreaMap({
 
   const clouds = useMemo(() => {
     const alpha = alphaRef.current;
-    const lockedAreas = MAP_AREAS.filter((a) => !settledAreas.includes(a));
-    const built = buildClouds(
-      view,
-      (lx, ly) => lockedAreas.some((a) => opaqueAt(alpha, a, lx, ly)),
-      (lx, ly) => settledAreas.some((a) => opaqueAt(alpha, a, lx, ly))
-    );
-    // 晴れる側の雲（解放されるエリアの上にある雲）は、そのエリアの中心から外へ流す。
-    return built.map((cloud) => {
+    const build = (settled: MapArea[]) => {
+      const lockedAreas = MAP_AREAS.filter((a) => !settled.includes(a));
+      return buildClouds(
+        view,
+        (lx, ly) => lockedAreas.some((a) => opaqueAt(alpha, a, lx, ly)),
+        (lx, ly) => settled.some((a) => opaqueAt(alpha, a, lx, ly))
+      );
+    };
+    // 解放後の雲（＝普段のマップの雲）
+    const finalClouds = build(visibleAreas);
+    if (revealList.length === 0) return finalClouds.map((c) => ({ ...c, drift: null as null | { dx: number; dy: number } }));
+    // 解放前の雲のうち、解放後には無い雲だけを、新エリアの中心から外へ流して消す。最後は普段のマップと同じ雲の並びになる。
+    const finalKeys = new Set(finalClouds.map((c) => c.key));
+    return build(settledAreas).map((cloud) => {
+      if (finalKeys.has(cloud.key)) return { ...cloud, drift: null as null | { dx: number; dy: number } };
       const cx = cloud.x + cloud.w / 2;
       const cy = cloud.y + cloud.h / 2;
-      const area = revealList.find(
-        (a) =>
-          opaqueAt(alpha, a, cx, cy) ||
-          opaqueAt(alpha, a, cx - 60, cy) ||
-          opaqueAt(alpha, a, cx + 60, cy) ||
-          opaqueAt(alpha, a, cx, cy - 60) ||
-          opaqueAt(alpha, a, cx, cy + 60)
-      );
-      if (!area) return { ...cloud, drift: null as null | { dx: number; dy: number } };
-      const dx = cx - (area.x + area.w / 2);
-      const dy = cy - (area.y + area.h / 2);
+      let best = revealList[0];
+      let bestDist = Infinity;
+      for (const a of revealList) {
+        const d = Math.hypot(cx - (a.x + a.w / 2), cy - (a.y + a.h / 2));
+        if (d < bestDist) {
+          bestDist = d;
+          best = a;
+        }
+      }
+      const dx = cx - (best.x + best.w / 2);
+      const dy = cy - (best.y + best.h / 2);
       const len = Math.hypot(dx, dy) || 1;
       return { ...cloud, drift: { dx: (dx / len) * CLOUD_DRIFT, dy: (dy / len) * CLOUD_DRIFT } };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, settledAreas, revealList, maskTick]);
+  }, [view, visibleAreas, settledAreas, revealList, maskTick]);
 
   // 各エリアの名前札を置く位置（他のエリアに隠れていない部分の重心）
   const labelPositions = useMemo(() => {
@@ -318,7 +332,8 @@ export function KuwagataAreaMap({
                 height: pct(area.h, view.h),
                 zIndex: 1 + MAP_AREAS.findIndex((a) => a.code === area.code),
                 opacity: hidden ? 0 : 1,
-                transition: `opacity ${REVEAL_MS}ms ease-out, filter 150ms`,
+                transform: hidden ? "scale(0.9)" : "scale(1)",
+                transition: `opacity ${REVEAL_MS}ms ease-out, transform ${REVEAL_MS}ms cubic-bezier(0.2, 1.3, 0.4, 1), filter 150ms`,
                 filter: hovered === area.code ? "brightness(1.08) drop-shadow(0 0 10px rgba(255,255,255,0.95))" : undefined,
               }}
             />
