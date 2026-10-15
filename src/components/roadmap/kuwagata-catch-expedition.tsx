@@ -7,6 +7,7 @@ import { Sparkles, ArrowRight } from "lucide-react";
 import { CelebrationOverlay } from "./celebration-overlay";
 import { TankOccupant } from "./kuwagata-shelf";
 import { KuwagataWordChallenge } from "./kuwagata-word-challenge";
+import { KuwagataAreaMap, KUWAGATA_MAP_AREA_CODES } from "./kuwagata-area-map";
 import type { KuwagataAreaCode } from "@/lib/supabase/kuwagata";
 
 const AREA_LABEL: Record<KuwagataAreaCode, string> = {
@@ -114,25 +115,35 @@ export function KuwagataCatchExpedition({
 
       {picking && (
         <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3">
-          <p className="mb-2 text-xs font-semibold text-amber-800">
-            どのエリアで採集する？
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {initialUnlockedAreas.map((areaCode) => (
-              <button
-                key={areaCode}
-                type="button"
-                onClick={() => {
-                  setPicking(false);
-                  setChallengeArea(areaCode);
-                }}
-                disabled={loading}
-                className="rounded-full border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-100 disabled:opacity-50"
-              >
-                {AREA_LABEL[areaCode]}
-              </button>
-            ))}
-          </div>
+          <KuwagataAreaMap
+            unlockedAreas={initialUnlockedAreas}
+            labels={AREA_LABEL}
+            disabled={loading}
+            onSelect={(areaCode) => {
+              setPicking(false);
+              setChallengeArea(areaCode);
+            }}
+          />
+          {initialUnlockedAreas.some((a) => !KUWAGATA_MAP_AREA_CODES.includes(a)) && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {initialUnlockedAreas
+                .filter((a) => !KUWAGATA_MAP_AREA_CODES.includes(a))
+                .map((areaCode) => (
+                  <button
+                    key={areaCode}
+                    type="button"
+                    onClick={() => {
+                      setPicking(false);
+                      setChallengeArea(areaCode);
+                    }}
+                    disabled={loading}
+                    className="rounded-full border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-100 disabled:opacity-50"
+                  >
+                    {AREA_LABEL[areaCode]}
+                  </button>
+                ))}
+            </div>
+          )}
           <button
             type="button"
             onClick={() => setPicking(false)}
