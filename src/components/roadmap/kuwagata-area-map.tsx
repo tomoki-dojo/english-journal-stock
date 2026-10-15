@@ -281,7 +281,7 @@ export function KuwagataAreaMap({
     <div className="mx-auto w-full max-w-md">
       <div
         ref={containerRef}
-        className="relative w-full overflow-hidden rounded-xl bg-[#c9dff0]"
+        className="relative isolate w-full overflow-hidden rounded-xl bg-[#c9dff0]"
         style={{ aspectRatio: `${view.w} / ${view.h}`, cursor: hovered && !disabled ? "pointer" : "default" }}
         onPointerMove={(e) => setHovered(hitTest(e.clientX, e.clientY))}
         onPointerLeave={() => setHovered(null)}
