@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CatchArthurRun, CatchArthurTalk, CatchGrass, SWING_TOTAL_MS } from "./catch-arthur-run";
-import { useMinigameBgm } from "./roadmap-sound";
+import { useMinigameBgm, useMinigameSe } from "./roadmap-sound";
 import type { KuwagataAreaCode } from "@/lib/supabase/kuwagata";
 
 type Question = { word: string; choices: string[] };
@@ -32,6 +32,7 @@ export function KuwagataWordChallenge({
   onCancel: () => void;
 }) {
   useMinigameBgm();
+  const playSe = useMinigameSe();
   const [phase, setPhase] = useState<"intro" | "loading" | "countdown" | "playing" | "swing">("intro");
   const [error, setError] = useState<string | null>(null);
   const [count, setCount] = useState(COUNTDOWN_FROM);
@@ -110,6 +111,7 @@ export function KuwagataWordChallenge({
   function handleChoose(choiceIndex: number) {
     const session = sessionRef.current;
     if (!session || finishedRef.current) return;
+    playSe();
     answersRef.current[questionIndex] = choiceIndex;
     setQuestionIndex((i) => Math.min(i + 1, session.questions.length - 1));
   }
@@ -208,6 +210,7 @@ export function KuwagataWordChallenge({
                 <button
                   key={`${questionIndex}-${i}`}
                   type="button"
+                  data-sound-silent
                   onClick={() => handleChoose(i)}
                   className="rounded-2xl border-2 border-zinc-900 bg-white px-4 py-3.5 text-lg font-bold text-zinc-800 transition-transform active:scale-95"
                 >

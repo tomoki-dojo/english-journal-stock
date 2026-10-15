@@ -21,6 +21,12 @@ const PAGE_SRC = "/roadmap/sound/se_page.mp3";
 const PAGE_VOLUME = 0.2;
 const MINIGAME_BGM_SRC = "/roadmap/sound/bgm_minigame.mp3";
 const MINIGAME_BGM_VOLUME = 0.25;
+const STAGE_BGM_SRC = "/roadmap/sound/bgm_stage.mp3";
+const STAGE_BGM_VOLUME = 0.15;
+// Stage3〜5は音声入力でマイクを使うので、聞き取り中だけBGMをほぼ消す（BGMがマイクに入って認識を邪魔しないように）。
+const MIC_DUCK_FACTOR = 0.04;
+const MINIGAME_SE_SRC = "/roadmap/sound/se_minigame.mp3";
+const MINIGAME_SE_VOLUME = 0.35;
 const STORAGE_KEY = "roadmap_sound_level";
 const LEGACY_STORAGE_KEY = "roadmap_sound_enabled"; // 旧: ON/OFFのみ。"0"ならミュートとして引き継ぐ。
 
@@ -41,6 +47,8 @@ type SoundContextValue = {
   setLevel: (level: number) => void;
   playPage: () => void;
   setMinigameActive: (active: boolean) => void;
+  setMicActive: (active: boolean) => void;
+  playMinigameSe: () => void;
 };
 const SoundContext = createContext<SoundContextValue | null>(null);
 
@@ -148,6 +156,33 @@ export function RoadmapSoundProvider({
     }
   }, [enabled, level, interacted, minigameActive]);
 
+  // 聞き取り（マイク）中は、Stageの練習BGMをほぼ消す。
+  const [micActive, setMicActive] = useState(false);
+
+  // Stage練習画面のBGM：Stage1・2は普通に、Stage3〜5は聞き取り中だけ極小。ページ移動をまたいでも途切れない。
+  const stageBgmRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => {
+    const shouldPlay = enabled && interacted && pathname.startsWith("/roadmap/stage");
+    if (!stageBgmRef.current) {
+      if (!shouldPlay) return;
+      const audio = new Audio(STAGE_BGM_SRC);
+      audio.loop = true;
+      stageBgmRef.current = audio;
+    }
+    const audio = stageBgmRef.current;
+    audio.volume = Math.min(1, STAGE_BGM_VOLUME * LEVEL_FACTORS[level] * (micActive ? MIC_DUCK_FACTOR : 1));
+    if (shouldPlay) void audio.play().catch(() => {});
+    else audio.pause();
+  }, [enabled, level, interacted, micActive, pathname]);
+
+  // ミニゲームで答えを選んだときの効果音（連打でも重なって鳴るよう、毎回新しく鳴らす）。
+  const playMinigameSe = useCallback(() => {
+    if (!enabledRef.current) return;
+    const audio = new Audio(MINIGAME_SE_SRC);
+    audio.volume = Math.min(1, MINIGAME_SE_VOLUME * LEVEL_FACTORS[levelRef.current]);
+    void audio.play().catch(() => {});
+  }, []);
+
   // BGM：部屋・棚・図鑑でだけ、ONかつ最初のタップ後に流す。ページ移動をまたいでも途切れない。
   useEffect(() => {
     const shouldPlay = enabled && interacted && !minigameActive && BGM_PATHS.has(pathname);
@@ -172,11 +207,12 @@ export function RoadmapSoundProvider({
     return () => {
       bgmRef.current?.pause();
       minigameBgmRef.current?.pause();
+      stageBgmRef.current?.pause();
     };
   }, []);
 
   return (
-    <SoundContext.Provider value={{ level, setLevel, playPage, setMinigameActive }}>
+    <SoundContext.Provider value={{ level, setLevel, playPage, setMinigameActive, setMicActive, playMinigameSe }}>
       {children}
     </SoundContext.Provider>
   );
@@ -194,6 +230,21 @@ export function useMinigameBgm() {
     setActive(true);
     return () => setActive(false);
   }, [setActive]);
+}
+
+// 音声入力で聞き取り中の間だけ true を渡す。Stage練習のBGMをほぼ消す。
+export function useBgmDuck(listening: boolean) {
+  const setMic = useContext(SoundContext)?.setMicActive;
+  useEffect(() => {
+    if (!setMic) return;
+    setMic(listening);
+    return () => setMic(false);
+  }, [setMic, listening]);
+}
+
+// ミニゲームで答えを選んだときの効果音を鳴らす関数を返す。
+export function useMinigameSe() {
+  return useContext(SoundContext)?.playMinigameSe ?? (() => {});
 }
 
 // 画面上部に置く音量コントロール。スピーカーをタップでミュート⇔元の音量、右の三角形（くさび形）を

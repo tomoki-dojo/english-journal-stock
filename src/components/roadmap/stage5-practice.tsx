@@ -9,6 +9,7 @@ import { GrowthBadge } from "./growth-badge";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
 import { ARTHUR_NAME, ArthurAvatar } from "./arthur";
 import { useSpeechRecognition } from "@/lib/use-speech-recognition";
+import { useBgmDuck } from "./roadmap-sound";
 import {
   STAGE5_TURN_COUNT,
   type Stage5Scenario,
@@ -47,6 +48,7 @@ export function Stage5Practice({ track }: Stage5PracticeProps) {
   const [sessionResult, setSessionResult] = useState<Stage5TurnResult | null>(null);
 
   const speech = useSpeechRecognition({ continuous: true });
+  useBgmDuck(speech.status === "listening");
   const trackLabel = track === "daily" ? "日常編" : "ビジネス編";
 
   async function loadScenarios() {

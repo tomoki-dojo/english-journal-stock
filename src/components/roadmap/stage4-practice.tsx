@@ -9,6 +9,7 @@ import { GrowthBadge } from "./growth-badge";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
 import { ARTHUR_NAME, ArthurAvatar } from "./arthur";
 import { useSpeechRecognition } from "@/lib/use-speech-recognition";
+import { useBgmDuck } from "./roadmap-sound";
 import {
   STAGE4_TURN_COUNT,
   type Stage4Scenario,
@@ -44,6 +45,7 @@ export function Stage4Practice() {
   const [sessionResult, setSessionResult] = useState<Stage4TurnResult | null>(null);
 
   const speech = useSpeechRecognition({ continuous: true });
+  useBgmDuck(speech.status === "listening");
 
   async function loadScenarios() {
     setState("loading");

@@ -10,6 +10,7 @@ import { GrowthBadge } from "./growth-badge";
 import { GrowingKuwagataPanel } from "./growing-kuwagata-panel";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
 import { useSpeechRecognition } from "@/lib/use-speech-recognition";
+import { useBgmDuck } from "./roadmap-sound";
 import type { Stage3JudgeResult, Stage3Question, Stage3SessionResponse, Stage3UsageInfo } from "./types";
 
 type ViewState = "loading" | "question" | "not_ready" | "done" | "limit_exceeded" | "error";
@@ -44,6 +45,7 @@ export function Stage3Practice() {
   const [firstAnswer, setFirstAnswer] = useState("");
 
   const speech = useSpeechRecognition({ continuous: true });
+  useBgmDuck(speech.status === "listening");
 
   async function loadSession() {
     setState("loading");
