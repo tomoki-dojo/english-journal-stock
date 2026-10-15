@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { KuwagataAreaCode } from "@/lib/supabase/kuwagata";
 
 // public/roadmap/map/map_layout.json と同じ座標系（原点＝エリア1の中心＝4000x4000アートボードの中心）。
@@ -16,20 +16,64 @@ const MAP_AREAS: MapArea[] = [
   { code: "ancient", src: "/roadmap/map/map_ancient.webp", x: -1349, y: -264, w: 1608, h: 1275 },
 ];
 
-// 雲。中心がどの解放済みエリアの矩形にも入っていない間だけ表示する（未解放エリアの上に浮かべる）。
-const MAP_CLOUDS = [
-  { src: "/roadmap/map/cloud3.webp", x: 227, y: -1140, w: 646, h: 440 },
-  { src: "/roadmap/map/cloud2.webp", x: 864, y: -1057, w: 407, h: 203 },
-  { src: "/roadmap/map/cloud1.webp", x: 944, y: -766, w: 257, h: 173 },
+const CLOUD_TYPES = [
+  { src: "/roadmap/map/cloud1.webp", w: 257, h: 173 },
+  { src: "/roadmap/map/cloud2.webp", w: 407, h: 203 },
+  { src: "/roadmap/map/cloud3.webp", w: 646, h: 440 },
 ];
 
-const PAD = 40;
-const MIN_X = Math.min(...MAP_AREAS.map((a) => a.x)) - PAD;
-const MIN_Y = Math.min(...MAP_AREAS.map((a) => a.y)) - PAD;
-const VIEW_W = Math.max(...MAP_AREAS.map((a) => a.x + a.w)) + PAD - MIN_X;
-const VIEW_H = Math.max(...MAP_AREAS.map((a) => a.y + a.h)) + PAD - MIN_Y;
-
 export const KUWAGATA_MAP_AREA_CODES = MAP_AREAS.map((a) => a.code);
+
+type View = { x: number; y: number; w: number; h: number };
+
+const VIEW_PAD = 140;
+const MIN_VIEW_SIZE = 1500;
+const CLOUD_STEP = 380;
+
+// 解放済みエリア全体が収まる表示範囲。縦横比は0.8〜1.25に収めて、足りない側は中央に寄せて広げる。
+function computeView(areas: MapArea[]): View {
+  const target = areas.length > 0 ? areas : MAP_AREAS;
+  const minX = Math.min(...target.map((a) => a.x)) - VIEW_PAD;
+  const minY = Math.min(...target.map((a) => a.y)) - VIEW_PAD;
+  const maxX = Math.max(...target.map((a) => a.x + a.w)) + VIEW_PAD;
+  const maxY = Math.max(...target.map((a) => a.y + a.h)) + VIEW_PAD;
+  let w = Math.max(maxX - minX, MIN_VIEW_SIZE);
+  let h = Math.max(maxY - minY, MIN_VIEW_SIZE);
+  const aspect = Math.min(1.25, Math.max(0.8, w / h));
+  if (w / h > aspect) h = w / aspect;
+  else w = h * aspect;
+  const cx = (minX + maxX) / 2;
+  const cy = (minY + maxY) / 2;
+  return { x: cx - w / 2, y: cy - h / 2, w, h };
+}
+
+function hash(i: number, j: number, salt: number): number {
+  let n = (Math.imul(i, 73856093) ^ Math.imul(j, 19349663) ^ Math.imul(salt, 83492791)) >>> 0;
+  n = Math.imul(n ^ (n >>> 15), 2246822519) >>> 0;
+  return (n % 10000) / 10000;
+}
+
+// 解放済みエリアの外側（未解放エリアの場所と、表示範囲の余白）を雲で埋める。位置は決め打ちで毎回同じ。
+function buildClouds(view: View, unlocked: MapArea[]) {
+  const clouds: { key: string; src: string; x: number; y: number; w: number; h: number }[] = [];
+  const i0 = Math.floor(view.x / CLOUD_STEP) - 1;
+  const i1 = Math.ceil((view.x + view.w) / CLOUD_STEP) + 1;
+  const j0 = Math.floor(view.y / CLOUD_STEP) - 1;
+  const j1 = Math.ceil((view.y + view.h) / CLOUD_STEP) + 1;
+  for (let i = i0; i <= i1; i++) {
+    for (let j = j0; j <= j1; j++) {
+      const cx = (i + 0.5 + (hash(i, j, 1) - 0.5) * 0.5) * CLOUD_STEP;
+      const cy = (j + 0.5 + (hash(i, j, 2) - 0.5) * 0.5) * CLOUD_STEP;
+      if (unlocked.some((a) => cx >= a.x && cx < a.x + a.w && cy >= a.y && cy < a.y + a.h)) continue;
+      const type = CLOUD_TYPES[Math.floor(hash(i, j, 3) * CLOUD_TYPES.length)];
+      const scale = (type.w > 500 ? 0.7 : 0.9) + hash(i, j, 4) * 0.35;
+      const w = type.w * scale;
+      const h = type.h * scale;
+      clouds.push({ key: `${i},${j}`, src: type.src, x: cx - w / 2, y: cy - h / 2, w, h });
+    }
+  }
+  return clouds;
+}
 
 function pct(value: number, total: number): string {
   return `${(value / total) * 100}%`;
@@ -51,7 +95,14 @@ export function KuwagataAreaMap({
   const alphaRef = useRef<Map<KuwagataAreaCode, ImageData>>(new Map());
   const [hovered, setHovered] = useState<KuwagataAreaCode | null>(null);
 
-  const visibleAreas = MAP_AREAS.filter((a) => unlockedAreas.includes(a.code));
+  const unlockedKey = unlockedAreas.join(",");
+  const visibleAreas = useMemo(
+    () => MAP_AREAS.filter((a) => unlockedAreas.includes(a.code)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [unlockedKey]
+  );
+  const view = useMemo(() => computeView(visibleAreas), [visibleAreas]);
+  const clouds = useMemo(() => buildClouds(view, visibleAreas), [view, visibleAreas]);
 
   useEffect(() => {
     let cancelled = false;
@@ -73,15 +124,14 @@ export function KuwagataAreaMap({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [unlockedAreas.join(",")]);
+  }, [visibleAreas]);
 
   function hitTest(clientX: number, clientY: number): KuwagataAreaCode | null {
     const el = containerRef.current;
     if (!el) return null;
     const rect = el.getBoundingClientRect();
-    const lx = MIN_X + ((clientX - rect.left) / rect.width) * VIEW_W;
-    const ly = MIN_Y + ((clientY - rect.top) / rect.height) * VIEW_H;
+    const lx = view.x + ((clientX - rect.left) / rect.width) * view.w;
+    const ly = view.y + ((clientY - rect.top) / rect.height) * view.h;
     for (let i = visibleAreas.length - 1; i >= 0; i--) {
       const area = visibleAreas[i];
       if (lx < area.x || ly < area.y || lx >= area.x + area.w || ly >= area.y + area.h) continue;
@@ -94,19 +144,12 @@ export function KuwagataAreaMap({
     return null;
   }
 
-  const unlockedRects = visibleAreas;
-  const visibleClouds = MAP_CLOUDS.filter((c) => {
-    const cx = c.x + c.w / 2;
-    const cy = c.y + c.h / 2;
-    return !unlockedRects.some((a) => cx >= a.x && cx < a.x + a.w && cy >= a.y && cy < a.y + a.h);
-  });
-
   return (
     <div className="mx-auto w-full max-w-md">
       <div
         ref={containerRef}
         className="relative w-full overflow-hidden rounded-xl bg-[#c9dff0]"
-        style={{ aspectRatio: `${VIEW_W} / ${VIEW_H}`, cursor: hovered && !disabled ? "pointer" : "default" }}
+        style={{ aspectRatio: `${view.w} / ${view.h}`, cursor: hovered && !disabled ? "pointer" : "default" }}
         onPointerMove={(e) => setHovered(hitTest(e.clientX, e.clientY))}
         onPointerLeave={() => setHovered(null)}
         onClick={(e) => {
@@ -115,6 +158,23 @@ export function KuwagataAreaMap({
           if (hit) onSelect(hit);
         }}
       >
+        {clouds.map((cloud) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={cloud.key}
+            src={cloud.src}
+            alt=""
+            draggable={false}
+            className="pointer-events-none absolute select-none"
+            style={{
+              left: pct(cloud.x - view.x, view.w),
+              top: pct(cloud.y - view.y, view.h),
+              width: pct(cloud.w, view.w),
+              height: pct(cloud.h, view.h),
+              zIndex: 0,
+            }}
+          />
+        ))}
         {visibleAreas.map((area) => (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -124,29 +184,12 @@ export function KuwagataAreaMap({
             draggable={false}
             className="pointer-events-none absolute select-none transition-[filter] duration-150"
             style={{
-              left: pct(area.x - MIN_X, VIEW_W),
-              top: pct(area.y - MIN_Y, VIEW_H),
-              width: pct(area.w, VIEW_W),
-              height: pct(area.h, VIEW_H),
-              zIndex: MAP_AREAS.findIndex((a) => a.code === area.code),
+              left: pct(area.x - view.x, view.w),
+              top: pct(area.y - view.y, view.h),
+              width: pct(area.w, view.w),
+              height: pct(area.h, view.h),
+              zIndex: 1 + MAP_AREAS.findIndex((a) => a.code === area.code),
               filter: hovered === area.code ? "brightness(1.08) drop-shadow(0 0 10px rgba(255,255,255,0.95))" : undefined,
-            }}
-          />
-        ))}
-        {visibleClouds.map((cloud) => (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            key={cloud.src}
-            src={cloud.src}
-            alt=""
-            draggable={false}
-            className="pointer-events-none absolute select-none"
-            style={{
-              left: pct(cloud.x - MIN_X, VIEW_W),
-              top: pct(cloud.y - MIN_Y, VIEW_H),
-              width: pct(cloud.w, VIEW_W),
-              height: pct(cloud.h, VIEW_H),
-              zIndex: 50,
             }}
           />
         ))}
