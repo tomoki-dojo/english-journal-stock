@@ -22,10 +22,10 @@ const PAGE_VOLUME = 0.2;
 const MINIGAME_BGM_SRC = "/roadmap/sound/bgm_minigame.mp3";
 const MINIGAME_BGM_VOLUME = 0.25;
 const STAGE_BGM_SRC = "/roadmap/sound/bgm_stage.mp3";
-const STAGE_BGM_VOLUME = 0.15;
+const STAGE_BGM_VOLUME = 0.1;
 // Stage3〜5は音声入力でマイクを使うので、聞き取り中だけBGMをほぼ消す（BGMがマイクに入って認識を邪魔しないように）。
 // 音量の段階（1〜3）に関わらず、同じ極小の音量に下げる（段階2の通常音量の約4%）。
-const MIC_DUCK_VOLUME = 0.006;
+const MIC_DUCK_VOLUME = 0.004;
 const MINIGAME_SE_SRC = "/roadmap/sound/se_minigame.mp3";
 const MINIGAME_SE_VOLUME = 0.35;
 const STORAGE_KEY = "roadmap_sound_level";
@@ -157,13 +157,23 @@ export function RoadmapSoundProvider({
     }
   }, [enabled, level, interacted, minigameActive]);
 
+  // いま流すべき曲の種類。曲の種類が切り替わったとき、前の曲は止めて頭に戻す（次に戻ってきたら最初から）。
+  // 表現一覧（街の掲示板）はStage練習と同じ曲を流す。
+  const activeTrack: "minigame" | "stage" | "room" | null = minigameActive
+    ? "minigame"
+    : pathname.startsWith("/roadmap/stage") || pathname === "/roadmap/board"
+      ? "stage"
+      : BGM_PATHS.has(pathname)
+        ? "room"
+        : null;
+
   // 聞き取り（マイク）中は、Stageの練習BGMをほぼ消す。
   const [micActive, setMicActive] = useState(false);
 
   // Stage練習画面のBGM：Stage1・2は普通に、Stage3〜5は聞き取り中だけ極小。ページ移動をまたいでも途切れない。
   const stageBgmRef = useRef<HTMLAudioElement | null>(null);
   useEffect(() => {
-    const shouldPlay = enabled && interacted && pathname.startsWith("/roadmap/stage");
+    const shouldPlay = enabled && interacted && activeTrack === "stage";
     if (!stageBgmRef.current) {
       if (!shouldPlay) return;
       const audio = new Audio(STAGE_BGM_SRC);
@@ -173,9 +183,13 @@ export function RoadmapSoundProvider({
     const audio = stageBgmRef.current;
     const normal = STAGE_BGM_VOLUME * LEVEL_FACTORS[level];
     audio.volume = Math.min(1, micActive ? Math.min(normal, MIC_DUCK_VOLUME) : normal);
-    if (shouldPlay) void audio.play().catch(() => {});
-    else audio.pause();
-  }, [enabled, level, interacted, micActive, pathname]);
+    if (shouldPlay) {
+      void audio.play().catch(() => {});
+    } else {
+      audio.pause();
+      if (activeTrack !== "stage") audio.currentTime = 0;
+    }
+  }, [enabled, level, interacted, micActive, activeTrack]);
 
   // ミニゲームで答えを選んだときの効果音（連打でも重なって鳴るよう、毎回新しく鳴らす）。
   const playMinigameSe = useCallback(() => {
@@ -187,7 +201,7 @@ export function RoadmapSoundProvider({
 
   // BGM：部屋・棚・図鑑でだけ、ONかつ最初のタップ後に流す。ページ移動をまたいでも途切れない。
   useEffect(() => {
-    const shouldPlay = enabled && interacted && !minigameActive && BGM_PATHS.has(pathname);
+    const shouldPlay = enabled && interacted && activeTrack === "room";
 
     if (!bgmRef.current) {
       if (!shouldPlay || bgmMissing.current) return;
@@ -201,9 +215,13 @@ export function RoadmapSoundProvider({
 
     const audio = bgmRef.current;
     audio.volume = Math.min(1, BGM_VOLUME * LEVEL_FACTORS[level]);
-    if (shouldPlay) void audio.play().catch(() => {});
-    else audio.pause();
-  }, [enabled, level, interacted, minigameActive, pathname]);
+    if (shouldPlay) {
+      void audio.play().catch(() => {});
+    } else {
+      audio.pause();
+      if (activeTrack !== "room") audio.currentTime = 0;
+    }
+  }, [enabled, level, interacted, activeTrack]);
 
   useEffect(() => {
     return () => {
