@@ -52,13 +52,19 @@ export function KuwagataCatchExpedition({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CatchResponse | null>(null);
   // ミニゲーム中のエリア。ミニゲームが終わったら、その成績つきで採集を実行する。
-  const [challengeArea, setChallengeArea] = useState<KuwagataAreaCode | null>(null);
+  const [challengeArea, setChallengeArea] = useState<KuwagataAreaCode | null>(
+    null,
+  );
 
   if (pendingCount <= 0 && !result) {
     return null;
   }
 
-  async function handleGoCatch(areaCode: KuwagataAreaCode, sessionId?: string, answers?: number[]) {
+  async function handleGoCatch(
+    areaCode: KuwagataAreaCode,
+    sessionId?: string,
+    answers?: number[],
+  ) {
     setLoading(true);
     setError(null);
     try {
@@ -114,50 +120,62 @@ export function KuwagataCatchExpedition({
       )}
 
       {picking && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3">
-          <KuwagataAreaMap
-            unlockedAreas={initialUnlockedAreas}
-            labels={AREA_LABEL}
-            disabled={loading}
-            onSelect={(areaCode) => {
-              setPicking(false);
-              setChallengeArea(areaCode);
-            }}
-          />
-          {initialUnlockedAreas.some((a) => !KUWAGATA_MAP_AREA_CODES.includes(a)) && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {initialUnlockedAreas
-                .filter((a) => !KUWAGATA_MAP_AREA_CODES.includes(a))
-                .map((areaCode) => (
-                  <button
-                    key={areaCode}
-                    type="button"
-                    onClick={() => {
-                      setPicking(false);
-                      setChallengeArea(areaCode);
-                    }}
-                    disabled={loading}
-                    className="rounded-full border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-100 disabled:opacity-50"
-                  >
-                    {AREA_LABEL[areaCode]}
-                  </button>
-                ))}
-            </div>
-          )}
-          <button
-            type="button"
-            onClick={() => setPicking(false)}
-            className="mt-2 text-[11px] text-zinc-400 hover:text-zinc-600"
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
+          onClick={() => setPicking(false)}
+        >
+          <div
+            className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-2xl border border-amber-200 bg-amber-50 p-3 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
           >
-            やめる
-          </button>
+            <KuwagataAreaMap
+              unlockedAreas={initialUnlockedAreas}
+              labels={AREA_LABEL}
+              disabled={loading}
+              onSelect={(areaCode) => {
+                setPicking(false);
+                setChallengeArea(areaCode);
+              }}
+            />
+            {initialUnlockedAreas.some(
+              (a) => !KUWAGATA_MAP_AREA_CODES.includes(a),
+            ) && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {initialUnlockedAreas
+                  .filter((a) => !KUWAGATA_MAP_AREA_CODES.includes(a))
+                  .map((areaCode) => (
+                    <button
+                      key={areaCode}
+                      type="button"
+                      onClick={() => {
+                        setPicking(false);
+                        setChallengeArea(areaCode);
+                      }}
+                      disabled={loading}
+                      className="rounded-full border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-100 disabled:opacity-50"
+                    >
+                      {AREA_LABEL[areaCode]}
+                    </button>
+                  ))}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => setPicking(false)}
+              className="mt-2 text-[11px] text-zinc-400 hover:text-zinc-600"
+            >
+              やめる
+            </button>
+          </div>
         </div>
       )}
 
       {challengeArea && (
         <KuwagataWordChallenge
           areaCode={challengeArea}
-          onFinish={(sessionId, answers) => void handleGoCatch(challengeArea, sessionId, answers)}
+          onFinish={(sessionId, answers) =>
+            void handleGoCatch(challengeArea, sessionId, answers)
+          }
           onCancel={() => setChallengeArea(null)}
         />
       )}
@@ -174,7 +192,12 @@ export function KuwagataCatchExpedition({
           }
           art={
             <div className="flex h-28 w-28 items-center justify-center">
-              <TankOccupant color="#f59e0b" sizeScale={4} speciesCode={result.speciesCode} growthStage="成虫" />
+              <TankOccupant
+                color="#f59e0b"
+                sizeScale={4}
+                speciesCode={result.speciesCode}
+                growthStage="成虫"
+              />
             </div>
           }
           message={`${result.speciesName}をゲットした！`}

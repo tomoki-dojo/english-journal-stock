@@ -54,7 +54,7 @@ function hash(i: number, j: number, salt: number): number {
 
 type Cloud = { key: string; src: string; x: number; y: number; w: number; h: number };
 
-const CLOUD_GRID = 140; // 雲を置く間隔
+const CLOUD_GRID = 110; // 雲を置く間隔
 
 // 未解放エリアの形の上に雲を敷き詰める（「何かある」と見せる）。解放済みエリアの絵の上には、縁に少しかかる程度。
 // isLocked: その座標が未解放エリアの絵の不透明部分か / isOpen: 解放済みエリアの絵の不透明部分か
@@ -75,17 +75,24 @@ function buildClouds(
       const cy = (j + 0.5 + (hash(i, j, 2) - 0.5) * 0.6) * CLOUD_GRID;
       if (isOpen(cx, cy)) continue;
       // 形の縁まで覆うため、中心の近傍のどこかが未解放エリアに入っていればよい
-      const covers =
+      const locked =
         isLocked(cx, cy) ||
         isLocked(cx - reach, cy) ||
         isLocked(cx + reach, cy) ||
         isLocked(cx, cy - reach) ||
         isLocked(cx, cy + reach);
-      if (!covers) continue;
+      // 未解放エリアは全部覆い、それ以外の余白にも雲を浮かべる
+      if (!locked && hash(i, j, 5) > 0.8) continue;
       const type = CLOUD_TYPES[Math.floor(hash(i, j, 3) * CLOUD_TYPES.length)];
       const scale = (type.w > 500 ? 0.55 : 0.8) + hash(i, j, 4) * 0.35;
       const w = type.w * scale;
       const h = type.h * scale;
+      // 解放済みエリアの絵には、縁に少しかかる程度まで。雲の幅の内側が2点以上絵に入るものは置かない。
+      const hw = w * 0.35;
+      const hh = h * 0.35;
+      const overlap =
+        Number(isOpen(cx - hw, cy)) + Number(isOpen(cx + hw, cy)) + Number(isOpen(cx, cy - hh)) + Number(isOpen(cx, cy + hh));
+      if (overlap >= 2) continue;
       clouds.push({ key: `${i},${j}`, src: type.src, x: cx - w / 2, y: cy - h / 2, w, h });
     }
   }
