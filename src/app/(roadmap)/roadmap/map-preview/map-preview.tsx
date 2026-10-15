@@ -16,6 +16,7 @@ const STEPS: { label: string; areas: KuwagataAreaCode[] }[] = [
 export function MapPreview() {
   const [step, setStep] = useState(1);
   const [playKey, setPlayKey] = useState(0);
+  const [playAll, setPlayAll] = useState(false);
   const areas = STEPS[step].areas;
   return (
     <div className="mx-auto max-w-md p-4">
@@ -33,6 +34,21 @@ export function MapPreview() {
           </button>
         ))}
       </div>
+      <button
+        type="button"
+        onClick={() => setPlayAll(true)}
+        className="mb-3 mr-2 rounded-full border border-rose-300 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700"
+      >
+        全エリア解放演出
+      </button>
+      {playAll && (
+        <KuwagataAreaUnlockCelebration
+          unlockedAreas={[...MAIN, "ancient"]}
+          newAreas={[...MAIN.slice(1), "ancient"]}
+          skipRecord
+          onClose={() => setPlayAll(false)}
+        />
+      )}
       {areas.length > 1 && (
         <button
           type="button"
