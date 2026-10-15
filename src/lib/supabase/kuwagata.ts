@@ -716,6 +716,32 @@ export async function getUnlockedAreas(userId: string): Promise<KuwagataAreaCode
     : [...mainAreas, ...PRO_ONLY_AREA_CODES.filter((area) => isAreaReleased(species, area))];
 }
 
+// 解放の演出（マップで雲が晴れる）をまだ見ていないエリア。getUnlockedAreasの後に呼ぶ。
+export async function getUncelebratedAreas(userId: string): Promise<KuwagataAreaCode[]> {
+  const { data, error } = await supabaseAdmin
+    .from("kuwagata_area_unlocks")
+    .select("area_code")
+    .eq("user_id", userId)
+    .is("celebrated_at", null);
+  if (error) {
+    throw new Error(`エリア解放演出の状態の取得に失敗しました: ${error.message}`);
+  }
+  return (data ?? []).map((r) => r.area_code as KuwagataAreaCode);
+}
+
+export async function markAreasCelebrated(userId: string, areaCodes: KuwagataAreaCode[]): Promise<void> {
+  if (areaCodes.length === 0) return;
+  const { error } = await supabaseAdmin
+    .from("kuwagata_area_unlocks")
+    .update({ celebrated_at: new Date().toISOString() })
+    .eq("user_id", userId)
+    .in("area_code", areaCodes)
+    .is("celebrated_at", null);
+  if (error) {
+    throw new Error(`エリア解放演出の記録に失敗しました: ${error.message}`);
+  }
+}
+
 export async function getKuwagataAreaProgress(userId: string): Promise<KuwagataAreaProgress[]> {
   const [species, individuals, unlockedAreas, plan] = await Promise.all([
     getKuwagataSpeciesList(),

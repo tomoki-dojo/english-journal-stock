@@ -2,17 +2,10 @@
 
 import { useState } from "react";
 import { KuwagataAreaMap } from "@/components/roadmap/kuwagata-area-map";
+import { KuwagataAreaUnlockCelebration } from "@/components/roadmap/kuwagata-area-unlock-celebration";
+import { KUWAGATA_AREA_NAMES } from "@/lib/kuwagata-area-names";
 import type { KuwagataAreaCode } from "@/lib/supabase/kuwagata";
 
-const LABELS: Record<KuwagataAreaCode, string> = {
-  area1: "エリア1",
-  area2: "エリア2",
-  area3: "エリア3",
-  area4: "エリア4",
-  area5: "エリア5",
-  aquarium: "水の底",
-  ancient: "古代の森",
-};
 
 const MAIN: KuwagataAreaCode[] = ["area1", "area2", "area3", "area4", "area5"];
 const STEPS: { label: string; areas: KuwagataAreaCode[] }[] = [
@@ -22,6 +15,8 @@ const STEPS: { label: string; areas: KuwagataAreaCode[] }[] = [
 
 export function MapPreview() {
   const [step, setStep] = useState(1);
+  const [playKey, setPlayKey] = useState(0);
+  const areas = STEPS[step].areas;
   return (
     <div className="mx-auto max-w-md p-4">
       <div className="mb-3 flex flex-wrap gap-1.5">
@@ -38,7 +33,25 @@ export function MapPreview() {
           </button>
         ))}
       </div>
-      <KuwagataAreaMap unlockedAreas={STEPS[step].areas} labels={LABELS} onSelect={() => {}} />
+      {areas.length > 1 && (
+        <button
+          type="button"
+          onClick={() => setPlayKey((k) => k + 1)}
+          className="mb-3 rounded-full border border-sky-300 bg-white px-3 py-1.5 text-xs font-semibold text-sky-700"
+        >
+          解放演出（{KUWAGATA_AREA_NAMES[areas[areas.length - 1]]}）
+        </button>
+      )}
+      {playKey > 0 && (
+        <KuwagataAreaUnlockCelebration
+          key={`${playKey}-${step}`}
+          unlockedAreas={areas}
+          newAreas={[areas[areas.length - 1]]}
+          skipRecord
+          onClose={() => setPlayKey(0)}
+        />
+      )}
+      <KuwagataAreaMap unlockedAreas={areas} labels={KUWAGATA_AREA_NAMES} onSelect={() => {}} />
     </div>
   );
 }

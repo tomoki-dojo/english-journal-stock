@@ -3,10 +3,16 @@ import { redirect } from "next/navigation";
 import { ChevronLeft, BookOpen } from "lucide-react";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
 import { getUserRoadmapState } from "@/lib/supabase/speaking-roadmap";
-import { getKuwagataShelfTanks, getPendingCatchState, getUnlockedAreas } from "@/lib/supabase/kuwagata";
+import {
+  getKuwagataShelfTanks,
+  getPendingCatchState,
+  getUncelebratedAreas,
+  getUnlockedAreas,
+} from "@/lib/supabase/kuwagata";
 import { OnboardingQuiz } from "@/components/roadmap/onboarding-quiz";
 import { KuwagataShelf } from "@/components/roadmap/kuwagata-shelf";
 import { KuwagataCatchExpedition } from "@/components/roadmap/kuwagata-catch-expedition";
+import { KuwagataAreaUnlockCelebration } from "@/components/roadmap/kuwagata-area-unlock-celebration";
 
 export default async function KuwagataShelfPage() {
   const user = await getCurrentUser();
@@ -24,6 +30,7 @@ export default async function KuwagataShelfPage() {
   let hiddenNewSpeciesTankCount = 0;
   let pendingCatchCount = 0;
   let unlockedAreas: Awaited<ReturnType<typeof getUnlockedAreas>> = [];
+  let newAreas: Awaited<ReturnType<typeof getUnlockedAreas>> = [];
   let loadError = false;
 
   try {
@@ -37,6 +44,8 @@ export default async function KuwagataShelfPage() {
     hiddenNewSpeciesTankCount = shelfResult.hiddenNewSpeciesTankCount;
     pendingCatchCount = pending.pendingCatchCount;
     unlockedAreas = areas;
+    // 解放の記録は getUnlockedAreas が行うので、その後で「まだ演出を見ていないエリア」を調べる。
+    newAreas = (await getUncelebratedAreas(user.id)).filter((a) => areas.includes(a));
   } catch (err) {
     console.error(err);
     loadError = true;
@@ -67,6 +76,9 @@ export default async function KuwagataShelfPage() {
         <p className="text-sm text-red-500">棚の読み込みに失敗しました。時間を置いて再度お試しください。</p>
       ) : (
         <>
+          {newAreas.length > 0 && (
+            <KuwagataAreaUnlockCelebration unlockedAreas={unlockedAreas} newAreas={newAreas} />
+          )}
           <KuwagataCatchExpedition initialPendingCount={pendingCatchCount} initialUnlockedAreas={unlockedAreas} />
           <KuwagataShelf tanks={tanks} knownTanks={knownTanks} />
           {hiddenNewSpeciesTankCount > 0 && (

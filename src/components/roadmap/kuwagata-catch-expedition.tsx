@@ -8,17 +8,16 @@ import { CelebrationOverlay } from "./celebration-overlay";
 import { TankOccupant } from "./kuwagata-shelf";
 import { KuwagataWordChallenge } from "./kuwagata-word-challenge";
 import { KuwagataAreaMap, KUWAGATA_MAP_AREA_CODES } from "./kuwagata-area-map";
+import { KUWAGATA_AREA_NAMES } from "@/lib/kuwagata-area-names";
 import type { KuwagataAreaCode } from "@/lib/supabase/kuwagata";
 
-const AREA_LABEL: Record<KuwagataAreaCode, string> = {
-  area1: "庭・裏庭",
-  area2: "里山・雑木林",
-  area3: "川",
-  area4: "ジャングル・秘境",
-  area5: "山岳",
-  aquarium: "水の底の秘境（Pro限定）",
-  ancient: "古代の森（Pro限定）",
-};
+// 採集エリア選択ではPro限定エリアに注記を付ける。
+const AREA_LABEL: Record<KuwagataAreaCode, string> = Object.fromEntries(
+  (Object.keys(KUWAGATA_AREA_NAMES) as KuwagataAreaCode[]).map((code) => [
+    code,
+    code === "aquarium" || code === "ancient" ? `${KUWAGATA_AREA_NAMES[code]}（Pro限定）` : KUWAGATA_AREA_NAMES[code],
+  ]),
+) as Record<KuwagataAreaCode, string>;
 
 type CatchResponse = {
   speciesCode: string;

@@ -9,16 +9,8 @@ import type {
 } from "@/lib/supabase/kuwagata";
 import { TankOccupant } from "@/components/roadmap/kuwagata-shelf";
 import { usePagePlayer } from "@/components/roadmap/roadmap-sound";
+import { kuwagataAreaChapterLabel } from "@/lib/kuwagata-area-names";
 
-const AREA_LABEL: Record<KuwagataAreaCode, string> = {
-  area1: "エリア1・庭・裏庭",
-  area2: "エリア2・里山・雑木林",
-  area3: "エリア3・川",
-  area4: "エリア4・ジャングル・秘境",
-  area5: "エリア5・山岳",
-  aquarium: "Pro限定・水の底の秘境",
-  ancient: "Pro限定・古代の森",
-};
 
 const KNOWN_ACQUISITION_TEXT: Record<number, string> = {
   1: "アカウント作成の日に届いた1匹",
@@ -200,7 +192,7 @@ export function KuwagataEncyclopediaView({ encyclopedia }: { encyclopedia: Kuwag
     { key: "known", label: "クワたんシリーズ" },
     ...encyclopedia.areas.map((area) => ({
       key: area.areaCode as ChapterKey,
-      label: AREA_LABEL[area.areaCode],
+      label: kuwagataAreaChapterLabel(area.areaCode),
       badge: area.unlocked ? `${area.discoveredCount}/${area.totalCount}` : undefined,
     })),
   ];

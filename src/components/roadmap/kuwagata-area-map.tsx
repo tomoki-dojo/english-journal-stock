@@ -112,48 +112,119 @@ function pct(value: number, total: number): string {
   return `${(value / total) * 100}%`;
 }
 
+type AlphaMap = Map<KuwagataAreaCode, ImageData>;
+
+function opaqueAt(alpha: AlphaMap, area: MapArea, lx: number, ly: number): boolean {
+  if (lx < area.x || ly < area.y || lx >= area.x + area.w || ly >= area.y + area.h) return false;
+  const data = alpha.get(area.code);
+  if (!data) return false;
+  const px = Math.floor(((lx - area.x) / area.w) * data.width);
+  const py = Math.floor(((ly - area.y) / area.h) * data.height);
+  return data.data[(py * data.width + px) * 4 + 3] > 16;
+}
+
+const REVEAL_DELAY_MS = 900;
+const REVEAL_MS = 1600;
+const CLOUD_DRIFT = 520; // 晴れるとき、雲が外へ流れる距離（マップ座標）
+
 export function KuwagataAreaMap({
   unlockedAreas,
   labels,
   onSelect,
   disabled,
+  revealAreas,
 }: {
   unlockedAreas: KuwagataAreaCode[];
   labels: Record<KuwagataAreaCode, string>;
   onSelect: (areaCode: KuwagataAreaCode) => void;
   disabled?: boolean;
+  // 指定したエリアは、最初は雲に覆われていて、少し待つと雲が晴れて現れる（解放演出用。unlockedAreasに含めておく）。
+  revealAreas?: KuwagataAreaCode[];
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   // 透明部分をクリックしても下のエリアに届くよう、画像のアルファ値でクリック判定する。
-  const alphaRef = useRef<Map<KuwagataAreaCode, ImageData>>(new Map());
+  const alphaRef = useRef<AlphaMap>(new Map());
   const [hovered, setHovered] = useState<KuwagataAreaCode | null>(null);
+  const [maskTick, setMaskTick] = useState(0);
 
   const unlockedKey = unlockedAreas.join(",");
+  const revealKey = (revealAreas ?? []).join(",");
   const visibleAreas = useMemo(
     () => MAP_AREAS.filter((a) => unlockedAreas.includes(a.code)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [unlockedKey]
   );
+  const revealList = useMemo(
+    () => visibleAreas.filter((a) => revealKey.split(",").includes(a.code)),
+    [visibleAreas, revealKey]
+  );
+  const settledAreas = useMemo(() => visibleAreas.filter((a) => !revealList.includes(a)), [visibleAreas, revealList]);
   const view = useMemo(() => computeView(visibleAreas), [visibleAreas]);
-  // 輪郭の縁取りは画像のアルファ値が要るので、読み込みが終わるたびに作り直す。
-  const [maskTick, setMaskTick] = useState(0);
+
+  const [revealed, setRevealed] = useState(revealList.length === 0);
+  const masksReady = maskTick >= MAP_AREAS.length;
+  useEffect(() => {
+    if (revealed || !masksReady) return;
+    const timer = setTimeout(() => setRevealed(true), REVEAL_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [revealed, masksReady]);
+
   const clouds = useMemo(() => {
-    const opaqueAt = (area: MapArea, lx: number, ly: number) => {
-      if (lx < area.x || ly < area.y || lx >= area.x + area.w || ly >= area.y + area.h) return false;
-      const data = alphaRef.current.get(area.code);
-      if (!data) return false;
-      const px = Math.floor(((lx - area.x) / area.w) * data.width);
-      const py = Math.floor(((ly - area.y) / area.h) * data.height);
-      return data.data[(py * data.width + px) * 4 + 3] > 16;
-    };
-    const lockedAreas = MAP_AREAS.filter((a) => !unlockedAreas.includes(a.code));
-    return buildClouds(
+    const alpha = alphaRef.current;
+    const lockedAreas = MAP_AREAS.filter((a) => !settledAreas.includes(a));
+    const built = buildClouds(
       view,
-      (lx, ly) => lockedAreas.some((a) => opaqueAt(a, lx, ly)),
-      (lx, ly) => visibleAreas.some((a) => opaqueAt(a, lx, ly))
+      (lx, ly) => lockedAreas.some((a) => opaqueAt(alpha, a, lx, ly)),
+      (lx, ly) => settledAreas.some((a) => opaqueAt(alpha, a, lx, ly))
     );
+    // 晴れる側の雲（解放されるエリアの上にある雲）は、そのエリアの中心から外へ流す。
+    return built.map((cloud) => {
+      const cx = cloud.x + cloud.w / 2;
+      const cy = cloud.y + cloud.h / 2;
+      const area = revealList.find(
+        (a) =>
+          opaqueAt(alpha, a, cx, cy) ||
+          opaqueAt(alpha, a, cx - 60, cy) ||
+          opaqueAt(alpha, a, cx + 60, cy) ||
+          opaqueAt(alpha, a, cx, cy - 60) ||
+          opaqueAt(alpha, a, cx, cy + 60)
+      );
+      if (!area) return { ...cloud, drift: null as null | { dx: number; dy: number } };
+      const dx = cx - (area.x + area.w / 2);
+      const dy = cy - (area.y + area.h / 2);
+      const len = Math.hypot(dx, dy) || 1;
+      return { ...cloud, drift: { dx: (dx / len) * CLOUD_DRIFT, dy: (dy / len) * CLOUD_DRIFT } };
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, visibleAreas, maskTick]);
+  }, [view, settledAreas, revealList, maskTick]);
+
+  // 各エリアの名前札を置く位置（他のエリアに隠れていない部分の重心）
+  const labelPositions = useMemo(() => {
+    const alpha = alphaRef.current;
+    const result = new Map<KuwagataAreaCode, { x: number; y: number }>();
+    for (const area of visibleAreas) {
+      const data = alpha.get(area.code);
+      if (!data) continue;
+      const front = visibleAreas.filter((o) => MAP_AREAS.indexOf(o) > MAP_AREAS.indexOf(area));
+      let sx = 0;
+      let sy = 0;
+      let n = 0;
+      for (let py = 0; py < data.height; py += 12) {
+        for (let px = 0; px < data.width; px += 12) {
+          if (data.data[(py * data.width + px) * 4 + 3] <= 16) continue;
+          const lx = area.x + (px / data.width) * area.w;
+          const ly = area.y + (py / data.height) * area.h;
+          if (front.some((o) => opaqueAt(alpha, o, lx, ly))) continue;
+          sx += lx;
+          sy += ly;
+          n++;
+        }
+      }
+      if (n > 0) result.set(area.code, { x: sx / n, y: sy / n });
+    }
+    return result;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleAreas, maskTick]);
 
   useEffect(() => {
     let cancelled = false;
@@ -186,12 +257,8 @@ export function KuwagataAreaMap({
     const ly = view.y + ((clientY - rect.top) / rect.height) * view.h;
     for (let i = visibleAreas.length - 1; i >= 0; i--) {
       const area = visibleAreas[i];
-      if (lx < area.x || ly < area.y || lx >= area.x + area.w || ly >= area.y + area.h) continue;
-      const data = alphaRef.current.get(area.code);
-      if (!data) continue;
-      const px = Math.floor(((lx - area.x) / area.w) * data.width);
-      const py = Math.floor(((ly - area.y) / area.h) * data.height);
-      if (data.data[(py * data.width + px) * 4 + 3] > 16) return area.code;
+      if (!revealed && revealList.includes(area)) continue;
+      if (opaqueAt(alphaRef.current, area, lx, ly)) return area.code;
     }
     return null;
   }
@@ -210,46 +277,72 @@ export function KuwagataAreaMap({
           if (hit) onSelect(hit);
         }}
       >
-        {clouds.map((cloud) => (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            key={cloud.key}
-            src={cloud.src}
-            alt=""
-            draggable={false}
-            className="pointer-events-none absolute select-none"
-            style={{
-              left: pct(cloud.x - view.x, view.w),
-              top: pct(cloud.y - view.y, view.h),
-              width: pct(cloud.w, view.w),
-              height: pct(cloud.h, view.h),
-              zIndex: 50,
-            }}
-          />
-        ))}
-        {visibleAreas.map((area) => (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            key={area.code}
-            src={area.src}
-            alt=""
-            draggable={false}
-            className="pointer-events-none absolute select-none transition-[filter] duration-150"
-            style={{
-              left: pct(area.x - view.x, view.w),
-              top: pct(area.y - view.y, view.h),
-              width: pct(area.w, view.w),
-              height: pct(area.h, view.h),
-              zIndex: 1 + MAP_AREAS.findIndex((a) => a.code === area.code),
-              filter: hovered === area.code ? "brightness(1.08) drop-shadow(0 0 10px rgba(255,255,255,0.95))" : undefined,
-            }}
-          />
-        ))}
-        {hovered && (
-          <span className="pointer-events-none absolute left-2 top-2 z-[60] rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-amber-800 shadow">
-            {labels[hovered]}
-          </span>
-        )}
+        {clouds.map((cloud) => {
+          const gone = revealed && cloud.drift;
+          const x = cloud.x + (gone && cloud.drift ? cloud.drift.dx : 0);
+          const y = cloud.y + (gone && cloud.drift ? cloud.drift.dy : 0);
+          return (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={cloud.key}
+              src={cloud.src}
+              alt=""
+              draggable={false}
+              className="pointer-events-none absolute select-none"
+              style={{
+                left: pct(x - view.x, view.w),
+                top: pct(y - view.y, view.h),
+                width: pct(cloud.w, view.w),
+                height: pct(cloud.h, view.h),
+                zIndex: 50,
+                opacity: gone ? 0 : 1,
+                transition: cloud.drift ? `left ${REVEAL_MS}ms ease-in, top ${REVEAL_MS}ms ease-in, opacity ${REVEAL_MS}ms ease-in` : undefined,
+              }}
+            />
+          );
+        })}
+        {visibleAreas.map((area) => {
+          const hidden = !revealed && revealList.includes(area);
+          return (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={area.code}
+              src={area.src}
+              alt=""
+              draggable={false}
+              className="pointer-events-none absolute select-none"
+              style={{
+                left: pct(area.x - view.x, view.w),
+                top: pct(area.y - view.y, view.h),
+                width: pct(area.w, view.w),
+                height: pct(area.h, view.h),
+                zIndex: 1 + MAP_AREAS.findIndex((a) => a.code === area.code),
+                opacity: hidden ? 0 : 1,
+                transition: `opacity ${REVEAL_MS}ms ease-out, filter 150ms`,
+                filter: hovered === area.code ? "brightness(1.08) drop-shadow(0 0 10px rgba(255,255,255,0.95))" : undefined,
+              }}
+            />
+          );
+        })}
+        {visibleAreas.map((area) => {
+          const pos = labelPositions.get(area.code);
+          if (!pos) return null;
+          const hidden = !revealed && revealList.includes(area);
+          return (
+            <span
+              key={`label-${area.code}`}
+              className="pointer-events-none absolute z-[55] -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-amber-200 bg-white/90 px-2 py-0.5 text-[10px] font-bold leading-tight text-amber-800 shadow"
+              style={{
+                left: pct(pos.x - view.x, view.w),
+                top: pct(pos.y - view.y, view.h),
+                opacity: hidden ? 0 : 1,
+                transition: `opacity ${REVEAL_MS}ms ease-out`,
+              }}
+            >
+              {labels[area.code]}
+            </span>
+          );
+        })}
       </div>
       {/* キーボード・スクリーンリーダー用 */}
       <div className="sr-only">
