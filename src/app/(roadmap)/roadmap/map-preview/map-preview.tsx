@@ -8,6 +8,7 @@ import type { KuwagataAreaCode } from "@/lib/supabase/kuwagata";
 
 
 const MAIN: KuwagataAreaCode[] = ["area1", "area2", "area3", "area4", "area5"];
+const SEQUENCE: KuwagataAreaCode[] = ["area2", "area3", "area4", "area5", "ancient"];
 const STEPS: { label: string; areas: KuwagataAreaCode[] }[] = [
   ...[1, 2, 3, 4, 5].map((n) => ({ label: `1〜${n}`, areas: MAIN.slice(0, n) })),
   ...[1, 2, 3, 4, 5].map((n) => ({ label: `1〜${n}＋古代`, areas: [...MAIN.slice(0, n), "ancient" as KuwagataAreaCode] })),
@@ -16,7 +17,8 @@ const STEPS: { label: string; areas: KuwagataAreaCode[] }[] = [
 export function MapPreview() {
   const [step, setStep] = useState(1);
   const [playKey, setPlayKey] = useState(0);
-  const [playAll, setPlayAll] = useState(false);
+  // 順番に解放していく演出（エリア2→3→4→5→古代）。とじるを押すと次のエリアへ進む。
+  const [seqStep, setSeqStep] = useState<number | null>(null);
   const areas = STEPS[step].areas;
   return (
     <div className="mx-auto max-w-md p-4">
@@ -36,17 +38,18 @@ export function MapPreview() {
       </div>
       <button
         type="button"
-        onClick={() => setPlayAll(true)}
+        onClick={() => setSeqStep(0)}
         className="mb-3 mr-2 rounded-full border border-rose-300 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700"
       >
-        全エリア解放演出
+        順番に解放演出（2→3→4→5→古代）
       </button>
-      {playAll && (
+      {seqStep !== null && (
         <KuwagataAreaUnlockCelebration
-          unlockedAreas={[...MAIN, "ancient"]}
-          newAreas={[...MAIN.slice(1), "ancient"]}
+          key={`seq-${seqStep}`}
+          unlockedAreas={["area1", ...SEQUENCE.slice(0, seqStep + 1)]}
+          newAreas={[SEQUENCE[seqStep]]}
           skipRecord
-          onClose={() => setPlayAll(false)}
+          onClose={() => setSeqStep(seqStep + 1 < SEQUENCE.length ? seqStep + 1 : null)}
         />
       )}
       {areas.length > 1 && (
