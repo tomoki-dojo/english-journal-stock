@@ -119,7 +119,7 @@ export async function judgeStage3Answer(params: JudgeStage3AnswerParams): Promis
       judgment: {
         correct: true,
         errorTags: [],
-        feedbackJa: "お手本どおりに言えています。次は、お手本を見ずに自分の言葉でも言ってみましょう。",
+        feedbackJa: "お手本どおりに言えています。",
       },
       usage: {
         remaining: params.skipUsageCount ? Math.max(usage.remaining + (checked.allowed ? 1 : 0), 0) : usage.remaining,

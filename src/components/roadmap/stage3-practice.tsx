@@ -241,12 +241,24 @@ export function Stage3Practice() {
             : undefined
         }
       >
-        <div className="mb-1 flex items-center gap-2">
-          <GrowthBadge stage={3} warmth={question.warmth} />
-          {question.meaningJa && <p className="text-lg font-medium text-zinc-900">{question.meaningJa}</p>}
-        </div>
+        {followUp ? (
+          <div className="mb-4 flex items-start gap-3">
+            <ArthurAvatar size={40} />
+            <div className="flex-1 rounded-xl bg-white px-4 py-3 shadow-sm">
+              <p className="text-2xl font-bold leading-snug text-zinc-900">{followUp.partnerReplyEn}</p>
+              {followUp.partnerReplyJa && <p className="mt-1 text-sm text-zinc-500">{followUp.partnerReplyJa}</p>}
+            </div>
+          </div>
+        ) : (
+          <div className="mb-3 flex items-center gap-2">
+            <GrowthBadge stage={3} warmth={question.warmth} />
+            {question.meaningJa && (
+              <p className="text-2xl font-bold leading-snug text-zinc-900">{question.meaningJa}</p>
+            )}
+          </div>
+        )}
 
-        {question.hintExpressionEn &&
+        {!followUp && question.hintExpressionEn &&
           (hintRevealed ? (
             <p className="mb-3 rounded-md bg-zinc-100/70 px-3 py-1.5 text-sm text-zinc-500">
               ヒント: {question.hintExpressionEn}
@@ -261,26 +273,6 @@ export function Stage3Practice() {
             </button>
           ))}
 
-        {followUp && (
-          <div className="mb-3 flex flex-col gap-2">
-            <div className="flex flex-row-reverse items-start gap-2">
-              <div
-                className="max-w-[85%] rounded-lg px-3 py-1.5 text-sm text-white"
-                style={{ backgroundColor: STAGE_COLOR }}
-              >
-                {firstAnswer}
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <ArthurAvatar size={24} />
-              <div className="max-w-[85%] rounded-lg bg-zinc-100 px-3 py-1.5 text-sm text-zinc-800">
-                <p>{followUp.partnerReplyEn}</p>
-                {followUp.partnerReplyJa && <p className="mt-0.5 text-xs text-zinc-400">{followUp.partnerReplyJa}</p>}
-              </div>
-            </div>
-          </div>
-        )}
-
         {answerPhase === "prompt" && (
           <div className="text-center">
             {speech.status === "unsupported" ? (
@@ -293,7 +285,7 @@ export function Stage3Practice() {
                   onChange={(e) => setManualText(e.target.value)}
                   placeholder="声に出す代わりに、ここに英文を入力"
                   rows={3}
-                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none"
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-base text-zinc-900 focus:border-zinc-400 focus:outline-none"
                 />
                 <button
                   type="button"
@@ -333,7 +325,7 @@ export function Stage3Practice() {
               onChange={(e) => setManualText(e.target.value)}
               disabled={answerPhase === "judging"}
               rows={3}
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none disabled:opacity-60"
+              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-base text-zinc-900 focus:border-zinc-400 focus:outline-none disabled:opacity-60"
             />
             <div className="mt-3 flex gap-3">
               <button
@@ -403,6 +395,20 @@ export function Stage3Practice() {
             >
               次へ
             </button>
+          </div>
+        )}
+
+        {followUp && (
+          <div className="mt-5 flex flex-col gap-1.5 border-t border-zinc-200/70 pt-3">
+            {question.meaningJa && <p className="text-xs text-zinc-400">{question.meaningJa}</p>}
+            <div className="flex justify-end">
+              <div
+                className="max-w-[85%] rounded-lg px-3 py-1.5 text-sm text-white"
+                style={{ backgroundColor: STAGE_COLOR }}
+              >
+                {firstAnswer}
+              </div>
+            </div>
           </div>
         )}
 
