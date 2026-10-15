@@ -24,7 +24,8 @@ const MINIGAME_BGM_VOLUME = 0.25;
 const STAGE_BGM_SRC = "/roadmap/sound/bgm_stage.mp3";
 const STAGE_BGM_VOLUME = 0.15;
 // Stage3〜5は音声入力でマイクを使うので、聞き取り中だけBGMをほぼ消す（BGMがマイクに入って認識を邪魔しないように）。
-const MIC_DUCK_FACTOR = 0.04;
+// 音量の段階（1〜3）に関わらず、同じ極小の音量に下げる（段階2の通常音量の約4%）。
+const MIC_DUCK_VOLUME = 0.006;
 const MINIGAME_SE_SRC = "/roadmap/sound/se_minigame.mp3";
 const MINIGAME_SE_VOLUME = 0.35;
 const STORAGE_KEY = "roadmap_sound_level";
@@ -170,7 +171,8 @@ export function RoadmapSoundProvider({
       stageBgmRef.current = audio;
     }
     const audio = stageBgmRef.current;
-    audio.volume = Math.min(1, STAGE_BGM_VOLUME * LEVEL_FACTORS[level] * (micActive ? MIC_DUCK_FACTOR : 1));
+    const normal = STAGE_BGM_VOLUME * LEVEL_FACTORS[level];
+    audio.volume = Math.min(1, micActive ? Math.min(normal, MIC_DUCK_VOLUME) : normal);
     if (shouldPlay) void audio.play().catch(() => {});
     else audio.pause();
   }, [enabled, level, interacted, micActive, pathname]);
