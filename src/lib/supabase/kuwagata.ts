@@ -696,6 +696,17 @@ export async function getUnlockedAreas(userId: string): Promise<KuwagataAreaCode
     newlyUnlocked.push(area);
   }
 
+  // Pro限定の独立枠(古代の森など)は、Pro会員になった最初の読み取りで解放として記録する。
+  // 記録することで「解放の演出」(マップで雲が晴れる)を一度だけ出せる。Freeに戻って再びProになっても、演出は繰り返さない。
+  if (plan !== "free") {
+    for (const area of PRO_ONLY_AREA_CODES) {
+      if (!unlocked.has(area) && isAreaReleased(species, area)) {
+        unlocked.add(area);
+        newlyUnlocked.push(area);
+      }
+    }
+  }
+
   if (newlyUnlocked.length > 0) {
     const { error: upsertError } = await supabaseAdmin
       .from("kuwagata_area_unlocks")
