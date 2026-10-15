@@ -26,9 +26,8 @@ export const KUWAGATA_MAP_AREA_CODES = MAP_AREAS.map((a) => a.code);
 
 type View = { x: number; y: number; w: number; h: number };
 
-const VIEW_PAD = 360;
+const VIEW_PAD = 140;
 const MIN_VIEW_SIZE = 1500;
-const CLOUD_STEP = 380;
 
 // 解放済みエリア全体が収まる表示範囲。縦横比は0.8〜1.25に収めて、足りない側は中央に寄せて広げる。
 function computeView(areas: MapArea[]): View {
@@ -55,68 +54,39 @@ function hash(i: number, j: number, salt: number): number {
 
 type Cloud = { key: string; src: string; x: number; y: number; w: number; h: number };
 
-const RING_CELL = 100; // 輪郭の判定に使う格子の大きさ
-const RING_MIN = 1; // 輪郭から何マス離れた所から
-const RING_MAX = 3; // 何マス離れた所までを雲で縁取るか
+const CLOUD_GRID = 140; // 雲を置く間隔
 
-// 解放済みエリアの輪郭に沿って雲を並べて縁取り、その外側にもまばらに雲を散らす。位置は決め打ちで毎回同じ。
-function buildClouds(view: View, unlocked: MapArea[], isOpaque: (x: number, y: number) => boolean): Cloud[] {
+// 未解放エリアの形の上に雲を敷き詰める（「何かある」と見せる）。解放済みエリアの絵の上には、縁に少しかかる程度。
+// isLocked: その座標が未解放エリアの絵の不透明部分か / isOpen: 解放済みエリアの絵の不透明部分か
+function buildClouds(
+  view: View,
+  isLocked: (x: number, y: number) => boolean,
+  isOpen: (x: number, y: number) => boolean
+): Cloud[] {
   const clouds: Cloud[] = [];
-  const pick = (i: number, j: number, salt: number) => CLOUD_TYPES[Math.floor(hash(i, j, salt) * CLOUD_TYPES.length)];
-
-  // ① 輪郭の縁取り
-  const gx0 = Math.floor(view.x / RING_CELL);
-  const gx1 = Math.ceil((view.x + view.w) / RING_CELL);
-  const gy0 = Math.floor(view.y / RING_CELL);
-  const gy1 = Math.ceil((view.y + view.h) / RING_CELL);
-  const opaque = new Set<string>();
-  for (let gx = gx0; gx < gx1; gx++) {
-    for (let gy = gy0; gy < gy1; gy++) {
-      if (isOpaque((gx + 0.5) * RING_CELL, (gy + 0.5) * RING_CELL)) opaque.add(`${gx},${gy}`);
-    }
-  }
-  const ringCells = new Set<string>();
-  if (opaque.size > 0) {
-    for (let gx = gx0; gx < gx1; gx++) {
-      for (let gy = gy0; gy < gy1; gy++) {
-        if (opaque.has(`${gx},${gy}`)) continue;
-        let near = Infinity;
-        for (let dx = -RING_MAX; dx <= RING_MAX; dx++) {
-          for (let dy = -RING_MAX; dy <= RING_MAX; dy++) {
-            if (opaque.has(`${gx + dx},${gy + dy}`)) near = Math.min(near, Math.hypot(dx, dy));
-          }
-        }
-        if (near < RING_MIN || near > RING_MAX) continue;
-        ringCells.add(`${gx},${gy}`);
-        if (hash(gx, gy, 5) > 0.42) continue;
-        const type = pick(gx, gy, 6);
-        const scale = (type.w > 500 ? 0.45 : 0.65) + hash(gx, gy, 7) * 0.3;
-        const w = type.w * scale;
-        const h = type.h * scale;
-        const cx = (gx + 0.5 + (hash(gx, gy, 8) - 0.5) * 0.8) * RING_CELL;
-        const cy = (gy + 0.5 + (hash(gx, gy, 9) - 0.5) * 0.8) * RING_CELL;
-        clouds.push({ key: `r${gx},${gy}`, src: type.src, x: cx - w / 2, y: cy - h / 2, w, h });
-      }
-    }
-  }
-
-  // ② 縁取りより外側（未解放エリアの場所など）にまばらに散らす
-  const i0 = Math.floor(view.x / CLOUD_STEP) - 1;
-  const i1 = Math.ceil((view.x + view.w) / CLOUD_STEP) + 1;
-  const j0 = Math.floor(view.y / CLOUD_STEP) - 1;
-  const j1 = Math.ceil((view.y + view.h) / CLOUD_STEP) + 1;
+  const i0 = Math.floor(view.x / CLOUD_GRID) - 1;
+  const i1 = Math.ceil((view.x + view.w) / CLOUD_GRID) + 1;
+  const j0 = Math.floor(view.y / CLOUD_GRID) - 1;
+  const j1 = Math.ceil((view.y + view.h) / CLOUD_GRID) + 1;
+  const reach = CLOUD_GRID * 0.5;
   for (let i = i0; i <= i1; i++) {
     for (let j = j0; j <= j1; j++) {
-      if (hash(i, j, 10) > 0.55) continue;
-      const cx = (i + 0.5 + (hash(i, j, 1) - 0.5) * 0.5) * CLOUD_STEP;
-      const cy = (j + 0.5 + (hash(i, j, 2) - 0.5) * 0.5) * CLOUD_STEP;
-      if (unlocked.some((a) => cx >= a.x && cx < a.x + a.w && cy >= a.y && cy < a.y + a.h)) continue;
-      if (ringCells.has(`${Math.floor(cx / RING_CELL)},${Math.floor(cy / RING_CELL)}`)) continue;
-      const type = pick(i, j, 3);
-      const scale = (type.w > 500 ? 0.6 : 0.8) + hash(i, j, 4) * 0.3;
+      const cx = (i + 0.5 + (hash(i, j, 1) - 0.5) * 0.6) * CLOUD_GRID;
+      const cy = (j + 0.5 + (hash(i, j, 2) - 0.5) * 0.6) * CLOUD_GRID;
+      if (isOpen(cx, cy)) continue;
+      // 形の縁まで覆うため、中心の近傍のどこかが未解放エリアに入っていればよい
+      const covers =
+        isLocked(cx, cy) ||
+        isLocked(cx - reach, cy) ||
+        isLocked(cx + reach, cy) ||
+        isLocked(cx, cy - reach) ||
+        isLocked(cx, cy + reach);
+      if (!covers) continue;
+      const type = CLOUD_TYPES[Math.floor(hash(i, j, 3) * CLOUD_TYPES.length)];
+      const scale = (type.w > 500 ? 0.55 : 0.8) + hash(i, j, 4) * 0.35;
       const w = type.w * scale;
       const h = type.h * scale;
-      clouds.push({ key: `f${i},${j}`, src: type.src, x: cx - w / 2, y: cy - h / 2, w, h });
+      clouds.push({ key: `${i},${j}`, src: type.src, x: cx - w / 2, y: cy - h / 2, w, h });
     }
   }
   return clouds;
@@ -151,25 +121,27 @@ export function KuwagataAreaMap({
   const view = useMemo(() => computeView(visibleAreas), [visibleAreas]);
   // 輪郭の縁取りは画像のアルファ値が要るので、読み込みが終わるたびに作り直す。
   const [maskTick, setMaskTick] = useState(0);
-  const clouds = useMemo(
-    () =>
-      buildClouds(view, visibleAreas, (lx, ly) =>
-        visibleAreas.some((area) => {
-          if (lx < area.x || ly < area.y || lx >= area.x + area.w || ly >= area.y + area.h) return false;
-          const data = alphaRef.current.get(area.code);
-          if (!data) return false;
-          const px = Math.floor(((lx - area.x) / area.w) * data.width);
-          const py = Math.floor(((ly - area.y) / area.h) * data.height);
-          return data.data[(py * data.width + px) * 4 + 3] > 16;
-        })
-      ),
+  const clouds = useMemo(() => {
+    const opaqueAt = (area: MapArea, lx: number, ly: number) => {
+      if (lx < area.x || ly < area.y || lx >= area.x + area.w || ly >= area.y + area.h) return false;
+      const data = alphaRef.current.get(area.code);
+      if (!data) return false;
+      const px = Math.floor(((lx - area.x) / area.w) * data.width);
+      const py = Math.floor(((ly - area.y) / area.h) * data.height);
+      return data.data[(py * data.width + px) * 4 + 3] > 16;
+    };
+    const lockedAreas = MAP_AREAS.filter((a) => !unlockedAreas.includes(a.code));
+    return buildClouds(
+      view,
+      (lx, ly) => lockedAreas.some((a) => opaqueAt(a, lx, ly)),
+      (lx, ly) => visibleAreas.some((a) => opaqueAt(a, lx, ly))
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [view, visibleAreas, maskTick]
-  );
+  }, [view, visibleAreas, maskTick]);
 
   useEffect(() => {
     let cancelled = false;
-    for (const area of visibleAreas) {
+    for (const area of MAP_AREAS) {
       if (alphaRef.current.has(area.code)) continue;
       const img = new Image();
       img.onload = () => {
@@ -188,7 +160,7 @@ export function KuwagataAreaMap({
     return () => {
       cancelled = true;
     };
-  }, [visibleAreas]);
+  }, []);
 
   function hitTest(clientX: number, clientY: number): KuwagataAreaCode | null {
     const el = containerRef.current;
@@ -235,7 +207,7 @@ export function KuwagataAreaMap({
               top: pct(cloud.y - view.y, view.h),
               width: pct(cloud.w, view.w),
               height: pct(cloud.h, view.h),
-              zIndex: 0,
+              zIndex: 50,
             }}
           />
         ))}
