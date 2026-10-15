@@ -111,7 +111,7 @@ export function KuwagataCatchExpedition({
           type="button"
           onClick={startExpedition}
           disabled={loading}
-          className="catch-cta inline-flex w-full items-center justify-center gap-2 rounded-full border-2 border-amber-700 px-5 py-3.5 text-base font-black tracking-wide text-white transition-transform disabled:opacity-50"
+          className="catch-cta inline-flex items-center justify-center gap-2 rounded-full border-2 border-amber-700 px-5 py-3.5 text-base font-black tracking-wide text-white transition-transform disabled:opacity-50"
           style={{ textShadow: "0 2px 0 rgba(120,53,15,0.8), 0 0 8px rgba(120,53,15,0.4)" }}
         >
           <Sparkles className="catch-cta-icon h-5 w-5" />
