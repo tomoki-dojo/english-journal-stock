@@ -8,7 +8,7 @@
 //   料金は変動するので、実運用モデルを決める前に必ず両方の実測結果で比較すること。
 
 import Anthropic from "@anthropic-ai/sdk";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { listVocabularyByIds } from "@/lib/supabase/vocabulary";
 import type { Plan } from "@/lib/plan";
@@ -187,7 +187,13 @@ export async function callGemini(
         model,
         contents: userText,
         // Claude側のmax_tokens: 1024と揃えて、1回あたりのコスト上限を必ず設ける。
-        config: { systemInstruction: systemPrompt, maxOutputTokens, httpOptions: { timeout: ATTEMPT_TIMEOUT_MS } },
+        // 思考(thinking)は出力トークンとして課金されるため、判定・添削には不要な思考を最小にして費用と遅延を抑える。
+        config: {
+          systemInstruction: systemPrompt,
+          maxOutputTokens,
+          thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
+          httpOptions: { timeout: ATTEMPT_TIMEOUT_MS },
+        },
       });
       console.log(`[gemini] ${model} 試行${attempt + 1}: ${Date.now() - startedAt}ms`);
       return response.text ?? "";
