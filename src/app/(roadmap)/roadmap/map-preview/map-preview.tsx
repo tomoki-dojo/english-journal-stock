@@ -14,13 +14,10 @@ const LABELS: Record<KuwagataAreaCode, string> = {
   ancient: "古代の森",
 };
 
+const MAIN: KuwagataAreaCode[] = ["area1", "area2", "area3", "area4", "area5"];
 const STEPS: { label: string; areas: KuwagataAreaCode[] }[] = [
-  { label: "1", areas: ["area1"] },
-  { label: "1〜2", areas: ["area1", "area2"] },
-  { label: "1〜3", areas: ["area1", "area2", "area3"] },
-  { label: "1〜4", areas: ["area1", "area2", "area3", "area4"] },
-  { label: "1〜5", areas: ["area1", "area2", "area3", "area4", "area5"] },
-  { label: "1〜5＋古代", areas: ["area1", "area2", "area3", "area4", "area5", "ancient"] },
+  ...[1, 2, 3, 4, 5].map((n) => ({ label: `1〜${n}`, areas: MAIN.slice(0, n) })),
+  ...[1, 2, 3, 4, 5].map((n) => ({ label: `1〜${n}＋古代`, areas: [...MAIN.slice(0, n), "ancient" as KuwagataAreaCode] })),
 ];
 
 export function MapPreview() {
