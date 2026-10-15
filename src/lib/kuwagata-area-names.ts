@@ -4,15 +4,15 @@ import type { KuwagataAreaCode } from "@/lib/supabase/kuwagata";
 
 export const KUWAGATA_AREA_NAMES: Record<KuwagataAreaCode, string> = {
   area1: "庭・裏庭",
-  area2: "里山・雑木林",
-  area3: "川",
-  area4: "ジャングル・秘境",
+  area2: "森",
+  area3: "渓流",
+  area4: "秘境",
   area5: "山岳",
   aquarium: "水の底の秘境",
   ancient: "古代の森",
 };
 
-// 図鑑のエリアタブの見出し（例: 「エリア2・里山・雑木林」「Pro限定・古代の森」）
+// 図鑑のエリアタブの見出し（例: 「エリア2・森」「Pro限定・古代の森」）
 export function kuwagataAreaChapterLabel(code: KuwagataAreaCode): string {
   const name = KUWAGATA_AREA_NAMES[code];
   if (code === "aquarium" || code === "ancient") return `Pro限定・${name}`;

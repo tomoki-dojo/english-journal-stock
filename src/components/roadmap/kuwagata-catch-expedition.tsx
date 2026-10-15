@@ -111,10 +111,15 @@ export function KuwagataCatchExpedition({
           type="button"
           onClick={startExpedition}
           disabled={loading}
-          className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-100 disabled:opacity-50"
+          className="catch-cta inline-flex w-full items-center justify-center gap-2 rounded-full border-2 border-amber-700 px-5 py-3.5 text-base font-black tracking-wide text-white transition-transform disabled:opacity-50"
+          style={{ textShadow: "0 2px 0 rgba(120,53,15,0.8), 0 0 8px rgba(120,53,15,0.4)" }}
         >
-          <Sparkles className="h-3.5 w-3.5" />
-          採集に出かける（チャンス{pendingCount}）
+          <Sparkles className="catch-cta-icon h-5 w-5" />
+          採集に出かける！
+          <span className="rounded-full bg-white/90 px-2 py-0.5 text-xs font-black text-orange-600" style={{ textShadow: "none" }}>
+            チャンス{pendingCount}
+          </span>
+          <Sparkles className="catch-cta-icon h-5 w-5" />
         </button>
       )}
 
