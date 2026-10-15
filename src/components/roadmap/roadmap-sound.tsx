@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import { usePathname } from "next/navigation";
-import { Volume2, VolumeX } from "lucide-react";
+import { Volume1, Volume2, VolumeX } from "lucide-react";
 
 // ロードマップ共通のサウンド（BGM・タップ音）。音源は public/roadmap/sound/ に置くだけで鳴る
 // （ファイルが無い間は何も鳴らず、エラーも出さない）。ファイル名は brand/kuwagata-asset-spec.md 参照。
@@ -21,7 +21,13 @@ const PAGE_SRC = "/roadmap/sound/se_page.mp3";
 const PAGE_VOLUME = 0.2;
 const MINIGAME_BGM_SRC = "/roadmap/sound/bgm_minigame.mp3";
 const MINIGAME_BGM_VOLUME = 0.25;
-const STORAGE_KEY = "roadmap_sound_enabled";
+const STORAGE_KEY = "roadmap_sound_level";
+const LEGACY_STORAGE_KEY = "roadmap_sound_enabled"; // 旧: ON/OFFのみ。"0"ならミュートとして引き継ぐ。
+
+// 音量は 0=ミュート / 1 / 2 / 3 の4段階。上の各音量(BGM_VOLUMEなど)は「2」のときの値で、段階ごとに倍率をかける。
+export const SOUND_MAX_LEVEL = 3;
+const DEFAULT_LEVEL = 2;
+const LEVEL_FACTORS = [0, 0.5, 1, 1.8];
 
 // BGMを流す画面（部屋・棚・図鑑）。Stageの練習画面などでは止める。
 const BGM_PATHS = new Set([
@@ -31,8 +37,8 @@ const BGM_PATHS = new Set([
 ]);
 
 type SoundContextValue = {
-  enabled: boolean;
-  toggle: () => void;
+  level: number;
+  setLevel: (level: number) => void;
   playPage: () => void;
   setMinigameActive: (active: boolean) => void;
 };
@@ -44,37 +50,44 @@ export function RoadmapSoundProvider({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const [enabled, setEnabled] = useState(true);
+  const [level, setLevelState] = useState(DEFAULT_LEVEL);
+  const enabled = level > 0;
   const [interacted, setInteracted] = useState(false);
   const bgmRef = useRef<HTMLAudioElement | null>(null);
   const tapRef = useRef<HTMLAudioElement | null>(null);
   const bgmMissing = useRef(false);
   const tapMissing = useRef(false);
+  const levelRef = useRef(DEFAULT_LEVEL);
   const enabledRef = useRef(true);
 
-  // 保存されたON/OFFを読み込む（既定はON）
+  // 保存された音量を読み込む（既定は2。旧設定でOFFだった人はミュート）
   useEffect(() => {
     try {
-      if (localStorage.getItem(STORAGE_KEY) === "0") setEnabled(false);
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved !== null) {
+        const n = Number(saved);
+        if (Number.isInteger(n) && n >= 0 && n <= SOUND_MAX_LEVEL) setLevelState(n);
+      } else if (localStorage.getItem(LEGACY_STORAGE_KEY) === "0") {
+        setLevelState(0);
+      }
     } catch {
       // localStorageが使えない環境ではメモリ上の状態のみ
     }
   }, []);
 
   useEffect(() => {
-    enabledRef.current = enabled;
-  }, [enabled]);
+    levelRef.current = level;
+    enabledRef.current = level > 0;
+  }, [level]);
 
-  const toggle = useCallback(() => {
-    setEnabled((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
-      } catch {
-        // 無視
-      }
-      return next;
-    });
+  const setLevel = useCallback((next: number) => {
+    const clamped = Math.min(SOUND_MAX_LEVEL, Math.max(0, Math.round(next)));
+    setLevelState(clamped);
+    try {
+      localStorage.setItem(STORAGE_KEY, String(clamped));
+    } catch {
+      // 無視
+    }
   }, []);
 
   // ブラウザの仕様で、音は最初のタップ後でないと鳴らせない。タップ音もここで鳴らす。
@@ -88,12 +101,12 @@ export function RoadmapSoundProvider({
 
       if (!tapRef.current) {
         const audio = new Audio(TAP_SRC);
-        audio.volume = TAP_VOLUME;
         audio.addEventListener("error", () => {
           tapMissing.current = true;
         });
         tapRef.current = audio;
       }
+      tapRef.current.volume = Math.min(1, TAP_VOLUME * LEVEL_FACTORS[levelRef.current]);
       tapRef.current.currentTime = 0;
       void tapRef.current.play().catch(() => {});
     };
@@ -107,10 +120,9 @@ export function RoadmapSoundProvider({
   const playPage = useCallback(() => {
     if (!enabledRef.current) return;
     if (!pageRef.current) {
-      const audio = new Audio(PAGE_SRC);
-      audio.volume = PAGE_VOLUME;
-      pageRef.current = audio;
+      pageRef.current = new Audio(PAGE_SRC);
     }
+    pageRef.current.volume = Math.min(1, PAGE_VOLUME * LEVEL_FACTORS[levelRef.current]);
     pageRef.current.currentTime = 0;
     void pageRef.current.play().catch(() => {});
   }, []);
@@ -124,17 +136,17 @@ export function RoadmapSoundProvider({
       if (!shouldPlay) return;
       const audio = new Audio(MINIGAME_BGM_SRC);
       audio.loop = true;
-      audio.volume = MINIGAME_BGM_VOLUME;
       minigameBgmRef.current = audio;
     }
     const audio = minigameBgmRef.current;
+    audio.volume = Math.min(1, MINIGAME_BGM_VOLUME * LEVEL_FACTORS[level]);
     if (shouldPlay) {
       void audio.play().catch(() => {});
     } else {
       audio.pause();
       audio.currentTime = 0;
     }
-  }, [enabled, interacted, minigameActive]);
+  }, [enabled, level, interacted, minigameActive]);
 
   // BGM：部屋・棚・図鑑でだけ、ONかつ最初のタップ後に流す。ページ移動をまたいでも途切れない。
   useEffect(() => {
@@ -144,7 +156,6 @@ export function RoadmapSoundProvider({
       if (!shouldPlay || bgmMissing.current) return;
       const audio = new Audio(BGM_SRC);
       audio.loop = true;
-      audio.volume = BGM_VOLUME;
       audio.addEventListener("error", () => {
         bgmMissing.current = true;
       });
@@ -152,9 +163,10 @@ export function RoadmapSoundProvider({
     }
 
     const audio = bgmRef.current;
+    audio.volume = Math.min(1, BGM_VOLUME * LEVEL_FACTORS[level]);
     if (shouldPlay) void audio.play().catch(() => {});
     else audio.pause();
-  }, [enabled, interacted, minigameActive, pathname]);
+  }, [enabled, level, interacted, minigameActive, pathname]);
 
   useEffect(() => {
     return () => {
@@ -164,7 +176,7 @@ export function RoadmapSoundProvider({
   }, []);
 
   return (
-    <SoundContext.Provider value={{ enabled, toggle, playPage, setMinigameActive }}>
+    <SoundContext.Provider value={{ level, setLevel, playPage, setMinigameActive }}>
       {children}
     </SoundContext.Provider>
   );
@@ -184,26 +196,83 @@ export function useMinigameBgm() {
   }, [setActive]);
 }
 
-// 画面上部に置く、ワンタップのON/OFFボタン（アイコンのみ）。
+// 画面上部に置く音量コントロール。スピーカーをタップでミュート⇔元の音量、右の三角形（くさび形）を
+// スワイプ／タップで 0(ミュート)・1・2・3 の4段階に切り替える。左端まで滑らせるとミュート。
 export function SoundToggleButton() {
   const ctx = useContext(SoundContext);
-  if (!ctx) return null;
-  const { enabled, toggle } = ctx;
+  const trackRef = useRef<HTMLDivElement>(null);
+  const draggingRef = useRef(false);
+  const lastLevelRef = useRef(DEFAULT_LEVEL);
+  const level = ctx?.level ?? 0;
+  const setLevel = ctx?.setLevel;
+
+  useEffect(() => {
+    if (level > 0) lastLevelRef.current = level;
+  }, [level]);
+
+  if (!ctx || !setLevel) return null;
+
+  function levelFromX(clientX: number): number {
+    const el = trackRef.current;
+    if (!el) return level;
+    const rect = el.getBoundingClientRect();
+    const f = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    if (f < 0.12) return 0;
+    return Math.min(SOUND_MAX_LEVEL, Math.max(1, Math.ceil(f * SOUND_MAX_LEVEL)));
+  }
+
+  const Icon = level === 0 ? VolumeX : level === 1 ? Volume1 : Volume2;
+  const wedge = "polygon(0 100%, 100% 100%, 100% 0)";
 
   return (
-    <button
-      type="button"
-      data-sound-toggle
-      onClick={toggle}
-      aria-label={enabled ? "音をオフにする" : "音をオンにする"}
-      aria-pressed={enabled}
-      className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-600 transition-colors hover:bg-amber-100/70 active:scale-95"
-    >
-      {enabled ? (
-        <Volume2 className="h-5 w-5" />
-      ) : (
-        <VolumeX className="h-5 w-5 text-zinc-400" />
-      )}
-    </button>
+    <div data-sound-toggle className="flex items-center gap-1">
+      <button
+        type="button"
+        onClick={() => setLevel(level > 0 ? 0 : lastLevelRef.current)}
+        aria-label={level > 0 ? "音をミュートにする" : "ミュートを解除する"}
+        className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-600 transition-colors hover:bg-amber-100/70 active:scale-95"
+      >
+        <Icon className={`h-5 w-5 ${level === 0 ? "text-zinc-400" : ""}`} />
+      </button>
+      <div
+        ref={trackRef}
+        role="slider"
+        tabIndex={0}
+        aria-label="音量"
+        aria-valuemin={0}
+        aria-valuemax={SOUND_MAX_LEVEL}
+        aria-valuenow={level}
+        aria-valuetext={level === 0 ? "ミュート" : `音量${level}`}
+        onPointerDown={(e) => {
+          draggingRef.current = true;
+          e.currentTarget.setPointerCapture(e.pointerId);
+          setLevel?.(levelFromX(e.clientX));
+        }}
+        onPointerMove={(e) => {
+          if (draggingRef.current) setLevel?.(levelFromX(e.clientX));
+        }}
+        onPointerUp={() => {
+          draggingRef.current = false;
+        }}
+        onPointerCancel={() => {
+          draggingRef.current = false;
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowRight" || e.key === "ArrowUp") setLevel?.(level + 1);
+          else if (e.key === "ArrowLeft" || e.key === "ArrowDown") setLevel?.(level - 1);
+        }}
+        className="relative flex h-8 w-20 cursor-pointer touch-none select-none items-center"
+      >
+        <div className="relative h-5 w-full">
+          <div className="absolute inset-0 bg-zinc-200" style={{ clipPath: wedge }} />
+          <div
+            className="absolute inset-y-0 left-0 overflow-hidden transition-[width] duration-150"
+            style={{ width: `${(level / SOUND_MAX_LEVEL) * 100}%` }}
+          >
+            <div className="absolute inset-y-0 left-0 bg-amber-500" style={{ clipPath: wedge, width: "5rem" }} />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
