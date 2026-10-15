@@ -157,6 +157,8 @@ export function Stage3Practice() {
     setManualText("");
     speech.reset();
     setAnswerPhase("prompt");
+    // 言い直しは、もう一度マイクをタップさせずにそのまま聞き取りへ入る
+    if (speech.status !== "unsupported") speech.start();
   }
 
   if (state === "loading") {

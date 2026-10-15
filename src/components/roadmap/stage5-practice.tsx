@@ -108,6 +108,8 @@ export function Stage5Practice({ track }: Stage5PracticeProps) {
     setManualText("");
     speech.reset();
     setAnswerPhase("prompt");
+    // 言い直しは、もう一度マイクをタップさせずにそのまま聞き取りへ入る
+    if (speech.status !== "unsupported") speech.start();
   }
 
   async function submitTurn() {
@@ -324,102 +326,6 @@ export function Stage5Practice({ track }: Stage5PracticeProps) {
       </p>
 
       <div className="mb-3 rounded-xl border border-zinc-200 bg-zinc-100/50 p-4">
-        {answerPhase === "prompt" && (
-          <div className="text-center">
-            {speech.status === "unsupported" ? (
-              <div>
-                <p className="mb-2 text-xs text-zinc-400">
-                  お使いのブラウザは音声入力に対応していないため、テキストで入力してください。
-                </p>
-                <textarea
-                  value={manualText}
-                  onChange={(e) => setManualText(e.target.value)}
-                  placeholder="声に出す代わりに、ここに英文を入力"
-                  rows={2}
-                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-base text-zinc-900 focus:border-zinc-400 focus:outline-none"
-                />
-                <button
-                  type="button"
-                  disabled={manualText.trim().length === 0}
-                  onClick={() => setAnswerPhase("review")}
-                  style={{ backgroundColor: STAGE_COLOR }}
-                  className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97] disabled:opacity-50"
-                >
-                  この内容で進む
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={speech.status === "listening" ? speech.stop : speech.start}
-                style={{ backgroundColor: speech.status === "listening" ? "#dc2626" : STAGE_COLOR }}
-                className="mx-auto flex h-16 w-16 items-center justify-center rounded-full text-white shadow-md transition-all duration-150 hover:opacity-90 active:scale-95"
-              >
-                {speech.status === "listening" ? <Square className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
-              </button>
-            )}
-            <p className="mt-3 text-xs text-zinc-400">
-              {speech.status === "listening" ? "聞き取り中...もう一度タップで終了" : "タップして声に出す"}
-            </p>
-            {speech.status === "listening" && speech.liveText && (
-              <p className="mt-3 rounded-lg bg-white px-3 py-2 text-left text-sm text-zinc-700">{speech.liveText}</p>
-            )}
-            {speech.errorMessage && <p className="mt-2 text-xs text-red-600">{speech.errorMessage}</p>}
-          </div>
-        )}
-
-        {(answerPhase === "review" || answerPhase === "sending") && (
-          <div className="animate-question-card-enter">
-            <p className="mb-1.5 text-xs text-zinc-400">この内容で送ります（間違っていれば修正できます）</p>
-            <textarea
-              value={manualText}
-              onChange={(e) => setManualText(e.target.value)}
-              disabled={answerPhase === "sending"}
-              rows={2}
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-base text-zinc-900 focus:border-zinc-400 focus:outline-none disabled:opacity-60"
-            />
-            <div className="mt-3 flex gap-3">
-              <button
-                type="button"
-                disabled={answerPhase === "sending" || manualText.trim().length === 0}
-                onClick={submitTurn}
-                style={{ backgroundColor: STAGE_COLOR }}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97] disabled:opacity-50"
-              >
-                {answerPhase === "sending" ? "送信中..." : "送る"}
-              </button>
-              <button
-                type="button"
-                disabled={answerPhase === "sending"}
-                onClick={retrySpeaking}
-                className="flex items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-600 transition-all duration-150 hover:border-zinc-400 active:scale-[.97] disabled:opacity-50"
-              >
-                <RotateCcw className="h-4 w-4" />
-                言い直す
-              </button>
-            </div>
-          </div>
-        )}
-
-        {error && <p className="mt-3 text-xs text-red-600">{error}</p>}
-      </div>
-      {history.length > 0 && history[history.length - 1].role === "ai" && (
-        <div className="mb-3 flex items-start gap-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <ArthurAvatar size={44} animated mood="talk" talkKey={history.length - 1} />
-          <div className="flex-1">
-            <p className="mb-0.5 text-xs font-semibold" style={{ color: STAGE_COLOR }}>
-              {ARTHUR_NAME}
-            </p>
-            <p className="text-2xl font-bold leading-snug text-zinc-900">{history[history.length - 1].text}</p>
-          </div>
-        </div>
-      )}
-
-      <p className="mb-2 text-center text-xs text-zinc-400">
-        {turnIndex}/{STAGE5_TURN_COUNT}ターン目
-      </p>
-
-      <div className="mb-3 mb-3 rounded-xl border border-zinc-200 bg-zinc-100/50 p-4">
         {answerPhase === "prompt" && (
           <div className="text-center">
             {speech.status === "unsupported" ? (

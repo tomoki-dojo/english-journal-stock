@@ -394,21 +394,19 @@ export async function getGrowingKuwagata(
 
   const strip = ({ points: _points, ...adult }: KuwagataAdultGrowth & { points: number }): KuwagataAdultGrowth => adult;
   const leveledAdults = leveledUp.sort((a, b) => b.points - a.points);
-  const otherAdults = adultCandidates.filter((adult) => !adult.leveledUp).sort((a, b) => b.points - a.points);
   const growingSorted = [...growing].sort((a, b) => gaugeTotal(b.growthGauge) - gaugeTotal(a.growthGauge));
 
   const shownLeveled = leveledAdults.slice(0, RESULT_DISPLAY_LIMIT);
-  let slots = RESULT_DISPLAY_LIMIT - shownLeveled.length;
+  const slots = RESULT_DISPLAY_LIMIT - shownLeveled.length;
   const shownGrowing = growingSorted.slice(0, slots);
-  slots -= shownGrowing.length;
-  const shownOthers = otherAdults.slice(0, slots);
 
-  const shownCount = shownLeveled.length + shownGrowing.length + shownOthers.length;
-  const totalCount = growing.length + adultCandidates.length;
+  const shownCount = shownLeveled.length + shownGrowing.length;
+  // 変化のなかった成虫は出さない（ご褒美で動いた個体だけを見せる）
+  const totalCount = growing.length + leveledAdults.length;
 
   return {
     individuals: shownGrowing,
-    adults: [...shownLeveled, ...shownOthers].map(strip),
+    adults: shownLeveled.map(strip),
     hiddenCount: totalCount - shownCount,
     stageUps,
     maxSizeUps,
