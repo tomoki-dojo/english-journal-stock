@@ -8,6 +8,7 @@ import {
   ADVICE_LINES,
   ADVICE_SPEAKER,
   ADVICE_SPEAKER_IMAGE,
+  ADVICE_TITLE,
   INTRO_LINES,
   type RoadmapAnnouncement,
   type RoadmapNewEgg,
@@ -89,7 +90,6 @@ export function RoomNoticeModal({
   ]);
 
   const [introPage, setIntroPage] = useState(0);
-  const [advicePage, setAdvicePage] = useState(0);
 
   const current = queue[0];
   if (!current) return null;
@@ -119,47 +119,6 @@ export function RoomNoticeModal({
         >
           {INTRO_LINES[introPage]}
         </p>
-        <span className="text-2xl text-white/70">▼</span>
-      </button>
-    );
-  }
-
-  if (current.kind === "advice") {
-    const isLast = advicePage >= ADVICE_LINES.length - 1;
-    const advance = () => {
-      if (!isLast) {
-        setAdvicePage((p) => p + 1);
-        return;
-      }
-      void fetch("/api/roadmap/notices/seen", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind: "advice" }),
-      }).catch(() => {});
-      setQueue((q) => q.slice(1));
-    };
-    return (
-      <button
-        type="button"
-        onClick={advance}
-        className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-zinc-900/90 px-8 text-center"
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element -- 自前の画像 */}
-        <img
-          key={advicePage}
-          src={ADVICE_SPEAKER_IMAGE}
-          alt=""
-          className="h-40 w-40 animate-question-card-enter rounded-full bg-white object-cover shadow-lg"
-        />
-        <div className="flex flex-col gap-2">
-          <p className="text-sm font-bold text-amber-300">{ADVICE_SPEAKER}</p>
-          <p
-            key={`line-${advicePage}`}
-            className="max-w-xs animate-question-card-enter text-lg font-medium leading-relaxed text-white [&_strong]:font-black [&_strong]:text-amber-300"
-          >
-            {renderEmphasis(ADVICE_LINES[advicePage])}
-          </p>
-        </div>
         <span className="text-2xl text-white/70">▼</span>
       </button>
     );
@@ -303,7 +262,10 @@ export function RoomNoticeModal({
   }
 
   const close = () => {
-    const body = { kind: "announcement", id: current.announcement.id };
+    const body =
+      current.kind === "advice"
+        ? { kind: "advice" }
+        : { kind: "announcement", id: current.announcement.id };
     void fetch("/api/roadmap/notices/seen", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -311,6 +273,49 @@ export function RoomNoticeModal({
     }).catch(() => {});
     setQueue((q) => q.slice(1));
   };
+
+  if (current.kind === "advice") {
+    // 家訓のような重厚なつくり: 和紙色の地に二重の枠、明朝系の書体、「一・二・三」の見出し。
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4">
+        <div className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-md border-[6px] border-double border-amber-900/70 bg-[#fbf3df] px-6 py-7 font-serif shadow-2xl">
+          <div className="mb-5 flex flex-col items-center gap-2 text-center">
+            {/* eslint-disable-next-line @next/next/no-img-element -- 自前の画像 */}
+            <img
+              src={ADVICE_SPEAKER_IMAGE}
+              alt=""
+              className="h-28 w-28 rounded-full border-2 border-amber-900/60 bg-white object-cover shadow-md"
+            />
+            <p className="text-lg font-black tracking-widest text-amber-950">
+              {ADVICE_SPEAKER}
+            </p>
+            <p className="border-y border-amber-900/40 px-4 py-0.5 text-xs font-bold tracking-[0.4em] text-amber-900">
+              {ADVICE_TITLE}
+            </p>
+          </div>
+          <ol className="flex flex-col gap-4">
+            {ADVICE_LINES.map((line, i) => (
+              <li key={line} className="flex gap-3">
+                <span className="shrink-0 pt-0.5 text-xl font-black text-amber-900">
+                  {["一", "二", "三", "四", "五"][i] ?? i + 1}
+                </span>
+                <p className="text-[15px] font-medium leading-relaxed text-zinc-800 [&_strong]:bg-amber-200/70 [&_strong]:px-0.5 [&_strong]:text-[17px] [&_strong]:font-black [&_strong]:text-amber-950">
+                  {renderEmphasis(line)}
+                </p>
+              </li>
+            ))}
+          </ol>
+          <button
+            type="button"
+            onClick={close}
+            className="mt-7 w-full rounded-md bg-amber-900 py-3 text-base font-black tracking-[0.5em] text-amber-50 shadow transition-transform active:scale-95"
+          >
+            はじめる
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-5">
