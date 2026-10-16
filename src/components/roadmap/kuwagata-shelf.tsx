@@ -85,6 +85,8 @@ type KnownCreatureArt = {
   mandibleBehindBody?: boolean;
   // trueなら体全体がふわふわ上下に漂う(飛ぶ種。歩く種のbobの代わり)
   flying?: boolean;
+  // 飛んでいる間だけ体(body)の代わりに出す1枚絵(羽根を広げた姿。脚は描き込み済みなので、その間は脚パーツを出さない)。
+  airborneBody?: string;
   // 水の中を泳ぐ種(動きの種類F)。後ろ足(kind:"paddle")が付け根を軸に水を掻く。
   swimming?: boolean;
   // お腹(体の一部)がぼんやり光る種(ホタたん)。中心位置と直径は絵のキャンバスに対する%。
@@ -175,6 +177,16 @@ function buildNewSpeciesWalkerArt(
   return {
     front: withHorn(base.front, horn?.frontOrigin, false),
     back: withHorn(base.back, horn?.backOrigin, horn?.backBehindBody ?? false),
+  };
+}
+
+// ハンたん(ハンミョウ): 歩行用のパーツに加えて、飛ぶ間だけ使う羽根を広げた体の1枚絵(front/back_body_flying)を持たせる。
+function buildTigerBeetleArt(code: string, horn: { frontOrigin: string; backOrigin: string }): Partial<Record<Facing, KnownCreatureArt>> {
+  const art = buildNewSpeciesWalkerArt(code, horn);
+  const flying = (facing: Facing) => `${KUWAGATA_ART_DIR}/kuwagata_${code}_${facing}_body_flying.svg`;
+  return {
+    front: art.front && { ...art.front, airborneBody: flying("front") },
+    back: art.back && { ...art.back, airborneBody: flying("back") },
   };
 }
 
@@ -970,7 +982,7 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   // ヘビたん(ヘビトンボ。大顎をガチガチ+大顎がキラッ=CHOMP_*。たまに羽ばたいて短い距離を飛ぶ=SNAKEFLY_*)
   "KW-0047": buildSnakeflyArt(),
   // ハンたん(ハンミョウ。大顎をガチガチ=CHOMP_*。たまに弧を描いて素早く飛んで移動=LEAP_*)
-  "KW-0027": buildNewSpeciesWalkerArt("KW-0027", { frontOrigin: "30% 88%", backOrigin: "90% 60%" }),
+  "KW-0027": buildTigerBeetleArt("KW-0027", { frontOrigin: "30% 88%", backOrigin: "90% 60%" }),
   // カミたん(カミキリムシ。大顎mandible_01をときどきガチガチ=CHOMP_*)
   // オサたん(オサムシ。標準の歩く6脚＋大顎。大顎mandible_01をガチガチ=CHOMP_*)
   // ユーたん(ホウネンエビ。歩く。横の腕=mandibleをゆらゆら揺らす)
@@ -1191,6 +1203,9 @@ function KnownCreatureSprite({
     );
   }
 
+  // 飛んでいる間は、羽根を広げた体の1枚絵に差し替える(あれば)。
+  const useAirborneBody = airborne && !!art.airborneBody;
+
   // 大顎(ツノ)。既定は一番手前、mandibleBehindBodyの向きは最背面(本体より奥)に描く。
   const heraShow = isHera(code) && shine;
   const jawClassName = `absolute inset-0 h-full w-full ${heraShow ? "animate-kuwagata-nod" : ""} ${fighting ? "animate-kuwagata-fight-jaw" : ""} ${hornSwing && art.mandibleOrigin ? "animate-kuwagata-horn" : ""} ${chomp && art.mandibleOrigin ? (code === SNAKEFLY_SPECIES_CODE ? "animate-kuwagata-chomp-big" : "animate-kuwagata-chomp") : ""} ${sniff && art.mandibleOrigin ? "animate-kuwagata-sniff" : ""}`;
@@ -1267,7 +1282,7 @@ function KnownCreatureSprite({
       )}
       {art.mandibleBehindBody && mandibleEl}
       {art.jaws?.filter((jaw) => jaw.behindBody).map(renderJaw)}
-      {art.legsBehindBody.map((leg, i) => leg.kind === "tail-ghost" && !strike ? null : (
+      {(useAirborneBody ? [] : art.legsBehindBody).map((leg, i) => leg.kind === "tail-ghost" && !strike ? null : (
         <img
           key={`behind${i}`}
           src={leg.src}
@@ -1288,8 +1303,8 @@ function KnownCreatureSprite({
           : {}), ...(leg.ghostOpacity ? ({ opacity: leg.ghostOpacity } as CSSProperties) : {}), ...(leg.clawDir ? ({ "--claw-dir": leg.clawDir } as CSSProperties) : {}), ...(leg.paddleDir ? ({ "--paddle-dir": leg.paddleDir } as CSSProperties) : {}), ...(leg.hind ? ({ "--hd": leg.hind.dir, "--kx": `${leg.hind.knee[0]}%`, "--ky": `${leg.hind.knee[1]}%` } as CSSProperties) : {}), ...(leg.flapDir ? ({ "--fd": leg.flapDir } as CSSProperties) : {}), ...(leg.squashAt ? ({ "--sq-x": `${leg.squashAt.x}%`, "--sq-y": `${leg.squashAt.y}%` } as CSSProperties) : {}) }}
         />
       ))}
-      <img src={art.body} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />
-      {art.legsInFrontOfBody.map((leg, i) => leg.kind === "tail-ghost" && !strike ? null : (
+      <img src={useAirborneBody ? art.airborneBody : art.body} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />
+      {(useAirborneBody ? [] : art.legsInFrontOfBody).map((leg, i) => leg.kind === "tail-ghost" && !strike ? null : (
         <img
           key={`front${i}`}
           src={leg.src}
@@ -1608,8 +1623,8 @@ const SPOT_PICK_ATTEMPTS = 30;
 const TRAVEL_MS_PER_PCT = 700;
 // ハンたん: たまに弧を描いて素早く飛んで移動する。頻度は低め(移動のたびにLEAP_CHANCEの確率)、飛行時間はLEAP_MS。
 const LEAP_SPECIES_CODE = "KW-0027";
-// 保留中(0=飛ばない)。羽根を広げた姿の絵ができたら、飛ぶ間だけその絵に切り替えて0.4前後に戻す。
-const LEAP_CHANCE = 0;
+// 飛ぶ間は羽根を広げた姿(airborneBody)に切り替わる。
+const LEAP_CHANCE = 0.4;
 const LEAP_MS = 1100;
 // ヘビたん: たまに羽ばたいて短い距離を飛ぶ(移動のたびにSNAKEFLY_CHANCEの確率)。距離はSNAKEFLY_MAX_DIST_PCT以下、飛行時間はSNAKEFLY_MS。
 const SNAKEFLY_SPECIES_CODE = "KW-0047";
