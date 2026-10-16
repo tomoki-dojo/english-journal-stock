@@ -1961,7 +1961,7 @@ function useWander(
       if (poseTimer) clearTimeout(poseTimer);
       if (flipTimer) clearTimeout(flipTimer);
     };
-  }, [seedKey, widthPct, moves, decorationSpots, positionsRef, travelScale, leapChance, chargeHopChance, poseChance, chargeMs, hopMs, hopMaxDistPct, restScale, geo, leapMs, leapMaxDistPct, flipTrap, courtChance]);
+  }, [seedKey, widthPct, moves, decorationSpots, positionsRef, travelScale, leapChance, chargeHopChance, poseChance, chargeMs, hopMs, hopMaxDistPct, restScale, geo, leapMs, leapMaxDistPct, flipTrap, courtChance, leapWindupMs]);
 
   return state;
 }
