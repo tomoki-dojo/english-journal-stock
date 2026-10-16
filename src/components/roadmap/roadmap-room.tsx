@@ -160,7 +160,7 @@ function StageCase({
   // 画像より手前（DOM順で後＝視覚的に上）に重ねるが、座布団自体は透かして背景の絵を感じられる程度の濃さにする。
   const labelEl = (
     <span
-      className="whitespace-nowrap rounded-full bg-white/50 px-2 py-0.5 text-[10px] font-semibold shadow-sm backdrop-blur-[1px]"
+      className={`whitespace-nowrap rounded-full bg-white/50 px-2 py-0.5 text-[10px] font-semibold shadow-sm backdrop-blur-[1px] ${locked ? "opacity-40" : ""}`}
       style={{ color: labelColor ?? color }}
     >
       {label}
@@ -177,12 +177,12 @@ function StageCase({
       <img
         src={imageSrc ?? undefined}
         alt=""
-        className={`block w-full object-contain drop-shadow-md ${locked ? "opacity-50 grayscale" : ""}`}
+        className={`block w-full object-contain ${locked ? "opacity-25 grayscale" : "drop-shadow-md"}`}
       />
       {locked && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/80 shadow-sm">
-            <Lock className="h-4 w-4 text-zinc-500" strokeWidth={2} />
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/60 shadow-sm">
+            <Lock className="h-4 w-4 text-zinc-400" strokeWidth={2} />
           </span>
         </div>
       )}
