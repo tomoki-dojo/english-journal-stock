@@ -34,7 +34,6 @@ export function Stage3Practice() {
   const [limitReachedMidRound, setLimitReachedMidRound] = useState(false);
   const question: Stage3Question | null = questions[questionIndex] ?? null;
   const [usage, setUsage] = useState<Stage3UsageInfo | null>(null);
-  const [poolSize, setPoolSize] = useState<number | null>(null);
   const [answerPhase, setAnswerPhase] = useState<AnswerPhase>("prompt");
   const [manualText, setManualText] = useState("");
   const [result, setResult] = useState<Stage3JudgeResult | null>(null);
@@ -104,7 +103,6 @@ export function Stage3Practice() {
 
       setQuestions(session.questions);
       setUsage(session.usage);
-      setPoolSize(session.poolSize);
       setState("question");
     } catch (err) {
       setError(err instanceof Error ? err.message : "出題データの取得に失敗しました");
@@ -318,7 +316,6 @@ export function Stage3Practice() {
       <RoundHeader
         stage={3}
         subFormatLabel={question.subStep}
-        poolLabel={poolSize !== null ? `Stage1卒業 ${poolSize}個から出題` : undefined}
         current={questionIndex + 1}
         total={questions.length}
         usageLabel={usageLabel}

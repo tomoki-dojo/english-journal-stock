@@ -75,7 +75,6 @@ export function RoundHeader({ stage, subFormatLabel, poolLabel, arthurMood, curr
           <span className="text-xs text-zinc-400">{usageLabel}</span>
         ) : (
           <div className="flex items-center gap-2">
-            {usageLabel && <span className="text-xs text-zinc-400">{usageLabel}</span>}
             <span className="text-xs text-zinc-400">
               {current}/{total}問目
             </span>
@@ -91,6 +90,10 @@ export function RoundHeader({ stage, subFormatLabel, poolLabel, arthurMood, curr
           </div>
         )}
       </div>
+
+      {current !== undefined && usageLabel && (
+        <p className="mt-1.5 text-right text-xs text-zinc-400">{usageLabel}</p>
+      )}
 
       {/* アーサー（練習相手）と水槽。Stage0〜5すべての練習画面共通。問題が切り替わるたびに口パクする。 */}
       <ArthurScene className="mt-3" mood={arthurMood} talkKey={current ?? usageLabel} />
