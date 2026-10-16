@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { ROADMAP_TITLE_PATH, sanitizeRoadmapNext } from "@/lib/roadmap-title";
 import { APP_VERSION } from "@/lib/app-version";
+
+export const metadata: Metadata = { title: { absolute: "喋って！育てろ！英クワたん" } };
 
 type TitlePageProps = {
   searchParams: Promise<{ next?: string }>;

@@ -1,8 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   RoadmapSoundProvider,
   SoundToggleButton,
 } from "@/components/roadmap/roadmap-sound";
+
+// ブラウザのタブ名など。アプリ名「喋って！育てろ！英クワたん」で出す(本体名のサフィックスは付けない)。
+export const metadata: Metadata = { title: { absolute: "喋って！育てろ！英クワたん" } };
 
 // スピーキング・ロードマップ専用のレイアウト。
 // 本体（UpskillEnglish）のサイドバー・ヘッダーは使わず、「陽だまりの箱庭タウン」という
