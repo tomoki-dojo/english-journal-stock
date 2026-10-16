@@ -58,15 +58,16 @@ export type OnboardingQuizResult = {
 };
 
 // Stage1（音読・シャドーイング）の3サブステップ。correct_streakの値の範囲から導出する
-// （0-1=リピーティング, 2-3=オーバーラッピング, 4=シャドーイング, 5=卒業）。2026-10-16に卒業を6連続から5連続へ短縮。
+// （0=リピーティング, 1-2=オーバーラッピング, 3-4=シャドーイング, 5=卒業）。2026-10-16に卒業を6連続から5連続へ短縮し、
+// 配分を1/2/2回にした（最終段階のシャドーイングを2回行う）。
 export const Stage1SubStepValues = ["リピーティング", "オーバーラッピング", "シャドーイング"] as const;
 export type Stage1SubStep = (typeof Stage1SubStepValues)[number];
 
 export const STAGE1_GRADUATE_STREAK = 5;
 
 export function getStage1SubStep(streak: number): Stage1SubStep {
-  if (streak >= 4) return "シャドーイング";
-  if (streak >= 2) return "オーバーラッピング";
+  if (streak >= 3) return "シャドーイング";
+  if (streak >= 1) return "オーバーラッピング";
   return "リピーティング";
 }
 
