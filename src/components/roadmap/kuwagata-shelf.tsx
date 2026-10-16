@@ -85,7 +85,7 @@ type KnownCreatureArt = {
   mandibleBehindBody?: boolean;
   // trueなら体全体がふわふわ上下に漂う(飛ぶ種。歩く種のbobの代わり)
   flying?: boolean;
-  // 飛んでいる間だけ体(body)の代わりに出す1枚絵(羽根を広げた姿。脚は描き込み済みなので、その間は脚パーツを出さない)。
+  // 飛んでいる間だけ体(body)の代わりに出す1枚絵(羽根を広げた姿。脚は歩行用パーツをそのまま重ねる)。
   airborneBody?: string;
   // 水の中を泳ぐ種(動きの種類F)。後ろ足(kind:"paddle")が付け根を軸に水を掻く。
   swimming?: boolean;
@@ -1282,7 +1282,7 @@ function KnownCreatureSprite({
       )}
       {art.mandibleBehindBody && mandibleEl}
       {art.jaws?.filter((jaw) => jaw.behindBody).map(renderJaw)}
-      {(useAirborneBody ? [] : art.legsBehindBody).map((leg, i) => leg.kind === "tail-ghost" && !strike ? null : (
+      {art.legsBehindBody.map((leg, i) => leg.kind === "tail-ghost" && !strike ? null : (
         <img
           key={`behind${i}`}
           src={leg.src}
@@ -1304,7 +1304,7 @@ function KnownCreatureSprite({
         />
       ))}
       <img src={useAirborneBody ? art.airborneBody : art.body} alt="" className="absolute inset-0 h-full w-full drop-shadow-sm" />
-      {(useAirborneBody ? [] : art.legsInFrontOfBody).map((leg, i) => leg.kind === "tail-ghost" && !strike ? null : (
+      {art.legsInFrontOfBody.map((leg, i) => leg.kind === "tail-ghost" && !strike ? null : (
         <img
           key={`front${i}`}
           src={leg.src}
@@ -1623,8 +1623,8 @@ const SPOT_PICK_ATTEMPTS = 30;
 const TRAVEL_MS_PER_PCT = 700;
 // ハンたん: たまに弧を描いて素早く飛んで移動する。頻度は低め(移動のたびにLEAP_CHANCEの確率)、飛行時間はLEAP_MS。
 const LEAP_SPECIES_CODE = "KW-0027";
-// 飛ぶ間は羽根を広げた姿(airborneBody)に切り替わる。
-const LEAP_CHANCE = 0.4;
+// 飛ぶ間は羽根を広げた姿(airborneBody。脚は歩行用パーツをそのまま重ねる)に切り替わる。
+const LEAP_CHANCE = 0.6;
 const LEAP_MS = 1100;
 // ハンたん: 羽根を広げてから実際に飛び立つまでの間(広げた姿で少し構える)。
 const LEAP_WINDUP_MS = 450;
