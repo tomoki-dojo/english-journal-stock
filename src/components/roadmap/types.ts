@@ -58,11 +58,11 @@ export type OnboardingQuizResult = {
 };
 
 // Stage1（音読・シャドーイング）の3サブステップ。correct_streakの値の範囲から導出する
-// （0-1=リピーティング, 2-3=オーバーラッピング, 4-5=シャドーイング, 6=卒業）。
+// （0-1=リピーティング, 2-3=オーバーラッピング, 4=シャドーイング, 5=卒業）。2026-10-16に卒業を6連続から5連続へ短縮。
 export const Stage1SubStepValues = ["リピーティング", "オーバーラッピング", "シャドーイング"] as const;
 export type Stage1SubStep = (typeof Stage1SubStepValues)[number];
 
-export const STAGE1_GRADUATE_STREAK = 6;
+export const STAGE1_GRADUATE_STREAK = 5;
 
 export function getStage1SubStep(streak: number): Stage1SubStep {
   if (streak >= 4) return "シャドーイング";
@@ -240,7 +240,8 @@ export type Stage2ReportResult = {
 // 1フレーズを覚えて卒業ではなく、同じ感覚に対する複数パターンで安定して「言えた」が続くまでを
 // 卒業条件とする。答え合わせのタイミングで、自己申告の正誤に関係なく毎回核イメージの解説
 // （coreImageJa）を出す（テスト効果を狙い、先に解説は読ませない。自己申告はstreak判定にのみ使う）。
-export const STAGE0_GRADUATE_STREAK = 6;
+// 卒業は5連続（2026-10-16に6連続から短縮）。
+export const STAGE0_GRADUATE_STREAK = 5;
 export const STAGE0_ACTIVE_SET_SIZE = 7;
 export const STAGE0_ROUND_SIZE = 5;
 
