@@ -35,6 +35,8 @@ export default async function RoadmapStage0Page() {
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Stage0・感覚</h1>
         <p className="mt-1 text-sm text-zinc-500">
           日本語の感覚のまま英語にすると事故りやすいポイントを、声に出しながら少しずつ体に入れます。
+          <br />
+          まずは英語の感覚を身につけよう！
         </p>
       </div>
 
