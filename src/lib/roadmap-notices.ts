@@ -50,7 +50,7 @@ export const LATEST_ANNOUNCEMENT_ID = ANNOUNCEMENTS.reduce((max, a) => Math.max(
 
 // 初回ログイン時の導入（世界観）。1行ずつ画面いっぱいに出して、タップで進める。
 export const INTRO_LINES: string[] = [
-  "この世界には、英語を聞かせると大きく育つ「エークワたん」がいる",
+  "ここには、英語を聞かせるとどんどん育つ「エークワたん」が住んでいる",
   "アーサーと一緒に沢山英語を喋って「エークワたん」を育てよう！",
 ];
 
