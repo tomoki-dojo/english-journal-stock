@@ -8,6 +8,7 @@ import { StageUnlockOverlay } from "./stage-unlock-overlay";
 import {
   ADVICE_LINES,
   ADVICE_SPEAKER,
+  ADVICE_SPEAKER_IMAGE,
   ADVICE_TITLE,
   INTRO_LINES,
   type RoadmapAnnouncement,
@@ -28,6 +29,37 @@ type Item =
   | { kind: "growth"; stageUps: RoadmapStageUp[] }
   | { kind: "announcement"; announcement: RoadmapAnnouncement }
   | { kind: "trivia"; trivia: { id: string; body: string } };
+
+// 「**太字**」の記法を<strong>に変換して表示する。
+function renderEmphasis(text: string) {
+  return text.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
+    part.startsWith("**") && part.endsWith("**") ? (
+      <strong key={i} className="font-extrabold text-zinc-900">
+        {part.slice(2, -2)}
+      </strong>
+    ) : (
+      part
+    )
+  );
+}
+
+// エークワ博士のアイコン。画像(ADVICE_SPEAKER_IMAGE)が無い間はBugアイコンで代用する。
+function AdviceSpeakerIcon() {
+  const [failed, setFailed] = useState(false);
+  return failed ? (
+    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 ring-1 ring-amber-200">
+      <Bug className="h-5 w-5 text-amber-700" />
+    </span>
+  ) : (
+    // eslint-disable-next-line @next/next/no-img-element -- 自前の画像
+    <img
+      src={ADVICE_SPEAKER_IMAGE}
+      alt=""
+      onError={() => setFailed(true)}
+      className="h-9 w-9 rounded-full bg-amber-100 object-cover ring-1 ring-amber-200"
+    />
+  );
+}
 
 // 部屋に入ったときのポップアップ。初回はエークワ博士のアドバイス、以降は未読のお知らせを1件ずつ順に出す。
 // 閉じるたびに既読をサーバーへ保存する（保存に失敗しても表示は先へ進める）。
@@ -242,9 +274,7 @@ export function RoomNoticeModal({
         {current.kind === "advice" ? (
           <>
             <div className="mb-4 flex items-center gap-2">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 ring-1 ring-amber-200">
-                <Bug className="h-5 w-5 text-amber-700" />
-              </span>
+              <AdviceSpeakerIcon />
               <div className="leading-tight">
                 <p className="text-sm font-bold text-zinc-800">
                   {ADVICE_SPEAKER}
@@ -258,7 +288,7 @@ export function RoomNoticeModal({
                   key={line}
                   className="rounded-xl bg-amber-50 px-3.5 py-2.5 text-sm font-medium leading-relaxed text-zinc-800"
                 >
-                  {line}
+                  {renderEmphasis(line)}
                 </li>
               ))}
             </ul>
