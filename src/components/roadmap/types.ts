@@ -286,6 +286,8 @@ export type Stage3SubStep = (typeof Stage3SubStepValues)[number];
 // 4-5=ミニ拡張, 6=卒業）。Stage1と同じ「各段階連続2回」パターン。
 export const STAGE3_GRADUATE_STREAK = 6;
 export const STAGE3_ACTIVE_SET_SIZE = 7;
+// 1ラウンドの問題数（アクティブセットから、別々の表現を最大この数だけまとめて出題する）
+export const STAGE3_ROUND_SIZE = 5;
 
 // Stage3解放条件（2026-09-16改訂）：Stage1卒業フレーズの累計数がこの値に届くとStage3が開く。
 // 以前は「Stage3の出題プールに1件でもあれば解放」（実質Stage1を1個卒業すれば即解放。
@@ -323,7 +325,7 @@ export type Stage3Question = {
 export type Stage3UsageInfo = { remaining: number; limit: number };
 
 export type Stage3SessionResponse =
-  | { status: "session"; question: Stage3Question; usage: Stage3UsageInfo; poolSize: number }
+  | { status: "session"; questions: Stage3Question[]; usage: Stage3UsageInfo; poolSize: number }
   | { status: "not_ready"; remainingToUnlock: number }
   | { status: "done"; totalCount: number }
   | { status: "limit_exceeded"; limit: number };

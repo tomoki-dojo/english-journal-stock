@@ -13,7 +13,7 @@ import { useSpeechRecognition } from "@/lib/use-speech-recognition";
 import { useBgmDuck } from "./roadmap-sound";
 import type { Stage3JudgeResult, Stage3Question, Stage3SessionResponse, Stage3UsageInfo } from "./types";
 
-type ViewState = "loading" | "question" | "not_ready" | "done" | "limit_exceeded" | "error";
+type ViewState = "loading" | "question" | "round_complete" | "not_ready" | "done" | "limit_exceeded" | "error";
 // prompt: まだ声に出していない。review: 発話（または手入力）の内容を確認・修正できる。
 // judging: AI判定中。result: 判定結果を表示中。
 type AnswerPhase = "prompt" | "review" | "judging" | "result";
@@ -26,7 +26,13 @@ const STAGE_COLOR = STAGE_COLORS[3];
 // 声に出す（Web Speech APIで書き起こし）→内容を確認・修正→AIが意味の一致を判定、の流れで進める。
 export function Stage3Practice() {
   const [state, setState] = useState<ViewState>("loading");
-  const [question, setQuestion] = useState<Stage3Question | null>(null);
+  const [questions, setQuestions] = useState<Stage3Question[]>([]);
+  const [questionIndex, setQuestionIndex] = useState(0);
+  // ラウンド内の各問の結果（卒業した表現はクワたんの成長パネルとリストで見せる）
+  const [roundResults, setRoundResults] = useState<{ correct: boolean; graduated: boolean; meaningJa?: string }[]>([]);
+  // ラウンド途中で今日のAI判定の上限に達したか（結果画面で区切りを説明する）
+  const [limitReachedMidRound, setLimitReachedMidRound] = useState(false);
+  const question: Stage3Question | null = questions[questionIndex] ?? null;
   const [usage, setUsage] = useState<Stage3UsageInfo | null>(null);
   const [poolSize, setPoolSize] = useState<number | null>(null);
   const [answerPhase, setAnswerPhase] = useState<AnswerPhase>("prompt");
@@ -47,8 +53,22 @@ export function Stage3Practice() {
   const speech = useSpeechRecognition({ continuous: true });
   useBgmDuck(speech.status === "listening");
 
+  function resetQuestionState() {
+    setAnswerPhase("prompt");
+    setManualText("");
+    setResult(null);
+    setError(null);
+    setHintRevealed(false);
+    setFollowUp(null);
+    setFirstAnswer("");
+    speech.reset();
+  }
+
   async function loadSession() {
     setState("loading");
+    setQuestionIndex(0);
+    setRoundResults([]);
+    setLimitReachedMidRound(false);
     setAnswerPhase("prompt");
     setManualText("");
     setResult(null);
@@ -82,7 +102,7 @@ export function Stage3Practice() {
         return;
       }
 
-      setQuestion(session.question);
+      setQuestions(session.questions);
       setUsage(session.usage);
       setPoolSize(session.poolSize);
       setState("question");
@@ -126,7 +146,13 @@ export function Stage3Practice() {
       if (!res.ok) {
         if (res.status === 429) {
           setLimit(json.limit ?? 0);
-          setState("limit_exceeded");
+          // ラウンド途中の上限到達：そこまでの結果を見せて区切る（1問も答えていなければ従来の上限画面）
+          if (roundResults.length > 0) {
+            setLimitReachedMidRound(true);
+            setState("round_complete");
+          } else {
+            setState("limit_exceeded");
+          }
           return;
         }
         throw new Error(json.error ?? "判定処理に失敗しました");
@@ -150,6 +176,21 @@ export function Stage3Practice() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "判定処理に失敗しました");
       setAnswerPhase("review");
+    }
+  }
+
+  // 「次へ」：ラウンド内の次の問題へ。最後の問題なら結果画面へ。
+  function goNext() {
+    if (!question || !result) return;
+    setRoundResults((prev) => [
+      ...prev,
+      { correct: result.correct, graduated: result.graduated, meaningJa: question.meaningJa },
+    ]);
+    if (questionIndex + 1 < questions.length) {
+      setQuestionIndex(questionIndex + 1);
+      resetQuestionState();
+    } else {
+      setState("round_complete");
     }
   }
 
@@ -215,6 +256,56 @@ export function Stage3Practice() {
     );
   }
 
+  if (state === "round_complete") {
+    const correctCount = roundResults.filter((r) => r.correct).length;
+    const graduated = roundResults.filter((r) => r.graduated);
+    return (
+      <div className="rounded-xl border border-zinc-200 bg-zinc-100/50 p-6 text-center animate-round-complete-pop">
+        <PartyPopper className="mx-auto mb-3 h-6 w-6" style={{ color: STAGE_COLOR }} />
+        <p className="text-sm font-medium text-zinc-900">
+          今回のラウンド：{roundResults.length}問中{correctCount}問「言えた」
+        </p>
+
+        {limitReachedMidRound && (
+          <p className="mt-3 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700">
+            今日のAI判定は{limit}回まで使い切りました。また明日挑戦できます。Proにすると上限が大きく緩和されます。
+          </p>
+        )}
+
+        {graduated.length > 0 && (
+          <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-left text-sm text-emerald-800">
+            <p className="mb-1 font-medium">卒業した表現</p>
+            <ul className="space-y-0.5">
+              {graduated.map((r, i) => (
+                <li key={i}>{r.meaningJa}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {graduated.length > 0 && <GrowingKuwagataPanel />}
+
+        <div className="mt-6 flex gap-3">
+          {!limitReachedMidRound && (
+            <button
+              type="button"
+              onClick={loadSession}
+              style={{ backgroundColor: STAGE_COLOR }}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97]"
+            >
+              もう1ラウンド
+            </button>
+          )}
+          <Link
+            href="/roadmap"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
+          >
+            部屋に戻る
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (!question) {
     return <p className="text-sm text-zinc-400">読み込み中...</p>;
   }
@@ -228,6 +319,8 @@ export function Stage3Practice() {
         stage={3}
         subFormatLabel={question.subStep}
         poolLabel={poolSize !== null ? `Stage1卒業 ${poolSize}個から出題` : undefined}
+        current={questionIndex + 1}
+        total={questions.length}
         usageLabel={usageLabel}
         arthurMood={result ? (result.correct ? "happy" : "sad") : "talk"}
       />
@@ -391,11 +484,11 @@ export function Stage3Practice() {
 
             <button
               type="button"
-              onClick={loadSession}
+              onClick={goNext}
               style={{ backgroundColor: STAGE_COLOR }}
               className="flex w-full items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97]"
             >
-              次へ
+              {questionIndex + 1 < questions.length ? "次へ" : "結果を見る"}
             </button>
           </div>
         )}

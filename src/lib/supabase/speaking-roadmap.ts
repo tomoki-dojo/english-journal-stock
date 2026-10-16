@@ -57,6 +57,8 @@ import {
   type Stage2RoundResponse,
   type Stage2SubStep,
   type Stage3SessionResponse,
+  type Stage3Question,
+  STAGE3_ROUND_SIZE,
   type Stage3JudgeResult,
   type Stage4ScenarioListItem,
   type Stage4Turn,
@@ -1322,32 +1324,37 @@ export async function getStage3Session(userId: string, plan: Plan): Promise<Stag
     if (b.lastPracticedAt === null) return 1;
     return a.lastPracticedAt < b.lastPracticedAt ? -1 : 1;
   });
-  const current = byLeastRecent[0];
-  const subStep = getStage3SubStep(current.streak);
+  // 1ラウンド分（最大STAGE3_ROUND_SIZE件）の別々の表現をまとめて出す。各問のsubStepは
+  // ラウンド開始時のstreakで決まり、同じ表現を同じラウンドに2回出さないので途中で変わらない。
+  const roundItems = byLeastRecent.slice(0, STAGE3_ROUND_SIZE);
 
-  // 「ヒント付き言い換え」のときだけ穴埋めヒントが必要（他のサブステップでは呼ばずAI呼び出しを
-  // 省く）。expressions.expression_enをそのまま見せていた以前の挙動をやめ、重要な語句だけを
-  // 空欄にしたヒントに変更した（2026-09-13 実機フィードバック：正解の全文が見えると
-  // そのまま読み上げるだけで通ってしまう）。
-  const hintExpressionEn =
-    subStep === "ヒント付き言い換え"
-      ? await getOrGenerateStage3HintBlank({
-          expressionId: current.id,
-          cached: current.stage3HintBlankEn,
-          expressionEn: current.expressionEn,
-          meaningJa: current.meaningJa ?? "",
-        })
-      : undefined;
+  // 「ヒント付き言い換え」のときだけ穴埋めヒントが必要（他のサブステップでは呼ばない）。
+  // 公開中の表現は生成済みでキャッシュを読むだけ。未生成の新規表現のみAI生成する。
+  const questions: Stage3Question[] = await Promise.all(
+    roundItems.map(async (item) => {
+      const subStep = getStage3SubStep(item.streak);
+      const hintExpressionEn =
+        subStep === "ヒント付き言い換え"
+          ? await getOrGenerateStage3HintBlank({
+              expressionId: item.id,
+              cached: item.stage3HintBlankEn,
+              expressionEn: item.expressionEn,
+              meaningJa: item.meaningJa ?? "",
+            })
+          : undefined;
+      return {
+        expressionId: item.id,
+        subStep,
+        meaningJa: item.meaningJa,
+        hintExpressionEn,
+        warmth: computeWarmth(item.streak, STAGE3_GRADUATE_STREAK),
+      };
+    })
+  );
 
   return {
     status: "session",
-    question: {
-      expressionId: current.id,
-      subStep,
-      meaningJa: current.meaningJa,
-      hintExpressionEn,
-      warmth: computeWarmth(current.streak, STAGE3_GRADUATE_STREAK),
-    },
+    questions,
     usage: { remaining: usageCheck.remaining, limit: usageCheck.limit },
     poolSize: totalCount,
   };

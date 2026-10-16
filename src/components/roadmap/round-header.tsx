@@ -17,7 +17,8 @@ type RoundHeaderProps = {
       // Stage0〜2：ラウンド内の問題番号（1始まり）と、ラウンドの総問題数
       current: number;
       total: number;
-      usageLabel?: undefined;
+      // Stage3：ラウンド進捗に加えて「今日のAI判定 あと◯回」も出す
+      usageLabel?: string;
     }
   | {
       // Stage3・Stage4：ラウンドという単位を持たないため、代わりに「今日のAI判定 あと◯回」
@@ -70,10 +71,11 @@ export function RoundHeader({ stage, subFormatLabel, poolLabel, arthurMood, curr
           )}
         </div>
 
-        {usageLabel !== undefined ? (
+        {current === undefined ? (
           <span className="text-xs text-zinc-400">{usageLabel}</span>
         ) : (
           <div className="flex items-center gap-2">
+            {usageLabel && <span className="text-xs text-zinc-400">{usageLabel}</span>}
             <span className="text-xs text-zinc-400">
               {current}/{total}問目
             </span>
