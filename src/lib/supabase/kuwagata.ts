@@ -330,7 +330,18 @@ export async function getGrowingKuwagata(
   // 最大サイズレベルに初めて届いた成虫（1匹につき一度きりの特別な演出に使う）
   maxSizeUps: RoadmapStageUp[];
 }> {
-  const all = await getUserKuwagataIndividuals(userId);
+  // 「手に入れた！」の演出をまだ見せていないタマゴは、演出より先に見えてしまわないよう結果画面に出さない。
+  const [allIndividuals, { data: uncelebrated }] = await Promise.all([
+    getUserKuwagataIndividuals(userId),
+    supabaseAdmin
+      .from("kuwagata_individuals")
+      .select("id")
+      .eq("user_id", userId)
+      .in("obtained_via", ["stage_clear", "event"])
+      .is("celebrated_at", null),
+  ]);
+  const hiddenIds = new Set((uncelebrated ?? []).map((row) => row.id as string));
+  const all = allIndividuals.filter((individual) => !hiddenIds.has(individual.id));
 
   // 練習のご褒美で段階が上がった個体は、この画面でその場で演出する（見せたものは記録して、二度出さない）。
   const practiceStageUps = findStageUps(all, true);
