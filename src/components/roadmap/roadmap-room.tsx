@@ -160,7 +160,7 @@ function StageCase({
   // 画像より手前（DOM順で後＝視覚的に上）に重ねるが、座布団自体は透かして背景の絵を感じられる程度の濃さにする。
   const labelEl = (
     <span
-      className={`whitespace-nowrap rounded-full bg-white/50 px-2.5 py-0.5 text-xs font-bold shadow-sm backdrop-blur-[1px] ${locked ? "opacity-40" : ""}`}
+      className={`whitespace-nowrap rounded-full bg-white/50 px-3 py-1 text-sm font-bold shadow-sm backdrop-blur-[1px] ${locked ? "opacity-40" : ""}`}
       style={{ color: locked ? "#71717a" : labelColor ?? color }}
     >
       {label}
