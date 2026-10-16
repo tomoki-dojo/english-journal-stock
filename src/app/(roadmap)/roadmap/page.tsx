@@ -10,6 +10,7 @@ import { OnboardingQuiz } from "@/components/roadmap/onboarding-quiz";
 import { RoadmapRoom } from "@/components/roadmap/roadmap-room";
 import { RoomNoticeModal } from "@/components/roadmap/room-notice-modal";
 import { getRoadmapNotices } from "@/lib/supabase/roadmap-notices";
+import { recordStageClearCatch } from "@/lib/supabase/kuwagata";
 
 // スピーキング・ロードマップのホーム（「アーサーの飼育部屋」）。
 // アイソメ都市マップ（RoadmapMap）は2026-10-01廃止し、探索不要の固定グリッドである
@@ -26,6 +27,10 @@ export default async function RoadmapPage() {
   if (!state || !state.onboardingQuizCompleted) {
     return <OnboardingQuiz />;
   }
+
+  // 安全網：エークワたんのタマゴは新規登録時にDBトリガーが渡すが、何かの理由で持っていない場合に備えて、
+  // 部屋に入るたびに「未所持なら渡す」(べき等)。失敗しても部屋の表示は続ける。
+  await recordStageClearCatch(user.id, 1).catch(() => {});
 
   const streakStats = await getStreakStats(user.id);
   const stageReadiness = await getRoadmapStageReadiness(user.id);
