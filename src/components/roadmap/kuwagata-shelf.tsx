@@ -1626,6 +1626,8 @@ const LEAP_SPECIES_CODE = "KW-0027";
 // 飛ぶ間は羽根を広げた姿(airborneBody)に切り替わる。
 const LEAP_CHANCE = 0.4;
 const LEAP_MS = 1100;
+// ハンたん: 羽根を広げてから実際に飛び立つまでの間(広げた姿で少し構える)。
+const LEAP_WINDUP_MS = 450;
 // ヘビたん: たまに羽ばたいて短い距離を飛ぶ(移動のたびにSNAKEFLY_CHANCEの確率)。距離はSNAKEFLY_MAX_DIST_PCT以下、飛行時間はSNAKEFLY_MS。
 const SNAKEFLY_SPECIES_CODE = "KW-0047";
 const SNAKEFLY_CHANCE = 0.4;
@@ -1685,7 +1687,8 @@ function useWander(
   leapMs = LEAP_MS,
   leapMaxDistPct = Infinity,
   flipTrap = false,
-  courtChance = 0
+  courtChance = 0,
+  leapWindupMs = 0
 ): { spot: { u: number; v: number }; facing: Facing; heading: Heading; travelMs: number; leaping: boolean; charging: boolean; posing: boolean; flipped?: boolean; hitting?: boolean; courting?: boolean } {
   const [state, setState] = useState<{
     spot: { u: number; v: number };
@@ -1940,10 +1943,10 @@ function useWander(
           const landed = { ...stateRef.current, leaping: false };
           stateRef.current = landed;
           setState(landed);
-        }, travelMs);
+        }, leapWindupMs + travelMs);
       }
       // 次の移動は、到着してからひと休みした後(休み2〜7秒)
-      timer = setTimeout(goToNextSpot, travelMs + (2000 + Math.random() * 5000) * restScale);
+      timer = setTimeout(goToNextSpot, (leaping ? leapWindupMs : 0) + travelMs + (2000 + Math.random() * 5000) * restScale);
     };
 
     // 個体ごとに最初の移動タイミングをズラす(同期して動くのを防ぐ)
@@ -2479,11 +2482,14 @@ function WanderingCreature({
     speciesCode === SNAKEFLY_SPECIES_CODE ? SNAKEFLY_MS : LEAP_MS,
     speciesCode === SNAKEFLY_SPECIES_CODE ? SNAKEFLY_MAX_DIST_PCT : Infinity,
     speciesCode === CLICK_BEETLE_SPECIES_CODE && growthStage === "成虫",
-    speciesCode === COURT_SPECIES_CODE && growthStage === "成虫" ? COURT_CHANCE : 0
+    speciesCode === COURT_SPECIES_CODE && growthStage === "成虫" ? COURT_CHANCE : 0,
+    speciesCode === LEAP_SPECIES_CODE ? LEAP_WINDUP_MS : 0
   );
   // 水中を泳ぐ種は、歩く代わりに3次元(底〜水面)を泳ぎ回る。
   const swim = useSwim(seedKey, initialSpot, widthPct, moves && swimmer, positionsRef, geo);
   const { facing, heading, leaping, charging, posing } = swimmer ? { ...walk, ...swim, leaping: false, charging: false, posing: false } : walk;
+  // 飛ぶ種は、羽根を広げた姿で少し構えてから、実際に位置が動き出す。
+  const windupMs = leaping && speciesCode === LEAP_SPECIES_CODE ? LEAP_WINDUP_MS : 0;
   const flipped = !swimmer && !!walk.flipped;
   const hitting = !swimmer && !!walk.hitting;
   const courting = !swimmer && !!walk.courting;
@@ -2502,7 +2508,7 @@ function WanderingCreature({
     : flipped
     ? `left ${travelMs}ms ease-out, top ${travelMs}ms ease-out`
     : leaping || hitting
-    ? `left ${travelMs}ms linear, top ${travelMs}ms linear`
+    ? `left ${travelMs}ms linear ${windupMs}ms, top ${travelMs}ms linear ${windupMs}ms`
     : straightFlight
     ? `left ${travelMs}ms linear, top ${travelMs}ms linear`
     : flyingCurve
@@ -2528,7 +2534,7 @@ function WanderingCreature({
       {hasArt ? (
         <div
           className={`h-full w-full ${chatting ? "animate-kuwagata-chat" : ""} ${fighting ? "animate-kuwagata-fight" : ""} ${proud ? "animate-kuwagata-proud" : ""} ${hopping ? (speciesCode === HIGH_HOP_SPECIES_CODE ? "animate-kuwagata-hop-high" : "animate-kuwagata-hop") : ""} ${charging ? (isPounce(speciesCode) ? "animate-kuwagata-stalk" : "animate-kuwagata-charge") : ""} ${stinking ? "animate-kuwagata-stink" : ""}`}
-          style={leaping ? { animation: `${isPounce(speciesCode) ? "kuwagata-pounce" : speciesCode === SNAKEFLY_SPECIES_CODE ? "kuwagata-fly-short" : speciesCode === CLICK_BEETLE_SPECIES_CODE ? "kuwagata-click-leap" : "kuwagata-leap"} ${travelMs}ms linear` } : undefined}
+          style={leaping ? { animation: `${isPounce(speciesCode) ? "kuwagata-pounce" : speciesCode === SNAKEFLY_SPECIES_CODE ? "kuwagata-fly-short" : speciesCode === CLICK_BEETLE_SPECIES_CODE ? "kuwagata-click-leap" : "kuwagata-leap"} ${travelMs}ms linear ${windupMs}ms` } : undefined}
         >
           <KnownCreatureSprite
             fighting={fighting}
