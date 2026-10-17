@@ -144,11 +144,11 @@ export function RoadmapProPlan({
       <div className="grid grid-cols-2 gap-3">
         {buildStats(shelfCap).map((stat) => (
           <div key={stat.label} className="rounded-2xl border border-amber-200 bg-white p-4 text-center shadow-sm">
-            <p className="flex items-center justify-center gap-1.5 text-xs font-bold text-zinc-600">
-              <stat.icon className="h-4 w-4 text-amber-500" strokeWidth={2} />
+            <p className="flex items-center justify-center gap-1.5 text-sm font-black text-zinc-700 sm:text-base">
+              <stat.icon className="h-5 w-5 text-amber-500" strokeWidth={2} />
               {stat.label}
             </p>
-            <p className="mt-2 text-xs font-semibold text-zinc-400 line-through decoration-zinc-300">Free {stat.free}</p>
+            <p className="mt-2 text-base font-bold sm:text-lg text-zinc-400 line-through decoration-zinc-300">Free {stat.free}</p>
             <p className="mt-0.5 leading-none">
               <span className="text-4xl font-black text-amber-500">{stat.pro}</span>
               {stat.unit && <span className="ml-0.5 text-sm font-black text-amber-600">{stat.unit}</span>}

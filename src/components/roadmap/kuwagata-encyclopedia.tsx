@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { ChevronLeft, ChevronRight, Crown, Lock } from "lucide-react";
 import type {
   KuwagataAreaCode,
@@ -128,6 +129,15 @@ function BookPage({
       {footnote && (
         <p className="mt-auto pt-3 text-center text-[10px] text-amber-900/60">{footnote}</p>
       )}
+      {proLocked && (
+        <Link
+          href="/roadmap/pro?from=zukan"
+          className="mx-auto mt-auto inline-flex items-center gap-1.5 rounded-full bg-gradient-to-b from-amber-400 to-orange-500 px-5 py-2 text-sm font-black text-white shadow-md ring-2 ring-amber-200 transition-transform hover:scale-105 active:scale-95"
+        >
+          <Crown className="h-4 w-4" />
+          Proを見る
+        </Link>
+      )}
       <span className="mt-auto pt-2 text-center font-serif text-[10px] text-amber-900/40">{pageNumber}</span>
     </div>
   );
@@ -153,6 +163,7 @@ export function KuwagataEncyclopediaView({ encyclopedia }: { encyclopedia: Kuwag
     []
   );
 
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const currentArea = chapter === "known" ? null : encyclopedia.areas.find((a) => a.areaCode === chapter) ?? null;
   const entries = chapter === "known" ? encyclopedia.known : (currentArea?.entries ?? []);
   const areaLocked = currentArea ? !currentArea.unlocked : false;
@@ -220,7 +231,24 @@ export function KuwagataEncyclopediaView({ encyclopedia }: { encyclopedia: Kuwag
       </div>
 
       <div className="rounded-xl rounded-tl-none bg-amber-900 p-2 shadow-md sm:p-3">
-        <div className="relative aspect-square w-full sm:aspect-[7/5]" style={{ perspective: "2400px" }}>
+        <div
+          className="relative aspect-square w-full sm:aspect-[7/5]"
+          style={{ perspective: "2400px", touchAction: "pan-y" }}
+          onTouchStart={(e) => {
+            const t = e.touches[0];
+            swipeStartRef.current = { x: t.clientX, y: t.clientY };
+          }}
+          onTouchEnd={(e) => {
+            const start = swipeStartRef.current;
+            swipeStartRef.current = null;
+            if (!start) return;
+            const t = e.changedTouches[0];
+            const dx = t.clientX - start.x;
+            const dy = t.clientY - start.y;
+            if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+            turn(dx < 0 ? "next" : "prev");
+          }}
+        >
           <div className="absolute inset-0 flex rounded-md" style={{ backgroundColor: PAPER }}>
             <div className="h-full w-1/2">{pageAt(staticLeft, 0)}</div>
             <div className="h-full w-1/2">{pageAt(staticRight, 1)}</div>

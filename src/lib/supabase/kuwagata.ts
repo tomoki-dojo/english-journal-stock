@@ -809,7 +809,11 @@ export type KuwagataEncyclopedia = {
   areas: KuwagataEncyclopediaArea[];
 };
 
-export async function getKuwagataEncyclopedia(userId: string): Promise<KuwagataEncyclopedia> {
+// previewAll: 開発確認用。全種を発見済み・全エリア解放済み・Pro限定も開いた状態の図鑑を返す（DBは変更しない）。
+export async function getKuwagataEncyclopedia(
+  userId: string,
+  options: { previewAll?: boolean } = {}
+): Promise<KuwagataEncyclopedia> {
   const [species, individuals, unlockedAreas, plan] = await Promise.all([
     getKuwagataSpeciesList(),
     getUserKuwagataIndividuals(userId),
@@ -822,6 +826,11 @@ export async function getKuwagataEncyclopedia(userId: string): Promise<KuwagataE
     if (firstBySpecies.has(individual.speciesId)) continue;
     firstBySpecies.set(individual.speciesId, { at: individual.obtainedAt, via: individual.obtainedVia });
   }
+  if (options.previewAll) {
+    for (const s of species) {
+      if (!firstBySpecies.has(s.id)) firstBySpecies.set(s.id, { at: new Date().toISOString(), via: "roll" });
+    }
+  }
 
   const toEntry = (s: KuwagataSpecies): KuwagataEncyclopediaEntry => {
     const first = firstBySpecies.get(s.id);
@@ -830,13 +839,13 @@ export async function getKuwagataEncyclopedia(userId: string): Promise<KuwagataE
       discovered: first !== undefined,
       firstObtainedAt: first?.at ?? null,
       firstObtainedVia: first?.via ?? null,
-      proLocked: plan === "free" && s.minPlan === "pro",
+      proLocked: !options.previewAll && plan === "free" && s.minPlan === "pro",
     };
   };
 
   const known = species.filter((s) => s.kind === "known").map(toEntry);
 
-  const unlockedSet = new Set(unlockedAreas);
+  const unlockedSet = new Set(options.previewAll ? [...KUWAGATA_AREA_ORDER, ...PRO_ONLY_AREA_CODES] : unlockedAreas);
   const areaCodesWithAquarium: KuwagataAreaCode[] = [
     ...KUWAGATA_AREA_ORDER.filter((areaCode) => isAreaReleased(species, areaCode)),
     ...PRO_ONLY_AREA_CODES.filter((areaCode) => isAreaReleased(species, areaCode)),

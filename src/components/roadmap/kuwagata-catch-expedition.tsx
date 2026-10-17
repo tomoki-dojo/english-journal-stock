@@ -60,10 +60,13 @@ export function KuwagataCatchExpedition({
   initialPendingCount,
   initialGuaranteedCount = 0,
   initialUnlockedAreas,
+  proLockedAreas = [],
 }: {
   initialPendingCount: number;
   initialGuaranteedCount?: number;
   initialUnlockedAreas: KuwagataAreaCode[];
+  // Freeに見せるPro限定エリア（マップにグレーで出し、選ぶとPro案内へ）
+  proLockedAreas?: KuwagataAreaCode[];
 }) {
   const router = useRouter();
   const [pendingCount, setPendingCount] = useState(initialPendingCount);
@@ -201,6 +204,8 @@ export function KuwagataCatchExpedition({
               unlockedAreas={initialUnlockedAreas}
               labels={AREA_LABEL}
               disabled={loading}
+              proAreas={proLockedAreas}
+              onSelectPro={() => router.push("/roadmap/pro?from=area")}
               onSelect={(areaCode) => {
                 setPicking(false);
                 setChallengeArea(areaCode);

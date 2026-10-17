@@ -7,7 +7,13 @@ import { getKuwagataEncyclopedia } from "@/lib/supabase/kuwagata";
 import { OnboardingQuiz } from "@/components/roadmap/onboarding-quiz";
 import { KuwagataEncyclopediaView } from "@/components/roadmap/kuwagata-encyclopedia";
 
-export default async function KuwagataEncyclopediaPage() {
+export default async function KuwagataEncyclopediaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ preview?: string }>;
+}) {
+  // 開発環境だけ、?preview=all で全種解放の図鑑を確認できる（DBは変更しない）。
+  const previewAll = process.env.NODE_ENV !== "production" && (await searchParams).preview === "all";
   const user = await getCurrentUser();
   if (!user) {
     redirect("/login?reason=roadmap&next=/roadmap/encyclopedia");
@@ -22,7 +28,7 @@ export default async function KuwagataEncyclopediaPage() {
   let loadError = false;
 
   try {
-    encyclopedia = await getKuwagataEncyclopedia(user.id);
+    encyclopedia = await getKuwagataEncyclopedia(user.id, { previewAll });
   } catch (err) {
     console.error(err);
     loadError = true;

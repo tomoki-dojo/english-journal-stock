@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Crown } from "lucide-react";
 import type { KuwagataAreaCode } from "@/lib/supabase/kuwagata";
 
 // public/roadmap/map/map_layout.json と同じ座標系（原点＝エリア1の中心＝4000x4000アートボードの中心）。
@@ -134,6 +135,8 @@ export function KuwagataAreaMap({
   disabled,
   revealAreas,
   onRevealed,
+  proAreas,
+  onSelectPro,
 }: {
   unlockedAreas: KuwagataAreaCode[];
   labels: Record<KuwagataAreaCode, string>;
@@ -143,6 +146,9 @@ export function KuwagataAreaMap({
   revealAreas?: KuwagataAreaCode[];
   // 雲が晴れ始めた瞬間に呼ばれる（演出の紙吹雪などを重ねる用）
   onRevealed?: () => void;
+  // Freeに見せる、Pro限定エリア（グレーで表示し、選ぶとPro案内へ）
+  proAreas?: KuwagataAreaCode[];
+  onSelectPro?: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   // 透明部分をクリックしても下のエリアに届くよう、画像のアルファ値でクリック判定する。
@@ -162,6 +168,8 @@ export function KuwagataAreaMap({
     [visibleAreas, revealKey]
   );
   const settledAreas = useMemo(() => visibleAreas.filter((a) => !revealList.includes(a)), [visibleAreas, revealList]);
+  // Freeには、Pro限定エリアは絵では見せず、雲の上にProバッジだけ置く。
+  const showProBadge = (proAreas ?? []).some((code) => !unlockedAreas.includes(code));
   const view = useMemo(() => computeView(visibleAreas), [visibleAreas]);
 
   const [revealed, setRevealed] = useState(revealList.length === 0);
@@ -358,6 +366,20 @@ export function KuwagataAreaMap({
             </span>
           );
         })}
+        {showProBadge && (
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectPro?.();
+            }}
+            className="absolute bottom-[8%] left-[3%] z-[56] inline-flex items-center gap-1 rounded-full border border-amber-300 bg-white/95 px-2.5 py-1 text-xs font-black text-amber-700 shadow transition-transform hover:scale-105 active:scale-95"
+          >
+            <Crown className="h-3.5 w-3.5 text-amber-500" />
+            Pro限定エリア
+          </button>
+        )}
       </div>
       {/* キーボード・スクリーンリーダー用 */}
       <div className="sr-only">
@@ -366,6 +388,11 @@ export function KuwagataAreaMap({
             {labels[area.code]}
           </button>
         ))}
+        {showProBadge && (
+          <button type="button" disabled={disabled} onClick={() => onSelectPro?.()}>
+            Pro限定エリア
+          </button>
+        )}
       </div>
     </div>
   );
