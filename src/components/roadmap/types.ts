@@ -136,7 +136,8 @@ export type Stage1ReportResult = {
 };
 
 // Stage2（瞬間英作文）の4サブステップ。correct_streakの値の範囲から導出する
-// （0-1=穴埋め音読, 2-3=全文瞬間英作文, 4-5=文脈からの想起, 6-7=微改変, 8=卒業）。
+// （0=穴埋め音読, 1=全文瞬間英作文, 2=文脈からの想起, 3-4=微改変, 5=卒業）。
+// 2026-10-18に卒業を8連続から5連続へ短縮した。
 export const Stage2SubStepValues = [
   "穴埋め音読",
   "全文瞬間英作文",
@@ -145,12 +146,12 @@ export const Stage2SubStepValues = [
 ] as const;
 export type Stage2SubStep = (typeof Stage2SubStepValues)[number];
 
-export const STAGE2_GRADUATE_STREAK = 8;
+export const STAGE2_GRADUATE_STREAK = 5;
 
 export function getStage2SubStep(streak: number): Stage2SubStep {
-  if (streak >= 6) return "微改変";
-  if (streak >= 4) return "文脈からの想起";
-  if (streak >= 2) return "全文瞬間英作文";
+  if (streak >= 3) return "微改変";
+  if (streak >= 2) return "文脈からの想起";
+  if (streak >= 1) return "全文瞬間英作文";
   return "穴埋め音読";
 }
 
@@ -284,9 +285,9 @@ export type Stage0ReportResult = {
 export const Stage3SubStepValues = ["ヒント付き言い換え", "自由言い換え", "ミニ拡張"] as const;
 export type Stage3SubStep = (typeof Stage3SubStepValues)[number];
 
-// correct_streakの値の範囲から導出する（0-1=ヒント付き言い換え, 2-3=自由言い換え,
-// 4-5=ミニ拡張, 6=卒業）。Stage1と同じ「各段階連続2回」パターン。
-export const STAGE3_GRADUATE_STREAK = 6;
+// correct_streakの値の範囲から導出する（0=ヒント付き言い換え, 1-2=自由言い換え,
+// 3-4=ミニ拡張, 5=卒業）。2026-10-18に卒業を6連続から5連続へ短縮し、Stage1と同じ配分(1/2/2回)にした。
+export const STAGE3_GRADUATE_STREAK = 5;
 export const STAGE3_ACTIVE_SET_SIZE = 7;
 // 1ラウンドの問題数（アクティブセットから、別々の表現を最大この数だけまとめて出題する）
 export const STAGE3_ROUND_SIZE = 5;
@@ -301,8 +302,8 @@ export const STAGE3_ROUND_SIZE = 5;
 export const STAGE3_UNLOCK_STAGE1_GRADUATIONS = 15;
 
 export function getStage3SubStep(streak: number): Stage3SubStep {
-  if (streak >= 4) return "ミニ拡張";
-  if (streak >= 2) return "自由言い換え";
+  if (streak >= 3) return "ミニ拡張";
+  if (streak >= 1) return "自由言い換え";
   return "ヒント付き言い換え";
 }
 
