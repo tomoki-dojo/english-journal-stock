@@ -1144,10 +1144,15 @@ export async function stockCatchChanceOnMasteredCountUpdate(userId: string, newT
 export async function consumePendingCatch(
   userId: string,
   areaCode: KuwagataAreaCode,
-  rareBoost = 1
+  rareBoost = 1,
+  // true=レア確定のチャンスだけ使う／false=普通のチャンスだけ使う／未指定=レア確定を優先
+  wantGuaranteed?: boolean
 ): Promise<KuwagataCatchResult | null> {
   // 残りの確認と消費を1回のSQLで行う（同時に2回送られても、消費できるのは片方だけ）。
-  const { data, error: consumeError } = await supabaseAdmin.rpc("consume_kuwagata_catch", { p_user_id: userId });
+  const { data, error: consumeError } = await supabaseAdmin.rpc("consume_kuwagata_catch", {
+    p_user_id: userId,
+    p_want_guaranteed: wantGuaranteed ?? null,
+  });
   if (consumeError) {
     throw new Error(`採集チャンスの消費に失敗しました: ${consumeError.message}`);
   }

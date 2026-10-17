@@ -1,7 +1,8 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useEffect, type CSSProperties } from "react";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
+import { useFanfare } from "./roadmap-sound";
 
 const TWINKLES = [
   { left: 10, top: 20, size: 14, delay: 0 },
@@ -22,6 +23,11 @@ export function StageUnlockOverlay({
   onClose: () => void;
 }) {
   const color = STAGE_COLORS[stage];
+  const playFanfare = useFanfare();
+  useEffect(() => {
+    playFanfare();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-8 overflow-hidden bg-black/80 px-8 text-center">

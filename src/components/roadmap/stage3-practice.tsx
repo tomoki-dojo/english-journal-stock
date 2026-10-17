@@ -243,7 +243,7 @@ export function Stage3Practice() {
     return (
       <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-100/30 px-6 py-10 text-center">
         <p className="text-sm text-zinc-700">今日のAI判定は{limit}回まで使い切りました。</p>
-        <p className="mt-1 text-xs text-zinc-400">また明日挑戦できます。Proにすると上限が大きく緩和されます。</p>
+        <p className="mt-1 text-xs text-zinc-400">また明日挑戦できます。<Link href="/roadmap/pro?from=stage3" className="font-semibold text-amber-600 underline underline-offset-2">Proにすると上限が大きく緩和されます。</Link></p>
         <Link
           href="/roadmap"
           className="mt-4 inline-flex items-center gap-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
@@ -266,7 +266,7 @@ export function Stage3Practice() {
 
         {limitReachedMidRound && (
           <p className="mt-3 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700">
-            今日のAI判定は{limit}回まで使い切りました。また明日挑戦できます。Proにすると上限が大きく緩和されます。
+            今日のAI判定は{limit}回まで使い切りました。また明日挑戦できます。<Link href="/roadmap/pro?from=stage3" className="font-semibold text-amber-600 underline underline-offset-2">Proにすると上限が大きく緩和されます。</Link>
           </p>
         )}
 

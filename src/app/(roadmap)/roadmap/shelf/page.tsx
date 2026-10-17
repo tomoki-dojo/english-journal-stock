@@ -29,6 +29,7 @@ export default async function KuwagataShelfPage() {
   let knownTanks: Awaited<ReturnType<typeof getKuwagataShelfTanks>>["knownTanks"] = [];
   let hiddenNewSpeciesTankCount = 0;
   let pendingCatchCount = 0;
+  let pendingGuaranteedCount = 0;
   let unlockedAreas: Awaited<ReturnType<typeof getUnlockedAreas>> = [];
   let newAreas: Awaited<ReturnType<typeof getUnlockedAreas>> = [];
   let loadError = false;
@@ -43,6 +44,7 @@ export default async function KuwagataShelfPage() {
     knownTanks = shelfResult.knownTanks;
     hiddenNewSpeciesTankCount = shelfResult.hiddenNewSpeciesTankCount;
     pendingCatchCount = pending.pendingCatchCount;
+    pendingGuaranteedCount = Math.min(pending.pendingGuaranteedRareCatchCount, pending.pendingCatchCount);
     unlockedAreas = areas;
     // 解放の記録は getUnlockedAreas が行うので、その後で「まだ演出を見ていないエリア」を調べる。
     newAreas = (await getUncelebratedAreas(user.id)).filter((a) => areas.includes(a));
@@ -79,13 +81,12 @@ export default async function KuwagataShelfPage() {
           {newAreas.length > 0 && (
             <KuwagataAreaUnlockCelebration unlockedAreas={unlockedAreas} newAreas={newAreas} />
           )}
-          <KuwagataCatchExpedition initialPendingCount={pendingCatchCount} initialUnlockedAreas={unlockedAreas} />
-          <KuwagataShelf tanks={tanks} knownTanks={knownTanks} />
-          {hiddenNewSpeciesTankCount > 0 && (
-            <p className="mt-4 text-center text-xs text-amber-700">
-              他にも{hiddenNewSpeciesTankCount}種類の水槽がありますが、Freeプランでは表示枠の都合で隠れています。Proにすると全部見られます。
-            </p>
-          )}
+          <KuwagataCatchExpedition
+            initialPendingCount={pendingCatchCount}
+            initialGuaranteedCount={pendingGuaranteedCount}
+            initialUnlockedAreas={unlockedAreas}
+          />
+          <KuwagataShelf tanks={tanks} knownTanks={knownTanks} lockedSpeciesCount={hiddenNewSpeciesTankCount} />
         </>
       )}
     </div>

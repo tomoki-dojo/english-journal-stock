@@ -78,7 +78,7 @@ export function ProSkipButton({ plan, proSkipEnabled, proSkipStartStage }: ProSk
       {open && !isPro && (
         <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-accent/10 px-3 py-2 text-xs text-accent ring-1 ring-accent/20">
           <span>Stageスキップ（先のStageから始める機能）はPro会員限定です。</span>
-          <Link href="/settings" className="font-medium underline underline-offset-2">
+          <Link href="/roadmap/pro?from=skip" className="font-medium underline underline-offset-2">
             プランを見る
           </Link>
         </div>

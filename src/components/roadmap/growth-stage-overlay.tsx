@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
 import type { RoadmapStageUp } from "@/lib/roadmap-notices";
 import { TankOccupant } from "./kuwagata-shelf";
+import { useGrowthSe } from "./roadmap-sound";
 
 const STAGE_LABEL: Record<RoadmapStageUp["stage"], string> = { 幼虫: "幼虫", 蛹: "サナギ", 成虫: "成虫" };
 
@@ -19,6 +21,12 @@ export function GrowthStageOverlay({
   // "maxSize": 最大サイズレベルに届いた成虫（1匹につき一度きり）
   kind?: "stage" | "maxSize";
 }) {
+  const playGrowth = useGrowthSe();
+  useEffect(() => {
+    playGrowth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const shown = stageUps.slice(0, MAX_SHOWN);
   const hiddenCount = stageUps.length - shown.length;
   const single = shown.length === 1;

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { GetSeOnMount, useFanfare } from "./roadmap-sound";
 import { ArthurAvatar } from "./arthur";
 import { CelebrationOverlay } from "./celebration-overlay";
 import { StageUnlockOverlay } from "./stage-unlock-overlay";
@@ -23,6 +24,7 @@ type Item =
   | { kind: "advice" }
   | { kind: "stageUnlock"; stage: 2 | 3 | 4 | 5; key: string }
   | { kind: "eggReason"; reason: string; key: string }
+  | { kind: "rareChance"; count: number }
   | { kind: "egg"; egg: RoadmapNewEgg }
   | { kind: "hatch"; hatch: RoadmapNewHatch }
   | { kind: "growth"; stageUps: RoadmapStageUp[] }
@@ -42,6 +44,35 @@ function renderEmphasis(text: string) {
   );
 }
 
+// 習得数がレア確定チャンスの節目に達したときの知らせ。出た瞬間にファンファーレを鳴らす。
+function RareChanceScreen({ count, onClose }: { count: number; onClose: () => void }) {
+  const playFanfare = useFanfare();
+  useEffect(() => {
+    playFanfare();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return (
+    <button
+      type="button"
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-zinc-900/90 px-8 text-center"
+    >
+      <p className="max-w-xs animate-question-card-enter text-lg font-bold leading-relaxed text-white">
+        習得したフレーズが{count}個になった！
+      </p>
+      <p
+        className="max-w-xs animate-question-card-enter text-2xl font-black leading-snug text-amber-300"
+        style={{ textShadow: "0 0 14px rgba(251,191,36,0.9), 0 2px 0 rgba(120,53,15,0.9)" }}
+      >
+        レア確定の
+        <br />
+        採集チャンスをゲット！
+      </p>
+      <span className="text-2xl text-white/70">▼</span>
+    </button>
+  );
+}
+
 // 部屋に入ったときのポップアップ。初回はエークワ博士のアドバイス、以降は未読のお知らせを1件ずつ順に出す。
 // 閉じるたびに既読をサーバーへ保存する（保存に失敗しても表示は先へ進める）。
 export function RoomNoticeModal({
@@ -51,6 +82,7 @@ export function RoomNoticeModal({
   newHatches = [],
   stageUps = [],
   trivia = null,
+  rareChance = null,
 }: {
   showAdvice: boolean;
   announcements: RoadmapAnnouncement[];
@@ -58,9 +90,12 @@ export function RoomNoticeModal({
   newHatches?: RoadmapNewHatch[];
   stageUps?: RoadmapStageUp[];
   trivia?: { id: string; body: string } | null;
+  rareChance?: number | null;
 }) {
   const [queue, setQueue] = useState<Item[]>(() => [
     ...(showAdvice ? ([{ kind: "intro" }, { kind: "advice" }] as Item[]) : []),
+    // 習得数がレア確定の節目に達したときの知らせ（タマゴより先に出す）
+    ...(rareChance ? ([{ kind: "rareChance", count: rareChance }] as Item[]) : []),
     // Stage解放で配られたタマゴは、タマゴ入手の演出の前に「Stage◯が解放された！」を挟む。
     // 節目のイベントで配られたタマゴは、先に「もらえた理由」を見せてからタマゴを渡す。
     ...newEggs.flatMap((egg): Item[] => {
@@ -194,6 +229,16 @@ export function RoomNoticeModal({
     );
   }
 
+  if (current.kind === "rareChance") {
+    return (
+      <RareChanceScreen
+        key={`rare-chance-${current.count}`}
+        count={current.count}
+        onClose={() => setQueue((q) => q.slice(1))}
+      />
+    );
+  }
+
   if (current.kind === "stageUnlock") {
     return (
       <StageUnlockOverlay
@@ -221,6 +266,7 @@ export function RoomNoticeModal({
         artClassName="animate-kuwagata-egg"
         message={`${egg.speciesName}のタマゴを手に入れた！`}
       >
+        <GetSeOnMount />
         <button
           type="button"
           onClick={closeEgg}

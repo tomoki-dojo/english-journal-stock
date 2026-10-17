@@ -1,8 +1,26 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { Bug, Check, ChevronLeft, ChevronRight, Pencil, X } from "lucide-react";
+import Link from "next/link";
+import { Bug, Check, ChevronLeft, ChevronRight, Lock, Pencil, X } from "lucide-react";
 import type { KuwagataGrowthStage, KuwagataShelfTank } from "@/lib/supabase/kuwagata";
+import {
+  DEFAULT_BODY_SHAPE,
+  bodyCircle,
+  bodyCircles,
+  FOOT_RADIUS_FACTOR,
+  FOOT_RISE_FACTOR,
+  circlesSlack,
+  distPct,
+  slackToStatic,
+  type Obstacle,
+  ellipseShape,
+  progress,
+  scanPath,
+  type BodyShape,
+  type Ease,
+  type WorldEntry,
+} from "@/lib/tank-collision";
 
 const GROWTH_STAGE_LABEL: Record<string, string> = {
   卵: "卵",
@@ -1551,17 +1569,41 @@ const AQUARIUM_GEOMETRY: TankGeometry = {
 // 古代の森(tank_bg_ancient.png)。水は張らず(heightPct=0)、地面の天面の実測は、水を張った水槽の底と同じ座標で描いてある。
 const ANCIENT_GEOMETRY: TankGeometry = { ...AQUARIUM_GEOMETRY, heightPct: 0 };
 
-// 古代の森の背景絵の中の障害物(川・倒木・岩・シダ)。生き物が川や倒木の上に立たないよう、置物と同じ扱いで避ける。
-// 位置は背景絵(688×516px)の見た目の位置から、底の面の(u,v)に換算した値。widthPctは避ける大きさの目安(置物と同じ単位)。
-const ANCIENT_OBSTACLES: { u: number; v: number; widthPct: number }[] = [
-  { u: 0.7, v: 0.84, widthPct: 14 }, // 川(手前〜左端)
-  { u: 0.79, v: 0.53, widthPct: 14 }, // 川(中ほど)
-  { u: 0.89, v: 0.22, widthPct: 14 }, // 川(奥側)
-  { u: 0.97, v: 0.05, widthPct: 12 }, // 川(右端)
-  { u: 0.24, v: 0.7, widthPct: 14 }, // 倒木
-  { u: 0.645, v: 0.36, widthPct: 8 }, // 岩
-  { u: 0.93, v: 0.86, widthPct: 7 }, // 手前の小さな岩
-  { u: 0.39, v: 0.81, widthPct: 8 }, // 丸まったシダ
+// 置物・背景の障害物。u,v,widthPctは立体の置物(胴体の円にする)。screenがあれば、画面の%でそのまま指定した地面の障害物(足元の円と照合)。
+type DecoSpot = { u: number; v: number; widthPct: number; screen?: { left: number; top: number; radius: number; water?: boolean } };
+const staticCircle = (spot: DecoSpot, geo: TankGeometry): Obstacle =>
+  spot.screen ? { pt: { left: spot.screen.left, top: spot.screen.top }, radius: spot.screen.radius, ground: true } : bodyCircle(surfacePoint(spot.u, spot.v, geo), spot.widthPct);
+
+// 置物・背景のうち、通り抜けられる水場(川)と、ぶつかる障害物に分ける。
+const solidSpotsOf = (spots: DecoSpot[]) => spots.filter((spot) => !spot.screen?.water);
+const waterZonesOf = (spots: DecoSpot[]): Obstacle[] =>
+  spots.filter((spot) => spot.screen?.water).map((spot) => ({ pt: { left: spot.screen!.left, top: spot.screen!.top }, radius: spot.screen!.radius }));
+// 足元(pt)が水場の中か。円の縁ぎりぎりでは出さないよう、半径の0.92倍で判定する。
+const isInWater = (pt: { left: number; top: number }, zones: Obstacle[]) => zones.some((z) => distPct(pt, z.pt) < z.radius * 0.92);
+// 羽のある種(置物・背景は無視して通り抜ける。虫同士は今まで通りぶつかる)。
+const NO_DECORATIONS: DecoSpot[] = [];
+const WINGED_SPECIES_CODES = ["KW-0011", "KW-0012", "KW-0015", "KW-0016", "KW-0020", "KW-0025", "KW-0026", "KW-0027", "KW-0028", "KW-0045", "KW-0047", "KW-0049", "KW-0051", "KW-0053", "KW-0057"];
+
+// 古代の森の背景絵の中の障害物(川・倒木・岩・シダ・植物)。生き物が川や倒木の上に立たないよう、置物と同じ扱いで避ける。
+// 背景絵(688×516px)で見た位置と大きさを、そのまま画面の%(left=x/688, top=y/516, radius=半径px/688)で持つ。
+// 地面にある平たい物なので、相手の足元の円と照合する(ground)。川(water)は通り抜けられる水場で、ぶつからず、足元に水しぶきが出る(円をつないで細長く表す)。
+const ANCIENT_OBSTACLES: DecoSpot[] = [
+  { u: 0, v: 0, widthPct: 0, screen: { left: 46.8, top: 78.5, radius: 3.5, water: true } }, // 川
+  { u: 0, v: 0, widthPct: 0, screen: { left: 56.0, top: 79.5, radius: 4.7, water: true } }, // 川
+  { u: 0, v: 0, widthPct: 0, screen: { left: 64.7, top: 78.5, radius: 6.1, water: true } }, // 川
+  { u: 0, v: 0, widthPct: 0, screen: { left: 73.4, top: 75.2, radius: 6.7, water: true } }, // 川
+  { u: 0, v: 0, widthPct: 0, screen: { left: 81.7, top: 68.6, radius: 6.7, water: true } }, // 川
+  { u: 0, v: 0, widthPct: 0, screen: { left: 89.8, top: 63.2, radius: 4.9, water: true } }, // 川
+  { u: 0, v: 0, widthPct: 0, screen: { left: 95.2, top: 61.6, radius: 3.2, water: true } }, // 川
+  { u: 0, v: 0, widthPct: 0, screen: { left: 21.8, top: 61.0, radius: 2.9 } }, // 倒木
+  { u: 0, v: 0, widthPct: 0, screen: { left: 26.9, top: 58.5, radius: 2.9 } }, // 倒木
+  { u: 0, v: 0, widthPct: 0, screen: { left: 32.0, top: 56.2, radius: 2.6 } }, // 倒木
+  { u: 0, v: 0, widthPct: 0, screen: { left: 63.5, top: 61.0, radius: 3.2 } }, // 岩
+  { u: 0, v: 0, widthPct: 0, screen: { left: 71.2, top: 84.7, radius: 2.0 } }, // 手前の小さな岩
+  { u: 0, v: 0, widthPct: 0, screen: { left: 34.2, top: 67.4, radius: 3.5 } }, // 丸まったシダ
+  { u: 0, v: 0, widthPct: 0, screen: { left: 48.0, top: 50.8, radius: 4.9 } }, // 大きな葉の植物
+  { u: 0, v: 0, widthPct: 0, screen: { left: 65.0, top: 49.4, radius: 1.5 } }, // 右の木の根もと
+  { u: 0, v: 0, widthPct: 0, screen: { left: 78.5, top: 54.3, radius: 1.5 } }, // 右の木の根もと
 ];
 
 // 平行四辺形なので back + u*(right-back) + v*(left-back) で底の面内の任意の点が求まる。
@@ -1578,12 +1620,19 @@ function surfacePoint(u: number, v: number, geo: TankGeometry = TERRARIUM_GEOMET
 // 「虫の幅の約35%」以上内側に制限する(大きい虫ほど左右の端に寄れない)。
 // 奥・手前の縁は、虫が縁の上に立って見えるだけなので制限しない。
 const SPOT_EDGE_MARGIN = 0.08;
+// 大きい個体ほど、足元が天面の縁に寄りすぎないよう縁から離す(足元の円の半径=幅の0.3倍ぶん)。
+// 天面の平行四辺形は、(u,v)を1動かすと縁までの画面上の距離がそれぞれ約64・約29(横幅%相当)動く。
+const SURFACE_EDGE_DEPTH_U = 64;
+const SURFACE_EDGE_DEPTH_V = 29;
 function pickRandomSpot(widthPct: number, random: () => number, geo: TankGeometry = TERRARIUM_GEOMETRY): { u: number; v: number } {
   const halfWidth = widthPct * 0.35;
+  const foot = widthPct * 0.3;
+  const marginU = Math.min(0.3, Math.max(SPOT_EDGE_MARGIN, foot / SURFACE_EDGE_DEPTH_U));
+  const marginV = Math.min(0.3, Math.max(SPOT_EDGE_MARGIN, foot / SURFACE_EDGE_DEPTH_V));
   for (let attempt = 0; attempt < 20; attempt++) {
     const candidate = {
-      u: SPOT_EDGE_MARGIN + random() * (1 - 2 * SPOT_EDGE_MARGIN),
-      v: SPOT_EDGE_MARGIN + random() * (1 - 2 * SPOT_EDGE_MARGIN),
+      u: marginU + random() * (1 - 2 * marginU),
+      v: marginV + random() * (1 - 2 * marginV),
     };
     const { left } = surfacePoint(candidate.u, candidate.v, geo);
     if (left >= halfWidth + 1 && left <= 99 - halfWidth) return candidate;
@@ -1617,6 +1666,37 @@ function spriteRadius(widthPct: number): number {
 }
 
 const SPOT_PICK_ATTEMPTS = 30;
+// 経路まで調べて行き先を選ぶときの候補数。経路チェックは距離計算が増えるので、行き先だけを見ていた頃より多めに試す。
+const PATH_PICK_ATTEMPTS = 40;
+// 到着後にその場で休んでいる間(ms)、動いている他個体の経路とぶつからないかも見る。
+const PATH_REST_CHECK_MS = 3000;
+// 歩く途中で何かに触れるとき、すぐ手前(経路の15%未満)で当たってしまう行き先は選びなおす回数と、その基準。
+// それでも当たる向きしか無いときは、その場で(ほとんど動かずに)怒る。
+const PLAN_RETRIES = 6;
+const PLAN_MIN_HIT_FRAC = 0.15;
+// ぶつかって止まったときの反応(怒る)の長さ、弾き返される長さ、最低限歩く時間。
+const BUMP_MS = 1100;
+// 触れたとみなして止まる距離(円の半径の和に対する割合)。1だと円どうしが触れた時点で止まるが、円は余裕をもたせて
+// 大きめにしてあるので、絵が実際に触れていないのに止まって見える。小さくするほど近づけるが、絵が重なって見えやすくなる。
+const BUMP_CONTACT_FACTOR = 0.85;
+// ぶつかったときの反応。いまは当たり判定の確認用に、全ての個体が「！」を出して震える。
+// 製品版では"none"(止まるだけ)を基本にして、フリー水槽で「仲の悪い種類どうしがぶつかったら怒って小競り合い」のように
+// 相手(scanPathのhitWith)や種類によって反応を変える使い方を想定している。
+// ぶつかったときの反応。none=何もしない / alert=「！」を出して震える(当たり判定の確認用) /
+// angry=「💢」を出して全身を赤く光らせ、プンプン怒る(怒りっぽい種) / chat=おしゃべり(シャベクワたん)。
+// 種類によって変えられる。将来「仲の悪い種類は小競り合い」なども、ここに足す。
+type BumpReaction = "none" | "alert" | "angry" | "chat";
+// 怒りっぽい種。ここに種類コードを足すと、ぶつかったときに「💢」で怒る。
+// フルクワたん・トンたん(縄張り)・カブたん(押し相撲)・スズたん・オニたん・ヘルたん・サソたん・カマたん・グンたん
+const ANGRY_SPECIES_CODES = ["KW-0008", "KW-0016", "KW-0014", "KW-0020", "KW-0028", "KW-0055", "KW-0031", "KW-0018", "KW-0033"];
+const bumpReactionFor = (speciesCode: string): BumpReaction =>
+  speciesCode === CHATTER_SPECIES_CODE ? "chat" : ANGRY_SPECIES_CODES.includes(speciesCode) ? "angry" : "alert";
+// 怒っている間、全身にかける赤い光(影の赤い発光+赤みがかった色味)。
+const ANGRY_FILTER = "drop-shadow(0 0 7px rgba(239,68,68,0.95)) drop-shadow(0 0 2px rgba(220,38,38,1)) sepia(0.45) saturate(3.5) hue-rotate(-50deg) brightness(1.08)";
+const BUMP_RECOIL_MS = 260;
+// ぶつかったときに弾き返される距離(予定していた道のりに対する割合の上限)。小さいほど反動が小さい(2026-10: 0.12→0.04)。
+const BUMP_RECOIL_FRAC = 0.04;
+const BUMP_MIN_WALK_MS = 500;
 
 // 歩く速さ。移動時間(travelMs)=距離(横幅%相当)×TRAVEL_MS_PER_PCT を、MIN〜MAXの範囲に収める。
 // 大きいほどゆっくり歩く(2026-10: 移動範囲を全面に広げて速く見えたため、固定7秒から距離比例に変更)。
@@ -1636,6 +1716,93 @@ const SNAKEFLY_MAX_DIST_PCT = 30;
 // コメたん: 歩いている途中で置物や他の個体にぶつかったら、その場で裏返ってじたばた(CLICK_FLIP_MS)し、
 // パチンと跳ねて(CLICK_HOP_MS)近くに着地する。ぶつからない移動のときは普通に歩くだけ。
 const CLICK_BEETLE_SPECIES_CODE = "KW-0048";
+// コメたんの当たり判定: 絵から測った胴体の形(長軸が画面で「／」に約30度傾いた楕円。足元から幅の0.35倍上が中心)を、3つの円で近似。
+const CLICK_BEETLE_SHAPE = ellipseShape(0, 0.35, 0.47, 0.26, 30);
+// 成虫の胴体(脚・ツノを除く本体の絵。体が複数パーツの種類は全パーツ+頭)の外接枠から自動で測った値 [中心の右への位置, 中心の足元からの高さ, 半幅, 半高](どれも絵の幅に対する割合)。
+// public/roadmap/kuwagata の *_front_body.svg の不透明部分から計算(絵を差し替えたら測り直す)。
+const BODY_FIT: Record<string, [number, number, number, number]> = {
+  "KW-0001": [0.00, 0.56, 0.42, 0.31],
+  "KW-0002": [0.00, 0.58, 0.42, 0.33],
+  "KW-0003": [0.05, 0.51, 0.40, 0.28],
+  "KW-0004": [0.05, 0.60, 0.44, 0.40],
+  "KW-0005": [0.00, 0.54, 0.42, 0.33],
+  "KW-0006": [-0.02, 0.52, 0.37, 0.27],
+  "KW-0007": [0.01, 0.53, 0.40, 0.27],
+  "KW-0008": [0.06, 0.51, 0.43, 0.29],
+  "KW-0009": [0.00, 0.51, 0.44, 0.32],
+  "KW-0010": [0.00, 0.55, 0.44, 0.35],
+  "KW-0011": [-0.15, 0.48, 0.33, 0.46],
+  "KW-0012": [0.00, 0.40, 0.46, 0.34],
+  "KW-0013": [-0.00, 0.52, 0.33, 0.48],
+  "KW-0014": [-0.00, 0.54, 0.43, 0.33],
+  "KW-0015": [-0.07, 0.42, 0.35, 0.37],
+  "KW-0016": [0.03, 0.45, 0.45, 0.23],
+  "KW-0017": [-0.00, 0.51, 0.49, 0.36],
+  "KW-0018": [0.00, 0.57, 0.47, 0.40],
+  "KW-0019": [0.03, 0.45, 0.45, 0.31],
+  "KW-0020": [-0.01, 0.41, 0.48, 0.34],
+  "KW-0021": [0.05, 0.53, 0.41, 0.34],
+  "KW-0022": [-0.07, 0.44, 0.41, 0.29],
+  "KW-0023": [0.03, 0.40, 0.44, 0.26],
+  "KW-0024": [0.02, 0.52, 0.34, 0.26],
+  "KW-0025": [0.10, 0.31, 0.39, 0.27],
+  "KW-0026": [-0.15, 0.50, 0.33, 0.45],
+  "KW-0027": [0.04, 0.44, 0.45, 0.30],
+  "KW-0028": [0.02, 0.37, 0.43, 0.36],
+  "KW-0029": [-0.01, 0.48, 0.40, 0.31],
+  "KW-0030": [-0.00, 0.51, 0.49, 0.36],
+  "KW-0031": [-0.02, 0.46, 0.35, 0.28],
+  "KW-0032": [0.00, 0.38, 0.49, 0.30],
+  "KW-0033": [-0.00, 0.59, 0.50, 0.31],
+  "KW-0034": [0.07, 0.34, 0.40, 0.27],
+  "KW-0035": [0.02, 0.51, 0.46, 0.40],
+  "KW-0036": [-0.01, 0.49, 0.35, 0.26],
+  "KW-0037": [-0.01, 0.50, 0.48, 0.24],
+  "KW-0038": [0.01, 0.54, 0.34, 0.42],
+  "KW-0039": [-0.03, 0.36, 0.38, 0.27],
+  "KW-0044": [0.03, 0.45, 0.39, 0.29],
+  "KW-0045": [-0.02, 0.36, 0.44, 0.30],
+  "KW-0046": [-0.04, 0.39, 0.44, 0.22],
+  "KW-0047": [-0.08, 0.42, 0.41, 0.29],
+  "KW-0048": [-0.03, 0.33, 0.46, 0.27],
+  "KW-0049": [-0.13, 0.47, 0.29, 0.32],
+  "KW-0050": [0.00, 0.42, 0.32, 0.24],
+  "KW-0051": [-0.09, 0.43, 0.23, 0.27],
+  "KW-0052": [0.07, 0.44, 0.41, 0.42],
+  "KW-0053": [-0.13, 0.45, 0.32, 0.31],
+  "KW-0054": [-0.01, 0.51, 0.48, 0.36],
+  "KW-0055": [0.01, 0.50, 0.49, 0.32],
+  "KW-0056": [0.08, 0.52, 0.41, 0.36],
+  "KW-0057": [0.02, 0.39, 0.37, 0.33],
+  "KW-0058": [0.05, 0.38, 0.40, 0.32],
+};
+const BODY_FIT_MARGIN = 0.95;
+// 種類ごとの当たり判定の形。成虫は胴体に合わせた楕円(横長は横に、縦長は縦に並べた3つの円)。
+// コメたんとKW-0054は斜めに傾けた楕円を手で指定。測定値がない種類・成虫以外は丸(DEFAULT_BODY_SHAPE)。
+// KW-0054(ヤスデ系)は、頭が左下・しっぽが右上へ「／」に伸びる体なので、コメたんと同様に斜めの楕円にする。
+const MILLIPEDE_SHAPE = ellipseShape(0, 0.52, 0.46, 0.22, 30);
+// 形は毎回同じ配列を返す(useWanderの依存に入るため、描画のたびに新しい配列を作ると、動きの計画が毎回やり直しになって動かなくなる)。
+const bodyShapeCache = new Map<string, BodyShape>();
+function bodyShapeFor(speciesCode: string, growthStage: KuwagataGrowthStage): BodyShape {
+  const key = `${speciesCode}|${growthStage}`;
+  let shape = bodyShapeCache.get(key);
+  if (!shape) {
+    shape = computeBodyShape(speciesCode, growthStage);
+    bodyShapeCache.set(key, shape);
+  }
+  return shape;
+}
+function computeBodyShape(speciesCode: string, growthStage: KuwagataGrowthStage): BodyShape {
+  if (growthStage !== "成虫") return DEFAULT_BODY_SHAPE;
+  if (speciesCode === CLICK_BEETLE_SPECIES_CODE) return CLICK_BEETLE_SHAPE;
+  if (speciesCode === "KW-0054") return MILLIPEDE_SHAPE;
+  const fit = BODY_FIT[speciesCode];
+  if (!fit) return DEFAULT_BODY_SHAPE;
+  const [cx, cy, hw, hh] = fit;
+  const w = hw * BODY_FIT_MARGIN;
+  const h = hh * BODY_FIT_MARGIN;
+  return w >= h ? ellipseShape(cx, cy, w, h, 0) : ellipseShape(cx, cy, h, w, 90);
+}
 const CLICK_FLIP_MS = 1800;
 const CLICK_HOP_MS = 1000;
 const CLICK_HOP_MAX_DIST_PCT = 20;
@@ -1644,7 +1811,7 @@ const CLICK_MIN_WALK_MS = 1200;
 const CLICK_DASH_MS_PER_PCT = 400;
 const CLICK_RECOIL_MS = 260;
 // 円の半径の和に対する「ぶつかった」とみなす距離の比。小さいほど、絵が実際に触れるくらいまで近づく。
-const CLICK_CONTACT_FACTOR = 0.6;
+const CLICK_CONTACT_FACTOR = 0.85;
 // クジャクたん: 移動と移動の間に一定確率で、その場で正面を向いて求愛ダンス(COURT_MS)をする。
 const COURT_SPECIES_CODE = "KW-0052";
 const COURT_CHANCE = 0.4;
@@ -1673,8 +1840,8 @@ function useWander(
   initial: { u: number; v: number },
   widthPct: number,
   moves: boolean,
-  decorationSpots: { u: number; v: number; widthPct: number }[],
-  positionsRef: { current: Record<string, { u: number; v: number; widthPct: number }> },
+  decorationSpots: DecoSpot[],
+  positionsRef: { current: Record<string, WorldEntry> },
   travelScale = 1,
   leapChance = 0,
   chargeHopChance = 0,
@@ -1688,8 +1855,12 @@ function useWander(
   leapMaxDistPct = Infinity,
   flipTrap = false,
   courtChance = 0,
-  leapWindupMs = 0
-): { spot: { u: number; v: number }; facing: Facing; heading: Heading; travelMs: number; leaping: boolean; charging: boolean; posing: boolean; flipped?: boolean; hitting?: boolean; courting?: boolean } {
+  leapWindupMs = 0,
+  shape: BodyShape = DEFAULT_BODY_SHAPE,
+  bumpReaction: BumpReaction = "alert",
+  chatTriggerRef?: { current: (() => void) | null },
+  waterZones: Obstacle[] = []
+): { wading: boolean; spot: { u: number; v: number }; facing: Facing; heading: Heading; travelMs: number; leaping: boolean; charging: boolean; posing: boolean; flipped?: boolean; hitting?: boolean; courting?: boolean; bumped?: boolean } {
   const [state, setState] = useState<{
     spot: { u: number; v: number };
     facing: Facing;
@@ -1707,6 +1878,8 @@ function useWander(
     flipped?: boolean;
     // 求愛ダンス中(クジャクたん。その場で正面を向く)
     courting?: boolean;
+    // 何かにぶつかって怒っている最中(その場で震えて「！」を出す)
+    bumped?: boolean;
   }>({
     spot: initial,
     facing: "front",
@@ -1717,15 +1890,18 @@ function useWander(
     posing: false,
   });
   const stateRef = useRef(state);
+  // 足元が水場(川)の中にいる間はtrue(水しぶきを出す)。
+  const [wading, setWading] = useState(false);
+  const wadingRef = useRef(false);
 
   useEffect(() => {
     const positions = positionsRef.current;
-    positions[seedKey] = { ...initial, widthPct };
+    positions[seedKey] = { ...initial, widthPct, shape };
     return () => {
       delete positions[seedKey];
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seedKey, widthPct]);
+  }, [seedKey, widthPct, shape]);
 
   useEffect(() => {
     if (!moves) return;
@@ -1735,30 +1911,159 @@ function useWander(
     let chargeTimer: ReturnType<typeof setTimeout> | undefined;
     let poseTimer: ReturnType<typeof setTimeout> | undefined;
     let flipTimer: ReturnType<typeof setTimeout> | undefined;
-    const ownRadius = spriteRadius(widthPct);
-    const decorationPts = decorationSpots.map((spot) => ({ pt: surfacePoint(spot.u, spot.v, geo), radius: spriteRadius(spot.widthPct) }));
+    let bumpTimer: ReturnType<typeof setTimeout> | undefined;
+    // いまいる場所が水場なら、最初から水しぶきを出す。
+    if (waterZones.length > 0) {
+      const nowInWater = isInWater(surfacePoint(stateRef.current.spot.u, stateRef.current.spot.v, geo), waterZones);
+      wadingRef.current = nowInWater;
+      setWading(nowInWater);
+    }
+    // 他の個体にぶつかられたとき、こちらも「！」を出す(反応の種類はbumpReactionFor)。
+    if (positionsRef.current[seedKey]) {
+      positionsRef.current[seedKey].onBump = () => {
+        if (cancelled) return;
+        if (bumpReaction === "chat") {
+          chatTriggerRef?.current?.();
+          return;
+        }
+        if (bumpReaction !== "alert" && bumpReaction !== "angry") return;
+        const alerted = { ...stateRef.current, bumped: true };
+        stateRef.current = alerted;
+        setState(alerted);
+        if (bumpTimer) clearTimeout(bumpTimer);
+        bumpTimer = setTimeout(() => {
+          if (cancelled) return;
+          const calm = { ...stateRef.current, bumped: false };
+          stateRef.current = calm;
+          setState(calm);
+        }, BUMP_MS);
+      };
+    }
+    // 置物は胴体の円にして判定する(個体も同じ式。tank-collision.tsのbodyCircle)。
+    const decorationPts = decorationSpots.map((spot) => staticCircle(spot, geo));
+    const othersList = () =>
+      Object.entries(positionsRef.current)
+        .filter(([id]) => id !== seedKey)
+        .map(([id, entry]) => ({ entry, id }));
 
-    const pickNextSpot = () => {
-      const others = Object.entries(positionsRef.current).filter(([id]) => id !== seedKey);
+    // 次の行き先を決める。置物・他個体のどれとも、経路上(動いている相手の予定位置を含む)で触れない場所を優先して選ぶ。
+    // opts: 出発までの待ち(delayMs)・距離から所要時間を出す関数(durOf)・イージング(ease)。
+    // 触れずに行ける候補が無ければ、一番マシな候補を返す(lastSlack<0で呼び出し側が判断する)。
+    type PickOpts = { delayMs?: number; durOf?: (distPct: number) => number; ease?: Ease };
+    const walkDurOf = (d: number) =>
+      Math.min(MAX_TRAVEL_MS * travelScale, Math.max(MIN_TRAVEL_MS * travelScale, d * TRAVEL_MS_PER_PCT * travelScale));
+    let lastSlack = 0;
+    const pickNextSpot = (opts: PickOpts = {}) => {
+      const others = othersList();
+      const from = surfacePoint(stateRef.current.spot.u, stateRef.current.spot.v, geo);
+      const durOf = opts.durOf ?? walkDurOf;
+      const ease = opts.ease ?? "inout";
+      const startMs = Date.now() + (opts.delayMs ?? 0);
+      let best = pickRandomSpot(widthPct, Math.random, geo);
+      let bestSlack = -Infinity;
+      for (let attempt = 0; attempt < PATH_PICK_ATTEMPTS; attempt++) {
+        const candidate = pickRandomSpot(widthPct, Math.random, geo);
+        const to = surfacePoint(candidate.u, candidate.v, geo);
+        const { minSlack } = scanPath({
+          proj: (u, v) => surfacePoint(u, v, geo),
+          from,
+          to,
+          startMs,
+          durMs: durOf(surfaceDistancePct(from, to)),
+          ease,
+          ownWidthPct: widthPct,
+          ownShape: shape,
+          statics: decorationPts,
+          others,
+          restMs: PATH_REST_CHECK_MS,
+        });
+        if (minSlack > bestSlack) {
+          bestSlack = minSlack;
+          best = candidate;
+        }
+        if (bestSlack >= 0) break; // 経路のどこでも触れない候補が見つかったので十分
+      }
+      lastSlack = bestSlack;
+      return best;
+    };
+    // 出発から到着までを他個体に知らせる(動いている間の予定位置を、他個体が先回りして避けられるように)。
+    // 移動の予定(出発点・終点・所要時間・イージング)から、足元が水場に入る・出る時刻を先に調べ、その時刻に水しぶきを出し入れする。
+    const wadeTimers: ReturnType<typeof setTimeout>[] = [];
+    const clearWadeTimers = () => {
+      while (wadeTimers.length) clearTimeout(wadeTimers.pop());
+    };
+    const scheduleWading = (fromSpot: { u: number; v: number }, toSpot: { u: number; v: number }, delayMs: number, durMs: number, ease: Ease) => {
+      if (waterZones.length === 0) return;
+      clearWadeTimers();
+      const a = surfacePoint(fromSpot.u, fromSpot.v, geo);
+      const b = surfacePoint(toSpot.u, toSpot.v, geo);
+      const steps = Math.max(4, Math.ceil(durMs / 120));
+      let cur = wadingRef.current;
+      for (let k = 0; k <= steps; k++) {
+        const x = k / steps;
+        const pr = progress(ease, x);
+        const inside = isInWater({ left: a.left + (b.left - a.left) * pr, top: a.top + (b.top - a.top) * pr }, waterZones);
+        if (inside === cur) continue;
+        cur = inside;
+        wadeTimers.push(
+          setTimeout(() => {
+            if (cancelled) return;
+            wadingRef.current = inside;
+            setWading(inside);
+          }, delayMs + x * durMs),
+        );
+      }
+    };
+    const reserve = (fromSpot: { u: number; v: number }, toSpot: { u: number; v: number }, delayMs: number, durMs: number, ease: Ease) => {
+      scheduleWading(fromSpot, toSpot, delayMs, durMs, ease);
+      positionsRef.current[seedKey] = {
+        onBump: positionsRef.current[seedKey]?.onBump,
+        shape,
+        u: toSpot.u,
+        v: toSpot.v,
+        widthPct,
+        track: { fromU: fromSpot.u, fromV: fromSpot.v, t0: Date.now() + delayMs, durMs, ease },
+      };
+    };
+    // 近めの着地点を選ぶ(跳ねる・飛ぶ距離の上限maxDist以内を優先)。触れずに行ける候補を優先し、その中で一番近いものを採る。
+    const pickNear = (fromPt: { left: number; top: number }, maxDist: number, opts: PickOpts) => {
+      let best = pickNextSpot(opts);
+      let bestSlack = lastSlack;
+      let bestDist = surfaceDistancePct(fromPt, surfacePoint(best.u, best.v, geo));
+      for (let i = 0; i < 14 && (bestDist > maxDist || bestSlack < 0); i++) {
+        const cand = pickNextSpot(opts);
+        const slack = lastSlack;
+        const d = surfaceDistancePct(fromPt, surfacePoint(cand.u, cand.v, geo));
+        const better =
+          bestSlack < 0 ? slack > bestSlack : slack >= 0 && d < bestDist;
+        if (better) {
+          best = cand;
+          bestSlack = slack;
+          bestDist = d;
+        }
+      }
+      lastSlack = bestSlack;
+      return best;
+    };
+    // 経路は見ず、行き先だけが置物・他個体と重ならない場所を選ぶ(コメたん用。わざとぶつかる経路を許すため)。
+    const pickDestinationOnly = () => {
+      const others = othersList();
       let best = pickRandomSpot(widthPct, Math.random, geo);
       let bestSlack = -Infinity;
       for (let attempt = 0; attempt < SPOT_PICK_ATTEMPTS; attempt++) {
         const candidate = pickRandomSpot(widthPct, Math.random, geo);
-        const pt = surfacePoint(candidate.u, candidate.v, geo);
-        // スコア=一番近い障害物との余裕(距離-必要距離)の最小値。プラスなら衝突なし、
-        // マイナスでも値が大きい(=0に近い)ほど「まだマシな重なり方」として優先される。
+        const own = bodyCircles(surfacePoint(candidate.u, candidate.v, geo), widthPct, shape);
         let slack = Infinity;
-        for (const d of decorationPts) {
-          slack = Math.min(slack, surfaceDistancePct(pt, d.pt) - (ownRadius + d.radius));
-        }
-        for (const [, other] of others) {
-          slack = Math.min(slack, surfaceDistancePct(pt, surfacePoint(other.u, other.v, geo)) - (ownRadius + spriteRadius(other.widthPct)));
+        for (const d of decorationPts) slack = Math.min(slack, slackToStatic(surfacePoint(candidate.u, candidate.v, geo), widthPct, shape, d));
+        for (const o of others) {
+          // 相手の行き先(到着後の位置)から離れた場所を選ぶ。
+          slack = Math.min(slack, circlesSlack(own, bodyCircles(surfacePoint(o.entry.u, o.entry.v, geo), o.entry.widthPct, o.entry.shape)));
         }
         if (slack > bestSlack) {
           bestSlack = slack;
           best = candidate;
         }
-        if (bestSlack >= 0) break; // 完全に衝突しない候補が見つかったので十分
+        if (bestSlack >= 0) break;
       }
       return best;
     };
@@ -1798,22 +2103,13 @@ function useWander(
       if (chargeHopChance > 0 && Math.random() < chargeHopChance) {
         // 近めの着地点を選ぶ(少し弧を描いて跳ねる距離)。その場で溜めてから跳ねる。
         const prevPt0 = surfacePoint(prev.spot.u, prev.spot.v, geo);
-        let hopSpot = pickNextSpot();
-        let hopDist = surfaceDistancePct(prevPt0, surfacePoint(hopSpot.u, hopSpot.v, geo));
-        for (let i = 0; i < 14 && hopDist > hopMaxDistPct; i++) {
-          const cand = pickNextSpot();
-          const d = surfaceDistancePct(prevPt0, surfacePoint(cand.u, cand.v, geo));
-          if (d < hopDist) {
-            hopSpot = cand;
-            hopDist = d;
-          }
-        }
+        const hopSpot = pickNear(prevPt0, hopMaxDistPct, { delayMs: chargeMs, durOf: () => hopMs, ease: "linear" });
         const charging = { ...prev, leaping: false, charging: true };
         stateRef.current = charging;
         setState(charging);
         chargeTimer = setTimeout(() => {
           if (cancelled) return;
-          positionsRef.current[seedKey] = { ...hopSpot, widthPct };
+          reserve(prev.spot, hopSpot, 0, hopMs, "linear");
           const toPt = surfacePoint(hopSpot.u, hopSpot.v, geo);
           const hx = toPt.left - prevPt0.left;
           const hy = toPt.top - prevPt0.top;
@@ -1834,97 +2130,128 @@ function useWander(
       }
       const leaping = leapChance > 0 && Math.random() < leapChance;
       const prevPt = surfacePoint(prev.spot.u, prev.spot.v, geo);
-      let nextSpot = pickNextSpot();
-      if (leaping && Number.isFinite(leapMaxDistPct)) {
-        // 飛ぶときは、近めの着地点を選ぶ(短い距離)。
-        let nextDist = surfaceDistancePct(prevPt, surfacePoint(nextSpot.u, nextSpot.v, geo));
-        for (let i = 0; i < 14 && nextDist > leapMaxDistPct; i++) {
-          const cand = pickNextSpot();
-          const d = surfaceDistancePct(prevPt, surfacePoint(cand.u, cand.v, geo));
-          if (d < nextDist) {
-            nextSpot = cand;
-            nextDist = d;
-          }
+      const flightOpts: PickOpts = { delayMs: leapWindupMs, durOf: () => leapMs, ease: "linear" };
+      // 歩きは「先に動いて、触れる手前で止まる」。出発時に経路上の予定位置を調べ、触れる地点を求める
+      // (飛ぶときは上を越えるので判定しない)。まっすぐ当たりに行く行き先は避けて、何度か選びなおす。
+      type Plan = { spot: { u: number; v: number }; hitFrac: number | null; hitWith: { kind: "static" } | { kind: "other"; id?: string } | null; dashMs: number; ease: Ease };
+      const planWalk = (spot: { u: number; v: number }): Plan => {
+        const toPt = surfacePoint(spot.u, spot.v, geo);
+        const dist = surfaceDistancePct(prevPt, toPt);
+        const walkMs = Math.min(MAX_TRAVEL_MS * travelScale, Math.max(MIN_TRAVEL_MS * travelScale, dist * TRAVEL_MS_PER_PCT * travelScale));
+        const dashMs = flipTrap ? Math.max(1, dist * CLICK_DASH_MS_PER_PCT * travelScale) : walkMs;
+        const ease: Ease = flipTrap ? "linear" : "inout";
+        const { hitFrac, hitWith } = scanPath({
+          proj: (u, v) => surfacePoint(u, v, geo),
+          from: prevPt,
+          to: toPt,
+          startMs: Date.now(),
+          durMs: dashMs,
+          ease,
+          ownWidthPct: widthPct,
+          ownShape: shape,
+          statics: decorationPts,
+          others: othersList(),
+          factor: flipTrap ? CLICK_CONTACT_FACTOR : BUMP_CONTACT_FACTOR,
+          mode: "hit",
+        });
+        return { spot, hitFrac, hitWith, dashMs, ease };
+      };
+      let plan: Plan;
+      if (leaping) {
+        const spot = Number.isFinite(leapMaxDistPct) ? pickNear(prevPt, leapMaxDistPct, flightOpts) : pickNextSpot(flightOpts);
+        plan = { spot, hitFrac: null, hitWith: null, dashMs: leapMs, ease: "linear" };
+      } else {
+        const pickSpot = () => (flipTrap ? pickDestinationOnly() : pickNextSpot());
+        plan = planWalk(pickSpot());
+        for (let i = 0; i < PLAN_RETRIES && plan.hitFrac !== null && plan.hitFrac < PLAN_MIN_HIT_FRAC; i++) {
+          const alt = planWalk(pickSpot());
+          if (alt.hitFrac === null || alt.hitFrac > plan.hitFrac) plan = alt;
         }
       }
-      positionsRef.current[seedKey] = { ...nextSpot, widthPct };
+      const nextSpot = plan.spot;
       const nextPt = surfacePoint(nextSpot.u, nextSpot.v, geo);
       const dx = nextPt.left - prevPt.left;
       const dy = nextPt.top - prevPt.top;
       const facing: Facing = Math.abs(dy) >= Math.abs(dx) ? (dy >= 0 ? "front" : "back") : dx <= 0 ? "front" : "back";
       const heading: Heading = dx === 0 ? prev.heading : dx < 0 ? "left" : "right";
-      if (flipTrap && !leaping) {
-        // コメたん: 目的地までの直線が置物・他の個体の円と交わるなら、交わる手前まで歩いてぶつかり、
-        // 裏返ってじたばた→パチンと跳ねて近くに着地する。動く相手は出発時の位置で判定する。
-        const obstacles = [
-          ...decorationPts,
-          ...Object.entries(positionsRef.current)
-            .filter(([id]) => id !== seedKey)
-            .map(([, other]) => ({ pt: surfacePoint(other.u, other.v, geo), radius: spriteRadius(other.widthPct) })),
-        ].filter((o) => surfaceDistancePct(prevPt, o.pt) >= (ownRadius + o.radius) * CLICK_CONTACT_FACTOR);
-        const STEPS = 48;
-        let hitStep = -1;
-        for (let k = 1; k <= STEPS && hitStep < 0; k++) {
-          const t = k / STEPS;
-          const pt = { left: prevPt.left + (nextPt.left - prevPt.left) * t, top: prevPt.top + (nextPt.top - prevPt.top) * t };
-          if (obstacles.some((o) => surfaceDistancePct(pt, o.pt) < (ownRadius + o.radius) * CLICK_CONTACT_FACTOR)) hitStep = k;
-        }
-        if (hitStep >= 4) {
-          const tc = hitStep / STEPS;
-          const contactSpot = {
-            u: prev.spot.u + (nextSpot.u - prev.spot.u) * tc,
-            v: prev.spot.v + (nextSpot.v - prev.spot.v) * tc,
+      if (!leaping && plan.hitFrac !== null) {
+        // 触れる手前まで歩いて止まる。tc=経路上のどこで触れるか(0〜1)。
+        const tc = progress(plan.ease, plan.hitFrac);
+        const contactSpot = {
+          u: prev.spot.u + (nextSpot.u - prev.spot.u) * tc,
+          v: prev.spot.v + (nextSpot.v - prev.spot.v) * tc,
+        };
+        const contactPt = surfacePoint(contactSpot.u, contactSpot.v, geo);
+        const walkMs = flipTrap
+          ? Math.max(CLICK_MIN_WALK_MS, surfaceDistancePct(prevPt, contactPt) * CLICK_DASH_MS_PER_PCT * travelScale)
+          : Math.max(BUMP_MIN_WALK_MS, plan.dashMs * plan.hitFrac);
+        reserve(prev.spot, contactSpot, 0, walkMs, "linear");
+        // 向きは、行き先ではなく実際に歩く(止まる地点までの)向きで決める。
+        const cdx = contactPt.left - prevPt.left;
+        const cdy = contactPt.top - prevPt.top;
+        const hitFacing: Facing = Math.abs(cdy) >= Math.abs(cdx) ? (cdy >= 0 ? "front" : "back") : cdx <= 0 ? "front" : "back";
+        const hitHeading: Heading = cdx === 0 ? prev.heading : cdx < 0 ? "left" : "right";
+        const approach = { spot: contactSpot, facing: hitFacing, heading: hitHeading, travelMs: walkMs, leaping: false, charging: false, posing: false, hitting: true, flipped: false, bumped: false };
+        stateRef.current = approach;
+        setState(approach);
+        flipTimer = setTimeout(() => {
+          if (cancelled) return;
+          // ぶつかった相手が他の個体なら、相手にも知らせる(相手も「！」を出す)。
+          if (plan.hitWith?.kind === "other" && plan.hitWith.id) positionsRef.current[plan.hitWith.id]?.onBump?.();
+          // 当たった勢いで、来た道を少し弾き返される。
+          const rb = Math.min(BUMP_RECOIL_FRAC, tc * 0.2);
+          const recoilSpot = {
+            u: prev.spot.u + (nextSpot.u - prev.spot.u) * (tc - rb),
+            v: prev.spot.v + (nextSpot.v - prev.spot.v) * (tc - rb),
           };
-          const contactPt = surfacePoint(contactSpot.u, contactSpot.v, geo);
-          positionsRef.current[seedKey] = { ...contactSpot, widthPct };
-          const walkMs = Math.max(CLICK_MIN_WALK_MS, surfaceDistancePct(prevPt, contactPt) * CLICK_DASH_MS_PER_PCT * travelScale);
-          const approach = { spot: contactSpot, facing, heading, travelMs: walkMs, leaping: false, charging: false, posing: false, hitting: true, flipped: false };
-          stateRef.current = approach;
-          setState(approach);
-          flipTimer = setTimeout(() => {
-            if (cancelled) return;
-            // 当たった勢いで、来た道を少し弾き返されながら裏返る。
-            const rb = Math.min(0.12, tc * 0.5);
-            const recoilSpot = {
-              u: prev.spot.u + (nextSpot.u - prev.spot.u) * (tc - rb),
-              v: prev.spot.v + (nextSpot.v - prev.spot.v) * (tc - rb),
-            };
-            const flippedState = { ...stateRef.current, spot: recoilSpot, travelMs: CLICK_RECOIL_MS, hitting: false, flipped: true };
-            stateRef.current = flippedState;
-            setState(flippedState);
+          if (!flipTrap) {
+            // ふつうの個体: ぶつかって止まる。反応はbumpReactionFor(種類)で決まる(いまは確認用に「！」を出して震える)。
+            reserve(contactSpot, recoilSpot, 0, BUMP_RECOIL_MS, "linear");
+            if (bumpReaction === "chat") chatTriggerRef?.current?.();
+            const angry = { ...stateRef.current, spot: recoilSpot, travelMs: BUMP_RECOIL_MS, hitting: true, bumped: bumpReaction === "alert" || bumpReaction === "angry" };
+            stateRef.current = angry;
+            setState(angry);
             flipTimer = setTimeout(() => {
               if (cancelled) return;
-              // パチン: 近めの着地点へ跳ねる(裏返しから元の姿に戻る)。
-              let landing = pickNextSpot();
-              let landDist = surfaceDistancePct(contactPt, surfacePoint(landing.u, landing.v, geo));
-              for (let i = 0; i < 14 && landDist > CLICK_HOP_MAX_DIST_PCT; i++) {
-                const cand = pickNextSpot();
-                const d = surfaceDistancePct(contactPt, surfacePoint(cand.u, cand.v, geo));
-                if (d < landDist) {
-                  landing = cand;
-                  landDist = d;
-                }
-              }
-              positionsRef.current[seedKey] = { ...landing, widthPct };
-              const landPt = surfacePoint(landing.u, landing.v, geo);
-              const lx = landPt.left - contactPt.left;
-              const ly = landPt.top - contactPt.top;
-              const landFacing: Facing = Math.abs(ly) >= Math.abs(lx) ? (ly >= 0 ? "front" : "back") : lx <= 0 ? "front" : "back";
-              const landHeading: Heading = lx === 0 ? heading : lx < 0 ? "left" : "right";
-              const clicked = { spot: landing, facing: landFacing, heading: landHeading, travelMs: CLICK_HOP_MS, leaping: true, charging: false, posing: false, hitting: false, flipped: false };
-              stateRef.current = clicked;
-              setState(clicked);
-              leapTimer = setTimeout(() => {
-                if (cancelled) return;
-                const landed = { ...stateRef.current, leaping: false };
-                stateRef.current = landed;
-                setState(landed);
-              }, CLICK_HOP_MS);
-            }, CLICK_FLIP_MS);
-          }, walkMs);
-          timer = setTimeout(goToNextSpot, walkMs + CLICK_FLIP_MS + CLICK_HOP_MS + 2000 + Math.random() * 5000);
-          return;
-        }
+              const calm = { ...stateRef.current, hitting: false, bumped: false };
+              stateRef.current = calm;
+              setState(calm);
+            }, BUMP_MS);
+            return;
+          }
+          // コメたん: 弾き返されながら裏返ってじたばたし、パチンと跳ねる。
+          reserve(contactSpot, recoilSpot, 0, CLICK_RECOIL_MS, "linear");
+          const flippedState = { ...stateRef.current, spot: recoilSpot, travelMs: CLICK_RECOIL_MS, hitting: false, flipped: true };
+          stateRef.current = flippedState;
+          setState(flippedState);
+          flipTimer = setTimeout(() => {
+            if (cancelled) return;
+            // パチン: 近めの着地点へ跳ねる(裏返しから元の姿に戻る)。
+            const landing = pickNear(contactPt, CLICK_HOP_MAX_DIST_PCT, { durOf: () => CLICK_HOP_MS, ease: "linear" });
+            reserve(recoilSpot, landing, 0, CLICK_HOP_MS, "linear");
+            const landPt = surfacePoint(landing.u, landing.v, geo);
+            const lx = landPt.left - contactPt.left;
+            const ly = landPt.top - contactPt.top;
+            const landFacing: Facing = Math.abs(ly) >= Math.abs(lx) ? (ly >= 0 ? "front" : "back") : lx <= 0 ? "front" : "back";
+            const landHeading: Heading = lx === 0 ? heading : lx < 0 ? "left" : "right";
+            const clicked = { spot: landing, facing: landFacing, heading: landHeading, travelMs: CLICK_HOP_MS, leaping: true, charging: false, posing: false, hitting: false, flipped: false };
+            stateRef.current = clicked;
+            setState(clicked);
+            leapTimer = setTimeout(() => {
+              if (cancelled) return;
+              const landed = { ...stateRef.current, leaping: false };
+              stateRef.current = landed;
+              setState(landed);
+            }, CLICK_HOP_MS);
+          }, CLICK_FLIP_MS);
+        }, walkMs);
+        timer = setTimeout(
+          goToNextSpot,
+          flipTrap
+            ? walkMs + CLICK_FLIP_MS + CLICK_HOP_MS + 2000 + Math.random() * 5000
+            : walkMs + BUMP_MS + 1500 + Math.random() * 3500
+        );
+        return;
       }
       // 移動時間は距離に比例(歩く速さを一定に保つ)。移動範囲が広くても速くならない。
       // たまに(leapChance)、歩かずに速く弧を描いて飛んで移動する(着地まで LEAP_MS)。
@@ -1934,6 +2261,7 @@ function useWander(
             MAX_TRAVEL_MS * travelScale,
             Math.max(MIN_TRAVEL_MS * travelScale, surfaceDistancePct(prevPt, nextPt) * TRAVEL_MS_PER_PCT * travelScale)
           );
+      reserve(prev.spot, nextSpot, leaping ? leapWindupMs : 0, travelMs, leaping ? "linear" : "inout");
       const next = { spot: nextSpot, facing, heading, travelMs, leaping, charging: false, posing: false };
       stateRef.current = next;
       setState(next);
@@ -1960,10 +2288,14 @@ function useWander(
       if (chargeTimer) clearTimeout(chargeTimer);
       if (poseTimer) clearTimeout(poseTimer);
       if (flipTimer) clearTimeout(flipTimer);
+      if (bumpTimer) clearTimeout(bumpTimer);
+      clearWadeTimers();
+      const entry = positionsRef.current[seedKey];
+      if (entry) entry.onBump = undefined;
     };
-  }, [seedKey, widthPct, moves, decorationSpots, positionsRef, travelScale, leapChance, chargeHopChance, poseChance, chargeMs, hopMs, hopMaxDistPct, restScale, geo, leapMs, leapMaxDistPct, flipTrap, courtChance, leapWindupMs]);
+  }, [seedKey, widthPct, shape, bumpReaction, chatTriggerRef, waterZones, moves, decorationSpots, positionsRef, travelScale, leapChance, chargeHopChance, poseChance, chargeMs, hopMs, hopMaxDistPct, restScale, geo, leapMs, leapMaxDistPct, flipTrap, courtChance, leapWindupMs]);
 
-  return state;
+  return { ...state, wading };
 }
 
 // 水の中を泳ぐ種(動きの種類F)。ゲンたん。
@@ -1995,7 +2327,7 @@ function useSwim(
   initial: { u: number; v: number },
   widthPct: number,
   enabled: boolean,
-  positionsRef: { current: Record<string, { u: number; v: number; widthPct: number; w?: number }> },
+  positionsRef: { current: Record<string, WorldEntry> },
   geo: TankGeometry
 ): { spot: SwimSpot; facing: Facing; heading: Heading; travelMs: number; moving: boolean } {
   const [state, setState] = useState<{ spot: SwimSpot; facing: Facing; heading: Heading; travelMs: number; moving: boolean }>({
@@ -2103,22 +2435,23 @@ function seededRandom(seed: string): () => number {
 function pickStationarySpot(
   seedKey: string,
   widthPct: number,
-  decorationSpots: { u: number; v: number; widthPct: number }[],
-  taken: { u: number; v: number; widthPct: number }[],
+  decorationSpots: DecoSpot[],
+  taken: { u: number; v: number; widthPct: number; shape: BodyShape }[],
+  shape: BodyShape,
   geo: TankGeometry = TERRARIUM_GEOMETRY,
 ): { u: number; v: number } {
   const random = seededRandom(seedKey);
-  const ownRadius = spriteRadius(widthPct);
-  const obstacles = [...decorationSpots, ...taken].map((o) => ({ pt: surfacePoint(o.u, o.v, geo), radius: spriteRadius(o.widthPct) }));
+  const statics = decorationSpots.map((o) => staticCircle(o, geo));
+  const others = taken.map((o) => bodyCircles(surfacePoint(o.u, o.v, geo), o.widthPct, o.shape));
   let best = { u: 0.5, v: 0.5 };
   let bestSlack = -Infinity;
-  for (let attempt = 0; attempt < SPOT_PICK_ATTEMPTS * 2; attempt++) {
+  for (let attempt = 0; attempt < SPOT_PICK_ATTEMPTS * 8; attempt++) {
     const candidate = pickRandomSpot(widthPct, random, geo);
-    const pt = surfacePoint(candidate.u, candidate.v, geo);
+    const anchor = surfacePoint(candidate.u, candidate.v, geo);
+    const own = bodyCircles(anchor, widthPct, shape);
     let slack = Infinity;
-    for (const o of obstacles) {
-      slack = Math.min(slack, surfaceDistancePct(pt, o.pt) - (ownRadius + o.radius));
-    }
+    for (const st of statics) slack = Math.min(slack, slackToStatic(anchor, widthPct, shape, st));
+    for (const o of others) slack = Math.min(slack, circlesSlack(own, o));
     if (slack > bestSlack) {
       bestSlack = slack;
       best = candidate;
@@ -2132,7 +2465,8 @@ function pickStationarySpot(
 // 変化し、見た目(脚・本体のアニメ)はKnownCreatureSprite/Bugアイコン側が担当する。
 // シャベクワたん(KW-0003)の「他の個体とよく喋る仕草」。水槽に他の個体がいるときだけ、15秒に1回、
 // 3秒間だけ体を小さく揺らして頭上に「…」の吹き出しを出す。個体ごとに開始をずらして一斉に喋らない。
-const CHATTER_CYCLE_MS = 15000;
+// 定期の喋りの間隔。ぶつかったときの喋りを主役にするため、長め(2026-10: 15秒→45秒)。
+const CHATTER_CYCLE_MS = 45000;
 const CHATTER_DURATION_MS = 3000;
 const CHATTER_SPECIES_CODE = "KW-0003";
 
@@ -2161,7 +2495,8 @@ function pickChatterBubble(): ChatterBubble {
 }
 
 // 喋っている間は吹き出しの種類を返し、それ以外はnull。
-function useChatter(enabled: boolean, seedKey: string): ChatterBubble | null {
+// triggerRefには「いますぐ喋る」関数を入れる(他の個体とぶつかったときに、定期の喋りとは別に喋らせる)。
+function useChatter(enabled: boolean, seedKey: string, triggerRef?: { current: (() => void) | null }): ChatterBubble | null {
   const [bubble, setBubble] = useState<ChatterBubble | null>(null);
 
   useEffect(() => {
@@ -2183,12 +2518,21 @@ function useChatter(enabled: boolean, seedKey: string): ChatterBubble | null {
     };
 
     timer = setTimeout(startChat, firstDelay);
+    if (triggerRef) {
+      triggerRef.current = () => {
+        if (cancelled) return;
+        // いま喋っている最中でなければ喋る。喋り終えたら、定期の喋りに戻る(次の定期まで間隔をあける)。
+        clearTimeout(timer);
+        startChat();
+      };
+    }
     return () => {
       cancelled = true;
       clearTimeout(timer);
+      if (triggerRef) triggerRef.current = null;
       setBubble(null);
     };
-  }, [enabled, seedKey]);
+  }, [enabled, seedKey, triggerRef]);
 
   return bubble;
 }
@@ -2345,9 +2689,11 @@ function WanderingCreature({
   color,
   mirror,
   decorationSpots,
+  waterZones,
   positionsRef,
   hasCompanions,
   geo,
+  showCollision = false,
 }: {
   seedKey: string;
   initialSpot: { u: number; v: number };
@@ -2359,16 +2705,22 @@ function WanderingCreature({
   nickname: string | null;
   color: string;
   mirror: boolean;
-  decorationSpots: { u: number; v: number; widthPct: number }[];
-  positionsRef: { current: Record<string, { u: number; v: number; widthPct: number; w?: number }> };
+  decorationSpots: DecoSpot[];
+  // 通り抜けられる水場(川)。足元が入ると水しぶきが出る。
+  waterZones: Obstacle[];
+  positionsRef: { current: Record<string, WorldEntry> };
   // 同じ水槽に自分以外の個体がいるか(シャベクワたんの「喋る仕草」の条件)
   hasCompanions: boolean;
+  // 当たり判定の円を重ねて表示する(確認用)。
+  showCollision?: boolean;
   // この水槽の立体の実測(底の面と水面の高さ)。テラリウムとアクアリウムで違う。
   geo: TankGeometry;
 }) {
+  const chatTriggerRef = useRef<(() => void) | null>(null);
   const chatterBubble = useChatter(
     hasCompanions && speciesCode === CHATTER_SPECIES_CODE && growthStage === "成虫" && hasArt,
-    seedKey
+    seedKey,
+    chatTriggerRef
   );
   const chatting = chatterBubble !== null;
   const fighting = useTimedGesture(
@@ -2462,13 +2814,16 @@ function WanderingCreature({
     STINK_DURATION_MS
   );
   const moves = !isStationaryStage(speciesCode, growthStage);
+  const bodyShape = bodyShapeFor(speciesCode, growthStage);
   const swimmer = isSwimmer(speciesCode) && growthStage === "成虫";
+  // 羽のある成虫は、置物・背景を無視して通り抜ける(虫同士は今まで通りぶつかる)。
+  const ignoresStatics = growthStage === "成虫" && WINGED_SPECIES_CODES.includes(speciesCode);
   const walk = useWander(
     seedKey,
     initialSpot,
     widthPct,
     moves && !swimmer,
-    decorationSpots,
+    ignoresStatics ? NO_DECORATIONS : decorationSpots,
     positionsRef,
     isDragonfly(speciesCode) ? DRAGONFLY_TRAVEL_SCALE : speciesCode === HORNET_SPECIES_CODE ? HORNET_TRAVEL_SCALE : isMantis(speciesCode) ? SCYTHE_TRAVEL_SCALE : 1,
     speciesCode === LEAP_SPECIES_CODE && growthStage === "成虫" ? LEAP_CHANCE : speciesCode === SNAKEFLY_SPECIES_CODE && growthStage === "成虫" ? SNAKEFLY_CHANCE : 0,
@@ -2483,7 +2838,11 @@ function WanderingCreature({
     speciesCode === SNAKEFLY_SPECIES_CODE ? SNAKEFLY_MAX_DIST_PCT : Infinity,
     speciesCode === CLICK_BEETLE_SPECIES_CODE && growthStage === "成虫",
     speciesCode === COURT_SPECIES_CODE && growthStage === "成虫" ? COURT_CHANCE : 0,
-    speciesCode === LEAP_SPECIES_CODE ? LEAP_WINDUP_MS : 0
+    speciesCode === LEAP_SPECIES_CODE ? LEAP_WINDUP_MS : 0,
+    bodyShape,
+    bumpReactionFor(speciesCode),
+    chatTriggerRef,
+    waterZones
   );
   // 水中を泳ぐ種は、歩く代わりに3次元(底〜水面)を泳ぎ回る。
   const swim = useSwim(seedKey, initialSpot, widthPct, moves && swimmer, positionsRef, geo);
@@ -2493,6 +2852,11 @@ function WanderingCreature({
   const flipped = !swimmer && !!walk.flipped;
   const hitting = !swimmer && !!walk.hitting;
   const courting = !swimmer && !!walk.courting;
+  const bumped = !swimmer && !!walk.bumped;
+  // 川の水しぶきは歩く種だけ(羽のある種は通り抜けるので出さない)。
+  const wading = !swimmer && !ignoresStatics && walk.wading;
+  // 怒りっぽい種は、ぶつかると「！」の代わりに「💢」を出して全身を赤く光らせる。
+  const angryLook = bumpReactionFor(speciesCode) === "angry";
   const spot = swimmer ? swim.spot : walk.spot;
   const travelMs = swimmer ? swim.travelMs : walk.travelMs;
   const swimming = swimmer && swim.moving;
@@ -2533,8 +2897,8 @@ function WanderingCreature({
     >
       {hasArt ? (
         <div
-          className={`h-full w-full ${chatting ? "animate-kuwagata-chat" : ""} ${fighting ? "animate-kuwagata-fight" : ""} ${proud ? "animate-kuwagata-proud" : ""} ${hopping ? (speciesCode === HIGH_HOP_SPECIES_CODE ? "animate-kuwagata-hop-high" : "animate-kuwagata-hop") : ""} ${charging ? (isPounce(speciesCode) ? "animate-kuwagata-stalk" : "animate-kuwagata-charge") : ""} ${stinking ? "animate-kuwagata-stink" : ""}`}
-          style={leaping ? { animation: `${isPounce(speciesCode) ? "kuwagata-pounce" : speciesCode === SNAKEFLY_SPECIES_CODE ? "kuwagata-fly-short" : speciesCode === CLICK_BEETLE_SPECIES_CODE ? "kuwagata-click-leap" : "kuwagata-leap"} ${travelMs}ms linear ${windupMs}ms` } : undefined}
+          className={`h-full w-full ${bumped ? "animate-kuwagata-bump" : ""} ${chatting ? "animate-kuwagata-chat" : ""} ${fighting ? "animate-kuwagata-fight" : ""} ${proud ? "animate-kuwagata-proud" : ""} ${hopping ? (speciesCode === HIGH_HOP_SPECIES_CODE ? "animate-kuwagata-hop-high" : "animate-kuwagata-hop") : ""} ${charging ? (isPounce(speciesCode) ? "animate-kuwagata-stalk" : "animate-kuwagata-charge") : ""} ${stinking ? "animate-kuwagata-stink" : ""}`}
+          style={leaping || (bumped && angryLook) ? { filter: bumped && angryLook ? ANGRY_FILTER : undefined, animation: leaping ?  `${isPounce(speciesCode) ? "kuwagata-pounce" : speciesCode === SNAKEFLY_SPECIES_CODE ? "kuwagata-fly-short" : speciesCode === CLICK_BEETLE_SPECIES_CODE ? "kuwagata-click-leap" : "kuwagata-leap"} ${travelMs}ms linear ${windupMs}ms` : undefined } : undefined}
         >
           <KnownCreatureSprite
             fighting={fighting}
@@ -2563,6 +2927,63 @@ function WanderingCreature({
         </div>
       ) : (
         <Bug className="block w-full h-auto drop-shadow-sm" style={{ color }} strokeWidth={1.75} />
+      )}
+      {wading && (
+        // 川の中を歩いている間の水しぶき: 体の左右の外側へ、足元から小さな水玉が弧を描いて跳ね上がる。
+        <div className="pointer-events-none absolute inset-x-0 z-[5]" style={{ bottom: "2%", height: "20%" }}>
+          {[
+            { side: "left", x: "20%", delay: 0, size: 6 },
+            { side: "left", x: "27%", delay: 0.35, size: 5 },
+            { side: "right", x: "20%", delay: 0.18, size: 6 },
+            { side: "right", x: "27%", delay: 0.53, size: 5 },
+          ].map((drop) => (
+            <span
+              key={`${drop.side}-${drop.x}`}
+              className={`${drop.side === "left" ? "animate-kuwagata-splash-left" : "animate-kuwagata-splash-right"} absolute rounded-full bg-sky-200 ring-1 ring-white`}
+              style={{ [drop.side]: drop.x, bottom: 0, width: `${drop.size}%`, aspectRatio: "1 / 1", animationDelay: `${drop.delay}s` }}
+            />
+          ))}
+        </div>
+      )}
+      {showCollision && (
+        // 当たり判定の確認用。足元(この枠の下端中央)から胴体の円を描く: 青=避ける広さ、赤=この距離まで近づくと止まる。
+        // 中心は足元から幅の0.4倍だけ上、半径は幅の0.5倍(tank-collision.tsのBODY_*)。枠は幅=高さなので円は真円になる。
+        <>
+          <span
+            className="pointer-events-none absolute rounded-full border-2 border-emerald-600/80"
+            style={{ left: `${(0.5 - FOOT_RADIUS_FACTOR) * 100}%`, top: `${(1 - FOOT_RISE_FACTOR - FOOT_RADIUS_FACTOR) * 100}%`, width: `${FOOT_RADIUS_FACTOR * 200}%`, height: `${FOOT_RADIUS_FACTOR * 200}%` }}
+          />
+          {bodyShape.map((c, i) => (
+            <span key={i}>
+              <span
+                className="pointer-events-none absolute rounded-full border-2 border-sky-500/80 bg-sky-400/10"
+                style={{ left: `${(0.5 + c.dx - c.r) * 100}%`, top: `${(1 - c.dy - c.r) * 100}%`, width: `${c.r * 200}%`, height: `${c.r * 200}%` }}
+              />
+              <span
+                className="pointer-events-none absolute rounded-full border-2 border-dashed border-red-500/80"
+                style={{ left: `${(0.5 + c.dx - c.r * BUMP_CONTACT_FACTOR) * 100}%`, top: `${(1 - c.dy - c.r * BUMP_CONTACT_FACTOR) * 100}%`, width: `${c.r * BUMP_CONTACT_FACTOR * 200}%`, height: `${c.r * BUMP_CONTACT_FACTOR * 200}%` }}
+              />
+            </span>
+          ))}
+        </>
+      )}
+      {bumped && (
+        // ぶつかって怒っている間だけ出る「！」(怒りっぽい種は「💢」)。名前ラベルより手前に出す。
+        angryLook ? (
+          <span
+            className="animate-question-card-enter pointer-events-none absolute z-20 flex h-7 w-7 items-center justify-center text-[22px] leading-none"
+            style={{ left: "62%", top: "2%", transform: "translateY(-100%)" }}
+          >
+            💢
+          </span>
+        ) : (
+          <span
+            className="animate-question-card-enter pointer-events-none absolute z-20 flex h-6 w-6 items-center justify-center rounded-full bg-white text-[15px] font-black leading-none text-red-500 shadow-sm"
+            style={{ left: "62%", top: "2%", transform: "translateY(-100%)" }}
+          >
+            !
+          </span>
+        )
       )}
       {chatterBubble && (
         // 喋っている間だけ出る丸い吹き出し。名前ラベルより手前(z-20)・さらに上に出して、ラベルに被らない。
@@ -2764,7 +3185,16 @@ function EnlargedTankVisual({
   // するためのref(Reactのstateにはしない=位置が変わってもこの水槽全体が再レンダー
   // されない)。モーダルを閉じるとEnlargedTankVisual自体がアンマウントされるので、
   // 次に開いたときは自動的に空の状態から始まる。
-  const positionsRef = useRef<Record<string, { u: number; v: number; widthPct: number; w?: number }>>({});
+  const positionsRef = useRef<Record<string, WorldEntry>>({});
+  // 当たり判定の円の表示(確認用)。開発中、または URL に ?collision=1 が付いているときだけ切り替えボタンを出す。
+  const [collisionDebugAvailable, setCollisionDebugAvailable] = useState(process.env.NODE_ENV !== "production");
+  const [showCollision, setShowCollision] = useState(false);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("collision") === "1") {
+      setCollisionDebugAvailable(true);
+      setShowCollision(true);
+    }
+  }, []);
   // この水槽の立体の実測。水を張ったアクアリウムは、底の砂利の面と、そこから水面までの高さを持つ。
   const geo = isAquarium ? AQUARIUM_GEOMETRY : isAncient ? ANCIENT_GEOMETRY : TERRARIUM_GEOMETRY;
   // デコレーションは水槽(tankId)ごとに決定的なので、個体の衝突回避にも
@@ -2772,20 +3202,30 @@ function EnlargedTankVisual({
   // widthPctも一緒に持たせ、衝突判定側でアイテムごとの実際の大きさを加味できるようにする。
   // 古代の森は背景絵に置物が描き込んであるので、置物は出さず、背景の障害物(ANCIENT_OBSTACLES)を避けさせる。
   const decorations = useMemo(() => (isAquarium || isAncient ? [] : pickDecorations(tank)), [tank, isAquarium, isAncient]);
-  const decorationSpots = useMemo(
+  const allDecorationSpots = useMemo<DecoSpot[]>(
     () => (isAncient ? ANCIENT_OBSTACLES : decorations.map((d) => ({ u: d.spot.u, v: d.spot.v, widthPct: d.widthPct }))),
     [decorations, isAncient],
   );
-  // 卵・蛹(動かない個体)の置き場所。置物や、先に置いた他の動かない個体を避けて1回だけ決める。
+  // ぶつかる障害物と、通り抜けられる水場(川)に分ける。
+  const decorationSpots = useMemo(() => solidSpotsOf(allDecorationSpots), [allDecorationSpots]);
+  const waterZones = useMemo(() => waterZonesOf(allDecorationSpots), [allDecorationSpots]);
+  // 開いたときの置き場所。置物や、先に置いた他の個体と重ならない場所を、個体ごとに1回だけ決める。
+  // 動かない個体(卵・蛹)を先に置き、歩き回る個体はその後に置く(大きい個体ほど先に決めて場所を確保する)。
   const stationarySpots = useMemo(() => {
     const spots: Record<string, { u: number; v: number }> = {};
-    const taken: { u: number; v: number; widthPct: number }[] = [];
-    for (const individual of tank.individuals) {
-      if (!isStationaryStage(individual.speciesCode, individual.growthStage)) continue;
+    const taken: { u: number; v: number; widthPct: number; shape: BodyShape }[] = [];
+    const ordered = [...tank.individuals].sort((a, b) => {
+      const sa = isStationaryStage(a.speciesCode, a.growthStage) ? 0 : 1;
+      const sb = isStationaryStage(b.speciesCode, b.growthStage) ? 0 : 1;
+      return sa - sb || b.sizeScale - a.sizeScale;
+    });
+    for (const individual of ordered) {
       const widthPct = creatureWidthPct(individual.sizeScale);
-      const spot = pickStationarySpot(individual.id, widthPct, decorationSpots, taken, geo);
+      const shape = bodyShapeFor(individual.speciesCode, individual.growthStage);
+      const ghost = individual.growthStage === "成虫" && WINGED_SPECIES_CODES.includes(individual.speciesCode);
+      const spot = pickStationarySpot(individual.id, widthPct, ghost ? NO_DECORATIONS : decorationSpots, taken, shape, geo);
       spots[individual.id] = spot;
-      taken.push({ ...spot, widthPct });
+      taken.push({ ...spot, widthPct, shape });
     }
     return spots;
   }, [tank, decorationSpots, geo]);
@@ -2851,12 +3291,34 @@ function EnlargedTankVisual({
             color={color}
             mirror={!hasArt && index % 2 === 1}
             decorationSpots={decorationSpots}
+            waterZones={waterZones}
             positionsRef={positionsRef}
             hasCompanions={tank.individuals.length > 1}
             geo={geo}
+            showCollision={showCollision}
           />
         );
       })}
+      {showCollision &&
+        allDecorationSpots.map((spot, index) => {
+          const c = staticCircle(spot, geo);
+          return (
+            <span
+              key={`collision-${index}`}
+              className={`pointer-events-none absolute z-10 rounded-full border-2 ${spot.screen?.water ? "border-cyan-500/80 border-dashed bg-cyan-300/20" : c.ground ? "border-emerald-600/80 bg-emerald-400/15" : "border-sky-500/80 bg-sky-400/10"}`}
+              style={{ left: `${c.pt.left}%`, top: `${c.pt.top}%`, width: `${c.radius * 2}%`, aspectRatio: "1 / 1", transform: "translate(-50%, -50%)" }}
+            />
+          );
+        })}
+      {collisionDebugAvailable && (
+        <button
+          type="button"
+          onClick={() => setShowCollision((v) => !v)}
+          className="absolute right-1.5 top-1.5 z-30 rounded bg-white/85 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-600 shadow-sm"
+        >
+          判定{showCollision ? "ON" : "OFF"}
+        </button>
+      )}
       {/* 水の底の秘境: 手前ガラス・水面の透明レイヤーを生き物・置物の上に重ねて「水の中」に見せる */}
       {isAquarium && (
         <img
@@ -3020,6 +3482,21 @@ function TankButton({
   );
 }
 
+// Freeの表示枠を超えた種類の水槽。中は見せず、タップでPro案内へ。
+function LockedTankLink() {
+  return (
+    <Link
+      href="/roadmap/pro?from=shelf"
+      className="relative flex h-[114px] w-full flex-col items-center justify-center gap-1 overflow-hidden rounded-t-md border-2 border-b-0 border-white bg-gradient-to-b from-zinc-200/90 to-zinc-300/80 shadow-inner ring-1 ring-zinc-300 transition-transform hover:scale-[1.03] active:scale-95"
+    >
+      <div className="absolute inset-x-0 top-0 h-1 bg-zinc-300/80" />
+      <Lock className="h-6 w-6 text-zinc-500" strokeWidth={1.75} />
+      <span className="rounded-md bg-white/75 px-3 py-0.5 text-xs font-semibold text-zinc-700 shadow-sm">？？？</span>
+      <span className="text-[10px] font-semibold text-amber-700">Proで飾れる</span>
+    </Link>
+  );
+}
+
 // 新種の棚の1ページの個数。PC/タブレット(sm以上)は3列×3段=9、スマホは2列×4段=8。
 const NEW_SHELF_PAGE_SIZE_WIDE = 9;
 const NEW_SHELF_PAGE_SIZE_NARROW = 8;
@@ -3027,9 +3504,12 @@ const NEW_SHELF_PAGE_SIZE_NARROW = 8;
 export function KuwagataShelf({
   tanks,
   knownTanks,
+  lockedSpeciesCount = 0,
 }: {
   tanks: KuwagataShelfTank[];
   knownTanks: KuwagataShelfTank[];
+  // Free会員の表示枠(FREE_SHELF_NEW_SPECIES_TANK_CAP)を超えて隠れている新種の種類数。鍵付きの水槽として並べる。
+  lockedSpeciesCount?: number;
 }) {
   const [selectedTankId, setSelectedTankId] = useState<string | null>(null);
   // 名前の編集。保存に成功した分はサーバー(props)の再取得を待たず、ここで上書きして即反映する。
@@ -3102,8 +3582,10 @@ export function KuwagataShelf({
   const newGroups = groupBySpecies(tanks);
   // 新種の棚は9個(3×3)ずつのページに分け、右スクロールで次のページを見せる。
   const newPageSize = isWideShelf ? NEW_SHELF_PAGE_SIZE_WIDE : NEW_SHELF_PAGE_SIZE_NARROW;
-  const newPages: KuwagataShelfTank[][][] = [];
-  for (let i = 0; i < newGroups.length; i += newPageSize) newPages.push(newGroups.slice(i, i + newPageSize));
+  // 新種の棚の並び。表示枠を超えて隠れている種類は、最後に鍵付きの水槽(null)として並べる。
+  const newItems: (KuwagataShelfTank[] | null)[] = [...newGroups, ...Array.from({ length: lockedSpeciesCount }, () => null)];
+  const newPages: (KuwagataShelfTank[] | null)[][] = [];
+  for (let i = 0; i < newItems.length; i += newPageSize) newPages.push(newItems.slice(i, i + newPageSize));
   // 選択中の水槽と同じ種類の水槽(ページャ用)と、その中での位置
   const siblingTanks = selectedTank ? lookupTanks.filter((t) => t.speciesId === selectedTank.speciesId) : [];
   const siblingIndex = selectedTank ? siblingTanks.findIndex((t) => t.tankId === selectedTank.tankId) : 0;
@@ -3163,7 +3645,14 @@ export function KuwagataShelf({
             >
               {newPages.map((pageGroups, pageIndex) => (
                 <div key={pageIndex} className="grid w-full shrink-0 snap-start grid-cols-2 content-start sm:grid-cols-3">
-                  {pageGroups.map((group) => {
+                  {pageGroups.map((group, itemIndex) => {
+                    if (group === null) {
+                      return (
+                        <RackCell key={`locked-${pageIndex}-${itemIndex}`}>
+                          <LockedTankLink />
+                        </RackCell>
+                      );
+                    }
                     const tank = group[0];
                     const color = tankColor(tank);
                     const representative = pickRepresentative(group);
@@ -3348,6 +3837,56 @@ export function KuwagataShelf({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// 開発用: 全種類の絵に当たり判定の円(青=避ける広さ、赤破線=止まる距離)を重ねて並べる確認画面。
+export function CollisionShapeGallery() {
+  const [stage, setStage] = useState<KuwagataGrowthStage>("成虫");
+  const codes = Object.keys(KNOWN_CREATURE_ART).sort();
+  return (
+    <div className="p-4">
+      <div className="mb-3 flex gap-2">
+        {(["成虫", "幼虫"] as const).map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => setStage(s)}
+            className={`rounded border px-3 py-1 text-sm ${stage === s ? "bg-zinc-800 text-white" : "bg-white"}`}
+          >
+            {s}
+          </button>
+        ))}
+      </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {codes.map((code) => {
+          const shape = bodyShapeFor(code, stage);
+          return (
+            <div key={code} className="rounded border border-zinc-200 bg-zinc-50 p-2">
+              <div className="mb-1 text-xs text-zinc-600">
+                {code}
+                {shape.length > 1 ? "(楕円)" : ""}
+              </div>
+              <div className="relative mx-auto aspect-square w-full max-w-[220px] border-b border-zinc-400">
+                <KnownCreatureSprite code={code} facing="front" mandibleVariant={1} growthStage={stage} />
+                {shape.map((c, i) => (
+                  <span key={i}>
+                    <span
+                      className="pointer-events-none absolute rounded-full border-2 border-sky-500/80 bg-sky-400/10"
+                      style={{ left: `${(0.5 + c.dx - c.r) * 100}%`, top: `${(1 - c.dy - c.r) * 100}%`, width: `${c.r * 200}%`, height: `${c.r * 200}%` }}
+                    />
+                    <span
+                      className="pointer-events-none absolute rounded-full border-2 border-dashed border-red-500/80"
+                      style={{ left: `${(0.5 + c.dx - c.r * BUMP_CONTACT_FACTOR) * 100}%`, top: `${(1 - c.dy - c.r * BUMP_CONTACT_FACTOR) * 100}%`, width: `${c.r * BUMP_CONTACT_FACTOR * 200}%`, height: `${c.r * BUMP_CONTACT_FACTOR * 200}%` }}
+                    />
+                  </span>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

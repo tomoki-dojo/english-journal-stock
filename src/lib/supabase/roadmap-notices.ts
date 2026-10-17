@@ -9,7 +9,7 @@ import {
 } from "@/lib/roadmap-notices";
 import { getLoginStageUps, getUncelebratedEggs, getUncelebratedHatches } from "@/lib/supabase/kuwagata";
 import { getTodaysTrivia, type ArthurTrivia } from "@/lib/supabase/arthur-trivia";
-import { grantMilestoneEggs } from "@/lib/supabase/kuwagata-egg-events";
+import { claimRareChanceNotice, grantMilestoneEggs } from "@/lib/supabase/kuwagata-egg-events";
 
 export type RoadmapNotices = {
   showAdvice: boolean;
@@ -22,6 +22,8 @@ export type RoadmapNotices = {
   stageUps: RoadmapStageUp[];
   // 今日まだ見ていない、アーサーの豆知識（お知らせのあとに1日1回）。初回ユーザーには出さない。
   trivia: ArthurTrivia | null;
+  // 習得数がレア確定チャンスの節目（50の倍数）に達した直後の、その節目の数。なければnull。
+  rareChance: number | null;
 };
 
 // 部屋に入ったときに出すポップアップ（初回アドバイス・未読のお知らせ）を決める。
@@ -35,10 +37,12 @@ export async function getRoadmapNotices(
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (!data) return { showAdvice: false, announcements: [], newEggs: [], newHatches: [], stageUps: [], trivia: null };
+  if (!data)
+    return { showAdvice: false, announcements: [], newEggs: [], newHatches: [], stageUps: [], trivia: null, rareChance: null };
 
   // 練習日数・習得数の節目のタマゴを先に配って、そのまま「手に入れた！」の演出に載せる。
   await grantMilestoneEggs(userId).catch(() => {});
+  const rareChance = await claimRareChanceNotice(userId).catch(() => null);
 
   const [newEggs, newHatches, stageUps] = await Promise.all([
     getUncelebratedEggs(userId),
@@ -47,7 +51,7 @@ export async function getRoadmapNotices(
   ]);
 
   if (!data.roadmap_advice_seen_at)
-    return { showAdvice: true, announcements: [], newEggs, newHatches, stageUps: [], trivia: null };
+    return { showAdvice: true, announcements: [], newEggs, newHatches, stageUps: [], trivia: null, rareChance };
 
   const lastSeen = data.roadmap_last_seen_announcement_id ?? 0;
   const trivia = await getTodaysTrivia(userId).catch(() => null);
@@ -58,6 +62,7 @@ export async function getRoadmapNotices(
     newHatches,
     stageUps,
     trivia,
+    rareChance,
   };
 }
 

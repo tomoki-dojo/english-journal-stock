@@ -1969,6 +1969,32 @@ body {
   animation: catch-cta-icon 1.2s ease-in-out infinite;
 }
 
+/* レア確定ボタンの周りに散る光の粒（4方向に尖った星形） */
+@keyframes catch-cta-sparkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.2) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.3) rotate(45deg);
+  }
+}
+
+.catch-cta-sparkle {
+  background: #fef3c7;
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  filter: drop-shadow(0 0 4px #fbbf24);
+  animation: catch-cta-sparkle 2s ease-in-out infinite;
+}
+
+/* 普通の採集ボタン: レア確定より控えめな緑系 */
+.catch-cta-normal {
+  background-image: linear-gradient(180deg, #86efac 0%, #22c55e 55%, #15803d 100%);
+  box-shadow: 0 3px 0 #166534;
+}
+
 /* エリア解放演出: 背後で回る光の筋、雲が晴れる瞬間の白フラッシュ、タイトルの登場 */
 @keyframes unlock-rays-spin {
   to {
@@ -2025,4 +2051,74 @@ body {
 
 .unlock-title {
   animation: unlock-title 0.7s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+/* ぶつかって怒っているときの震え(その場で小刻みに左右へ揺れる)。 */
+@keyframes kuwagata-bump-shake {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  20% {
+    transform: translateX(-1.8%) rotate(-1.2deg);
+  }
+  40% {
+    transform: translateX(1.8%) rotate(1.2deg);
+  }
+  60% {
+    transform: translateX(-1.4%) rotate(-0.8deg);
+  }
+  80% {
+    transform: translateX(1.4%) rotate(0.8deg);
+  }
+}
+
+.animate-kuwagata-bump {
+  transform-origin: 50% 100%;
+  animation: kuwagata-bump-shake 0.22s linear infinite;
+}
+
+/* 川の中を歩くときの水しぶき(体の左右の外側へ、小さな水玉が弧を描いて跳ねる)。 */
+@keyframes kuwagata-splash-left {
+  0% {
+    transform: translate(0, 0) scale(0.6);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-35%, -190%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-65%, 0) scale(0.6);
+    opacity: 0;
+  }
+}
+
+@keyframes kuwagata-splash-right {
+  0% {
+    transform: translate(0, 0) scale(0.6);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  50% {
+    transform: translate(35%, -190%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(65%, 0) scale(0.6);
+    opacity: 0;
+  }
+}
+
+.animate-kuwagata-splash-left {
+  animation: kuwagata-splash-left 0.8s ease-out infinite;
+}
+
+.animate-kuwagata-splash-right {
+  animation: kuwagata-splash-right 0.8s ease-out infinite;
 }

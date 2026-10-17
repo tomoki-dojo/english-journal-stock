@@ -5,16 +5,22 @@ import { ROADMAP_TITLE_PATH } from "@/lib/roadmap-title";
 
 export const metadata = { title: "バージョン情報" };
 
-export default function RoadmapVersionPage() {
+export default async function RoadmapVersionPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string }>;
+}) {
+  const { from } = await searchParams;
+  const fromRoom = from === "room";
   return (
     <div className="min-h-dvh bg-gradient-to-b from-amber-50 via-white to-sky-50 px-6 py-8">
       <div className="mx-auto w-full max-w-md">
         <Link
-          href={ROADMAP_TITLE_PATH}
+          href={fromRoom ? "/roadmap" : ROADMAP_TITLE_PATH}
           className="inline-flex items-center gap-0.5 text-sm font-medium text-amber-700"
         >
           <ChevronLeft className="h-4 w-4" />
-          タイトルへ
+          {fromRoom ? "部屋へ戻る" : "タイトルへ"}
         </Link>
         <h1 className="mt-4 text-xl font-bold text-zinc-800">バージョン情報</h1>
 

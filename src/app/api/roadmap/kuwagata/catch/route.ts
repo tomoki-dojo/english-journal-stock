@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/supabase/server-auth";
 import { finishMinigameSession, getRareBoostMultiplier } from "@/lib/kuwagata-minigame";
 import {
   consumePendingCatch,
+  getKuwagataShelfTanks,
   getPendingCatchState,
   getUnlockedAreas,
   type KuwagataAreaCode,
@@ -81,14 +82,29 @@ export async function POST(request: Request) {
       typeof body.sessionId === "string"
         ? await finishMinigameSession(user.id, body.sessionId, json.areaCode, body.answers)
         : 0;
-    const result = await consumePendingCatch(user.id, json.areaCode, getRareBoostMultiplier(correctCount));
+    const wantGuaranteed = typeof body.guaranteed === "boolean" ? body.guaranteed : undefined;
+    const result = await consumePendingCatch(
+      user.id,
+      json.areaCode,
+      getRareBoostMultiplier(correctCount),
+      wantGuaranteed
+    );
     if (!result) {
       return NextResponse.json({ error: "採集チャンスがありません" }, { status: 409 });
+    }
+
+    // Freeの棚の表示枠(新種10種類)を超えて、捕まえた子が棚に飾れないときは結果画面で伝える。
+    let hiddenOnShelf = false;
+    if (result.species.kind === "new") {
+      const shelf = await getKuwagataShelfTanks(user.id);
+      hiddenOnShelf =
+        shelf.hiddenNewSpeciesTankCount > 0 && !shelf.tanks.some((t) => t.speciesId === result.species.id);
     }
 
     return NextResponse.json(
       {
         ok: true,
+        hiddenOnShelf,
         speciesCode: result.species.code,
         speciesName: result.species.name,
         speciesKind: result.species.kind,

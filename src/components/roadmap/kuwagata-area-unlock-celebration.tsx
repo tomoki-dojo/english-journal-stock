@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { KuwagataAreaMap } from "./kuwagata-area-map";
 import { CelebrationBurst } from "./celebration-overlay";
+import { useFanfare } from "./roadmap-sound";
 import { KUWAGATA_AREA_NAMES } from "@/lib/kuwagata-area-names";
 import type { KuwagataAreaCode } from "@/lib/supabase/kuwagata";
 
@@ -22,6 +23,7 @@ export function KuwagataAreaUnlockCelebration({
   skipRecord?: boolean;
 }) {
   const router = useRouter();
+  const playFanfare = useFanfare();
   const [open, setOpen] = useState(true);
   const [revealed, setRevealed] = useState(false);
   if (!open || newAreas.length === 0) return null;
@@ -76,7 +78,10 @@ export function KuwagataAreaUnlockCelebration({
             labels={KUWAGATA_AREA_NAMES}
             revealAreas={newAreas}
             onSelect={() => {}}
-            onRevealed={() => setRevealed(true)}
+            onRevealed={() => {
+              setRevealed(true);
+              playFanfare();
+            }}
           />
           {revealed && (
             <div className="pointer-events-none absolute left-1/2 top-1/2 z-[70] h-56 w-56 -translate-x-1/2 -translate-y-1/2">
@@ -90,7 +95,7 @@ export function KuwagataAreaUnlockCelebration({
               className="unlock-title text-xl font-black text-white"
               style={{ textShadow: "0 2px 0 #1c1917, 0 0 14px rgba(251,191,36,0.9)" }}
             >
-              「{newAreas.map((a) => KUWAGATA_AREA_NAMES[a]).join("」「")}」が解放された！
+              「{newAreas.map((a) => KUWAGATA_AREA_NAMES[a]).join("」「")}」で採集ができるようになったぞ！
             </p>
           )}
         </div>

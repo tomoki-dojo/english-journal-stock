@@ -21,13 +21,22 @@ const PAGE_SRC = "/roadmap/sound/se_page.mp3";
 const PAGE_VOLUME = 0.2;
 const MINIGAME_BGM_SRC = "/roadmap/sound/bgm_minigame.mp3";
 const MINIGAME_BGM_VOLUME = 0.25;
+// 単語ノートのテスト中のBGM（テストが始まってから結果が出るまで）。
+const QUIZ_BGM_SRC = "/roadmap/sound/bgm_notebook.mp3";
+const QUIZ_BGM_VOLUME = 0.35;
 const STAGE_BGM_SRC = "/roadmap/sound/bgm_stage.mp3";
 const STAGE_BGM_VOLUME = 0.1;
 // Stage3〜5は音声入力でマイクを使うので、聞き取り中だけBGMをほぼ消す（BGMがマイクに入って認識を邪魔しないように）。
 // 音量の段階（1〜3）に関わらず、同じ極小の音量に下げる（段階2の通常音量の約4%）。
 const MIC_DUCK_VOLUME = 0.004;
 const MINIGAME_SE_SRC = "/roadmap/sound/se_minigame.mp3";
-const MINIGAME_SE_VOLUME = 0.35;
+const MINIGAME_SE_VOLUME = 0.2;
+const FANFARE_SRC = "/roadmap/sound/se_fanfare.mp3";
+const FANFARE_VOLUME = 0.3;
+const GROWTH_SRC = "/roadmap/sound/se_growth.mp3";
+const GROWTH_VOLUME = 0.12;
+const GET_SRC = "/roadmap/sound/se_get.mp3";
+const GET_VOLUME = 0.3;
 const STORAGE_KEY = "roadmap_sound_level";
 const LEGACY_STORAGE_KEY = "roadmap_sound_enabled"; // 旧: ON/OFFのみ。"0"ならミュートとして引き継ぐ。
 
@@ -48,8 +57,12 @@ type SoundContextValue = {
   setLevel: (level: number) => void;
   playPage: () => void;
   setMinigameActive: (active: boolean) => void;
+  setQuizActive: (active: boolean) => void;
   setMicActive: (active: boolean) => void;
   playMinigameSe: () => void;
+  playFanfare: () => void;
+  playGrowth: () => void;
+  playGet: () => void;
 };
 const SoundContext = createContext<SoundContextValue | null>(null);
 
@@ -157,11 +170,34 @@ export function RoadmapSoundProvider({
     }
   }, [enabled, level, interacted, minigameActive]);
 
+  // 単語ノートのテスト中のBGM：テスト中は他のBGMを止めて、こちらを頭から流す。
+  const [quizActive, setQuizActive] = useState(false);
+  const quizBgmRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => {
+    const shouldPlay = enabled && interacted && quizActive && !minigameActive;
+    if (!quizBgmRef.current) {
+      if (!shouldPlay) return;
+      const audio = new Audio(QUIZ_BGM_SRC);
+      audio.loop = true;
+      quizBgmRef.current = audio;
+    }
+    const audio = quizBgmRef.current;
+    audio.volume = Math.min(1, QUIZ_BGM_VOLUME * LEVEL_FACTORS[level]);
+    if (shouldPlay) {
+      void audio.play().catch(() => {});
+    } else {
+      audio.pause();
+      if (!quizActive) audio.currentTime = 0;
+    }
+  }, [enabled, level, interacted, quizActive, minigameActive]);
+
   // いま流すべき曲の種類。曲の種類が切り替わったとき、前の曲は止めて頭に戻す（次に戻ってきたら最初から）。
-  // 表現一覧（街の掲示板）はStage練習と同じ曲を流す。
-  const activeTrack: "minigame" | "stage" | "room" | null = minigameActive
+  // 表現一覧（街の掲示板）と単語ノートは、Stage練習と同じ曲を流す。
+  const activeTrack: "minigame" | "quiz" | "stage" | "room" | null = minigameActive
     ? "minigame"
-    : pathname.startsWith("/roadmap/stage") || pathname === "/roadmap/board"
+    : quizActive
+      ? "quiz"
+      : pathname.startsWith("/roadmap/stage") || pathname === "/roadmap/board" || pathname.startsWith("/roadmap/notebook")
       ? "stage"
       : BGM_PATHS.has(pathname)
         ? "room"
@@ -199,6 +235,30 @@ export function RoadmapSoundProvider({
     void audio.play().catch(() => {});
   }, []);
 
+  // 解放・獲得などのお祝いで鳴らすファンファーレ。
+  const playFanfare = useCallback(() => {
+    if (!enabledRef.current) return;
+    const audio = new Audio(FANFARE_SRC);
+    audio.volume = Math.min(1, FANFARE_VOLUME * LEVEL_FACTORS[levelRef.current]);
+    void audio.play().catch(() => {});
+  }, []);
+
+  // クワたんの成長段階が上がったときの効果音。
+  const playGrowth = useCallback(() => {
+    if (!enabledRef.current) return;
+    const audio = new Audio(GROWTH_SRC);
+    audio.volume = Math.min(1, GROWTH_VOLUME * LEVEL_FACTORS[levelRef.current]);
+    void audio.play().catch(() => {});
+  }, []);
+
+  // タマゴやレアなクワたんを手に入れたときの効果音。
+  const playGet = useCallback(() => {
+    if (!enabledRef.current) return;
+    const audio = new Audio(GET_SRC);
+    audio.volume = Math.min(1, GET_VOLUME * LEVEL_FACTORS[levelRef.current]);
+    void audio.play().catch(() => {});
+  }, []);
+
   // BGM：部屋・棚・図鑑でだけ、ONかつ最初のタップ後に流す。ページ移動をまたいでも途切れない。
   useEffect(() => {
     const shouldPlay = enabled && interacted && activeTrack === "room";
@@ -228,11 +288,12 @@ export function RoadmapSoundProvider({
       bgmRef.current?.pause();
       minigameBgmRef.current?.pause();
       stageBgmRef.current?.pause();
+      quizBgmRef.current?.pause();
     };
   }, []);
 
   return (
-    <SoundContext.Provider value={{ level, setLevel, playPage, setMinigameActive, setMicActive, playMinigameSe }}>
+    <SoundContext.Provider value={{ level, setLevel, playPage, setMinigameActive, setQuizActive, setMicActive, playMinigameSe, playFanfare, playGrowth, playGet }}>
       {children}
     </SoundContext.Provider>
   );
@@ -252,6 +313,16 @@ export function useMinigameBgm() {
   }, [setActive]);
 }
 
+// 単語ノートのテスト中だけ true を渡す。テスト用のBGMを流す。
+export function useQuizBgm(active: boolean) {
+  const setActive = useContext(SoundContext)?.setQuizActive;
+  useEffect(() => {
+    if (!setActive) return;
+    setActive(active);
+    return () => setActive(false);
+  }, [setActive, active]);
+}
+
 // 音声入力で聞き取り中の間だけ true を渡す。Stage練習のBGMをほぼ消す。
 export function useBgmDuck(listening: boolean) {
   const setMic = useContext(SoundContext)?.setMicActive;
@@ -265,6 +336,26 @@ export function useBgmDuck(listening: boolean) {
 // ミニゲームで答えを選んだときの効果音を鳴らす関数を返す。
 export function useMinigameSe() {
   return useContext(SoundContext)?.playMinigameSe ?? (() => {});
+}
+
+// お祝いのファンファーレを鳴らす関数を返す。
+export function useFanfare() {
+  return useContext(SoundContext)?.playFanfare ?? (() => {});
+}
+
+// 成長段階が上がったときの効果音を鳴らす関数を返す。
+export function useGrowthSe() {
+  return useContext(SoundContext)?.playGrowth ?? (() => {});
+}
+
+// 「手に入れた！」の効果音を、置かれた瞬間に1回鳴らす（何も描画しない）。
+export function GetSeOnMount() {
+  const playGet = useContext(SoundContext)?.playGet;
+  useEffect(() => {
+    playGet?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return null;
 }
 
 // 画面上部に置く音量コントロール。スピーカーをタップでミュート⇔元の音量、右の三角形（くさび形）を

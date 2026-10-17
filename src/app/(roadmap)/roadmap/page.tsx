@@ -11,6 +11,7 @@ import { RoadmapRoom } from "@/components/roadmap/roadmap-room";
 import { RoomNoticeModal } from "@/components/roadmap/room-notice-modal";
 import { getRoadmapNotices } from "@/lib/supabase/roadmap-notices";
 import { recordStageClearCatch } from "@/lib/supabase/kuwagata";
+import { isNotebookBoostCapped } from "@/lib/quiz-notebook";
 
 // スピーキング・ロードマップのホーム（「アーサーの飼育部屋」）。
 // アイソメ都市マップ（RoadmapMap）は2026-10-01廃止し、探索不要の固定グリッドである
@@ -35,6 +36,7 @@ export default async function RoadmapPage() {
   const streakStats = await getStreakStats(user.id);
   const stageReadiness = await getRoadmapStageReadiness(user.id);
   const plan = await getPlan(user.id);
+  const notebookCapped = await isNotebookBoostCapped(user.id, plan).catch(() => false);
   const notices = await getRoadmapNotices(user.id).catch(() => ({
     showAdvice: false,
     announcements: [],
@@ -42,6 +44,7 @@ export default async function RoadmapPage() {
     newHatches: [],
     stageUps: [],
     trivia: null,
+    rareChance: null,
   }));
 
   return (
@@ -53,6 +56,7 @@ export default async function RoadmapPage() {
         newHatches={notices.newHatches}
         stageUps={notices.stageUps}
         trivia={notices.trivia}
+        rareChance={notices.rareChance}
       />
       <RoadmapRoom
         stageReadiness={stageReadiness}
@@ -61,6 +65,7 @@ export default async function RoadmapPage() {
         proSkipEnabled={state.proSkipEnabled}
         totalMasteredCount={state.totalMasteredCount}
         streakStats={streakStats}
+        notebookCapped={notebookCapped}
       />
     </>
   );

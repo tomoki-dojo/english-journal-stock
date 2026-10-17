@@ -14,6 +14,7 @@ import {
   Lock,
   Sparkles,
   Flame,
+  NotebookPen,
 } from "lucide-react";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
 import { ProSkipButton } from "./pro-skip-button";
@@ -23,6 +24,7 @@ import type { StreakStats } from "@/lib/supabase/speaking-roadmap";
 
 const BOARD_COLOR = "#e11d48";
 const SHELF_COLOR = "#92400e";
+const NOTEBOOK_COLOR = "#0d9488";
 
 // 部屋背景の実アート配置先。brand/kuwagata-asset-spec.mdの命名規則どおり
 // public/roadmap/room/room_bg.png にファイルを置くだけで反映される（コード変更不要）。
@@ -98,17 +100,19 @@ type ItemPlacement = {
 };
 
 const ITEM_PLACEMENT: Record<string, ItemPlacement> = {
-  stage0: { left: 22, top: 82, rotate: 0, widthPct: 13 },
+  stage0: { left: 21.6, top: 83, rotate: 0, widthPct: 13 },
   stage1: { left: 64, top: 79, rotate: 0, widthPct: 21 },
   stage2: { left: 20, top: 57, rotate: 0, widthPct: 14 },
   stage3: { left: 62, top: 22, rotate: 0, widthPct: 13 },
-  stage4: { left: 39, top: 70, rotate: 0, widthPct: 12 },
+  stage4: { left: 40.5, top: 77.4, rotate: 0, widthPct: 12 },
   // 机面に接地して見えるよう、widthPct拡大に合わせてtopも下げて調整
-  stage5: { left: 53, top: 56, rotate: 0, widthPct: 13 },
+  stage5: { left: 38.4, top: 56, rotate: 0, widthPct: 13 },
   board: { left: 25, top: 23, rotate: 0, widthPct: 40, labelOverlapPx: 50 },
   // 棚は一回り大きくして、画像自体をほぼ床に接地するまで下げる。
   // ラベルは画像下端ではなく中央に完全に重ねる表示にする。
   shelf: { left: 92, top: 64, rotate: 0, widthPct: 22, labelPosition: "center" },
+  // 単語ノート(小さな本棚)。机の右奥に置く。位置・幅は、ユーザーの配置イメージ(部屋の完成イメージ画像)から実測。
+  notebook: { left: 58, top: 49, rotate: 0, widthPct: 20 },
 };
 
 type RoadmapRoomProps = {
@@ -124,6 +128,8 @@ type RoadmapRoomProps = {
   proSkipEnabled: boolean;
   totalMasteredCount: number;
   streakStats: StreakStats;
+  // 単語ノートの今日のブースト上限に達している(見た目をうっすら暗くする)
+  notebookCapped?: boolean;
 };
 
 function StageCase({
@@ -137,6 +143,7 @@ function StageCase({
   locked,
   current,
   placement,
+  dimmed = false,
 }: {
   color: string;
   // ラベル文字色だけを上書きしたい場合（例：Stage2のライムグリーンは白座布団の上だと
@@ -150,6 +157,7 @@ function StageCase({
   locked: boolean;
   current: boolean;
   placement: ItemPlacement;
+  dimmed?: boolean;
 }) {
   // 解放済み＋実アート有りの場合だけ、アイテムごとのwidthPctで実寸表示する
   // （丸バッジを外し、縦横比はobject-containで画像任せ）。それ以外（未解放／
@@ -178,6 +186,8 @@ function StageCase({
         src={imageSrc ?? undefined}
         alt=""
         className={`block w-full object-contain ${locked ? "opacity-25 grayscale" : "drop-shadow-md"}`}
+        // 今日の成長ブーストが上限のときは、薄くせず画像だけ暗くする(薄いと未解放と見分けがつかず、押せないと思われるため。ラベルはそのまま)。
+        style={dimmed ? { filter: "brightness(0.65)" } : undefined}
       />
       {locked && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
@@ -259,6 +269,7 @@ export function RoadmapRoom({
   proSkipEnabled,
   totalMasteredCount,
   streakStats,
+  notebookCapped = false,
 }: RoadmapRoomProps) {
   const hasAnyRecord = streakStats.totalDays > 0;
   const hasCurrentStreak = streakStats.current > 0;
@@ -370,6 +381,18 @@ export function RoadmapRoom({
           locked={false}
           current={false}
           placement={ITEM_PLACEMENT.shelf}
+        />
+        <StageCase
+          color={NOTEBOOK_COLOR}
+          icon={NotebookPen}
+          imageSrc={roomItemImageSrc("notebook")}
+          label="単語ノート"
+          caption="単語"
+          href="/roadmap/notebook"
+          locked={false}
+          current={false}
+          placement={ITEM_PLACEMENT.notebook}
+          dimmed={notebookCapped}
         />
       </div>
     </div>

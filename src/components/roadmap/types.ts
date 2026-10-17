@@ -386,8 +386,14 @@ export const STAGE4_UNLOCK_STAGE3_GRADUATIONS = 6;
 // Stage3の1回0.02円の3倍程度）ため、セッション単位で少なめの回数に設定する。実コストは誤差
 // レベルのため原価防衛ではなく体験設計上の数字であり、Stage3同様ユーザーの様子を見て調整する
 // 前提（Stage3も2→5→8回と実際に調整した経緯がある）。
-export const STAGE4_FREE_DAILY_LIMIT = 3;
-export const STAGE4_PRO_DAILY_LIMIT = 15;
+// 2026-10-17改訂（収益化戦略チャット）：Free 3→2回、Pro 15→10回。コスト実測（約0.45円/セッション）を
+// 踏まえ、リリース前に控えめな数字で決めておき、後から増やせる余地を残す（リリース後に減らすと改悪になるため）。
+// Freeは、Stage4を初めて遊んだ日から STAGE45_FREE_WELCOME_DAYS 日間だけ STAGE4_FREE_WELCOME_DAILY_LIMIT 回
+// （はじめてボーナス）。卒業に連続3回の合格が要るので、初日に1本卒業できるようにするため。
+export const STAGE4_FREE_DAILY_LIMIT = 2;
+export const STAGE4_FREE_WELCOME_DAILY_LIMIT = 3;
+export const STAGE4_PRO_DAILY_LIMIT = 10;
+export const STAGE45_FREE_WELCOME_DAYS = 7;
 
 export type Stage4Scenario = {
   id: string;
@@ -464,8 +470,10 @@ export const STAGE5_UNLOCK_STAGE4_GRADUATIONS = 5;
 // Stage4と同じ理由（AI呼び出しコスト）で日次上限を設けるが、テーブル・カウンタはStage4とは
 // 独立させる（stage5_usage。Stage4を使い切った日にStage5に手を出せなくなる、またはその逆が
 // 起きると体験を損ねるため）。初期値はStage4と同じ数字を仮置きし、実運用を見て調整する。
-export const STAGE5_FREE_DAILY_LIMIT = 3;
-export const STAGE5_PRO_DAILY_LIMIT = 15;
+// 2026-10-17改訂：Stage4と同じく Free 3→2回（初めて遊んだ日から7日間は3回）、Pro 15→10回。
+export const STAGE5_FREE_DAILY_LIMIT = 2;
+export const STAGE5_FREE_WELCOME_DAILY_LIMIT = 3;
+export const STAGE5_PRO_DAILY_LIMIT = 10;
 
 export type Stage5Track = "daily" | "business";
 

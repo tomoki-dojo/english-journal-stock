@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Mic, PartyPopper, RotateCcw, Square, User2 } from "lucide-react";
+import { Crown, Mic, PartyPopper, RotateCcw, Square, User2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RoundHeader } from "./round-header";
 import { GrowthBadge } from "./growth-badge";
@@ -18,6 +18,7 @@ import {
   type Stage5Turn,
   type Stage5TurnResult,
   type Stage5UsageInfo,
+  STAGE5_PRO_DAILY_LIMIT,
 } from "./types";
 
 type ViewState = "loading" | "picker" | "chat" | "limit_exceeded" | "not_ready" | "error";
@@ -188,7 +189,7 @@ export function Stage5Practice({ track }: Stage5PracticeProps) {
     return (
       <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-100/30 px-6 py-10 text-center">
         <p className="text-sm text-zinc-700">今日のセッションは{limit}回まで使い切りました。</p>
-        <p className="mt-1 text-xs text-zinc-400">また明日挑戦できます。Proにすると上限が大きく緩和されます。</p>
+        <p className="mt-1 text-xs text-zinc-400">また明日挑戦できます。<Link href="/roadmap/pro?from=stage5" className="font-semibold text-amber-600 underline underline-offset-2">Proにすると上限が大きく緩和されます。</Link></p>
         <Link
           href="/roadmap"
           className="mt-4 inline-flex items-center gap-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
@@ -207,6 +208,15 @@ export function Stage5Practice({ track }: Stage5PracticeProps) {
           <p className="text-sm font-medium text-zinc-700">話すシーンを選んでください（{trackLabel}）</p>
           {usageLabel && <span className="text-xs text-zinc-400">{usageLabel}</span>}
         </div>
+        {usage && usage.remaining <= 0 && usage.limit < STAGE5_PRO_DAILY_LIMIT && (
+          <Link
+            href="/roadmap/pro?from=stage5"
+            className="mb-4 flex items-center justify-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-100"
+          >
+            <Crown className="h-4 w-4" />
+            Proで1日{STAGE5_PRO_DAILY_LIMIT}回まで話せる
+          </Link>
+        )}
 
         {scenarios.length === 0 ? (
           <p className="text-sm text-zinc-400">現在、選べるシナリオがありません。</p>

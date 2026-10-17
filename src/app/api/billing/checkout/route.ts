@@ -38,6 +38,10 @@ export async function POST(request: Request) {
     );
   }
 
+  // 英クワたん(/roadmap)から来た場合は、決済後も英クワたんのPro案内ページに戻す。
+  const returnTo = (json as Record<string, unknown> | null)?.returnTo;
+  const returnPath = returnTo === "roadmap" ? "/roadmap/pro" : "/settings";
+
   const priceId = STRIPE_PRICE_IDS.pro[interval];
   if (!priceId) {
     const envKey = interval === "monthly" ? "STRIPE_PRICE_ID_PRO_MONTHLY" : "STRIPE_PRICE_ID_PRO_ANNUAL";
@@ -97,8 +101,8 @@ export async function POST(request: Request) {
       mode: "subscription",
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${origin}/settings?checkout=success`,
-      cancel_url: `${origin}/settings?checkout=cancelled`,
+      success_url: `${origin}${returnPath}?checkout=success`,
+      cancel_url: `${origin}${returnPath}?checkout=cancelled`,
       allow_promotion_codes: true,
       metadata: { userId: user.id, plan: "pro", interval },
       subscription_data: {

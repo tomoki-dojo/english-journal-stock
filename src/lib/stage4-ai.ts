@@ -18,11 +18,31 @@ import {
   type JudgeStage4TurnInput,
   type ParsedStage4Turn,
 } from "@/lib/stage4-judge-prompt";
-import { STAGE4_FREE_DAILY_LIMIT, STAGE4_PRO_DAILY_LIMIT } from "@/components/roadmap/types";
+import {
+  STAGE4_FREE_DAILY_LIMIT,
+  STAGE4_FREE_WELCOME_DAILY_LIMIT,
+  STAGE4_PRO_DAILY_LIMIT,
+  STAGE45_FREE_WELCOME_DAYS,
+} from "@/components/roadmap/types";
 import type { Plan } from "@/lib/plan";
 
-function dailyLimitForPlan(plan: Plan): number {
-  return plan === "free" ? STAGE4_FREE_DAILY_LIMIT : STAGE4_PRO_DAILY_LIMIT;
+// Proは固定。Freeは、このStageを初めて遊んだ日（stage4_usageの最初のday_key）から
+// STAGE45_FREE_WELCOME_DAYS日間だけ、はじめてボーナスの回数にする（まだ一度も遊んでいなければボーナス扱い）。
+async function dailyLimitFor(userId: string, plan: Plan): Promise<number> {
+  if (plan !== "free") return STAGE4_PRO_DAILY_LIMIT;
+  const { data, error } = await supabaseAdmin
+    .from("stage4_usage")
+    .select("day_key")
+    .eq("user_id", userId)
+    .order("day_key", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(`Stage4の初回利用日の取得に失敗しました: ${error.message}`);
+  if (!data) return STAGE4_FREE_WELCOME_DAILY_LIMIT;
+  const firstDay = Date.parse(`${data.day_key}T00:00:00Z`);
+  const today = Date.parse(`${getTodayDateKey()}T00:00:00Z`);
+  const elapsedDays = Math.floor((today - firstDay) / 86_400_000);
+  return elapsedDays < STAGE45_FREE_WELCOME_DAYS ? STAGE4_FREE_WELCOME_DAILY_LIMIT : STAGE4_FREE_DAILY_LIMIT;
 }
 
 export type Stage4UsageCheckResult =
@@ -31,7 +51,7 @@ export type Stage4UsageCheckResult =
 
 // 今日のセッション開始回数を確認するだけ（消費しない）。セッションの最初のターンでのみ呼ぶ。
 export async function checkStage4Usage(userId: string, plan: Plan): Promise<Stage4UsageCheckResult> {
-  const limit = dailyLimitForPlan(plan);
+  const limit = await dailyLimitFor(userId, plan);
   const dayKey = getTodayDateKey();
 
   const { data: existing, error: fetchError } = await supabaseAdmin

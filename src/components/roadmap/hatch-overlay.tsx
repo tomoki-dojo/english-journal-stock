@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { CelebrationOverlay } from "./celebration-overlay";
 import { TankOccupant } from "./kuwagata-shelf";
+import { useFanfare } from "./roadmap-sound";
 
 type GrowthLabel = "卵" | "幼虫" | "蛹";
 
@@ -29,6 +30,13 @@ export function HatchOverlay({
 }) {
   const [phase, setPhase] = useState<"buildup" | "flash" | "reveal">("buildup");
   const before: GrowthLabel = hatchedFrom === "卵" || hatchedFrom === "幼虫" || hatchedFrom === "蛹" ? hatchedFrom : "蛹";
+
+  const playFanfare = useFanfare();
+  // 閃光のあと成虫が現れた瞬間に鳴らす
+  useEffect(() => {
+    if (phase === "reveal") playFanfare();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
 
   useEffect(() => {
     const toFlash = setTimeout(() => setPhase("flash"), BUILDUP_MS);

@@ -22,7 +22,8 @@ const SIZE_STEP = 0.06;
 
 // ラウンド結果画面用。フレーズ卒業のご褒美で、育成中のクワたんの成長（2色ゲージ）と、
 // 成虫のクワたんの大きさ（サイズレベル）が進んだ様子を見せる。どちらもいなければ何も出さない。
-export function GrowingKuwagataPanel() {
+// maxCount: 見せる匹数の上限(結果画面の下に答え合わせが続く画面では1匹だけにして、答えが下に追いやられないようにする)。
+export function GrowingKuwagataPanel({ maxCount }: { maxCount?: number } = {}) {
   const [growing, setGrowing] = useState<KuwagataGrowingIndividual[]>([]);
   const [adults, setAdults] = useState<KuwagataAdultGrowth[]>([]);
   const [hiddenCount, setHiddenCount] = useState(0);
@@ -57,6 +58,11 @@ export function GrowingKuwagataPanel() {
 
   if (growing.length === 0 && adults.length === 0) return null;
 
+  // 匹数の上限があるときは、育成中(次の段階に近い順)→サイズアップした成虫の順に、上限まで見せる。
+  const shownGrowing = maxCount === undefined ? growing : growing.slice(0, maxCount);
+  const shownAdults = maxCount === undefined ? adults : adults.slice(0, Math.max(0, maxCount - shownGrowing.length));
+  const shownHidden = maxCount === undefined ? hiddenCount : 0;
+
   return (
     <div className="relative mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
       {overlay === "stage" && (
@@ -79,7 +85,7 @@ export function GrowingKuwagataPanel() {
         />
       )}
       <div className="flex flex-wrap items-end justify-center gap-4">
-        {growing.map((individual) => (
+        {shownGrowing.map((individual) => (
           <div key={individual.id} className="flex flex-col items-center gap-1.5">
             <TankOccupant
               color="#f59e0b"
@@ -94,7 +100,7 @@ export function GrowingKuwagataPanel() {
             </span>
           </div>
         ))}
-        {adults.map((adult) => (
+        {shownAdults.map((adult) => (
           <div
             key={adult.id}
             className={`flex flex-col items-center gap-1.5 ${adult.leveledUp ? "animate-round-complete-pop" : ""}`}
@@ -113,9 +119,9 @@ export function GrowingKuwagataPanel() {
             </span>
           </div>
         ))}
-        {hiddenCount > 0 && (
+        {shownHidden > 0 && (
           <span className="self-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-700">
-            +{hiddenCount}匹
+            +{shownHidden}匹
           </span>
         )}
       </div>
