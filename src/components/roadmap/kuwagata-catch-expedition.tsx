@@ -10,6 +10,7 @@ import { KuwagataWordChallenge } from "./kuwagata-word-challenge";
 import { KuwagataAreaMap, KUWAGATA_MAP_AREA_CODES } from "./kuwagata-area-map";
 import { KUWAGATA_AREA_NAMES } from "@/lib/kuwagata-area-names";
 import type { KuwagataAreaCode } from "@/lib/supabase/kuwagata";
+import { ShareButton } from "@/components/share-button";
 import { useRoadmapAdBreak } from "./roadmap-ad-break";
 import { GetSeOnMount } from "./roadmap-sound";
 
@@ -297,6 +298,14 @@ export function KuwagataCatchExpedition({
           >
             棚を見る
           </button>
+          {result.rarity !== "コモン" && (
+            <ShareButton
+              campaign="catch_rare"
+              label="みんなに自慢する"
+              text={`英クワたんで${result.rarity}の「${result.speciesName}」をゲットした！ #英クワたん`}
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border-2 border-white/70 bg-white/10 py-2 text-sm font-bold text-white transition-transform active:scale-95"
+            />
+          )}
           <Link
             href="/roadmap"
             className="flex items-center gap-1 rounded-full px-4 py-1.5 text-xs font-semibold text-white/80 hover:text-white"

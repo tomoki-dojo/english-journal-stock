@@ -1,5 +1,6 @@
 "use client";
 
+import { ShareButton } from "@/components/share-button";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { KuwagataAreaMap } from "./kuwagata-area-map";
@@ -99,6 +100,14 @@ export function KuwagataAreaUnlockCelebration({
             </p>
           )}
         </div>
+        {revealed && (
+          <ShareButton
+            campaign="area_unlock"
+            label="みんなに自慢する"
+            text={`英クワたんで新エリア「${newAreas.map((a) => KUWAGATA_AREA_NAMES[a]).join("」「")}」が解放された！ #英クワたん`}
+            className="inline-flex w-full max-w-xs items-center justify-center gap-1.5 rounded-full border-2 border-white/70 bg-white/10 py-2 text-sm font-bold text-white transition-transform active:scale-95"
+          />
+        )}
         <button
           type="button"
           onClick={() => void close()}

@@ -15,28 +15,28 @@ import { Volume1, Volume2, VolumeX } from "lucide-react";
 // （ファイルが無い間は何も鳴らず、エラーも出さない）。ファイル名は brand/kuwagata-asset-spec.md 参照。
 const BGM_SRC = "/roadmap/sound/bgm_room.mp3";
 const TAP_SRC = "/roadmap/sound/se_tap.mp3";
-const BGM_VOLUME = 0.15;
-const TAP_VOLUME = 0.05;
+const BGM_VOLUME = 0.2;
+const TAP_VOLUME = 0.07;
 const PAGE_SRC = "/roadmap/sound/se_page.mp3";
-const PAGE_VOLUME = 0.2;
+const PAGE_VOLUME = 0.25;
 const MINIGAME_BGM_SRC = "/roadmap/sound/bgm_minigame.mp3";
-const MINIGAME_BGM_VOLUME = 0.25;
+const MINIGAME_BGM_VOLUME = 0.3;
 // 単語ノートのテスト中のBGM（テストが始まってから結果が出るまで）。
 const QUIZ_BGM_SRC = "/roadmap/sound/bgm_notebook.mp3";
-const QUIZ_BGM_VOLUME = 0.35;
+const QUIZ_BGM_VOLUME = 0.4;
 const STAGE_BGM_SRC = "/roadmap/sound/bgm_stage.mp3";
-const STAGE_BGM_VOLUME = 0.1;
+const STAGE_BGM_VOLUME = 0.13;
 // Stage3〜5は音声入力でマイクを使うので、聞き取り中だけBGMをほぼ消す（BGMがマイクに入って認識を邪魔しないように）。
 // 音量の段階（1〜3）に関わらず、同じ極小の音量に下げる（段階2の通常音量の約4%）。
 const MIC_DUCK_VOLUME = 0.004;
 const MINIGAME_SE_SRC = "/roadmap/sound/se_minigame.mp3";
-const MINIGAME_SE_VOLUME = 0.2;
+const MINIGAME_SE_VOLUME = 0.25;
 const FANFARE_SRC = "/roadmap/sound/se_fanfare.mp3";
-const FANFARE_VOLUME = 0.3;
+const FANFARE_VOLUME = 0.4;
 const GROWTH_SRC = "/roadmap/sound/se_growth.mp3";
 const GROWTH_VOLUME = 0.12;
 const GET_SRC = "/roadmap/sound/se_get.mp3";
-const GET_VOLUME = 0.3;
+const GET_VOLUME = 0.4;
 const STORAGE_KEY = "roadmap_sound_level";
 const LEGACY_STORAGE_KEY = "roadmap_sound_enabled"; // 旧: ON/OFFのみ。"0"ならミュートとして引き継ぐ。
 
