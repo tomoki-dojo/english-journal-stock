@@ -16,7 +16,7 @@ const IRREGULAR: Record<string, string[]> = {
   drove: ["drive"], driven: ["drive"], flew: ["fly"], flown: ["fly"],
   forgot: ["forget"], forgotten: ["forget"], lost: ["lose"], lent: ["lend"],
   sent: ["send"], spent: ["spend"], built: ["build"], sold: ["sell"], won: ["win"],
-  wore: ["wear"], worn: ["wear"], broke: ["break"], broken: ["break"],
+  wore: ["wear"], worn: ["wear"], beaten: ["beat"], misunderstood: ["misunderstand"], broke: ["break"], broken: ["break"],
   fell: ["fall"], fallen: ["fall"], grew: ["grow"], grown: ["grow"],
   rose: ["rise"], risen: ["rise"], sang: ["sing"], sung: ["sing"], swam: ["swim"],
   threw: ["throw"], thrown: ["throw"], woke: ["wake"], woken: ["wake"],
