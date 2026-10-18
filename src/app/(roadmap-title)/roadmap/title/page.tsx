@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/supabase/server-auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { ROADMAP_TITLE_PATH, sanitizeRoadmapNext } from "@/lib/roadmap-title";
 import { APP_VERSION } from "@/lib/app-version";
-import { TitleBgm } from "@/components/roadmap/title-bgm";
+import { TitleScene } from "@/components/roadmap/title-scene";
 
 export const metadata: Metadata = { title: { absolute: "喋って！育てろ！英クワたん" } };
 
@@ -42,58 +42,28 @@ export default async function RoadmapTitlePage({ searchParams }: TitlePageProps)
   // タイトル画面は1枚絵(9:16)。画面に収まる最大の大きさで中央に置き、絵の下の余白にボタンを重ねる。
   return (
     <div className="relative flex h-dvh items-center justify-center overflow-hidden bg-[#fffaeb]">
-      <TitleBgm />
-      <div className="relative" style={{ aspectRatio: "9 / 16", height: "min(100dvh, calc(100vw * 16 / 9))" }}>
-        {/* タイトル絵はレイヤーごとのSVGを重ねたもの(入場演出でロゴ・吹き出しを個別に動かす)。 */}
-        {/* eslint-disable @next/next/no-img-element */}
-        <img
-          src="/roadmap/title/title_layer_bg.webp"
-          alt="英クワたん 喋って！育てろ！"
-          className="animate-title-bg absolute inset-0 h-full w-full select-none"
-          draggable={false}
-        />
-        <img
-          src="/roadmap/title/title_layer_logo.webp"
-          alt=""
-          className="animate-title-logo absolute inset-0 h-full w-full select-none"
-          draggable={false}
-        />
-        <img
-          src="/roadmap/title/title_layer_bubble.webp"
-          alt=""
-          className="animate-title-bubble absolute inset-0 h-full w-full select-none"
-          draggable={false}
-        />
-        <img
-          src="/roadmap/title/title_layer_mega.webp"
-          alt=""
-          className="animate-title-mega absolute inset-0 h-full w-full select-none"
-          draggable={false}
-        />
-        {/* eslint-enable @next/next/no-img-element */}
-        <div className="animate-title-buttons absolute inset-x-0 top-[76%] flex flex-col items-center gap-3 px-[12%]">
-          {user ? (
-            <>
-              {displayName && <p className="text-sm font-bold text-zinc-600">{displayName}</p>}
-              <a
-                href={`${ROADMAP_TITLE_PATH}/enter?next=${encodeURIComponent(nextPath)}`}
-                className={`${primaryButton} w-full`}
-              >
-                続きを始める
-              </a>
-            </>
-          ) : (
-            <>
-              <Link href={signupHref} className={`${primaryButton} w-full`}>
-                サインアップ
-              </Link>
-              <Link href={loginHref} className={`${secondaryButton} w-full`}>
-                サインイン
-              </Link>
-            </>
-          )}
-        </div>
-      </div>
+      <TitleScene>
+        {user ? (
+          <>
+            {displayName && <p className="text-sm font-bold text-zinc-600">{displayName}</p>}
+            <a
+              href={`${ROADMAP_TITLE_PATH}/enter?next=${encodeURIComponent(nextPath)}`}
+              className={`${primaryButton} w-full`}
+            >
+              続きを始める
+            </a>
+          </>
+        ) : (
+          <>
+            <Link href={signupHref} className={`${primaryButton} w-full`}>
+              サインアップ
+            </Link>
+            <Link href={loginHref} className={`${secondaryButton} w-full`}>
+              サインイン
+            </Link>
+          </>
+        )}
+      </TitleScene>
 
       <Link
         href={`${ROADMAP_TITLE_PATH}/version`}

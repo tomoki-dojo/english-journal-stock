@@ -2180,6 +2180,20 @@ body {
   }
 }
 
+@keyframes title-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.animate-title-blink {
+  animation: title-blink 1.4s ease-in-out infinite;
+}
+
 .animate-title-bg {
   animation: title-bg-in 0.5s ease-out both;
 }
@@ -2221,6 +2235,7 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .animate-title-blink,
   .animate-title-bg,
   .animate-title-logo,
   .animate-title-bubble,
