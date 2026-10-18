@@ -77,6 +77,12 @@ function RareChanceScreen({ count, onClose }: { count: number; onClose: () => vo
 // 残った古いデータで同じ演出がもう一度出てしまうのを防ぐ。ページを読み込み直せばサーバーの既読が効く。
 const shownEggIds = new Set<string>();
 const shownHatchIds = new Set<string>();
+// 導入・アドバイスを見せ終えたか(同じ理由で、戻ったときに古いキャッシュで再表示されるのを防ぐ)。
+let introShown = false;
+const shownRareCounts = new Set<number>();
+const shownStageUpIds = new Set<string>();
+const shownAnnouncementIds = new Set<number>();
+const shownTriviaIds = new Set<string>();
 
 // 部屋に入ったときのポップアップ。初回はエークワ博士のアドバイス、以降は未読のお知らせを1件ずつ順に出す。
 // 閉じるたびに既読をサーバーへ保存する（保存に失敗しても表示は先へ進める）。
@@ -98,9 +104,9 @@ export function RoomNoticeModal({
   rareChance?: number | null;
 }) {
   const [queue, setQueue] = useState<Item[]>(() => [
-    ...(showAdvice ? ([{ kind: "intro" }, { kind: "advice" }] as Item[]) : []),
+    ...(showAdvice && !introShown ? ([{ kind: "intro" }, { kind: "advice" }] as Item[]) : []),
     // 習得数がレア確定の節目に達したときの知らせ（タマゴより先に出す）
-    ...(rareChance ? ([{ kind: "rareChance", count: rareChance }] as Item[]) : []),
+    ...(rareChance && !shownRareCounts.has(rareChance) ? ([{ kind: "rareChance", count: rareChance }] as Item[]) : []),
     // Stage解放で配られたタマゴは、タマゴ入手の演出の前に「Stage◯が解放された！」を挟む。
     // 節目のイベントで配られたタマゴは、先に「もらえた理由」を見せてからタマゴを渡す。
     ...newEggs.filter((egg) => !shownEggIds.has(egg.id)).flatMap((egg): Item[] => {
@@ -122,13 +128,17 @@ export function RoomNoticeModal({
       .filter((hatch) => !shownHatchIds.has(hatch.id))
       .map((hatch) => ({ kind: "hatch" as const, hatch })),
     // 日数がたって成長したクワたん（練習のご褒美で成長した分は、結果画面でその場で見せる）
-    ...(stageUps.length > 0 ? ([{ kind: "growth", stageUps }] as Item[]) : []),
-    ...announcements.map((announcement) => ({
-      kind: "announcement" as const,
-      announcement,
-    })),
+    ...(stageUps.some((s) => !shownStageUpIds.has(s.id))
+      ? ([{ kind: "growth", stageUps: stageUps.filter((s) => !shownStageUpIds.has(s.id)) }] as Item[])
+      : []),
+    ...announcements
+      .filter((a) => !shownAnnouncementIds.has(a.id))
+      .map((announcement) => ({
+        kind: "announcement" as const,
+        announcement,
+      })),
     // お知らせのあとに、その日のアーサーの豆知識（1日1回）
-    ...(trivia ? ([{ kind: "trivia", trivia }] as Item[]) : []),
+    ...(trivia && !shownTriviaIds.has(trivia.id) ? ([{ kind: "trivia", trivia }] as Item[]) : []),
   ]);
 
   const [introPage, setIntroPage] = useState(0);
@@ -139,7 +149,10 @@ export function RoomNoticeModal({
   if (current.kind === "intro") {
     const isLast = introPage >= INTRO_LINES.length - 1;
     const advance = () => {
-      if (isLast) setQueue((q) => q.slice(1));
+      if (isLast) {
+        introShown = true;
+        setQueue((q) => q.slice(1));
+      }
       else setIntroPage((p) => p + 1);
     };
     return (
@@ -169,6 +182,7 @@ export function RoomNoticeModal({
   if (current.kind === "trivia") {
     const { trivia: item } = current;
     const closeTrivia = () => {
+      shownTriviaIds.add(item.id);
       void fetch("/api/roadmap/notices/seen", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -201,6 +215,7 @@ export function RoomNoticeModal({
   if (current.kind === "growth") {
     const { stageUps: items } = current;
     const closeGrowth = () => {
+      items.forEach((item) => shownStageUpIds.add(item.id));
       void fetch("/api/roadmap/notices/seen", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -241,7 +256,10 @@ export function RoomNoticeModal({
       <RareChanceScreen
         key={`rare-chance-${current.count}`}
         count={current.count}
-        onClose={() => setQueue((q) => q.slice(1))}
+        onClose={() => {
+          shownRareCounts.add(current.count);
+          setQueue((q) => q.slice(1));
+        }}
       />
     );
   }
@@ -317,6 +335,7 @@ export function RoomNoticeModal({
   }
 
   const close = () => {
+    if (current.kind === "announcement") shownAnnouncementIds.add(current.announcement.id);
     const body =
       current.kind === "advice"
         ? { kind: "advice" }
