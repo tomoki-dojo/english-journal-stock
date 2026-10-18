@@ -9,6 +9,9 @@ const TITLE_BGM_SRC = "/roadmap/sound/bgm_title.mp3";
 const TITLE_BGM_VOLUME = 0.07;
 const LEVEL_FACTORS = [0, 0.5, 1, 1.8];
 const STORAGE_KEY = "roadmap_sound_level";
+// ボタンを押したときと同じ音(roadmap-sound.tsx のタップ音と同じ音源・音量)。
+const TAP_SRC = "/roadmap/sound/se_tap.mp3";
+const TAP_VOLUME = 0.07;
 
 function readLevel(): number {
   try {
@@ -36,14 +39,17 @@ export function TitleScene({ children }: { children: React.ReactNode }) {
   function start() {
     if (started) return;
     setStarted(true);
-    const volume = Math.min(1, TITLE_BGM_VOLUME * LEVEL_FACTORS[readLevel()]);
-    if (volume <= 0) return;
+    const factor = LEVEL_FACTORS[readLevel()];
+    if (factor <= 0) return;
+    const tap = new Audio(TAP_SRC);
+    tap.volume = Math.min(1, TAP_VOLUME * factor);
+    void tap.play().catch((err) => console.warn("タップ音を鳴らせませんでした", err));
     const audio = new Audio(TITLE_BGM_SRC);
     audio.loop = true;
-    audio.volume = volume;
+    audio.volume = Math.min(1, TITLE_BGM_VOLUME * factor);
     audioRef.current = audio;
     // タップの中で鳴らすので、スマホでも許可される。
-    void audio.play().catch(() => {});
+    void audio.play().catch((err) => console.warn("タイトルのBGMを鳴らせませんでした", err));
   }
 
   return (

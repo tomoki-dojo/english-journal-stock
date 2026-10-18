@@ -56,7 +56,7 @@ export default async function RoadmapTitlePage({ searchParams }: TitlePageProps)
         ) : (
           <>
             <Link href={signupHref} className={`${primaryButton} w-full`}>
-              サインアップ
+              登録して始める
             </Link>
             <Link href={loginHref} className={`${secondaryButton} w-full`}>
               サインイン
