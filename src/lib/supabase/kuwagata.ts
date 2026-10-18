@@ -828,6 +828,8 @@ export async function getKuwagataEncyclopedia(
   const firstBySpecies = new Map<string, { at: string; via: KuwagataIndividual["obtainedVia"] }>();
   for (const individual of individuals) {
     if (firstBySpecies.has(individual.speciesId)) continue;
+    // クワたんシリーズ(既知種)は、成虫になって(羽化して)から図鑑に載る。卵・幼虫・蛹のうちは載らない。
+    if (individual.speciesKind === "known" && !isAdultIndividual(individual)) continue;
     firstBySpecies.set(individual.speciesId, { at: individual.obtainedAt, via: individual.obtainedVia });
   }
   if (options.previewAll) {
