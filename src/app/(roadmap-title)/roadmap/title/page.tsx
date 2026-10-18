@@ -53,19 +53,19 @@ export default async function RoadmapTitlePage({ searchParams }: TitlePageProps)
           draggable={false}
         />
         <img
-          src="/roadmap/title/title_layer_logo.svg"
+          src="/roadmap/title/title_layer_logo.webp"
           alt=""
           className="animate-title-logo absolute inset-0 h-full w-full select-none"
           draggable={false}
         />
         <img
-          src="/roadmap/title/title_layer_bubble.svg"
+          src="/roadmap/title/title_layer_bubble.webp"
           alt=""
           className="animate-title-bubble absolute inset-0 h-full w-full select-none"
           draggable={false}
         />
         <img
-          src="/roadmap/title/title_layer_mega.svg"
+          src="/roadmap/title/title_layer_mega.webp"
           alt=""
           className="animate-title-mega absolute inset-0 h-full w-full select-none"
           draggable={false}
