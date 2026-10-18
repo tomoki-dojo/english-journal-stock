@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { setAudioVolume, unlockAudio } from "@/lib/audio-volume";
 
 // タイトル画面の本体。最初は背景と「TAP TO START」だけを見せ、タップしたらBGMを鳴らして入場演出を始める。
 // (スマホは操作するまで音を鳴らせないので、このタップを音を出す合図にする。)
@@ -38,15 +39,16 @@ export function TitleScene({ children }: { children: React.ReactNode }) {
 
   function start() {
     if (started) return;
+    unlockAudio();
     setStarted(true);
     const factor = LEVEL_FACTORS[readLevel()];
     if (factor <= 0) return;
     const tap = new Audio(TAP_SRC);
-    tap.volume = Math.min(1, TAP_VOLUME * factor);
+    setAudioVolume(tap, TAP_VOLUME * factor);
     void tap.play().catch((err) => console.warn("タップ音を鳴らせませんでした", err));
     const audio = new Audio(TITLE_BGM_SRC);
     audio.loop = true;
-    audio.volume = Math.min(1, TITLE_BGM_VOLUME * factor);
+    setAudioVolume(audio, TITLE_BGM_VOLUME * factor);
     audioRef.current = audio;
     // タップの中で鳴らすので、スマホでも許可される。
     void audio.play().catch((err) => console.warn("タイトルのBGMを鳴らせませんでした", err));

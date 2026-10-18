@@ -10,6 +10,7 @@ import {
 } from "react";
 import { usePathname } from "next/navigation";
 import { Volume1, Volume2, VolumeX } from "lucide-react";
+import { setAudioVolume, unlockAudio } from "@/lib/audio-volume";
 
 // ロードマップ共通のサウンド（BGM・タップ音）。音源は public/roadmap/sound/ に置くだけで鳴る
 // （ファイルが無い間は何も鳴らず、エラーも出さない）。ファイル名は brand/kuwagata-asset-spec.md 参照。
@@ -128,13 +129,20 @@ export function RoadmapSoundProvider({
         });
         tapRef.current = audio;
       }
-      tapRef.current.volume = Math.min(1, TAP_VOLUME * LEVEL_FACTORS[levelRef.current]);
+      setAudioVolume(tapRef.current, TAP_VOLUME * LEVEL_FACTORS[levelRef.current]);
       tapRef.current.currentTime = 0;
       void tapRef.current.play().catch(() => {});
     };
+    // iPhoneは音量をWeb Audio経由で変えるため、タップの中で再開しておく(touchend/clickでないと効かない端末がある)。
+    const unlock = () => unlockAudio();
     document.addEventListener("pointerdown", onPointerDown, true);
-    return () =>
+    document.addEventListener("touchend", unlock, true);
+    document.addEventListener("click", unlock, true);
+    return () => {
       document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("touchend", unlock, true);
+      document.removeEventListener("click", unlock, true);
+    };
   }, []);
 
   // 図鑑のページをめくる音
@@ -144,7 +152,7 @@ export function RoadmapSoundProvider({
     if (!pageRef.current) {
       pageRef.current = new Audio(PAGE_SRC);
     }
-    pageRef.current.volume = Math.min(1, PAGE_VOLUME * LEVEL_FACTORS[levelRef.current]);
+    setAudioVolume(pageRef.current, PAGE_VOLUME * LEVEL_FACTORS[levelRef.current]);
     pageRef.current.currentTime = 0;
     void pageRef.current.play().catch(() => {});
   }, []);
@@ -161,7 +169,7 @@ export function RoadmapSoundProvider({
       minigameBgmRef.current = audio;
     }
     const audio = minigameBgmRef.current;
-    audio.volume = Math.min(1, MINIGAME_BGM_VOLUME * LEVEL_FACTORS[level]);
+    setAudioVolume(audio, MINIGAME_BGM_VOLUME * LEVEL_FACTORS[level]);
     if (shouldPlay) {
       void audio.play().catch(() => {});
     } else {
@@ -182,7 +190,7 @@ export function RoadmapSoundProvider({
       quizBgmRef.current = audio;
     }
     const audio = quizBgmRef.current;
-    audio.volume = Math.min(1, QUIZ_BGM_VOLUME * LEVEL_FACTORS[level]);
+    setAudioVolume(audio, QUIZ_BGM_VOLUME * LEVEL_FACTORS[level]);
     if (shouldPlay) {
       void audio.play().catch(() => {});
     } else {
@@ -218,7 +226,7 @@ export function RoadmapSoundProvider({
     }
     const audio = stageBgmRef.current;
     const normal = STAGE_BGM_VOLUME * LEVEL_FACTORS[level];
-    audio.volume = Math.min(1, micActive ? Math.min(normal, MIC_DUCK_VOLUME) : normal);
+    setAudioVolume(audio, micActive ? Math.min(normal, MIC_DUCK_VOLUME) : normal);
     if (shouldPlay) {
       void audio.play().catch(() => {});
     } else {
@@ -231,7 +239,7 @@ export function RoadmapSoundProvider({
   const playMinigameSe = useCallback(() => {
     if (!enabledRef.current) return;
     const audio = new Audio(MINIGAME_SE_SRC);
-    audio.volume = Math.min(1, MINIGAME_SE_VOLUME * LEVEL_FACTORS[levelRef.current]);
+    setAudioVolume(audio, MINIGAME_SE_VOLUME * LEVEL_FACTORS[levelRef.current]);
     void audio.play().catch(() => {});
   }, []);
 
@@ -239,7 +247,7 @@ export function RoadmapSoundProvider({
   const playFanfare = useCallback(() => {
     if (!enabledRef.current) return;
     const audio = new Audio(FANFARE_SRC);
-    audio.volume = Math.min(1, FANFARE_VOLUME * LEVEL_FACTORS[levelRef.current]);
+    setAudioVolume(audio, FANFARE_VOLUME * LEVEL_FACTORS[levelRef.current]);
     void audio.play().catch(() => {});
   }, []);
 
@@ -247,7 +255,7 @@ export function RoadmapSoundProvider({
   const playGrowth = useCallback(() => {
     if (!enabledRef.current) return;
     const audio = new Audio(GROWTH_SRC);
-    audio.volume = Math.min(1, GROWTH_VOLUME * LEVEL_FACTORS[levelRef.current]);
+    setAudioVolume(audio, GROWTH_VOLUME * LEVEL_FACTORS[levelRef.current]);
     void audio.play().catch(() => {});
   }, []);
 
@@ -255,7 +263,7 @@ export function RoadmapSoundProvider({
   const playGet = useCallback(() => {
     if (!enabledRef.current) return;
     const audio = new Audio(GET_SRC);
-    audio.volume = Math.min(1, GET_VOLUME * LEVEL_FACTORS[levelRef.current]);
+    setAudioVolume(audio, GET_VOLUME * LEVEL_FACTORS[levelRef.current]);
     void audio.play().catch(() => {});
   }, []);
 
@@ -274,7 +282,7 @@ export function RoadmapSoundProvider({
     }
 
     const audio = bgmRef.current;
-    audio.volume = Math.min(1, BGM_VOLUME * LEVEL_FACTORS[level]);
+    setAudioVolume(audio, BGM_VOLUME * LEVEL_FACTORS[level]);
     if (shouldPlay) {
       void audio.play().catch(() => {});
     } else {
