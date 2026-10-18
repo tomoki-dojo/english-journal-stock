@@ -115,6 +115,23 @@ const ITEM_PLACEMENT: Record<string, ItemPlacement> = {
   notebook: { left: 58, top: 49, rotate: 0, widthPct: 20 },
 };
 
+// スマホ(sm未満)用の縦長(3:4)背景に合わせた配置。
+// rotate・labelPosition等は共通のITEM_PLACEMENTを使い、座標と幅だけ上書きする。
+const MOBILE_PLACEMENT: Record<string, { left: number; top: number; widthPct: number }> = {
+  // ユーザーが示した完成イメージ(実測)に合わせた値。棚は右端で見切れる配置。
+  board: { left: 27.3, top: 15.1, widthPct: 49.6 },
+  shelf: { left: 88, top: 69.3, widthPct: 30 },
+  stage3: { left: 76.9, top: 19.5, widthPct: 19.6 },
+  stage2: { left: 9.2, top: 45, widthPct: 14 },
+  notebook: { left: 46.7, top: 38.1, widthPct: 26.5 },
+  stage5: { left: 26.9, top: 53.7, widthPct: 20 },
+  stage1: { left: 54.5, top: 78.9, widthPct: 28.7 },
+  stage0: { left: 13.3, top: 84, widthPct: 22 },
+  stage4: { left: 24.5, top: 71.5, widthPct: 17 },
+};
+
+const ROOM_BG_MOBILE_URL = "/roadmap/room/room_bg_mobile.png";
+
 type RoadmapRoomProps = {
   stageReadiness: {
     stage2Ready: boolean;
@@ -143,6 +160,7 @@ function StageCase({
   locked,
   current,
   placement,
+  mobilePlacement,
   dimmed = false,
 }: {
   color: string;
@@ -157,6 +175,7 @@ function StageCase({
   locked: boolean;
   current: boolean;
   placement: ItemPlacement;
+  mobilePlacement?: { left: number; top: number; widthPct: number };
   dimmed?: boolean;
 }) {
   // 解放済み＋実アート有りの場合だけ、アイテムごとのwidthPctで実寸表示する
@@ -168,7 +187,7 @@ function StageCase({
   // 画像より手前（DOM順で後＝視覚的に上）に重ねるが、座布団自体は透かして背景の絵を感じられる程度の濃さにする。
   const labelEl = (
     <span
-      className={`whitespace-nowrap rounded-full bg-white/50 px-3 py-1 text-sm font-bold shadow-sm backdrop-blur-[1px] ${locked ? "opacity-40" : ""}`}
+      className={`whitespace-nowrap rounded-full bg-white/50 px-2 py-0.5 text-xs font-bold shadow-sm sm:px-3 sm:py-1 sm:text-sm backdrop-blur-[1px] ${locked ? "opacity-40" : ""}`}
       style={{ color: locked ? "#71717a" : labelColor ?? color }}
     >
       {label}
@@ -232,15 +251,22 @@ function StageCase({
     </div>
   );
 
+  // 座標・幅はCSS変数で持ち、スマホ(--m*)とsm以上(--d*)をクラスで切り替える
+  // (サーバーコンポーネントのままレスポンシブにするため)。
+  const m = mobilePlacement ?? placement;
+  const cssVars = {
+    "--dl": `${placement.left}%`,
+    "--dt": `${placement.top}%`,
+    "--dw": `${placement.widthPct}%`,
+    "--ml": `${m.left}%`,
+    "--mt": `${m.top}%`,
+    "--mw": `${m.widthPct}%`,
+  } as React.CSSProperties;
+
   return (
     <div
-      className="absolute"
-      style={{
-        left: `${placement.left}%`,
-        top: `${placement.top}%`,
-        transform: "translate(-50%, -50%)",
-        width: showRealArt ? `${placement.widthPct}%` : undefined,
-      }}
+      className={`absolute left-[var(--ml)] top-[var(--mt)] sm:left-[var(--dl)] sm:top-[var(--dt)] ${showRealArt ? "w-[var(--mw)] sm:w-[var(--dw)]" : ""}`}
+      style={{ ...cssVars, transform: "translate(-50%, -50%)" }}
     >
       {locked ? content : (
         <Link href={href} className="block">
@@ -328,8 +354,13 @@ export function RoadmapRoom({
         （検討の経緯は_reference/kuwagata-motif-exploration.md参照）。
       */}
       <div
-        className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-amber-200 bg-cover bg-center p-4"
-        style={{ backgroundImage: `url(${ROOM_BG_URL}), linear-gradient(to bottom, #fffbeb, #ffffff)` }}
+        className="relative aspect-[3/4] overflow-hidden rounded-2xl border border-amber-200 bg-cover bg-center p-4 bg-[image:var(--bg-m)] sm:aspect-[4/3] sm:bg-[image:var(--bg-d)]"
+        style={
+          {
+            "--bg-m": `url(${ROOM_BG_MOBILE_URL}), linear-gradient(to bottom, #fffbeb, #ffffff)`,
+            "--bg-d": `url(${ROOM_BG_URL}), linear-gradient(to bottom, #fffbeb, #ffffff)`,
+          } as React.CSSProperties
+        }
       >
         <StageCase
           color={STAGE_COLORS[0]}
@@ -341,6 +372,7 @@ export function RoadmapRoom({
           locked={false}
           current={false}
           placement={ITEM_PLACEMENT.stage0}
+          mobilePlacement={MOBILE_PLACEMENT.stage0}
         />
         {STAGE_NUMBERS.map((stage) => {
           const meta = STAGE_META[stage];
@@ -357,6 +389,7 @@ export function RoadmapRoom({
               locked={!UNLOCKED[stage]}
               current={stage === currentStage}
               placement={ITEM_PLACEMENT[`stage${stage}`]}
+              mobilePlacement={MOBILE_PLACEMENT[`stage${stage}`]}
             />
           );
         })}
@@ -370,6 +403,7 @@ export function RoadmapRoom({
           locked={false}
           current={false}
           placement={ITEM_PLACEMENT.board}
+          mobilePlacement={MOBILE_PLACEMENT.board}
         />
         <StageCase
           color={SHELF_COLOR}
@@ -381,6 +415,7 @@ export function RoadmapRoom({
           locked={false}
           current={false}
           placement={ITEM_PLACEMENT.shelf}
+          mobilePlacement={MOBILE_PLACEMENT.shelf}
         />
         <StageCase
           color={NOTEBOOK_COLOR}
@@ -392,6 +427,7 @@ export function RoadmapRoom({
           locked={false}
           current={false}
           placement={ITEM_PLACEMENT.notebook}
+          mobilePlacement={MOBILE_PLACEMENT.notebook}
           dimmed={notebookCapped}
         />
       </div>

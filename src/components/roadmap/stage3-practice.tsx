@@ -1,5 +1,6 @@
 "use client";
 
+import { TrackOnMount } from "@/components/analytics/track-on-mount";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Check, Hourglass, Mic, PartyPopper, RotateCcw, Square, X } from "lucide-react";
@@ -9,6 +10,7 @@ import { ArthurAvatar } from "./arthur";
 import { GrowthBadge } from "./growth-badge";
 import { GrowingKuwagataPanel } from "./growing-kuwagata-panel";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
+import { TappableText } from "./tappable-text";
 import { useSpeechRecognition } from "@/lib/use-speech-recognition";
 import { useBgmDuck } from "./roadmap-sound";
 import type { Stage3JudgeResult, Stage3Question, Stage3SessionResponse, Stage3UsageInfo } from "./types";
@@ -243,7 +245,7 @@ export function Stage3Practice() {
     return (
       <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-100/30 px-6 py-10 text-center">
         <p className="text-sm text-zinc-700">今日のAI判定は{limit}回まで使い切りました。</p>
-        <p className="mt-1 text-xs text-zinc-400">また明日挑戦できます。<Link href="/roadmap/pro?from=stage3" className="font-semibold text-amber-600 underline underline-offset-2">Proにすると上限が大きく緩和されます。</Link></p>
+        <p className="mt-1 text-xs text-zinc-400">また明日挑戦できます。<TrackOnMount event="ai_limit_hit" params={{ stage: 3 }} onceKey={`ai_limit_hit:stage3:${new Date().toDateString()}`} /><Link href="/roadmap/pro?from=stage3" className="font-semibold text-amber-600 underline underline-offset-2">Proにすると上限が大きく緩和されます。</Link></p>
         <Link
           href="/roadmap"
           className="mt-4 inline-flex items-center gap-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
@@ -266,7 +268,7 @@ export function Stage3Practice() {
 
         {limitReachedMidRound && (
           <p className="mt-3 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700">
-            今日のAI判定は{limit}回まで使い切りました。また明日挑戦できます。<Link href="/roadmap/pro?from=stage3" className="font-semibold text-amber-600 underline underline-offset-2">Proにすると上限が大きく緩和されます。</Link>
+            今日のAI判定は{limit}回まで使い切りました。また明日挑戦できます。<TrackOnMount event="ai_limit_hit" params={{ stage: 3 }} onceKey={`ai_limit_hit:stage3:${new Date().toDateString()}`} /><Link href="/roadmap/pro?from=stage3" className="font-semibold text-amber-600 underline underline-offset-2">Proにすると上限が大きく緩和されます。</Link>
           </p>
         )}
 
@@ -288,14 +290,14 @@ export function Stage3Practice() {
               type="button"
               onClick={loadSession}
               style={{ backgroundColor: STAGE_COLOR }}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97]"
+              className="flex flex-1 items-center justify-center gap-1 sm:gap-1.5 rounded-lg px-2 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97]"
             >
               もう1ラウンド
             </button>
           )}
           <Link
             href="/roadmap"
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
+            className="flex flex-1 items-center justify-center gap-1 sm:gap-1.5 rounded-lg border border-zinc-300 bg-white px-2 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
           >
             部屋に戻る
           </Link>
@@ -337,7 +339,11 @@ export function Stage3Practice() {
           <div className="mb-4 flex items-start gap-3">
             <ArthurAvatar size={40} />
             <div className="flex-1 rounded-xl bg-white px-4 py-3 shadow-sm">
-              <p className="text-2xl font-bold leading-snug text-zinc-900">{followUp.partnerReplyEn}</p>
+              <TappableText
+                text={followUp.partnerReplyEn}
+                accentColor={STAGE_COLOR}
+                className="text-2xl font-bold leading-snug text-zinc-900"
+              />
               {followUp.partnerReplyJa && <p className="mt-1 text-sm text-zinc-500">{followUp.partnerReplyJa}</p>}
             </div>
           </div>
@@ -384,7 +390,7 @@ export function Stage3Practice() {
                   disabled={manualText.trim().length === 0}
                   onClick={() => setAnswerPhase("review")}
                   style={{ backgroundColor: STAGE_COLOR }}
-                  className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97] disabled:opacity-50"
+                  className="mt-3 flex w-full items-center justify-center gap-1 sm:gap-1.5 rounded-lg px-2 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97] disabled:opacity-50"
                 >
                   この内容で進む
                 </button>
@@ -425,7 +431,7 @@ export function Stage3Practice() {
                 disabled={answerPhase === "judging" || manualText.trim().length === 0}
                 onClick={submitAnswer}
                 style={{ backgroundColor: STAGE_COLOR }}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97] disabled:opacity-50"
+                className="flex flex-1 items-center justify-center gap-1 sm:gap-1.5 rounded-lg px-2 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97] disabled:opacity-50"
               >
                 {answerPhase === "judging" ? "判定中..." : "判定する"}
               </button>
@@ -433,7 +439,7 @@ export function Stage3Practice() {
                 type="button"
                 disabled={answerPhase === "judging"}
                 onClick={retrySpeaking}
-                className="flex items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-600 transition-all duration-150 hover:border-zinc-400 active:scale-[.97] disabled:opacity-50"
+                className="flex items-center justify-center gap-1 sm:gap-1.5 rounded-lg border border-zinc-300 bg-white px-2 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm font-medium text-zinc-600 transition-all duration-150 hover:border-zinc-400 active:scale-[.97] disabled:opacity-50"
               >
                 <RotateCcw className="h-4 w-4" />
                 言い直す
@@ -467,7 +473,11 @@ export function Stage3Practice() {
                 <p className="mb-0.5 text-[10px] font-semibold" style={{ color: STAGE_COLOR }}>
                   模範解答
                 </p>
-                <p className="text-sm text-zinc-800">{result.modelAnswerEn}</p>
+                <TappableText
+                  text={result.modelAnswerEn}
+                  accentColor={STAGE_COLOR}
+                  className="text-sm text-zinc-800"
+                />
               </div>
             </div>
 
@@ -483,7 +493,7 @@ export function Stage3Practice() {
               type="button"
               onClick={goNext}
               style={{ backgroundColor: STAGE_COLOR }}
-              className="flex w-full items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97]"
+              className="flex w-full items-center justify-center gap-1 sm:gap-1.5 rounded-lg px-2 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97]"
             >
               {questionIndex + 1 < questions.length ? "次へ" : "結果を見る"}
             </button>

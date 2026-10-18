@@ -73,6 +73,11 @@ function RareChanceScreen({ count, onClose }: { count: number; onClose: () => vo
   );
 }
 
+// 演出を見せ終えたタマゴ・羽化のID。部屋に「戻る」とき(ブラウザの戻る等)に、画面遷移のキャッシュに
+// 残った古いデータで同じ演出がもう一度出てしまうのを防ぐ。ページを読み込み直せばサーバーの既読が効く。
+const shownEggIds = new Set<string>();
+const shownHatchIds = new Set<string>();
+
 // 部屋に入ったときのポップアップ。初回はエークワ博士のアドバイス、以降は未読のお知らせを1件ずつ順に出す。
 // 閉じるたびに既読をサーバーへ保存する（保存に失敗しても表示は先へ進める）。
 export function RoomNoticeModal({
@@ -98,7 +103,7 @@ export function RoomNoticeModal({
     ...(rareChance ? ([{ kind: "rareChance", count: rareChance }] as Item[]) : []),
     // Stage解放で配られたタマゴは、タマゴ入手の演出の前に「Stage◯が解放された！」を挟む。
     // 節目のイベントで配られたタマゴは、先に「もらえた理由」を見せてからタマゴを渡す。
-    ...newEggs.flatMap((egg): Item[] => {
+    ...newEggs.filter((egg) => !shownEggIds.has(egg.id)).flatMap((egg): Item[] => {
       const stage = egg.stageTrigger;
       const eggItem: Item = { kind: "egg", egg };
       if (egg.reason)
@@ -113,7 +118,9 @@ export function RoomNoticeModal({
           ]
         : [eggItem];
     }),
-    ...newHatches.map((hatch) => ({ kind: "hatch" as const, hatch })),
+    ...newHatches
+      .filter((hatch) => !shownHatchIds.has(hatch.id))
+      .map((hatch) => ({ kind: "hatch" as const, hatch })),
     // 日数がたって成長したクワたん（練習のご褒美で成長した分は、結果画面でその場で見せる）
     ...(stageUps.length > 0 ? ([{ kind: "growth", stageUps }] as Item[]) : []),
     ...announcements.map((announcement) => ({
@@ -252,6 +259,7 @@ export function RoomNoticeModal({
   if (current.kind === "egg") {
     const { egg } = current;
     const closeEgg = () => {
+      shownEggIds.add(egg.id);
       void fetch("/api/roadmap/notices/seen", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -281,6 +289,7 @@ export function RoomNoticeModal({
   if (current.kind === "hatch") {
     const { hatch } = current;
     const closeHatch = () => {
+      shownHatchIds.add(hatch.id);
       void fetch("/api/roadmap/notices/seen", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

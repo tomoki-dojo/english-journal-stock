@@ -32,11 +32,11 @@ const MIC_DUCK_VOLUME = 0.004;
 const MINIGAME_SE_SRC = "/roadmap/sound/se_minigame.mp3";
 const MINIGAME_SE_VOLUME = 0.25;
 const FANFARE_SRC = "/roadmap/sound/se_fanfare.mp3";
-const FANFARE_VOLUME = 0.4;
+const FANFARE_VOLUME = 0.2;
 const GROWTH_SRC = "/roadmap/sound/se_growth.mp3";
 const GROWTH_VOLUME = 0.12;
 const GET_SRC = "/roadmap/sound/se_get.mp3";
-const GET_VOLUME = 0.4;
+const GET_VOLUME = 0.15;
 const STORAGE_KEY = "roadmap_sound_level";
 const LEGACY_STORAGE_KEY = "roadmap_sound_enabled"; // 旧: ON/OFFのみ。"0"ならミュートとして引き継ぐ。
 
@@ -392,9 +392,9 @@ export function SoundToggleButton() {
         type="button"
         onClick={() => setLevel(level > 0 ? 0 : lastLevelRef.current)}
         aria-label={level > 0 ? "音をミュートにする" : "ミュートを解除する"}
-        className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-600 transition-colors hover:bg-amber-100/70 active:scale-95"
+        className="flex h-6 w-6 items-center justify-center rounded-full text-zinc-600 sm:h-8 sm:w-8 transition-colors hover:bg-amber-100/70 active:scale-95"
       >
-        <Icon className={`h-5 w-5 ${level === 0 ? "text-zinc-400" : ""}`} />
+        <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${level === 0 ? "text-zinc-400" : ""}`} />
       </button>
       <div
         ref={trackRef}
@@ -423,9 +423,9 @@ export function SoundToggleButton() {
           if (e.key === "ArrowRight" || e.key === "ArrowUp") setLevel?.(level + 1);
           else if (e.key === "ArrowLeft" || e.key === "ArrowDown") setLevel?.(level - 1);
         }}
-        className="relative flex h-8 w-20 cursor-pointer touch-none select-none items-center"
+        className="relative flex h-6 w-20 cursor-pointer sm:h-8 touch-none select-none items-center"
       >
-        <div className="relative h-5 w-full">
+        <div className="relative h-4 w-full sm:h-5">
           <div className="absolute inset-0 bg-zinc-200" style={{ clipPath: wedge }} />
           <div
             className="absolute inset-y-0 left-0 overflow-hidden transition-[width] duration-150"

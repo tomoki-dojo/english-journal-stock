@@ -256,6 +256,8 @@ export type Stage0RoundQuestion = {
   answerEn: string;
   // 「言えなかった」を選んだときだけUIで表示する。先には見せない。
   coreImageJa: string;
+  // 「他のケースも見る」で開く、ルール全体の掘り下げ(理由・他のケース・例外)。
+  deepDiveJa: string | null;
   warmth: WarmthLevel;
 };
 
@@ -415,7 +417,8 @@ export type Stage4ScenarioListItem = Stage4Scenario & {
 
 export type Stage4Turn = { role: "ai" | "user"; text: string };
 
-export type Stage4UsageInfo = { remaining: number; limit: number };
+// welcomeDaysLeft: はじめてボーナスの残り日数（今日を含む）。ボーナス中だけ入る。
+export type Stage4UsageInfo = { remaining: number; limit: number; welcomeDaysLeft?: number };
 
 export type Stage4TurnRequest = {
   scenarioId: string;
@@ -499,7 +502,8 @@ export type Stage5ScenarioListItem = Stage5Scenario & {
 // 既存方針（stage3/4のjudge-prompt分離コメント参照）に揃え、型も独立させておく。
 export type Stage5Turn = { role: "ai" | "user"; text: string };
 
-export type Stage5UsageInfo = { remaining: number; limit: number };
+// welcomeDaysLeft: はじめてボーナスの残り日数（今日を含む）。ボーナス中だけ入る。
+export type Stage5UsageInfo = { remaining: number; limit: number; welcomeDaysLeft?: number };
 
 export type Stage5TurnRequest = {
   scenarioId: string;
@@ -524,3 +528,8 @@ export type Stage5TurnOutcome =
   | { status: "ok"; result: Stage5TurnResult }
   | { status: "limit_exceeded"; limit: number }
   | { status: "error"; message: string };
+
+// Stage4・5の利用回数の隣に出す「はじめてボーナス 残り◯日」。ボーナス中でなければ空文字。
+export function welcomeBonusLabel(usage: { welcomeDaysLeft?: number } | null): string {
+  return usage?.welcomeDaysLeft ? `はじめてボーナス 残り${usage.welcomeDaysLeft}日` : "";
+}

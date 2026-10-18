@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
-import { Bug, Check, ChevronLeft, ChevronRight, Lock, Pencil, X } from "lucide-react";
+import { Bug, Check, ChevronLeft, ChevronRight, Crown, Lock, Pencil, X } from "lucide-react";
 import type { KuwagataGrowthStage, KuwagataShelfTank } from "@/lib/supabase/kuwagata";
 import {
   DEFAULT_BODY_SHAPE,
@@ -3170,6 +3170,9 @@ function tankBgStyle(isAquarium: boolean, isAncient = false): CSSProperties {
   return { backgroundImage: `url(${url}), ${fallback}` };
 }
 
+// 水槽の絵のズーム倍率の上限。
+const TANK_ZOOM_MAX = 3;
+
 function EnlargedTankVisual({
   tank,
   color,
@@ -3186,12 +3189,10 @@ function EnlargedTankVisual({
   // されない)。モーダルを閉じるとEnlargedTankVisual自体がアンマウントされるので、
   // 次に開いたときは自動的に空の状態から始まる。
   const positionsRef = useRef<Record<string, WorldEntry>>({});
-  // 当たり判定の円の表示(確認用)。開発中、または URL に ?collision=1 が付いているときだけ切り替えボタンを出す。
-  const [collisionDebugAvailable, setCollisionDebugAvailable] = useState(process.env.NODE_ENV !== "production");
+  // 当たり判定の円の表示(確認用)。切り替えボタンは外した。URL に ?collision=1 を付けたときだけ表示する。
   const [showCollision, setShowCollision] = useState(false);
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("collision") === "1") {
-      setCollisionDebugAvailable(true);
       setShowCollision(true);
     }
   }, []);
@@ -3230,9 +3231,122 @@ function EnlargedTankVisual({
     return spots;
   }, [tank, decorationSpots, geo]);
 
+  // ピンチ・ホイールで水槽の絵をズームする(見た目だけ。個体の動きや当たり判定の座標には影響しない)。
+  // 倍率と位置はrefで持ち、styleを直接書き換える(動かすたびに水槽全体を再レンダーしないため)。
+  const frameRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const viewRef = useRef({ s: 1, x: 0, y: 0 });
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const gestureRef = useRef<{ dist: number; s: number; x: number; y: number; mx: number; my: number } | null>(null);
+  const tapRef = useRef<{ t: number; x: number; y: number; moved: boolean } | null>(null);
+  const lastTapRef = useRef(0);
+  const [zoomed, setZoomed] = useState(false);
+
+  const applyView = (s: number, x: number, y: number) => {
+    const frame = frameRef.current;
+    const content = contentRef.current;
+    if (!frame || !content) return;
+    const ns = Math.min(TANK_ZOOM_MAX, Math.max(1, s));
+    const w = frame.clientWidth;
+    const h = frame.clientHeight;
+    const nx = Math.min(0, Math.max(w * (1 - ns), x));
+    const ny = Math.min(0, Math.max(h * (1 - ns), y));
+    viewRef.current = { s: ns, x: nx, y: ny };
+    content.style.transform = ns === 1 ? "" : `translate(${nx}px, ${ny}px) scale(${ns})`;
+    frame.style.touchAction = ns > 1.001 ? "none" : "pan-y";
+    setZoomed(ns > 1.001);
+  };
+  const zoomAt = (ns: number, cx: number, cy: number) => {
+    const { s, x, y } = viewRef.current;
+    const clamped = Math.min(TANK_ZOOM_MAX, Math.max(1, ns));
+    applyView(clamped, cx - (cx - x) * (clamped / s), cy - (cy - y) * (clamped / s));
+  };
+  const localPoint = (e: { clientX: number; clientY: number }) => {
+    const rect = frameRef.current?.getBoundingClientRect();
+    return { x: e.clientX - (rect?.left ?? 0), y: e.clientY - (rect?.top ?? 0) };
+  };
+  useEffect(() => {
+    const frame = frameRef.current;
+    if (!frame) return;
+    // PCでは、Ctrl(トラックパッドのピンチを含む)＋ホイールでズームする。普通のホイールは、ポップアップのスクロールに使う。
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      const rect = frame.getBoundingClientRect();
+      zoomAt(viewRef.current.s * (e.deltaY < 0 ? 1.12 : 1 / 1.12), e.clientX - rect.left, e.clientY - rect.top);
+    };
+    frame.addEventListener("wheel", onWheel, { passive: false });
+    return () => frame.removeEventListener("wheel", onWheel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const pt = localPoint(e);
+    pointersRef.current.set(e.pointerId, pt);
+    e.currentTarget.setPointerCapture(e.pointerId);
+    if (pointersRef.current.size === 1) {
+      tapRef.current = { t: Date.now(), x: pt.x, y: pt.y, moved: false };
+    } else if (pointersRef.current.size === 2) {
+      const [a, b] = [...pointersRef.current.values()];
+      const { s, x, y } = viewRef.current;
+      gestureRef.current = {
+        dist: Math.hypot(a.x - b.x, a.y - b.y) || 1,
+        s,
+        x,
+        y,
+        mx: (a.x + b.x) / 2,
+        my: (a.y + b.y) / 2,
+      };
+      if (tapRef.current) tapRef.current.moved = true;
+    }
+  };
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const prev = pointersRef.current.get(e.pointerId);
+    if (!prev) return;
+    const pt = localPoint(e);
+    pointersRef.current.set(e.pointerId, pt);
+    if (tapRef.current && Math.hypot(pt.x - tapRef.current.x, pt.y - tapRef.current.y) > 8) tapRef.current.moved = true;
+    if (pointersRef.current.size >= 2 && gestureRef.current) {
+      const [a, b] = [...pointersRef.current.values()];
+      const g = gestureRef.current;
+      const ns = Math.min(TANK_ZOOM_MAX, Math.max(1, (g.s * Math.hypot(a.x - b.x, a.y - b.y)) / g.dist));
+      const mx = (a.x + b.x) / 2;
+      const my = (a.y + b.y) / 2;
+      applyView(ns, mx - (g.mx - g.x) * (ns / g.s), my - (g.my - g.y) * (ns / g.s));
+    } else if (pointersRef.current.size === 1 && viewRef.current.s > 1.001) {
+      const { s, x, y } = viewRef.current;
+      applyView(s, x + (pt.x - prev.x), y + (pt.y - prev.y));
+    }
+  };
+  const handlePointerEnd = (e: React.PointerEvent<HTMLDivElement>) => {
+    pointersRef.current.delete(e.pointerId);
+    gestureRef.current = null;
+    const tap = tapRef.current;
+    if (pointersRef.current.size === 0 && tap && !tap.moved && Date.now() - tap.t < 300) {
+      // ダブルタップ: 拡大中なら元に戻し、等倍なら2.2倍にする。
+      if (Date.now() - lastTapRef.current < 300) {
+        if (viewRef.current.s > 1.001) applyView(1, 0, 0);
+        else zoomAt(2.2, tap.x, tap.y);
+        lastTapRef.current = 0;
+      } else {
+        lastTapRef.current = Date.now();
+      }
+    }
+    if (pointersRef.current.size === 0) tapRef.current = null;
+  };
+
   return (
     <div
-      className="relative mb-3.5 aspect-[4/3] w-full overflow-hidden rounded-lg border border-zinc-200 bg-cover bg-center"
+      ref={frameRef}
+      className="relative mb-3.5 w-full select-none overflow-hidden rounded-lg border border-zinc-200"
+      style={{ touchAction: "pan-y" }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerEnd}
+      onPointerCancel={handlePointerEnd}
+    >
+    <div
+      ref={contentRef}
+      className="relative aspect-[4/3] w-full origin-top-left bg-cover bg-center"
       style={tankBgStyle(isAquarium, isAncient)}
     >
       {isAquarium &&
@@ -3310,15 +3424,6 @@ function EnlargedTankVisual({
             />
           );
         })}
-      {collisionDebugAvailable && (
-        <button
-          type="button"
-          onClick={() => setShowCollision((v) => !v)}
-          className="absolute right-1.5 top-1.5 z-30 rounded bg-white/85 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-600 shadow-sm"
-        >
-          判定{showCollision ? "ON" : "OFF"}
-        </button>
-      )}
       {/* 水の底の秘境: 手前ガラス・水面の透明レイヤーを生き物・置物の上に重ねて「水の中」に見せる */}
       {isAquarium && (
         <img
@@ -3328,6 +3433,17 @@ function EnlargedTankVisual({
           draggable={false}
           className="pointer-events-none absolute inset-0 h-full w-full select-none"
         />
+      )}
+    </div>
+      {zoomed && (
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => applyView(1, 0, 0)}
+          className="absolute right-1.5 top-1.5 z-30 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold text-zinc-600 shadow"
+        >
+          元に戻す
+        </button>
       )}
     </div>
   );
@@ -3483,7 +3599,7 @@ function TankButton({
 }
 
 // Freeの表示枠を超えた種類の水槽。中は見せず、タップでPro案内へ。
-function LockedTankLink() {
+function LockedTankLink({ count }: { count: number }) {
   return (
     <Link
       href="/roadmap/pro?from=shelf"
@@ -3491,8 +3607,11 @@ function LockedTankLink() {
     >
       <div className="absolute inset-x-0 top-0 h-1 bg-zinc-300/80" />
       <Lock className="h-6 w-6 text-zinc-500" strokeWidth={1.75} />
-      <span className="rounded-md bg-white/75 px-3 py-0.5 text-xs font-semibold text-zinc-700 shadow-sm">？？？</span>
-      <span className="text-[10px] font-semibold text-amber-700">Proで飾れる</span>
+      <span className="rounded-md bg-white/75 px-2 py-0.5 text-xs font-semibold text-zinc-700 shadow-sm">{count}種が飾れていません</span>
+      <span className="mx-1 inline-flex items-center gap-1 rounded-2xl bg-gradient-to-b from-amber-400 to-orange-500 px-2 py-1 text-center text-[10px] font-black leading-tight text-white shadow-md ring-2 ring-amber-200">
+        <Crown className="h-3 w-3 shrink-0" />
+        Proなら飾れる水槽無制限！
+      </span>
     </Link>
   );
 }
@@ -3582,8 +3701,9 @@ export function KuwagataShelf({
   const newGroups = groupBySpecies(tanks);
   // 新種の棚は9個(3×3)ずつのページに分け、右スクロールで次のページを見せる。
   const newPageSize = isWideShelf ? NEW_SHELF_PAGE_SIZE_WIDE : NEW_SHELF_PAGE_SIZE_NARROW;
-  // 新種の棚の並び。表示枠を超えて隠れている種類は、最後に鍵付きの水槽(null)として並べる。
-  const newItems: (KuwagataShelfTank[] | null)[] = [...newGroups, ...Array.from({ length: lockedSpeciesCount }, () => null)];
+  // 新種の棚の並び。表示枠を超えて隠れている種類があれば、最後に鍵付きの水槽(null)を1つ並べる。
+  // 隠れている種類は、1つの鍵付き水槽にまとめて「◯種が飾れていません」と出す。
+  const newItems: (KuwagataShelfTank[] | null)[] = [...newGroups, ...(lockedSpeciesCount > 0 ? [null] : [])];
   const newPages: (KuwagataShelfTank[] | null)[][] = [];
   for (let i = 0; i < newItems.length; i += newPageSize) newPages.push(newItems.slice(i, i + newPageSize));
   // 選択中の水槽と同じ種類の水槽(ページャ用)と、その中での位置
@@ -3649,7 +3769,7 @@ export function KuwagataShelf({
                     if (group === null) {
                       return (
                         <RackCell key={`locked-${pageIndex}-${itemIndex}`}>
-                          <LockedTankLink />
+                          <LockedTankLink count={lockedSpeciesCount} />
                         </RackCell>
                       );
                     }
@@ -3715,14 +3835,14 @@ export function KuwagataShelf({
 
       {selectedTank && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-2 sm:p-4"
           onClick={() => setSelectedTankId(null)}
         >
           <div
-            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-5 shadow-xl sm:p-6"
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-1.5 shadow-xl sm:p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-3 flex items-center justify-between">
+            <div className="mb-2 flex items-center justify-between px-2 pt-1.5 sm:mb-3 sm:px-0 sm:pt-0">
               <h2 className="text-base font-bold text-zinc-800 sm:text-lg">
                 {selectedTank.speciesKind === "known"
                   ? selectedTank.speciesName

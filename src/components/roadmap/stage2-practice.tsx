@@ -8,6 +8,7 @@ import { RoundHeader } from "./round-header";
 import { GrowthBadge } from "./growth-badge";
 import { GrowingKuwagataPanel } from "./growing-kuwagata-panel";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
+import { TappableText } from "./tappable-text";
 import { getStage2SubFormatLabel } from "./types";
 import type { Stage2RoundQuestion, Stage2RoundResponse, WarmthLevel } from "./types";
 
@@ -233,13 +234,13 @@ export function Stage2Practice() {
             type="button"
             onClick={loadRound}
             style={{ backgroundColor: STAGE_COLOR }}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97]"
+            className="flex flex-1 items-center justify-center gap-1 sm:gap-1.5 rounded-lg px-2 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97]"
           >
             もう1ラウンド
           </button>
           <Link
             href="/roadmap"
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
+            className="flex flex-1 items-center justify-center gap-1 whitespace-nowrap sm:gap-1.5 rounded-lg border border-zinc-300 bg-white px-2 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
           >
             部屋に戻る
           </Link>
@@ -290,7 +291,11 @@ export function Stage2Practice() {
             <div className="mb-1 flex items-center gap-2">
               <GrowthBadge stage={2} warmth={currentQuestion.warmth} />
               {currentQuestion.promptEn ? (
-                <p className="text-lg font-medium text-zinc-900">{currentQuestion.promptEn}</p>
+                <TappableText
+                  text={currentQuestion.promptEn}
+                  accentColor={STAGE_COLOR}
+                  className="text-lg font-medium text-zinc-900"
+                />
               ) : currentQuestion.promptJa ? (
                 <p className="text-lg font-medium text-zinc-900">{currentQuestion.promptJa}</p>
               ) : null}
@@ -315,7 +320,7 @@ export function Stage2Practice() {
               <button
                 type="button"
                 onClick={handleReveal}
-                className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed px-4 py-2.5 text-sm font-medium transition-all duration-150 active:scale-[.97]"
+                className="flex w-full items-center justify-center gap-1 sm:gap-1.5 rounded-lg border border-dashed px-2 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm font-medium transition-all duration-150 active:scale-[.97]"
                 style={{ borderColor: STAGE_COLOR, color: STAGE_COLOR }}
               >
                 答えを確認する
@@ -326,7 +331,11 @@ export function Stage2Practice() {
                   className="mb-3 rounded-lg border px-4 py-3"
                   style={{ borderColor: withAlpha(STAGE_COLOR, "55"), backgroundColor: withAlpha(STAGE_COLOR, "12") }}
                 >
-                  <p className="text-base font-semibold text-zinc-900">{currentQuestion.answerText}</p>
+                  <TappableText
+                    text={currentQuestion.answerText}
+                    accentColor={STAGE_COLOR}
+                    className="text-base font-semibold text-zinc-900"
+                  />
                 </div>
 
                 {currentQuestion.referenceChoices.length > 0 && (
@@ -355,18 +364,18 @@ export function Stage2Practice() {
                     disabled={submitting}
                     onClick={() => submitResult(true)}
                     style={{ backgroundColor: STAGE_COLOR }}
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97] disabled:opacity-50"
+                    className="flex flex-1 items-center justify-center gap-1 sm:gap-1.5 rounded-lg px-2 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97] disabled:opacity-50"
                   >
-                    <Check className="h-4 w-4" />
+                    <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     言えた
                   </button>
                   <button
                     type="button"
                     disabled={submitting}
                     onClick={() => submitResult(false)}
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-600 transition-all duration-150 hover:border-zinc-400 active:scale-[.97] disabled:opacity-50"
+                    className="flex flex-1 items-center justify-center gap-1 whitespace-nowrap sm:gap-1.5 rounded-lg border border-zinc-300 bg-white px-2 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm font-medium text-zinc-600 transition-all duration-150 hover:border-zinc-400 active:scale-[.97] disabled:opacity-50"
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     言えなかった
                   </button>
                 </div>
@@ -377,7 +386,11 @@ export function Stage2Practice() {
           <div>
             <div className="mb-1 flex items-center gap-2">
               <GrowthBadge stage={2} warmth={currentQuestion.warmth} />
-              <p className="text-lg font-medium text-zinc-900">{currentQuestion.expressionEn}</p>
+              <TappableText
+                text={currentQuestion.expressionEn}
+                accentColor={STAGE_COLOR}
+                className="text-lg font-medium text-zinc-900"
+              />
             </div>
             {currentQuestion.meaningJa && (
               <p className="mb-4 text-sm text-zinc-500">{currentQuestion.meaningJa}</p>
@@ -388,18 +401,18 @@ export function Stage2Practice() {
                 disabled={submitting}
                 onClick={() => submitResult(true)}
                 style={{ backgroundColor: STAGE_COLOR }}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97] disabled:opacity-50"
+                className="flex flex-1 items-center justify-center gap-1 sm:gap-1.5 rounded-lg px-2 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97] disabled:opacity-50"
               >
-                <Check className="h-4 w-4" />
+                <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 言えた
               </button>
               <button
                 type="button"
                 disabled={submitting}
                 onClick={() => submitResult(false)}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-600 transition-all duration-150 hover:border-zinc-400 active:scale-[.97] disabled:opacity-50"
+                className="flex flex-1 items-center justify-center gap-1 whitespace-nowrap sm:gap-1.5 rounded-lg border border-zinc-300 bg-white px-2 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm font-medium text-zinc-600 transition-all duration-150 hover:border-zinc-400 active:scale-[.97] disabled:opacity-50"
               >
-                <X className="h-4 w-4" />
+                <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 言えなかった
               </button>
             </div>

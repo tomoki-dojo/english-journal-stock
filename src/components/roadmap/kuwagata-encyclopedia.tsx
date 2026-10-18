@@ -164,6 +164,8 @@ export function KuwagataEncyclopediaView({ encyclopedia }: { encyclopedia: Kuwag
   );
 
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const wheelAccumRef = useRef(0);
+  const wheelLastTurnRef = useRef(0);
   const currentArea = chapter === "known" ? null : encyclopedia.areas.find((a) => a.areaCode === chapter) ?? null;
   const entries = chapter === "known" ? encyclopedia.known : (currentArea?.entries ?? []);
   const areaLocked = currentArea ? !currentArea.unlocked : false;
@@ -199,13 +201,18 @@ export function KuwagataEncyclopediaView({ encyclopedia }: { encyclopedia: Kuwag
   const staticLeft = flip?.dir === "prev" ? flip.to : safeSpread;
   const staticRight = flip?.dir === "next" ? flip.to : safeSpread;
 
-  const chapters: { key: ChapterKey; label: string; badge?: string }[] = [
-    { key: "known", label: "クワたんシリーズ" },
-    ...encyclopedia.areas.map((area) => ({
-      key: area.areaCode as ChapterKey,
-      label: kuwagataAreaChapterLabel(area.areaCode),
-      badge: area.unlocked ? `${area.discoveredCount}/${area.totalCount}` : undefined,
-    })),
+  // kind: pro=Freeに伏せているPro限定エリア(名前は出さない) / locked=未解放(鍵・数なし) / open=通常
+  const chapters: { key: ChapterKey; label: string; badge?: string; kind: "pro" | "locked" | "open" }[] = [
+    { key: "known", label: "クワたんシリーズ", kind: "open" },
+    ...encyclopedia.areas.map((area) => {
+      const proHidden = area.entries.length > 0 && area.entries.every((e) => e.proLocked);
+      return {
+        key: area.areaCode as ChapterKey,
+        label: proHidden ? "Pro限定エリア" : kuwagataAreaChapterLabel(area.areaCode),
+        badge: area.unlocked && !proHidden ? `${area.discoveredCount}/${area.totalCount}` : undefined,
+        kind: proHidden ? ("pro" as const) : area.unlocked ? ("open" as const) : ("locked" as const),
+      };
+    }),
   ];
 
   return (
@@ -220,10 +227,18 @@ export function KuwagataEncyclopediaView({ encyclopedia }: { encyclopedia: Kuwag
               setChapter(c.key);
               setSpread(0);
             }}
-            className={`rounded-t-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-              c.key === chapter ? "bg-amber-900 text-amber-50" : "bg-amber-100 text-amber-800 hover:bg-amber-200"
+            className={`inline-flex items-center gap-1 rounded-t-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+              c.kind === "pro"
+                ? `bg-gradient-to-b from-amber-400 to-orange-500 font-black text-white ${c.key === chapter ? "ring-2 ring-amber-900" : ""}`
+                : c.key === chapter
+                  ? "bg-amber-900 text-amber-50"
+                  : c.kind === "locked"
+                    ? "bg-zinc-200 text-zinc-500 hover:bg-zinc-300"
+                    : "bg-amber-100 text-amber-800 hover:bg-amber-200"
             }`}
           >
+            {c.kind === "pro" && <Crown className="h-3.5 w-3.5 shrink-0" />}
+            {c.kind === "locked" && <Lock className="h-3 w-3 shrink-0" />}
             {c.label}
             {c.badge && <span className="ml-1 opacity-70">{c.badge}</span>}
           </button>
@@ -238,6 +253,21 @@ export function KuwagataEncyclopediaView({ encyclopedia }: { encyclopedia: Kuwag
             const t = e.touches[0];
             swipeStartRef.current = { x: t.clientX, y: t.clientY };
           }}
+          onWheel={(e) => {
+            // トラックパッドの2本指スワイプ(横スクロール)でもめくれるようにする。慣性で連続発火するので、めくり中は無視する。
+            if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+            const now = Date.now();
+            if (now - wheelLastTurnRef.current < 700) return; // 慣性スクロールの余韻で2ページ進まないように
+            wheelAccumRef.current += e.deltaX;
+            if (Math.abs(wheelAccumRef.current) < 40) return;
+            const dir = wheelAccumRef.current > 0 ? "next" : "prev";
+            wheelAccumRef.current = 0;
+            wheelLastTurnRef.current = now;
+            turn(dir);
+          }}
+          onTouchCancel={() => {
+            swipeStartRef.current = null;
+          }}
           onTouchEnd={(e) => {
             const start = swipeStartRef.current;
             swipeStartRef.current = null;
@@ -245,7 +275,8 @@ export function KuwagataEncyclopediaView({ encyclopedia }: { encyclopedia: Kuwag
             const t = e.changedTouches[0];
             const dx = t.clientX - start.x;
             const dy = t.clientY - start.y;
-            if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+            // 斜めの軽い払いでもめくれるように、横の移動が縦より大きければ(35px以上)めくる。
+            if (Math.abs(dx) < 35 || Math.abs(dx) <= Math.abs(dy)) return;
             turn(dx < 0 ? "next" : "prev");
           }}
         >

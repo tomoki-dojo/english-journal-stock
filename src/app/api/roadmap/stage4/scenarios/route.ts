@@ -13,7 +13,10 @@ import {
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-export async function GET() {
+export async function GET(request: Request) {
+  // ?track=daily|business で日常/ビジネスのシナリオだけに絞る(省略時は全件)。
+  const trackParam = new URL(request.url).searchParams.get("track");
+  const track = trackParam === "daily" || trackParam === "business" ? trackParam : undefined;
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "この機能を利用するにはログインが必要です" }, { status: 401 });
@@ -32,7 +35,7 @@ export async function GET() {
 
     const plan = await getPlan(user.id);
     const [scenarios, usage] = await Promise.all([
-      listStage4Scenarios(user.id),
+      listStage4Scenarios(user.id, track),
       getStage4UsageInfo(user.id, plan),
     ]);
 

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { CatchArthurRun, CatchArthurTalk, CatchGrass, SWING_TOTAL_MS } from "./catch-arthur-run";
 import { useMinigameBgm, useMinigameSe } from "./roadmap-sound";
 import type { KuwagataAreaCode } from "@/lib/supabase/kuwagata";
+import { getMinigameDurationSec } from "@/lib/kuwagata-minigame-config";
 
 type Question = { word: string; choices: string[] };
 type StartResponse = { sessionId: string; questions: Question[]; durationSec: number };
@@ -135,7 +136,7 @@ export function KuwagataWordChallenge({
           <>
             <CatchArthurTalk size={200} />
             <p className="text-xl font-bold leading-relaxed text-white">
-              10秒で単語の意味をできるだけ沢山答えろ！
+              {getMinigameDurationSec(areaCode)}秒で単語の意味をできるだけ沢山答えろ！
               <br />
               正解数が多いとレアな虫がゲットできるかも！？
             </p>

@@ -97,7 +97,12 @@ export function ArthurScene({
 }) {
   // 水槽はアーサーの右前（画面では左下）に、胸元へ重ねる。サイズ・位置はアーサーのキャンバス幅に対する比率。
   return (
-    <div className={cn("relative mx-auto", className)} style={{ width: SCENE_SIZE, height: SCENE_SIZE }}>
+    // スマホでは一回り小さく(0.8倍)。外側の枠の大きさも縮めて、下の要素が詰まるようにする。
+    <div className={cn("relative mx-auto h-[141px] w-[141px] sm:h-44 sm:w-44", className)}>
+      <div
+        className="absolute left-0 top-0 origin-top-left scale-[0.8] sm:scale-100"
+        style={{ width: SCENE_SIZE, height: SCENE_SIZE }}
+      >
       <ArthurAvatar size={SCENE_SIZE} animated bare mood={mood} talkKey={talkKey} />
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
@@ -108,6 +113,7 @@ export function ArthurScene({
         className="pointer-events-none absolute select-none"
         style={{ left: "6%", bottom: "-2%", width: "52%" }}
       />
+      </div>
     </div>
   );
 }

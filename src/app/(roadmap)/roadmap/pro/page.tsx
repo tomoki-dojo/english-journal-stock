@@ -30,7 +30,7 @@ function findScreenshots(): string[] {
 export default async function RoadmapProPage({
   searchParams,
 }: {
-  searchParams: Promise<{ checkout?: string }>;
+  searchParams: Promise<{ checkout?: string; from?: string; interval?: string; session_id?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) {
@@ -50,7 +50,10 @@ export default async function RoadmapProPage({
       </Link>
       <RoadmapProPlan
         isPro={plan !== "free"}
-        checkoutResult={params.checkout === "success" ? "success" : null}
+        checkoutResult={params.checkout === "success" ? "success" : params.checkout === "cancelled" ? "cancelled" : null}
+        from={typeof params.from === "string" && /^[a-z0-9_]{1,20}$/.test(params.from) ? params.from : ""}
+        purchasedInterval={params.interval === "annual" ? "annual" : params.interval === "monthly" ? "monthly" : null}
+        checkoutSessionId={typeof params.session_id === "string" ? params.session_id.slice(0, 100) : null}
         screenshots={findScreenshots()}
         shelfCap={FREE_SHELF_NEW_SPECIES_TANK_CAP}
       />

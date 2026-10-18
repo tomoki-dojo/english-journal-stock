@@ -69,6 +69,9 @@ export async function POST(request: Request) {
   }
 
   try {
+    // プラン取得はゲート判定と無関係なので、同時に始めておく。
+    const planP = getPlan(user.id);
+    planP.catch(() => {}); // ゲートで早期returnしたときの未処理拒否を防ぐ
     const track = await getStage5ScenarioTrack(json.scenarioId);
     if (!track) {
       return NextResponse.json({ error: "対象のシナリオが見つかりませんでした" }, { status: 404 });
@@ -85,7 +88,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const plan = await getPlan(user.id);
+    const plan = await planP;
     const outcome = await reportStage5Turn(
       user.id,
       plan,

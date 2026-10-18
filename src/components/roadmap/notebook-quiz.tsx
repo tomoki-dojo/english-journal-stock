@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { BookOpen, Check, X } from "lucide-react";
+import { BookOpen, Check, Flag, X } from "lucide-react";
 import { ShareButton } from "@/components/share-button";
 import { useQuizBgm } from "./roadmap-sound";
 import { GrowingKuwagataPanel } from "./growing-kuwagata-panel";
@@ -17,7 +17,12 @@ type FinishResponse = { correctCount: number; total: number; boostDays: number; 
 export function NotebookQuiz() {
   const [phase, setPhase] = useState<"select" | "loading" | "playing" | "submitting" | "result">("select");
   const [error, setError] = useState<string | null>(null);
-  const [difficulty, setDifficulty] = useState<NotebookDifficultyUi | null>(null);
+  const [difficulty, setDifficulty] = useState<NotebookDifficultyUi | "weak" | null>(null);
+  const [weakCount, setWeakCount] = useState<number | null>(null);
+  // 今日の苦手テストの残り回数(Proはnull=無制限)
+  const [weakTestsLeft, setWeakTestsLeft] = useState<number | null>(null);
+  // 苦手テストの件数取得が終わるまで選択画面を出さない(ボタンが時間差で出るのを防ぐ)
+  const [weakReady, setWeakReady] = useState(false);
   const [index, setIndex] = useState(0);
   const [result, setResult] = useState<FinishResponse | null>(null);
   const roundRef = useRef<StartResponse | null>(null);
@@ -27,7 +32,30 @@ export function NotebookQuiz() {
 
   useQuizBgm(phase === "playing" || phase === "submitting");
 
-  async function start(selected: NotebookDifficultyUi) {
+  // 選択画面が出るたびに、苦手テストに出せる単語数を取り直す。
+  useEffect(() => {
+    if (phase !== "select") return;
+    let cancelled = false;
+    setWeakReady(false);
+    fetch("/api/roadmap/notebook/weak-count")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json: { count?: number; testsToday?: number; testLimit?: number | null } | null) => {
+        if (cancelled || !json || typeof json.count !== "number") return;
+        setWeakCount(json.count);
+        setWeakTestsLeft(
+          typeof json.testLimit === "number" ? Math.max(json.testLimit - (json.testsToday ?? 0), 0) : null
+        );
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setWeakReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [phase]);
+
+  async function start(selected: NotebookDifficultyUi | "weak") {
     setDifficulty(selected);
     setPhase("loading");
     setError(null);
@@ -110,13 +138,37 @@ export function NotebookQuiz() {
   }
 
   // 出題の取得中。レベル選択画面を出さずに、読み込み表示だけにする(「もう1ラウンド」直後に一瞬レベル選択が見えてしまうため)。
-  if (phase === "loading") {
+  if (phase === "loading" || (phase === "select" && !weakReady)) {
     return <p className="py-24 text-center text-sm font-semibold text-zinc-400">読み込み中…</p>;
   }
 
   if (phase === "select") {
     return (
       <div className="flex flex-col gap-3">
+        {weakCount !== null && weakCount > 0 && (
+          weakTestsLeft === 0 ? (
+            <Link
+              href="/roadmap/pro"
+              className="flex items-center rounded-2xl border-2 border-zinc-300 bg-zinc-50 px-5 py-4 text-left text-zinc-500 transition-transform active:scale-95"
+            >
+              <Flag className="mr-2 h-5 w-5" />
+              <span className="text-lg font-bold">苦手テスト</span>
+              <span className="ml-2 text-xs">今日は終了 · Proで無制限</span>
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void start("weak")}
+              className="flex items-center rounded-2xl border-2 border-red-300 bg-red-50 px-5 py-4 text-left text-red-700 transition-transform active:scale-95"
+            >
+              <Flag className="mr-2 h-5 w-5" />
+              <span className="text-lg font-bold">苦手テスト</span>
+              <span className="ml-2 text-xs opacity-70">
+                {weakCount}語{weakTestsLeft !== null && ` · 今日あと${weakTestsLeft}回`}
+              </span>
+            </button>
+          )
+        )}
         {NOTEBOOK_DIFFICULTIES_UI.map((d) => (
           <button
             key={d}
@@ -145,7 +197,7 @@ export function NotebookQuiz() {
     const question = round?.questions[index];
     if (!round || !question) return null;
     return (
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-3 sm:gap-5">
         <div className="flex items-center gap-3">
           <div className="h-2 flex-1 overflow-hidden rounded-full bg-zinc-200">
             <div
@@ -158,11 +210,11 @@ export function NotebookQuiz() {
           </span>
         </div>
         <div className="text-center">
-          <p className="text-4xl font-black tracking-wide text-zinc-800">{question.word}</p>
-          {question.exampleEn && <p className="mt-3 text-lg italic text-zinc-500">{question.exampleEn}</p>}
+          <p className="text-3xl font-black tracking-wide text-zinc-800 sm:text-4xl">{question.word}</p>
+          {question.exampleEn && <p className="mt-1.5 text-base italic text-zinc-500 sm:mt-3 sm:text-lg">{question.exampleEn}</p>}
         </div>
         {/* ボタン幅は固定: 全単語の意味の最長(8文字=約9rem)＋左右の余白(チェックマーク用を含む3rem×2) */}
-        <div className="grid grid-cols-[1fr_minmax(0,15rem)_1fr] gap-2.5">
+        <div className="grid grid-cols-[1fr_minmax(0,15rem)_1fr] gap-2 sm:gap-2.5">
           {question.choices.map((choice, i) => {
             let style = "border-zinc-800 bg-white text-zinc-800";
             if (feedback) {
@@ -176,7 +228,7 @@ export function NotebookQuiz() {
                 type="button"
                 disabled={phase === "submitting" || checking || !!feedback}
                 onClick={() => void choose(i)}
-                className={`relative col-start-2 flex items-center justify-center rounded-2xl border-2 px-12 py-3.5 text-center text-lg font-bold transition-transform active:scale-95 ${style}`}
+                className={`relative col-start-2 flex items-center justify-center rounded-2xl border-2 px-12 py-2 text-center text-base font-bold sm:py-3.5 sm:text-lg transition-transform active:scale-95 ${style}`}
               >
                 <span>{choice}</span>
                 {feedback && i === feedback.correctIndex && <Check className="absolute right-4 h-5 w-5" strokeWidth={3} />}
@@ -186,16 +238,16 @@ export function NotebookQuiz() {
           })}
           {feedback?.exampleEn && (
             // 3列グリッドの全幅(col-span-3)に置く。中央列は固定幅(15rem)なので、例文の長さでボタン幅が変わらない
-            <p className="col-span-3 rounded-xl bg-zinc-50 px-3 py-2 text-center text-lg text-zinc-600">
+            <p className="col-span-3 rounded-xl bg-zinc-50 px-3 py-1.5 text-center text-base text-zinc-600 sm:py-2 sm:text-lg">
               {feedback.exampleEn}
-              {feedback.exampleJa && <span className="block text-base text-zinc-400">{feedback.exampleJa}</span>}
+              {feedback.exampleJa && <span className="block text-sm text-zinc-400 sm:text-base">{feedback.exampleJa}</span>}
             </p>
           )}
           {feedback && (
             <button
               type="button"
               onClick={() => void next()}
-              className="col-start-2 rounded-full bg-amber-500 px-12 py-3 text-base font-bold text-white transition-transform active:scale-95"
+              className="col-start-2 rounded-full bg-amber-500 px-12 py-2 text-base font-bold sm:py-3 text-white transition-transform active:scale-95"
             >
               {index + 1 < round.questions.length ? "次へ" : "結果を見る"}
             </button>

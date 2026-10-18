@@ -374,7 +374,7 @@ export function KuwagataAreaMap({
               e.stopPropagation();
               onSelectPro?.();
             }}
-            className="absolute bottom-[8%] left-[3%] z-[56] inline-flex items-center gap-1 rounded-full border border-amber-300 bg-white/95 px-2.5 py-1 text-xs font-black text-amber-700 shadow transition-transform hover:scale-105 active:scale-95"
+            className="absolute bottom-[2%] left-[3%] z-[56] inline-flex items-center gap-1 rounded-full border border-amber-300 bg-white/95 px-2.5 py-1 text-xs font-black text-amber-700 shadow transition-transform hover:scale-105 active:scale-95"
           >
             <Crown className="h-3.5 w-3.5 text-amber-500" />
             Pro限定エリア

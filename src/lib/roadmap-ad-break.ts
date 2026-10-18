@@ -9,8 +9,8 @@ export const AD_BREAK_MIN_INTERVAL_MS = 5 * 60 * 1000;
 // 区切り広告を出してよい画面（練習中の画面には出さない）
 export const AD_BREAK_PATHS = new Set(["/roadmap", "/roadmap/shelf", "/roadmap/encyclopedia"]);
 
-// 区切り広告用のAdSense広告ユニット。専用ユニットを作ったら NEXT_PUBLIC_ADSENSE_SLOT_ROADMAP_BREAK に設定する
-// （未設定の間は本体サイドバーと同じユニットを使う）。
-export const AD_BREAK_SLOT = process.env.NEXT_PUBLIC_ADSENSE_SLOT_ROADMAP_BREAK || "7523817086";
+// 区切り広告用のAdSense広告ユニット「英クワたん_区切り」。広告ユニットIDは本体（サイドバー・表現一覧）と同じく
+// コードに直接書く（パブリッシャーIDだけ環境変数 NEXT_PUBLIC_ADSENSE_CLIENT_ID）。
+export const AD_BREAK_SLOT = "4366766122";
 
 export const AD_BREAK_STORAGE_KEY = "roadmap_ad_break_last_at";

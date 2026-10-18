@@ -1,6 +1,7 @@
 // クワガタ育成機能（棚・図鑑）のデータアクセス層。
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getPlan } from "@/lib/supabase/profile";
+import { ttlCached } from "@/lib/ttl-cache";
 import { describeEggEvent, type RoadmapStageUp } from "@/lib/roadmap-notices";
 
 export type KuwagataAreaCode = "area1" | "area2" | "area3" | "area4" | "area5" | "aquarium" | "ancient";
@@ -570,7 +571,10 @@ function fromDbSpeciesRow(row: DbSpeciesRow): KuwagataSpecies {
 }
 
 // 公開済みの種類マスタを全件取得する（既知種・新種を問わず）。件数が少ないため全件取得でよい。
-export async function getKuwagataSpeciesList(): Promise<KuwagataSpecies[]> {
+// 種マスタは全ユーザー共通でほぼ変わらず、部屋・棚・採集などあちこちで読まれるので、メモリに5分持つ。
+export const getKuwagataSpeciesList = ttlCached(5 * 60 * 1000, fetchKuwagataSpeciesList);
+
+async function fetchKuwagataSpeciesList(): Promise<KuwagataSpecies[]> {
   const { data, error } = await supabaseAdmin
     .from("kuwagata_species")
     .select("id, code, name, kind, area_code, stage_trigger, flavor_text_ja, sort_order, rarity, min_plan, base_size")
@@ -981,6 +985,20 @@ export async function markIndividualCelebrated(userId: string, individualId: str
 }
 
 export async function recordStageClearCatch(userId: string, stageJustCleared: number): Promise<void> {
+  // 部屋を開くたびに呼ばれ、ほとんどは入手済みなので、まず1クエリで「もう持っているか」だけ確認する。
+  const { data: owned, error: ownedError } = await supabaseAdmin
+    .from("kuwagata_individuals")
+    .select("id, kuwagata_species!inner(kind, stage_trigger)")
+    .eq("user_id", userId)
+    .eq("obtained_via", "stage_clear")
+    .eq("kuwagata_species.kind", "known")
+    .eq("kuwagata_species.stage_trigger", stageJustCleared)
+    .limit(1);
+  if (ownedError) {
+    throw new Error(`既知種の既存個体確認に失敗しました: ${ownedError.message}`);
+  }
+  if ((owned?.length ?? 0) > 0) return; // 既に確定入手済み（べき等）。
+
   const { data: speciesRows, error: speciesError } = await supabaseAdmin
     .from("kuwagata_species")
     .select("id, base_size")
@@ -1060,14 +1078,15 @@ export async function goCatchInArea(
     (s) => s.kind === "new" && s.areaCode === areaCode && (plan !== "free" || s.minPlan === "free")
   );
 
-  // 既知種の2体目以降：このエリアに対応する既知種が、初回個体（stage_clear）を既に持っていれば合流。
+  // 既知種の2体目以降：このエリアに対応する既知種の、最初のタマゴ（stage_clear）が成虫になっていれば合流。
+  // タマゴが育ちきる前に同じ種が採集で捕まる、ということが起きないようにする。
   const stageTrigger = AREA_KNOWN_SPECIES_STAGE_TRIGGER[areaCode];
   const knownSpecies = species.find((s) => s.kind === "known" && s.stageTrigger === stageTrigger);
   if (knownSpecies) {
-    const hasFirstIndividual = individuals.some(
-      (i) => i.speciesId === knownSpecies.id && i.obtainedVia === "stage_clear"
+    const firstIsAdult = individuals.some(
+      (i) => i.speciesId === knownSpecies.id && i.obtainedVia === "stage_clear" && isAdultIndividual(i)
     );
-    if (hasFirstIndividual) pool.push(knownSpecies);
+    if (firstIsAdult) pool.push(knownSpecies);
   }
 
   // テッペンクワたんは激レア枠としてarea5に入る（Stage5を卒業して、最初のタマゴが羽化した人だけ）。
@@ -1198,6 +1217,9 @@ export async function forceHatchTeppenToAdult(userId: string): Promise<void> {
 
   const species = speciesRows?.[0];
   if (!species) return; // まだ用意されていない。
+
+  // Stage5を卒業した時点で卵がなければ(Stage5を別の経路で開いた場合の保険)、ここで配ってから羽化させる。べき等。
+  await recordStageClearCatch(userId, 5);
 
   const { data: individual, error: individualError } = await supabaseAdmin
     .from("kuwagata_individuals")

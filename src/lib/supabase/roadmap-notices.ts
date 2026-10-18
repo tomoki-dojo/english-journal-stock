@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
+import type { UserRoadmapState } from "@/components/roadmap/types";
 import {
   ANNOUNCEMENTS,
   LATEST_ANNOUNCEMENT_ID,
@@ -9,7 +10,7 @@ import {
 } from "@/lib/roadmap-notices";
 import { getLoginStageUps, getUncelebratedEggs, getUncelebratedHatches } from "@/lib/supabase/kuwagata";
 import { getTodaysTrivia, type ArthurTrivia } from "@/lib/supabase/arthur-trivia";
-import { claimRareChanceNotice, grantMilestoneEggs } from "@/lib/supabase/kuwagata-egg-events";
+import { claimRareChanceNotice, createGrantedKeysLoader, grantMilestoneEggs } from "@/lib/supabase/kuwagata-egg-events";
 
 export type RoadmapNotices = {
   showAdvice: boolean;
@@ -28,21 +29,27 @@ export type RoadmapNotices = {
 
 // 部屋に入ったときに出すポップアップ（初回アドバイス・未読のお知らせ）を決める。
 // 初回ユーザーにはアドバイスだけを出し、過去のお知らせは見せない（アドバイスを閉じた時点で最新まで既読にする）。
+// known: 呼び出し側が取得済みの値(同じ行を何度も読まないため)。
 export async function getRoadmapNotices(
   userId: string,
+  known?: { state: UserRoadmapState | null; totalDays: number },
 ): Promise<RoadmapNotices> {
-  const { data } = await supabaseAdmin
-    .from("profiles")
-    .select("roadmap_advice_seen_at, roadmap_last_seen_announcement_id")
-    .eq("user_id", userId)
-    .maybeSingle();
+  // プロフィール読み出しと、節目のタマゴ配布・レア通知は互いに依存しないので同時に走らせる。
+  // 練習日数・習得数の節目のタマゴは先に配って、そのまま「手に入れた！」の演出に載せる。
+  // 台帳の読み出しは両者で共有して1回にする(必要になった方が最初に読む)。
+  const loadGrantedKeys = createGrantedKeysLoader(userId);
+  const [{ data }, , rareChance] = await Promise.all([
+    supabaseAdmin
+      .from("profiles")
+      .select("roadmap_advice_seen_at, roadmap_last_seen_announcement_id")
+      .eq("user_id", userId)
+      .maybeSingle(),
+    grantMilestoneEggs(userId, known, loadGrantedKeys).catch(() => {}),
+    claimRareChanceNotice(userId, known?.state, loadGrantedKeys).catch(() => null),
+  ]);
 
   if (!data)
     return { showAdvice: false, announcements: [], newEggs: [], newHatches: [], stageUps: [], trivia: null, rareChance: null };
-
-  // 練習日数・習得数の節目のタマゴを先に配って、そのまま「手に入れた！」の演出に載せる。
-  await grantMilestoneEggs(userId).catch(() => {});
-  const rareChance = await claimRareChanceNotice(userId).catch(() => null);
 
   const [newEggs, newHatches, stageUps] = await Promise.all([
     getUncelebratedEggs(userId),

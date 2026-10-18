@@ -13,13 +13,13 @@ export function GrowthBadge({ stage, warmth }: GrowthBadgeProps) {
   const color = STAGE_COLORS[stage];
 
   if (warmth === 0) {
-    return <Circle className="h-4 w-4 text-zinc-300" aria-hidden="true" />;
+    return <Circle className="h-5 w-5 shrink-0 text-zinc-300" aria-hidden="true" />;
   }
   if (warmth === 1) {
-    return <Sprout className="h-4 w-4" style={{ color, opacity: 0.55 }} aria-hidden="true" />;
+    return <Sprout className="h-5 w-5 shrink-0" style={{ color, opacity: 0.55 }} aria-hidden="true" />;
   }
   if (warmth === 2) {
-    return <Sprout className="h-4 w-4" style={{ color }} aria-hidden="true" />;
+    return <Sprout className="h-5 w-5 shrink-0" style={{ color }} aria-hidden="true" />;
   }
-  return <Flower2 className="h-4 w-4" style={{ color }} aria-hidden="true" />;
+  return <Flower2 className="h-5 w-5 shrink-0" style={{ color }} aria-hidden="true" />;
 }

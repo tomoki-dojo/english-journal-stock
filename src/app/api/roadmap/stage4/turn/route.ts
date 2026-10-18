@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     // バグ修正（2026-09-14）：ページ・シナリオ一覧APIに加えて、AI判定コール自体が
     // 発生するこのエンドポイントでも同じゲートを防御的にチェックする（コストが発生する
     // 処理のため、3箇所の中でも特に守る意味が大きい）。
-    const unlocked = await isStage4Unlocked(user.id);
+    const [unlocked, plan] = await Promise.all([isStage4Unlocked(user.id), getPlan(user.id)]);
     if (!unlocked) {
       return NextResponse.json(
         { error: "Stage4はStage3の表現を6つ卒業すると開きます" },
@@ -77,7 +77,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const plan = await getPlan(user.id);
     const outcome = await reportStage4Turn(
       user.id,
       plan,

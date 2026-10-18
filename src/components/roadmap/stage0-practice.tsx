@@ -8,6 +8,7 @@ import { RoundHeader } from "./round-header";
 import { GrowthBadge } from "./growth-badge";
 import { GrowingKuwagataPanel } from "./growing-kuwagata-panel";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
+import { TappableText } from "./tappable-text";
 import type { Stage0RoundQuestion, Stage0RoundResponse, WarmthLevel } from "./types";
 
 type ViewState = "loading" | "round" | "round_complete" | "done" | "error";
@@ -67,6 +68,7 @@ export function Stage0Practice({ availableErrorTags }: Stage0PracticeProps) {
   const [results, setResults] = useState<QuestionResult[]>([]);
   const [reaction, setReaction] = useState<"happy" | "sad" | null>(null);
   const [revealed, setRevealed] = useState(false);
+  const [deepOpen, setDeepOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedErrorTag, setSelectedErrorTag] = useState<string | null>(null);
@@ -78,6 +80,7 @@ export function Stage0Practice({ availableErrorTags }: Stage0PracticeProps) {
     setCurrentIndex(0);
     setResults([]);
     setRevealed(false);
+    setDeepOpen(false);
     setError(null);
 
     try {
@@ -120,6 +123,7 @@ export function Stage0Practice({ availableErrorTags }: Stage0PracticeProps) {
   // 次の問題へ進む（ラウンド最後なら結果画面へ）。
   function advanceToNext() {
     setRevealed(false);
+    setDeepOpen(false);
     if (currentIndex + 1 < questions.length) {
       setCurrentIndex((i) => i + 1);
     } else {
@@ -284,13 +288,13 @@ export function Stage0Practice({ availableErrorTags }: Stage0PracticeProps) {
               type="button"
               onClick={() => loadRound(selectedErrorTag)}
               style={{ backgroundColor: STAGE_COLOR }}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97]"
+              className="flex flex-1 items-center justify-center gap-1 sm:gap-1.5 rounded-lg px-2 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97]"
             >
               もう1ラウンド
             </button>
             <Link
               href="/roadmap"
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
+              className="flex flex-1 items-center justify-center gap-1 whitespace-nowrap sm:gap-1.5 rounded-lg border border-zinc-300 bg-white px-2 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
             >
               部屋に戻る
             </Link>
@@ -347,7 +351,7 @@ export function Stage0Practice({ availableErrorTags }: Stage0PracticeProps) {
           <button
             type="button"
             onClick={handleReveal}
-            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed px-4 py-2.5 text-sm font-medium transition-all duration-150 active:scale-[.97]"
+            className="flex w-full items-center justify-center gap-1 sm:gap-1.5 rounded-lg border border-dashed px-2 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm font-medium transition-all duration-150 active:scale-[.97]"
             style={{ borderColor: STAGE_COLOR, color: STAGE_COLOR }}
           >
             答えを確認する
@@ -358,14 +362,38 @@ export function Stage0Practice({ availableErrorTags }: Stage0PracticeProps) {
               className="mb-3 rounded-lg border px-4 py-3"
               style={{ borderColor: withAlpha(STAGE_COLOR, "55"), backgroundColor: withAlpha(STAGE_COLOR, "12") }}
             >
-              <p className="text-base font-semibold text-zinc-900">{currentQuestion.answerEn}</p>
+              <TappableText
+                text={currentQuestion.answerEn}
+                accentColor={STAGE_COLOR}
+                className="text-base font-semibold text-zinc-900"
+              />
             </div>
 
             {/* 解説は自己申告の前に、答え合わせと同時に必ず見せる（「なんとなく言えた」を選んだ人が
                 核イメージを読み逃さないように）。 */}
             <div className="mb-4 flex gap-2 rounded-lg border border-violet-200 bg-violet-50 p-3 text-sm text-violet-900">
               <Lightbulb className="mt-0.5 h-4 w-4 flex-shrink-0" style={{ color: STAGE_COLOR }} />
-              <p>{currentQuestion.coreImageJa}</p>
+              <div className="min-w-0 flex-1">
+                <p className="whitespace-pre-line">{currentQuestion.coreImageJa}</p>
+                {currentQuestion.deepDiveJa && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setDeepOpen((v) => !v)}
+                      className="mt-2 inline-flex items-center gap-1 text-xs font-bold underline-offset-2 hover:underline"
+                      style={{ color: STAGE_COLOR }}
+                    >
+                      他のケースも見る
+                      <ChevronDown className={`h-3.5 w-3.5 transition-transform ${deepOpen ? "rotate-180" : ""}`} />
+                    </button>
+                    {deepOpen && (
+                      <p className="mt-2 whitespace-pre-line border-t border-violet-200 pt-2 text-[13px] leading-relaxed">
+                        {currentQuestion.deepDiveJa}
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
 
             <div className="flex gap-3">
@@ -374,18 +402,18 @@ export function Stage0Practice({ availableErrorTags }: Stage0PracticeProps) {
                 disabled={submitting}
                 onClick={() => handleSelfReport(true)}
                 style={{ backgroundColor: STAGE_COLOR }}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97] disabled:opacity-50"
+                className="flex flex-1 items-center justify-center gap-1 sm:gap-1.5 rounded-lg px-2 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97] disabled:opacity-50"
               >
-                <Check className="h-4 w-4" />
+                <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 言えた
               </button>
               <button
                 type="button"
                 disabled={submitting}
                 onClick={() => handleSelfReport(false)}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-600 transition-all duration-150 hover:border-zinc-400 active:scale-[.97] disabled:opacity-50"
+                className="flex flex-1 items-center justify-center gap-1 whitespace-nowrap sm:gap-1.5 rounded-lg border border-zinc-300 bg-white px-2 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm font-medium text-zinc-600 transition-all duration-150 hover:border-zinc-400 active:scale-[.97] disabled:opacity-50"
               >
-                <X className="h-4 w-4" />
+                <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 言えなかった
               </button>
             </div>

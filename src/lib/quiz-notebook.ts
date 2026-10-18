@@ -3,6 +3,8 @@
 // 流れ: startNotebookRound(問題を発行・正解はDBに保存) → 10問に回答 → finishNotebookRound(採点・進捗更新・成長ブースト付与)
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { addGrowthBoost } from "@/lib/supabase/kuwagata";
+import { fetchAllRows } from "@/lib/supabase/fetch-all";
+import { ttlCached } from "@/lib/ttl-cache";
 import type { Plan } from "@/lib/plan";
 
 // 出題の単位は難易度(1〜5)。1・2=初級(中学)、3・4=中級(高校)、5=上級(大学)。
@@ -77,26 +79,166 @@ export async function isNotebookBoostCapped(userId: string, plan: Plan): Promise
   return used >= DAILY_BOOST_CAP[plan] - 1e-9;
 }
 
+// 苦手な単語の集合: 手動で入れた単語(先)と、直近で間違えた単語(新しい順)。
+async function loadWeakWordIds(userId: string): Promise<{ flagged: string[]; wrong: string[] }> {
+  const [{ data: flagRows }, { data: progress }] = await Promise.all([
+    supabaseAdmin.from("quiz_word_weak_flags").select("word_id").eq("user_id", userId),
+    supabaseAdmin
+      .from("quiz_word_progress")
+      .select("word_id, last_answered_at")
+      .eq("user_id", userId)
+      .eq("last_result", false)
+      .order("last_answered_at", { ascending: false }),
+  ]);
+  return {
+    flagged: (flagRows ?? []).map((f) => f.word_id as string),
+    wrong: (progress ?? []).map((p) => p.word_id as string),
+  };
+}
+
+// 苦手機能の無料枠。手動で苦手に入れられる語数と、苦手テストの1日の回数(Proは無制限)。
+export const WEAK_FLAG_FREE_LIMIT = 10;
+export const WEAK_TEST_FREE_DAILY_LIMIT = 2;
+
+export class WeakLimitError extends Error {
+  constructor(public kind: "flag" | "test", message: string) {
+    super(message);
+  }
+}
+
+function jstDay(): string {
+  return new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+}
+
+async function countManualFlags(userId: string): Promise<number> {
+  const { count } = await supabaseAdmin
+    .from("quiz_word_weak_flags")
+    .select("word_id", { count: "exact", head: true })
+    .eq("user_id", userId);
+  return count ?? 0;
+}
+
+async function getWeakTestsToday(userId: string): Promise<number> {
+  const { data } = await supabaseAdmin
+    .from("quiz_weak_test_usage")
+    .select("test_count")
+    .eq("user_id", userId)
+    .eq("day_key", jstDay())
+    .maybeSingle();
+  return Number(data?.test_count ?? 0);
+}
+
+// 苦手機能の現在の使用状況(上限nullは無制限)。
+export async function getWeakStatus(userId: string, plan: Plan) {
+  const isFree = plan === "free";
+  const [count, flagCount, testsToday] = await Promise.all([
+    countWeakWords(userId),
+    countManualFlags(userId),
+    getWeakTestsToday(userId),
+  ]);
+  return {
+    count,
+    flagCount,
+    flagLimit: isFree ? WEAK_FLAG_FREE_LIMIT : null,
+    testsToday,
+    testLimit: isFree ? WEAK_TEST_FREE_DAILY_LIMIT : null,
+  };
+}
+
+// 手動で苦手に入れる前の上限チェック(すでに入っている語の再登録は通す)。
+export async function assertCanFlagWord(userId: string, plan: Plan, wordId: string): Promise<void> {
+  if (plan !== "free") return;
+  const { data } = await supabaseAdmin
+    .from("quiz_word_weak_flags")
+    .select("word_id")
+    .eq("user_id", userId)
+    .eq("word_id", wordId)
+    .maybeSingle();
+  if (data) return;
+  if ((await countManualFlags(userId)) >= WEAK_FLAG_FREE_LIMIT) {
+    throw new WeakLimitError("flag", `苦手登録は${WEAK_FLAG_FREE_LIMIT}語までです`);
+  }
+}
+
+// 苦手テストで出題できる単語の数(重複を除く)。
+export async function countWeakWords(userId: string): Promise<number> {
+  const { flagged, wrong } = await loadWeakWordIds(userId);
+  const ids = Array.from(new Set([...flagged, ...wrong]));
+  if (ids.length === 0) return 0;
+  // クイズに出さない語(辞書専用)は数えない
+  const { data } = await supabaseAdmin.from("quiz_words").select("id").in("id", ids).eq("quiz_enabled", true);
+  return (data ?? []).length;
+}
+
+// 難易度ごとのクイズ対象単語(全ユーザー共通のマスタ)。毎ラウンド数百〜千行を取り直さないよう、メモリに5分持つ。
+// 返した配列は共有されるので、呼び出し側では書き換えない(filter・コピーしてから並べ替える)。
+const listQuizWordsByDifficulty = ttlCached(
+  5 * 60 * 1000,
+  (difficulty: NotebookDifficulty, columns: string) =>
+    fetchAllRows<WordRow>((from, to) =>
+      supabaseAdmin
+        .from("quiz_words")
+        .select(columns)
+        .eq("active", true)
+        .eq("publish_status", "公開")
+        .eq("quiz_enabled", true)
+        .eq("difficulty", difficulty)
+        .order("code", { ascending: true })
+        .range(from, to) as unknown as PromiseLike<{ data: WordRow[] | null; error: { message: string } | null }>
+    ).catch((e: Error) => {
+      throw new Error(`単語の取得に失敗しました: ${e.message}`);
+    })
+);
+
+// target が "weak" のときは、難易度を問わず苦手な単語だけで出題する(苦手テスト)。
 export async function startNotebookRound(
   userId: string,
-  difficulty: NotebookDifficulty
+  target: NotebookDifficulty | "weak",
+  plan: Plan = "free"
 ): Promise<{ sessionId: string; questions: NotebookQuestion[] }> {
-  const { data, error } = await supabaseAdmin
-    .from("quiz_words")
-    .select("id, word_en, part_of_speech, meaning_ja, example_en, example_ja, difficulty, distractors_ja, other_meanings_ja")
-    .eq("active", true)
-    .eq("publish_status", "公開")
-    .eq("difficulty", difficulty);
-  if (error) throw new Error(`単語の取得に失敗しました: ${error.message}`);
-  const words = (data ?? []) as WordRow[];
+  const isWeakTest = target === "weak";
+  if (isWeakTest && plan === "free" && (await getWeakTestsToday(userId)) >= WEAK_TEST_FREE_DAILY_LIMIT) {
+    throw new WeakLimitError("test", `今日の苦手テストは${WEAK_TEST_FREE_DAILY_LIMIT}回までです`);
+  }
+  const WORD_COLUMNS =
+    "id, word_en, part_of_speech, meaning_ja, example_en, example_ja, difficulty, distractors_ja, other_meanings_ja";
+  type ProgressRow = { word_id: string; last_result: boolean | null; last_answered_at: string | null; correct_count: number };
+  let words: WordRow[];
+  let progress: ProgressRow[] = [];
+  let weakSource: { flagged: string[]; wrong: string[] };
+  if (isWeakTest) {
+    // 苦手テストは、苦手な単語と選択肢の候補(ランダム数十語)だけをDBから取る。全単語は取らない。
+    weakSource = await loadWeakWordIds(userId);
+    const candidateIds = Array.from(new Set([...weakSource.flagged, ...weakSource.wrong])).slice(0, 300);
+    const [weakRes, poolRes] = await Promise.all([
+      candidateIds.length > 0
+        ? supabaseAdmin.from("quiz_words").select(WORD_COLUMNS).in("id", candidateIds).eq("quiz_enabled", true)
+        : Promise.resolve({ data: [] as WordRow[], error: null }),
+      supabaseAdmin.rpc("get_random_quiz_words", { p_limit: 60 }),
+    ]);
+    if (weakRes.error) throw new Error(`単語の取得に失敗しました: ${weakRes.error.message}`);
+    if (poolRes.error) throw new Error(`単語の取得に失敗しました: ${poolRes.error.message}`);
+    const merged = new Map<string, WordRow>();
+    for (const w of [...((weakRes.data ?? []) as WordRow[]), ...((poolRes.data ?? []) as WordRow[])]) merged.set(w.id, w);
+    words = Array.from(merged.values());
+  } else {
+    // 難易度ごとの単語・進捗・苦手を同時に取る(待ち時間を重ねないため)。
+    const [wordsResult, progressRes, weak] = await Promise.all([
+      listQuizWordsByDifficulty(target, WORD_COLUMNS),
+      supabaseAdmin
+        .from("quiz_word_progress")
+        .select("word_id, last_result, last_answered_at, correct_count")
+        .eq("user_id", userId),
+      loadWeakWordIds(userId),
+    ]);
+    if (progressRes.error) throw new Error(`進捗の取得に失敗しました: ${progressRes.error.message}`);
+    words = wordsResult;
+    progress = (progressRes.data ?? []) as ProgressRow[];
+    weakSource = weak;
+  }
   if (words.length < CHOICE_COUNT) throw new Error("単語が足りません");
   const byId = new Map(words.map((w) => [w.id, w]));
 
-  const { data: progress, error: progressError } = await supabaseAdmin
-    .from("quiz_word_progress")
-    .select("word_id, last_result, last_answered_at, correct_count")
-    .eq("user_id", userId);
-  if (progressError) throw new Error(`進捗の取得に失敗しました: ${progressError.message}`);
   const seen = new Set((progress ?? []).map((p) => p.word_id as string));
   const masteredIds = new Set(
     (progress ?? [])
@@ -106,17 +248,19 @@ export async function startNotebookRound(
   const answeredAt = new Map((progress ?? []).map((p) => [p.word_id as string, String(p.last_answered_at)]));
 
   // 苦手(直近で間違えた)単語を新しい順に、この難易度の分だけ最大WEAK_QUESTION_COUNT問。
-  const weakIds = (progress ?? [])
-    .filter((p) => p.last_result === false && byId.has(p.word_id as string))
-    .sort((a, b) => String(b.last_answered_at).localeCompare(String(a.last_answered_at)))
-    .slice(0, WEAK_QUESTION_COUNT)
-    .map((p) => p.word_id as string);
+  // 手動で苦手に入れた単語を先に、続けて直近で間違えた単語を新しい順に。
+  const flaggedIds = shuffle(weakSource.flagged.filter((id) => byId.has(id)));
+  const wrongIds = weakSource.wrong.filter((id) => byId.has(id));
+  const weakLimit = isWeakTest ? NOTEBOOK_QUESTION_COUNT : WEAK_QUESTION_COUNT;
+  const weakIds = Array.from(new Set([...flaggedIds, ...wrongIds])).slice(0, weakLimit);
+  if (isWeakTest && weakIds.length === 0) throw new Error("苦手な単語がありません");
   const weakWords = weakIds.map((id) => byId.get(id)!);
 
   // 残りは未出題の単語から。足りなければ出題済みの単語から補う。
   const weakSet = new Set(weakIds);
-  const unseen = shuffle(words.filter((w) => !seen.has(w.id)));
-  const restNeeded = NOTEBOOK_QUESTION_COUNT - weakWords.length;
+  const unseen = shuffle(words.filter((w) => !seen.has(w.id) && !weakSet.has(w.id)));
+  // 苦手テストは苦手な単語だけで出す(10問に満たなくてもそのまま)。
+  const restNeeded = isWeakTest ? 0 : NOTEBOOK_QUESTION_COUNT - weakWords.length;
   let rest = unseen.slice(0, restNeeded);
   if (rest.length < restNeeded) {
     // 出題済みの補充は、覚えていない単語を古い順に。それでも足りないときだけ覚えた単語から。
@@ -159,7 +303,7 @@ export async function startNotebookRound(
 
   const { data: session, error: insertError } = await supabaseAdmin
     .from("quiz_word_sessions")
-    .insert({ user_id: userId, word_ids: picked.map((w) => w.id), correct_indices: correctIndices })
+    .insert({ user_id: userId, word_ids: picked.map((w) => w.id), correct_indices: correctIndices, is_weak_test: isWeakTest })
     .select("id")
     .single();
   if (insertError || !session) throw new Error(`開始に失敗しました: ${insertError?.message}`);
@@ -195,19 +339,17 @@ export async function answerNotebookQuestion(
   const answers = (session.answers as number[] | null) ?? [];
   if (index >= wordIds.length || answers.length !== index) return null;
 
-  const { error } = await supabaseAdmin
-    .from("quiz_word_sessions")
-    .update({ answers: [...answers, choice] })
-    .eq("id", sessionId)
-    .eq("user_id", userId)
-    .is("used_at", null);
+  // 回答の保存と、答え合わせに出す単語の取得は互いに依存しないので同時に行う。
+  const [{ error }, { data: word }] = await Promise.all([
+    supabaseAdmin
+      .from("quiz_word_sessions")
+      .update({ answers: [...answers, choice] })
+      .eq("id", sessionId)
+      .eq("user_id", userId)
+      .is("used_at", null),
+    supabaseAdmin.from("quiz_words").select("meaning_ja, example_en, example_ja").eq("id", wordIds[index]).maybeSingle(),
+  ]);
   if (error) throw new Error(`回答の保存に失敗しました: ${error.message}`);
-
-  const { data: word } = await supabaseAdmin
-    .from("quiz_words")
-    .select("meaning_ja, example_en, example_ja")
-    .eq("id", wordIds[index])
-    .maybeSingle();
   return {
     correct: choice === correctIndices[index],
     correctIndex: correctIndices[index],
@@ -245,10 +387,20 @@ export async function finishNotebookRound(
     .eq("id", sessionId)
     .eq("user_id", userId)
     .is("used_at", null)
-    .select("word_ids, correct_indices, answers, created_at")
+    .select("word_ids, correct_indices, answers, created_at, is_weak_test")
     .maybeSingle();
   if (!session) return null;
   if (Date.now() - new Date(session.created_at as string).getTime() > SESSION_TTL_MS) return null;
+
+  // 苦手テストは、最後まで終えた回だけ1日の回数に数える。
+  // 採点用の取得と並行して進める(互いに依存しない)。
+  const weakUsageDone: Promise<unknown> = session.is_weak_test
+    ? getWeakTestsToday(userId).then((used) =>
+        supabaseAdmin
+          .from("quiz_weak_test_usage")
+          .upsert({ user_id: userId, day_key: jstDay(), test_count: used + 1 }, { onConflict: "user_id,day_key" })
+      )
+    : Promise.resolve();
 
   const wordIds = session.word_ids as string[];
   const correctIndices = session.correct_indices as number[];
@@ -311,13 +463,22 @@ export async function finishNotebookRound(
     });
   });
 
-  if (upserts.length > 0) {
+  // 進捗の保存・苦手フラグの解除・ブーストの予約・苦手テスト回数の記録は互いに依存しないので同時に行う。
+  const saveProgress = async () => {
+    if (upserts.length === 0) return;
     const { error } = await supabaseAdmin.from("quiz_word_progress").upsert(upserts, { onConflict: "user_id,word_id" });
     if (error) throw new Error(`進捗の保存に失敗しました: ${error.message}`);
-  }
+  };
 
-  let boostDays = 0;
-  if (requested > 0) {
+  // 手動で苦手に入れていた単語は、クイズで正解したら外れる。
+  const clearFlags = async () => {
+    const correctWordIds = upserts.filter((u) => u.last_result).map((u) => u.word_id);
+    if (correctWordIds.length === 0) return;
+    await supabaseAdmin.from("quiz_word_weak_flags").delete().eq("user_id", userId).in("word_id", correctWordIds);
+  };
+
+  const grantBoost = async (): Promise<number> => {
+    if (requested <= 0) return 0;
     const rounded = Math.round(requested * 10000) / 10000;
     const { data: granted, error } = await supabaseAdmin.rpc("reserve_quiz_word_boost", {
       p_user_id: userId,
@@ -325,9 +486,12 @@ export async function finishNotebookRound(
       p_cap: DAILY_BOOST_CAP[plan],
     });
     if (error) throw new Error(`ブーストの付与に失敗しました: ${error.message}`);
-    boostDays = Number(granted ?? 0);
-    if (boostDays > 0) await addGrowthBoost(userId, boostDays);
-  }
+    const days = Number(granted ?? 0);
+    if (days > 0) await addGrowthBoost(userId, days);
+    return days;
+  };
+
+  const [, , , boostDays] = await Promise.all([saveProgress(), clearFlags(), weakUsageDone, grantBoost()]);
 
   return {
     correctCount,
@@ -351,6 +515,7 @@ export type NotebookWordItem = {
   meaning: string;
   difficulty: number;
   status: NotebookWordStatus;
+  flagged: boolean;
   exampleEn: string | null;
   exampleJa: string | null;
   otherMeanings: string[];
@@ -366,21 +531,40 @@ export async function listNotebookWords(
   userId: string,
   filter: { difficulty?: NotebookDifficulty; status?: NotebookWordStatus; pos?: string; page?: number }
 ): Promise<{ items: NotebookWordItem[]; total: number; page: number; pageSize: number }> {
-  let query = supabaseAdmin
-    .from("quiz_words")
-    .select("id, code, word_en, part_of_speech, meaning_ja, difficulty, example_en, example_ja, other_meanings_ja, note_ja")
-    .eq("active", true)
-    .eq("publish_status", "公開")
-    .order("difficulty", { ascending: true })
-    .order("code", { ascending: true })
-    .limit(3000);
-  if (filter.difficulty) query = query.eq("difficulty", filter.difficulty);
-  if (filter.pos) {
-    if (filter.pos === "その他") query = query.not("part_of_speech", "in", "(名詞,動詞,形容詞,副詞)");
-    else query = query.eq("part_of_speech", filter.pos);
+  type ListRow = {
+    id: string;
+    code: string;
+    word_en: string;
+    part_of_speech: string | null;
+    meaning_ja: string;
+    difficulty: number;
+    example_en: string | null;
+    example_ja: string | null;
+    other_meanings_ja: string[] | null;
+    note_ja: string | null;
+  };
+  let data: ListRow[];
+  try {
+    data = await fetchAllRows<ListRow>((from, to) => {
+      let query = supabaseAdmin
+        .from("quiz_words")
+        .select("id, code, word_en, part_of_speech, meaning_ja, difficulty, example_en, example_ja, other_meanings_ja, note_ja")
+        .eq("active", true)
+        .eq("publish_status", "公開")
+        .eq("quiz_enabled", true);
+      if (filter.difficulty) query = query.eq("difficulty", filter.difficulty);
+      if (filter.pos) {
+        if (filter.pos === "その他") query = query.not("part_of_speech", "in", "(名詞,動詞,形容詞,副詞)");
+        else query = query.eq("part_of_speech", filter.pos);
+      }
+      return query
+        .order("difficulty", { ascending: true })
+        .order("code", { ascending: true })
+        .range(from, to) as unknown as PromiseLike<{ data: ListRow[] | null; error: { message: string } | null }>;
+    });
+  } catch (e) {
+    throw new Error(`単語の取得に失敗しました: ${(e as Error).message}`);
   }
-  const { data, error } = await query;
-  if (error) throw new Error(`単語の取得に失敗しました: ${error.message}`);
 
   const { data: progress, error: progressError } = await supabaseAdmin
     .from("quiz_word_progress")
@@ -389,7 +573,15 @@ export async function listNotebookWords(
   if (progressError) throw new Error(`進捗の取得に失敗しました: ${progressError.message}`);
   const progressMap = new Map((progress ?? []).map((p) => [p.word_id as string, p]));
 
+  const { data: flagRows, error: flagError } = await supabaseAdmin
+    .from("quiz_word_weak_flags")
+    .select("word_id")
+    .eq("user_id", userId);
+  if (flagError) throw new Error(`苦手の取得に失敗しました: ${flagError.message}`);
+  const flagged = new Set((flagRows ?? []).map((f) => f.word_id as string));
+
   const statusOf = (id: string): NotebookWordStatus => {
+    if (flagged.has(id)) return "weak";
     const p = progressMap.get(id);
     if (!p) return "unseen";
     if (p.last_result === false) return "weak";
@@ -404,6 +596,7 @@ export async function listNotebookWords(
     meaning: w.meaning_ja as string,
     difficulty: w.difficulty as number,
     status: statusOf(w.id as string),
+    flagged: flagged.has(w.id as string),
     exampleEn: (w.example_en as string | null) ?? null,
     exampleJa: (w.example_ja as string | null) ?? null,
     otherMeanings: (w.other_meanings_ja as string[] | null) ?? [],

@@ -1,10 +1,12 @@
 "use client";
 
+import { TrackOnMount } from "@/components/analytics/track-on-mount";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Crown, Mic, PartyPopper, RotateCcw, Square, User2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { RoundHeader } from "./round-header";
+import { TappableText } from "./tappable-text";
+import { RoundHeader, UsageBonusBadge } from "./round-header";
 import { GrowthBadge } from "./growth-badge";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
 import { ARTHUR_NAME, ArthurAvatar } from "./arthur";
@@ -18,6 +20,7 @@ import {
   type Stage5Turn,
   type Stage5TurnResult,
   type Stage5UsageInfo,
+  welcomeBonusLabel,
   STAGE5_PRO_DAILY_LIMIT,
 } from "./types";
 
@@ -189,7 +192,7 @@ export function Stage5Practice({ track }: Stage5PracticeProps) {
     return (
       <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-100/30 px-6 py-10 text-center">
         <p className="text-sm text-zinc-700">今日のセッションは{limit}回まで使い切りました。</p>
-        <p className="mt-1 text-xs text-zinc-400">また明日挑戦できます。<Link href="/roadmap/pro?from=stage5" className="font-semibold text-amber-600 underline underline-offset-2">Proにすると上限が大きく緩和されます。</Link></p>
+        <p className="mt-1 text-xs text-zinc-400">また明日挑戦できます。<TrackOnMount event="ai_limit_hit" params={{ stage: 5 }} onceKey={`ai_limit_hit:stage5:${new Date().toDateString()}`} /><Link href="/roadmap/pro?from=stage5" className="font-semibold text-amber-600 underline underline-offset-2">Proにすると上限が大きく緩和されます。</Link></p>
         <Link
           href="/roadmap"
           className="mt-4 inline-flex items-center gap-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
@@ -206,9 +209,16 @@ export function Stage5Practice({ track }: Stage5PracticeProps) {
       <div>
         <div className="mb-4 flex items-center justify-between">
           <p className="text-sm font-medium text-zinc-700">話すシーンを選んでください（{trackLabel}）</p>
-          {usageLabel && <span className="text-xs text-zinc-400">{usageLabel}</span>}
+          {usageLabel && (
+            <span className="text-xs text-zinc-400">
+              {usageLabel}
+              {welcomeBonusLabel(usage) && <UsageBonusBadge label={welcomeBonusLabel(usage)} />}
+            </span>
+          )}
         </div>
         {usage && usage.remaining <= 0 && usage.limit < STAGE5_PRO_DAILY_LIMIT && (
+          <>
+          <TrackOnMount event="ai_limit_hit" params={{ stage: 5 }} onceKey={`ai_limit_hit:stage5:${new Date().toDateString()}`} />
           <Link
             href="/roadmap/pro?from=stage5"
             className="mb-4 flex items-center justify-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-100"
@@ -216,6 +226,7 @@ export function Stage5Practice({ track }: Stage5PracticeProps) {
             <Crown className="h-4 w-4" />
             Proで1日{STAGE5_PRO_DAILY_LIMIT}回まで話せる
           </Link>
+          </>
         )}
 
         {scenarios.length === 0 ? (
@@ -267,6 +278,7 @@ export function Stage5Practice({ track }: Stage5PracticeProps) {
           stage={5}
           subFormatLabel={activeScenario.titleJa}
           usageLabel={usage ? `今日のセッション あと${usage.remaining}回` : ""}
+          usageBonusLabel={welcomeBonusLabel(usage)}
           arthurMood={sessionResult.overallPass ? "happy" : "sad"}
         />
         <div className="rounded-xl border border-zinc-200 bg-zinc-100/50 p-6 text-center">
@@ -288,14 +300,14 @@ export function Stage5Practice({ track }: Stage5PracticeProps) {
               type="button"
               onClick={() => startScenario({ ...activeScenario, track, status: "練習中", warmth: 0 })}
               style={{ backgroundColor: STAGE_COLOR }}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97]"
+              className="flex flex-1 items-center justify-center gap-1 sm:gap-1.5 rounded-lg px-2 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97]"
             >
               もう一度話す
             </button>
             <button
               type="button"
               onClick={backToPicker}
-              className="flex items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-600 transition-all duration-150 hover:border-zinc-400 active:scale-[.97]"
+              className="flex items-center justify-center gap-1 sm:gap-1.5 rounded-lg border border-zinc-300 bg-white px-2 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm font-medium text-zinc-600 transition-all duration-150 hover:border-zinc-400 active:scale-[.97]"
             >
               シーン一覧に戻る
             </button>
@@ -309,7 +321,12 @@ export function Stage5Practice({ track }: Stage5PracticeProps) {
 
   return (
     <div>
-      <RoundHeader stage={5} subFormatLabel={activeScenario.titleJa} usageLabel={usageLabel} />
+      <RoundHeader
+        stage={5}
+        subFormatLabel={activeScenario.titleJa}
+        usageLabel={usageLabel}
+        usageBonusLabel={welcomeBonusLabel(usage)}
+      />
 
       <div
         className="mb-3 rounded-xl border p-4"
@@ -326,7 +343,11 @@ export function Stage5Practice({ track }: Stage5PracticeProps) {
             <p className="mb-0.5 text-xs font-semibold" style={{ color: STAGE_COLOR }}>
               {ARTHUR_NAME}
             </p>
-            <p className="text-2xl font-bold leading-snug text-zinc-900">{history[history.length - 1].text}</p>
+            <TappableText
+              text={history[history.length - 1].text}
+              accentColor={STAGE_COLOR}
+              className="text-2xl font-bold leading-snug text-zinc-900"
+            />
           </div>
         </div>
       )}
@@ -355,7 +376,7 @@ export function Stage5Practice({ track }: Stage5PracticeProps) {
                   disabled={manualText.trim().length === 0}
                   onClick={() => setAnswerPhase("review")}
                   style={{ backgroundColor: STAGE_COLOR }}
-                  className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97] disabled:opacity-50"
+                  className="mt-3 flex w-full items-center justify-center gap-1 sm:gap-1.5 rounded-lg px-2 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97] disabled:opacity-50"
                 >
                   この内容で進む
                 </button>
@@ -396,7 +417,7 @@ export function Stage5Practice({ track }: Stage5PracticeProps) {
                 disabled={answerPhase === "sending" || manualText.trim().length === 0}
                 onClick={submitTurn}
                 style={{ backgroundColor: STAGE_COLOR }}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97] disabled:opacity-50"
+                className="flex flex-1 items-center justify-center gap-1 sm:gap-1.5 rounded-lg px-2 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97] disabled:opacity-50"
               >
                 {answerPhase === "sending" ? "送信中..." : "送る"}
               </button>
@@ -404,7 +425,7 @@ export function Stage5Practice({ track }: Stage5PracticeProps) {
                 type="button"
                 disabled={answerPhase === "sending"}
                 onClick={retrySpeaking}
-                className="flex items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-600 transition-all duration-150 hover:border-zinc-400 active:scale-[.97] disabled:opacity-50"
+                className="flex items-center justify-center gap-1 sm:gap-1.5 rounded-lg border border-zinc-300 bg-white px-2 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm font-medium text-zinc-600 transition-all duration-150 hover:border-zinc-400 active:scale-[.97] disabled:opacity-50"
               >
                 <RotateCcw className="h-4 w-4" />
                 言い直す
@@ -442,7 +463,11 @@ export function Stage5Practice({ track }: Stage5PracticeProps) {
                   {ARTHUR_NAME}
                 </p>
               )}
-              {turn.text}
+              {turn.role === "ai" ? (
+                <TappableText text={turn.text} accentColor={STAGE_COLOR} />
+              ) : (
+                turn.text
+              )}
             </div>
           </div>
         ))}

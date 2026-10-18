@@ -41,6 +41,11 @@ export async function POST(request: Request) {
   // 英クワたん(/roadmap)から来た場合は、決済後も英クワたんのPro案内ページに戻す。
   const returnTo = (json as Record<string, unknown> | null)?.returnTo;
   const returnPath = returnTo === "roadmap" ? "/roadmap/pro" : "/settings";
+  // どのPro導線から来たか（/roadmap/pro?from=...）。決済後の戻り先とStripeの記録に引き継いで、
+  // 「どこから来た人が課金したか」を測れるようにする。英小文字・数字・_のみ、20文字まで。
+  const rawFrom = (json as Record<string, unknown> | null)?.from;
+  const from = typeof rawFrom === "string" && /^[a-z0-9_]{1,20}$/.test(rawFrom) ? rawFrom : "";
+  const trackingQuery = `&interval=${interval}${from ? `&from=${from}` : ""}`;
 
   const priceId = STRIPE_PRICE_IDS.pro[interval];
   if (!priceId) {
@@ -101,12 +106,13 @@ export async function POST(request: Request) {
       mode: "subscription",
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${origin}${returnPath}?checkout=success`,
-      cancel_url: `${origin}${returnPath}?checkout=cancelled`,
+      // {CHECKOUT_SESSION_ID}はStripeが実際のセッションIDに置き換える（GA4のpurchaseの重複防止に使う）。
+      success_url: `${origin}${returnPath}?checkout=success${trackingQuery}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}${returnPath}?checkout=cancelled${trackingQuery}`,
       allow_promotion_codes: true,
-      metadata: { userId: user.id, plan: "pro", interval },
+      metadata: { userId: user.id, plan: "pro", interval, from },
       subscription_data: {
-        metadata: { userId: user.id, plan: "pro", interval },
+        metadata: { userId: user.id, plan: "pro", interval, from },
       },
     });
 

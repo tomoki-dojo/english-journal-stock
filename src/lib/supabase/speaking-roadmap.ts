@@ -3,6 +3,7 @@
 // Stage2以降の出題ロジックは別タスクで実装する。
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getTodayDateKey } from "@/lib/daily-rotation";
+import { ttlCached } from "@/lib/ttl-cache";
 import { getExpressionAudioSignedUrl } from "@/lib/supabase/expression-audio";
 import { judgeStage3Answer, checkStage3Usage } from "@/lib/stage3-ai";
 import { judgeStage4Turn, checkStage4Usage } from "@/lib/stage4-ai";
@@ -134,6 +135,9 @@ export async function setProSkip(userId: string, startStage: 2 | 3 | 4): Promise
   for (const trigger of skippedTriggers) {
     await recordStageClearCatch(userId, trigger);
   }
+  // Stage5はスキップで即解放されるので、通常の「Stage5解放の日に届く卵」と同じく、テッペンクワたんの卵もここで配る。
+  // 羽化はこれまでどおりStage5の実卒業で起きる。
+  await recordStageClearCatch(userId, 5);
 }
 
 // 会話クイズの回答から、開始Stage（1 or 2）とトラックを判定する。
@@ -373,7 +377,15 @@ function sortDailyFirst<T extends { sceneTags: string[] }>(rows: T[]): T[] {
 // 前にデータごと届かず、並べ替えが一切効いていないように見える不具合が起きていた。
 // 対策として、日常会話タグを含む行は専用のクエリ（.overlaps）で別出しにして取得することで、
 // 全体件数が1000件を超えても日常会話タグの行だけは常に取得漏れしないようにする。
-async function listStage1PhrasePool(scene?: Stage1Scene | null): Promise<Stage1PoolRow[]> {
+// 出題プールは全ユーザー共通のマスタなので、サーバーのメモリに5分だけ持つ(毎ラウンド最大2000行を取り直さない)。
+const MASTER_CACHE_TTL_MS = 5 * 60 * 1000;
+const listStage1PhrasePool = ttlCached(
+  MASTER_CACHE_TTL_MS,
+  (scene?: Stage1Scene | null) => fetchStage1PhrasePool(scene),
+  (scene) => scene ?? ""
+);
+
+async function fetchStage1PhrasePool(scene?: Stage1Scene | null): Promise<Stage1PoolRow[]> {
   const selectCols = "id, expression_en, meaning_ja, audio_expression_path, scene_tags";
 
   // シーンが選ばれているときは、そのシーンの表現だけをcode順に返す（1シーン最大でも数百件のため1回の取得で足りる）。
@@ -444,8 +456,7 @@ async function getStage1ActiveSet(userId: string, scene?: Stage1Scene | null): P
   totalCount: number;
   remainingCount: number;
 }> {
-  const pool = await listStage1PhrasePool(scene);
-  const progressMap = await getStage1ProgressMap(userId);
+  const [pool, progressMap] = await Promise.all([listStage1PhrasePool(scene), getStage1ProgressMap(userId)]);
 
   const totalCount = pool.length;
   const nonGraduated = pool.filter((e) => progressMap.get(e.id)?.status !== "習得済み");
@@ -514,35 +525,32 @@ async function reportStageStreakResult(
   const graduated = newStreak >= graduateStreak;
   const status = graduated ? "習得済み" : newStreak > 0 ? "練習中" : "未着手";
 
-  const { error: upsertError } = await supabaseAdmin.from("speaking_stage_progress").upsert(
-    {
-      user_id: userId,
-      phrase_id: expressionId,
-      phrase_source: phraseSource,
-      stage,
-      status,
-      correct_streak: newStreak,
-      last_result: correct ? "correct" : "incorrect",
-      last_practiced_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id,phrase_id,phrase_source,stage" }
-  );
-
-  if (upsertError) {
-    throw new Error(`Stage${stage}進捗の保存に失敗しました: ${upsertError.message}`);
-  }
-
-  await recordDailyPractice(userId);
-  await incrementDailyActivity(userId);
-
-  if (graduated) {
-    await incrementTotalMasteredCount(userId);
-  }
+  // 進捗の保存・今日の練習記録・賑わい度は互いに依存しないので同時に行う。
+  // 卒業時の累計+1と成長ブーストも、進捗の内容を使わないので同じ段で走らせる。
+  const saveProgress = async () => {
+    const { error: upsertError } = await supabaseAdmin.from("speaking_stage_progress").upsert(
+      {
+        user_id: userId,
+        phrase_id: expressionId,
+        phrase_source: phraseSource,
+        stage,
+        status,
+        correct_streak: newStreak,
+        last_result: correct ? "correct" : "incorrect",
+        last_practiced_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,phrase_id,phrase_source,stage" }
+    );
+    if (upsertError) {
+      throw new Error(`Stage${stage}進捗の保存に失敗しました: ${upsertError.message}`);
+    }
+  };
 
   // クワガタ育成機能：初めて習得済みになった回だけ、育成中の個体の成長をブーストし、成虫の個体を大きくする
   // （同じ項目を再挑戦して稼げないよう、既に習得済みだった場合は対象外）。
   // Stage5は卒業でテッペンクワたんが即成虫になるため、ブースト対象外。
-  if (graduated && !wasGraduated && stage <= 4) {
+  const grantBoost = async () => {
+    if (!(graduated && !wasGraduated && stage <= 4)) return;
     try {
       const reward = KUWAGATA_GRADUATION_BOOST_DAYS[stage as 0 | 1 | 2 | 3 | 4];
       // 育成中の個体は成長日数、成虫の個体は成長ポイント（サイズレベルの元）として同じ重みで加算する。
@@ -551,7 +559,15 @@ async function reportStageStreakResult(
       // ご褒美の加算に失敗しても、練習の記録自体は成功扱いにする。
       console.error(err);
     }
-  }
+  };
+
+  await Promise.all([
+    saveProgress(),
+    recordDailyPractice(userId),
+    incrementDailyActivity(userId),
+    graduated ? incrementTotalMasteredCount(userId) : Promise.resolve(),
+    grantBoost(),
+  ]);
 
   return { streak: newStreak, graduated };
 }
@@ -694,26 +710,38 @@ async function getStage1GraduatedExpressionIds(userId: string): Promise<Set<stri
 
 // Stage2用に作り込まれたコンテンツ（stage2_quiz_content）を、Stage1卒業済みのものに絞り、
 // code順に並べたうえで、Stage1と同じく日常会話タグを優先する順に並べ替えて取得する。
-async function listStage2ContentPool(userId: string): Promise<DbStage2ContentRow[]> {
-  const graduatedIds = await getStage1GraduatedExpressionIds(userId);
-  if (graduatedIds.size === 0) return [];
-
+// 全ユーザー共通のStage2コンテンツ(code順→日常会話優先の並び済み)。マスタなのでメモリに5分持つ。
+// blank_choice_reasons・variationsは、初回アクセス時にAIで生成してDBへ書き戻される列なので、
+// ここには含めない(含めると、書き戻し後も古いnullが残ってAIを呼び直してしまう)。
+// 出題する数件の分だけ、fillStage2GeneratedColumnsで都度読む。
+const listAllStage2Content = ttlCached(MASTER_CACHE_TTL_MS, async (): Promise<DbStage2ContentRow[]> => {
   const { data, error } = await supabaseAdmin
     .from("stage2_quiz_content")
     .select(
-      "expression_id, blank_target, blank_choices, sentence_choices, context_prompt_ja, blank_choice_reasons, variations, expressions(code, expression_en, meaning_ja, scene_tags)"
+      "expression_id, blank_target, blank_choices, sentence_choices, context_prompt_ja, expressions(code, expression_en, meaning_ja, scene_tags)"
     );
 
   if (error) {
     throw new Error(`Stage2コンテンツの取得に失敗しました: ${error.message}`);
   }
 
-  const rows = (data ?? []) as unknown as DbStage2ContentRow[];
+  const rows = ((data ?? []) as unknown as DbStage2ContentRow[]).map((row) => ({
+    ...row,
+    blank_choice_reasons: null,
+    variations: null,
+  }));
   const sortedByCode = rows
-    .filter((row) => graduatedIds.has(row.expression_id) && row.expressions)
-    .sort((a, b) => (a.expressions!.code).localeCompare(b.expressions!.code));
+    .filter((row) => row.expressions)
+    .sort((a, b) => a.expressions!.code.localeCompare(b.expressions!.code));
 
   return sortDailyFirst(sortedByCode.map((row) => ({ ...row, sceneTags: row.expressions!.scene_tags ?? [] })));
+});
+
+async function listStage2ContentPool(userId: string): Promise<DbStage2ContentRow[]> {
+  const [graduatedIds, all] = await Promise.all([getStage1GraduatedExpressionIds(userId), listAllStage2Content()]);
+  if (graduatedIds.size === 0) return [];
+  // 並び済みのマスタからStage1卒業済みだけを抜き出す(安定ソート済みなので順序は保たれる)。
+  return all.filter((row) => graduatedIds.has(row.expression_id));
 }
 
 // Stage1のあるフレーズが今まさに卒業した直後、その卒業でStage2が「今まさに解放された」かどうかを判定する。
@@ -736,14 +764,15 @@ async function getStage2ActiveSet(userId: string): Promise<{
   totalCount: number;
   remainingCount: number;
 }> {
-  const pool = await listStage2ContentPool(userId);
-
-  const { data: progressData, error: progressError } = await supabaseAdmin
-    .from("speaking_stage_progress")
-    .select("phrase_id, status, correct_streak")
-    .eq("user_id", userId)
-    .eq("stage", 2)
-    .eq("phrase_source", "expression");
+  const [pool, { data: progressData, error: progressError }] = await Promise.all([
+    listStage2ContentPool(userId),
+    supabaseAdmin
+      .from("speaking_stage_progress")
+      .select("phrase_id, status, correct_streak")
+      .eq("user_id", userId)
+      .eq("stage", 2)
+      .eq("phrase_source", "expression"),
+  ]);
 
   if (progressError) {
     throw new Error(`Stage2進捗の取得に失敗しました: ${progressError.message}`);
@@ -889,9 +918,30 @@ export async function getStage2Round(userId: string): Promise<Stage2RoundRespons
 
   const sampled = shuffleArray(activeSet).slice(0, Math.min(STAGE2_ROUND_SIZE, activeSet.length));
 
+  // 出題する分だけ、AI生成の書き戻し列(理由・微改変)を最新の状態で読む。
+  const { data: generated, error: generatedError } = await supabaseAdmin
+    .from("stage2_quiz_content")
+    .select("expression_id, blank_choice_reasons, variations")
+    .in(
+      "expression_id",
+      sampled.map((row) => row.expression_id)
+    );
+  if (generatedError) {
+    throw new Error(`Stage2生成済みデータの取得に失敗しました: ${generatedError.message}`);
+  }
+  const generatedById = new Map((generated ?? []).map((g) => [g.expression_id as string, g]));
+  const withGenerated = sampled.map((row) => {
+    const g = generatedById.get(row.expression_id);
+    return {
+      ...row,
+      blank_choice_reasons: (g?.blank_choice_reasons as Stage2ReferenceChoice[] | null) ?? null,
+      variations: (g?.variations as Stage2Variation[] | null) ?? null,
+    };
+  });
+
   return {
     status: "round",
-    questions: await Promise.all(sampled.map((row) => buildStage2Question(row, row.subStep, row.streak))),
+    questions: await Promise.all(withGenerated.map((row) => buildStage2Question(row, row.subStep, row.streak))),
     remainingCount,
     totalCount,
   };
@@ -924,7 +974,8 @@ type UsageRulePoolRow = {
   errorTag: string;
   title: string;
   coreImageJa: string;
-  prompts: { promptJa: string; answerEn: string }[];
+  deepDiveJa: string | null;
+  prompts: { promptJa: string; answerEn: string; noteJa: string | null }[];
 };
 
 // 公開済みのusage_rulesを、紐づくusage_rule_prompts込みでcode順に取得する。
@@ -935,7 +986,7 @@ type UsageRulePoolRow = {
 async function listUsageRulePool(errorTag?: string): Promise<UsageRulePoolRow[]> {
   let query = supabaseAdmin
     .from("usage_rules")
-    .select("id, code, error_tag, title, core_image_ja, usage_rule_prompts(prompt_ja, answer_en)")
+    .select("id, code, error_tag, title, core_image_ja, deep_dive_ja, usage_rule_prompts(prompt_ja, answer_en, note_ja)")
     .eq("publish_status", "公開");
 
   if (errorTag) {
@@ -953,10 +1004,14 @@ async function listUsageRulePool(errorTag?: string): Promise<UsageRulePoolRow[]>
     errorTag: row.error_tag as string,
     title: row.title as string,
     coreImageJa: row.core_image_ja as string,
-    prompts: ((row.usage_rule_prompts ?? []) as { prompt_ja: string; answer_en: string }[]).map((p) => ({
-      promptJa: p.prompt_ja,
-      answerEn: p.answer_en,
-    })),
+    deepDiveJa: (row.deep_dive_ja as string | null) ?? null,
+    prompts: ((row.usage_rule_prompts ?? []) as { prompt_ja: string; answer_en: string; note_ja: string | null }[]).map(
+      (p) => ({
+        promptJa: p.prompt_ja,
+        answerEn: p.answer_en,
+        noteJa: p.note_ja,
+      })
+    ),
   }));
 }
 
@@ -1045,7 +1100,9 @@ export async function getStage0Round(userId: string, errorTag?: string): Promise
           title: rule.title,
           promptJa: prompt.promptJa,
           answerEn: prompt.answerEn,
-          coreImageJa: rule.coreImageJa,
+          // 出題文ごとの解説(note_ja)があればそれを、無ければルール全体の解説を出す。
+          coreImageJa: prompt.noteJa?.trim() ? prompt.noteJa : rule.coreImageJa,
+          deepDiveJa: rule.deepDiveJa,
           warmth: computeWarmth(rule.streak, STAGE0_GRADUATE_STREAK),
         };
       }),
@@ -1199,34 +1256,38 @@ export async function isStage4Unlocked(userId: string): Promise<boolean> {
 // （_reference/speaking-roadmap-design.md「Stage5：スキーマ・解放ロジック設計」参照）。
 // Stage4自体はtrack列を持たないため、既存のisDailyScene()でscene_tagから逆算する
 // （Stage5シナリオ側はtrack列で直接判定するので、この関数はStage4→Stage5の解放判定専用）。
+// Stage4シナリオのid→scene_tag対応(公開状態を問わない全件)。全ユーザー共通のマスタなのでメモリに5分持つ。
+const listStage4SceneTags = ttlCached(MASTER_CACHE_TTL_MS, async (): Promise<{ id: string; scene_tag: string }[]> => {
+  const { data, error } = await supabaseAdmin.from("stage4_scenarios").select("id, scene_tag");
+  if (error) {
+    throw new Error(`Stage4シナリオの取得に失敗しました: ${error.message}`);
+  }
+  return (data ?? []) as { id: string; scene_tag: string }[];
+});
+
 async function getStage5DomainReadiness(
   userId: string
 ): Promise<{ dailyReady: boolean; businessReady: boolean }> {
-  const { data: progressRows, error: progressError } = await supabaseAdmin
-    .from("speaking_stage_progress")
-    .select("phrase_id")
-    .eq("user_id", userId)
-    .eq("stage", 4)
-    .eq("phrase_source", "stage4_scenario")
-    .eq("status", "習得済み");
+  // 卒業実績とシナリオ対応表は互いに依存しないので同時に取り、絞り込みはこちらで行う。
+  const [progressRes, sceneTags] = await Promise.all([
+    supabaseAdmin
+      .from("speaking_stage_progress")
+      .select("phrase_id")
+      .eq("user_id", userId)
+      .eq("stage", 4)
+      .eq("phrase_source", "stage4_scenario")
+      .eq("status", "習得済み"),
+    listStage4SceneTags(),
+  ]);
 
-  if (progressError) {
-    throw new Error(`Stage4卒業実績の取得に失敗しました: ${progressError.message}`);
+  if (progressRes.error) {
+    throw new Error(`Stage4卒業実績の取得に失敗しました: ${progressRes.error.message}`);
   }
 
-  const graduatedIds = (progressRows ?? []).map((row) => row.phrase_id as string);
-  if (graduatedIds.length === 0) return { dailyReady: false, businessReady: false };
+  const graduatedIds = new Set((progressRes.data ?? []).map((row) => row.phrase_id as string));
+  if (graduatedIds.size === 0) return { dailyReady: false, businessReady: false };
 
-  const { data: scenarioRows, error: scenarioError } = await supabaseAdmin
-    .from("stage4_scenarios")
-    .select("scene_tag")
-    .in("id", graduatedIds);
-
-  if (scenarioError) {
-    throw new Error(`Stage4シナリオの取得に失敗しました: ${scenarioError.message}`);
-  }
-
-  const tags = (scenarioRows ?? []).map((row) => row.scene_tag as string);
+  const tags = sceneTags.filter((row) => graduatedIds.has(row.id)).map((row) => row.scene_tag);
   const dailyCount = tags.filter((tag) => isDailyScene([tag])).length;
   const businessCount = tags.length - dailyCount;
 
@@ -1250,7 +1311,11 @@ export async function isStage5TrackUnlocked(userId: string, track: Stage5Track):
   return domainReady || proSkipEnabled;
 }
 
-export async function getRoadmapStageReadiness(userId: string): Promise<{
+// knownState: 呼び出し側が取得済みのstateがあれば渡す(同じ行を二度読まないため)。
+export async function getRoadmapStageReadiness(
+  userId: string,
+  knownState?: UserRoadmapState | null
+): Promise<{
   stage2Ready: boolean;
   stage3Ready: boolean;
   stage4Ready: boolean;
@@ -1262,7 +1327,7 @@ export async function getRoadmapStageReadiness(userId: string): Promise<{
     getStage1GraduatedExpressionIds(userId),
     countStage3Graduations(userId),
     getStage5DomainReadiness(userId),
-    getUserRoadmapState(userId),
+    knownState !== undefined ? Promise.resolve(knownState) : getUserRoadmapState(userId),
   ]);
   const proSkipEnabled = state?.proSkipEnabled ?? false;
 
@@ -1514,23 +1579,34 @@ export async function reportStage3Result(
 // 公開中の全シナリオに、そのユーザーの進捗（speaking_stage_progress, stage=4,
 // phrase_source='stage4_scenario'）を重ねて返す。Stage1〜3と違いアクティブセットの概念がなく、
 // 全シナリオを常に選択肢として見せる（数が少ないうちは絞り込む必要がないため）。
-export async function listStage4Scenarios(userId: string): Promise<Stage4ScenarioListItem[]> {
-  const { data: scenarios, error } = await supabaseAdmin
+// 公開中のStage4シナリオ(全ユーザー共通のマスタ。code順)。メモリに5分持つ。会話ターンの設定取得にも使う。
+const listPublishedStage4Scenarios = ttlCached(MASTER_CACHE_TTL_MS, async () => {
+  const { data, error } = await supabaseAdmin
     .from("stage4_scenarios")
-    .select("id, code, scene_tag, title_ja, situation_ja, goal_ja, opening_line_en, level")
+    .select("id, code, scene_tag, title_ja, situation_ja, goal_ja, opening_line_en, level, ai_persona_ja")
     .eq("publish_status", "公開")
     .order("code", { ascending: true });
 
   if (error) {
     throw new Error(`Stage4シナリオ一覧の取得に失敗しました: ${error.message}`);
   }
+  return data ?? [];
+});
 
-  const { data: progressRows, error: progressError } = await supabaseAdmin
-    .from("speaking_stage_progress")
-    .select("phrase_id, status, correct_streak")
-    .eq("user_id", userId)
-    .eq("stage", 4)
-    .eq("phrase_source", "stage4_scenario");
+// track を指定すると、そのドメイン(日常=DAILY_SCENE_TAGSのシーン、ビジネス=それ以外)のシナリオだけを返す。
+export async function listStage4Scenarios(
+  userId: string,
+  track?: "daily" | "business"
+): Promise<Stage4ScenarioListItem[]> {
+  const [scenarios, { data: progressRows, error: progressError }] = await Promise.all([
+    listPublishedStage4Scenarios(),
+    supabaseAdmin
+      .from("speaking_stage_progress")
+      .select("phrase_id, status, correct_streak")
+      .eq("user_id", userId)
+      .eq("stage", 4)
+      .eq("phrase_source", "stage4_scenario"),
+  ]);
 
   if (progressError) {
     throw new Error(`Stage4進捗の取得に失敗しました: ${progressError.message}`);
@@ -1544,7 +1620,10 @@ export async function listStage4Scenarios(userId: string): Promise<Stage4Scenari
     });
   }
 
-  return (scenarios ?? []).map((row) => {
+  const inTrack = (sceneTag: string) =>
+    !track || (track === "daily") === isDailyScene([sceneTag]);
+
+  return (scenarios ?? []).filter((row) => inTrack(row.scene_tag as string)).map((row) => {
     const progress = progressMap.get(row.id as string);
     const streak = progress?.correct_streak ?? 0;
     return {
@@ -1563,11 +1642,14 @@ export async function listStage4Scenarios(userId: string): Promise<Stage4Scenari
 }
 
 // シナリオ選択画面で「今日のセッション あと◯回」を表示するための、消費なしの残数確認。
-export async function getStage4UsageInfo(userId: string, plan: Plan): Promise<{ remaining: number; limit: number }> {
+export async function getStage4UsageInfo(
+  userId: string,
+  plan: Plan
+): Promise<{ remaining: number; limit: number; welcomeDaysLeft?: number }> {
   const check = await checkStage4Usage(userId, plan);
   return check.allowed
-    ? { remaining: check.remaining + 1, limit: check.limit }
-    : { remaining: 0, limit: check.limit };
+    ? { remaining: check.remaining + 1, limit: check.limit, welcomeDaysLeft: check.welcomeDaysLeft }
+    : { remaining: 0, limit: check.limit, welcomeDaysLeft: check.welcomeDaysLeft };
 }
 
 // Stage4の1ターン分を処理する。turnIndex===1のときだけ日次セッション開始回数をチェック・消費し、
@@ -1582,16 +1664,7 @@ export async function reportStage4Turn(
   history: Stage4Turn[],
   userUtterance: string
 ): Promise<Stage4TurnOutcome> {
-  const { data: scenario, error: scenarioError } = await supabaseAdmin
-    .from("stage4_scenarios")
-    .select("title_ja, situation_ja, ai_persona_ja, goal_ja, scene_tag")
-    .eq("id", scenarioId)
-    .eq("publish_status", "公開")
-    .maybeSingle();
-
-  if (scenarioError) {
-    throw new Error(`Stage4シナリオの取得に失敗しました: ${scenarioError.message}`);
-  }
+  const scenario = (await listPublishedStage4Scenarios()).find((s) => s.id === scenarioId);
   if (!scenario) {
     return { status: "error", message: "対象のシナリオが見つかりませんでした" };
   }
@@ -1615,13 +1688,14 @@ export async function reportStage4Turn(
     return { status: "error", message: judged.message };
   }
 
-  if (judged.turn.errorTags.length > 0) {
-    await recordErrorTags(userId, judged.turn.errorTags);
-  }
+  // エラータグの記録は、最終ターンの卒業判定の更新と並行して行える(互いに依存しない)。
+  const tagsDone =
+    judged.turn.errorTags.length > 0 ? recordErrorTags(userId, judged.turn.errorTags) : Promise.resolve();
 
   const isFinalTurn = turnIndex >= STAGE4_TURN_COUNT;
 
   if (!isFinalTurn) {
+    await tagsDone;
     return {
       status: "ok",
       result: {
@@ -1634,14 +1708,17 @@ export async function reportStage4Turn(
     };
   }
 
-  const { streak, graduated } = await reportStageStreakResult(
-    userId,
-    4,
-    scenarioId,
-    STAGE4_GRADUATE_STREAK,
-    judged.turn.overallPass === true,
-    "stage4_scenario"
-  );
+  const [{ streak, graduated }] = await Promise.all([
+    reportStageStreakResult(
+      userId,
+      4,
+      scenarioId,
+      STAGE4_GRADUATE_STREAK,
+      judged.turn.overallPass === true,
+      "stage4_scenario"
+    ),
+    tagsDone,
+  ]);
 
   // Stage5解放（テッペンクワたんの卵配布）。日常/ビジネスどちらのドメインで解放条件を
   // 満たしたかをこのシナリオのscene_tagから判定する。recordStageClearCatchはべき等なので、
@@ -1681,29 +1758,37 @@ export async function reportStage4Turn(
 // ============================================================
 
 // 指定トラックの公開中シナリオに、そのユーザーの進捗を重ねて返す。
+// 公開中のStage5シナリオ(両トラック分、code順)。全ユーザー共通のマスタなのでメモリに5分持つ。
+// 一覧・トラック判定・会話ターンの設定取得で共通に使う。
+const listPublishedStage5Scenarios = ttlCached(MASTER_CACHE_TTL_MS, async () => {
+  const { data, error } = await supabaseAdmin
+    .from("stage5_scenarios")
+    .select("id, code, track, scene_tag, title_ja, situation_ja, goal_ja, opening_line_en, level, ai_persona_ja")
+    .eq("publish_status", "公開")
+    .order("code", { ascending: true });
+
+  if (error) {
+    throw new Error(`Stage5シナリオ一覧の取得に失敗しました: ${error.message}`);
+  }
+  return data ?? [];
+});
+
 export async function listStage5Scenarios(
   userId: string,
   track: Stage5Track
 ): Promise<Stage5ScenarioListItem[]> {
   const dbTrack = track === "daily" ? "日常" : "ビジネス";
 
-  const { data: scenarios, error } = await supabaseAdmin
-    .from("stage5_scenarios")
-    .select("id, code, track, scene_tag, title_ja, situation_ja, goal_ja, opening_line_en, level")
-    .eq("publish_status", "公開")
-    .eq("track", dbTrack)
-    .order("code", { ascending: true });
-
-  if (error) {
-    throw new Error(`Stage5シナリオ一覧の取得に失敗しました: ${error.message}`);
-  }
-
-  const { data: progressRows, error: progressError } = await supabaseAdmin
-    .from("speaking_stage_progress")
-    .select("phrase_id, status, correct_streak")
-    .eq("user_id", userId)
-    .eq("stage", 5)
-    .eq("phrase_source", "stage5_scenario");
+  const [allScenarios, { data: progressRows, error: progressError }] = await Promise.all([
+    listPublishedStage5Scenarios(),
+    supabaseAdmin
+      .from("speaking_stage_progress")
+      .select("phrase_id, status, correct_streak")
+      .eq("user_id", userId)
+      .eq("stage", 5)
+      .eq("phrase_source", "stage5_scenario"),
+  ]);
+  const scenarios = allScenarios.filter((row) => row.track === dbTrack);
 
   if (progressError) {
     throw new Error(`Stage5進捗の取得に失敗しました: ${progressError.message}`);
@@ -1739,27 +1824,21 @@ export async function listStage5Scenarios(
 // turn APIが「このシナリオはどのトラックか」をゲートチェックのために引くための軽量ルックアップ。
 // クライアントからのtrack指定を信用せず、scenarioIdからDBの実データで判定する。
 export async function getStage5ScenarioTrack(scenarioId: string): Promise<Stage5Track | null> {
-  const { data, error } = await supabaseAdmin
-    .from("stage5_scenarios")
-    .select("track")
-    .eq("id", scenarioId)
-    .eq("publish_status", "公開")
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(`Stage5シナリオの取得に失敗しました: ${error.message}`);
-  }
+  const data = (await listPublishedStage5Scenarios()).find((s) => s.id === scenarioId);
   if (!data) return null;
 
   return (data.track as string) === "日常" ? "daily" : "business";
 }
 
 // シナリオ選択画面で「今日のセッション あと◯回」を表示するための、消費なしの残数確認。
-export async function getStage5UsageInfo(userId: string, plan: Plan): Promise<{ remaining: number; limit: number }> {
+export async function getStage5UsageInfo(
+  userId: string,
+  plan: Plan
+): Promise<{ remaining: number; limit: number; welcomeDaysLeft?: number }> {
   const check = await checkStage5Usage(userId, plan);
   return check.allowed
-    ? { remaining: check.remaining + 1, limit: check.limit }
-    : { remaining: 0, limit: check.limit };
+    ? { remaining: check.remaining + 1, limit: check.limit, welcomeDaysLeft: check.welcomeDaysLeft }
+    : { remaining: 0, limit: check.limit, welcomeDaysLeft: check.welcomeDaysLeft };
 }
 
 // Stage5の1ターン分を処理する。turnIndexが1のときだけ日次セッション開始回数をチェック・消費し、
@@ -1774,16 +1853,7 @@ export async function reportStage5Turn(
   history: Stage5Turn[],
   userUtterance: string
 ): Promise<Stage5TurnOutcome> {
-  const { data: scenario, error: scenarioError } = await supabaseAdmin
-    .from("stage5_scenarios")
-    .select("title_ja, situation_ja, ai_persona_ja, goal_ja")
-    .eq("id", scenarioId)
-    .eq("publish_status", "公開")
-    .maybeSingle();
-
-  if (scenarioError) {
-    throw new Error(`Stage5シナリオの取得に失敗しました: ${scenarioError.message}`);
-  }
+  const scenario = (await listPublishedStage5Scenarios()).find((s) => s.id === scenarioId);
   if (!scenario) {
     return { status: "error", message: "対象のシナリオが見つかりませんでした" };
   }
@@ -1807,13 +1877,13 @@ export async function reportStage5Turn(
     return { status: "error", message: judged.message };
   }
 
-  if (judged.turn.errorTags.length > 0) {
-    await recordErrorTags(userId, judged.turn.errorTags);
-  }
+  const tagsDone =
+    judged.turn.errorTags.length > 0 ? recordErrorTags(userId, judged.turn.errorTags) : Promise.resolve();
 
   const isFinalTurn = turnIndex >= STAGE5_TURN_COUNT;
 
   if (!isFinalTurn) {
+    await tagsDone;
     return {
       status: "ok",
       result: {
@@ -1826,14 +1896,17 @@ export async function reportStage5Turn(
     };
   }
 
-  const { streak, graduated } = await reportStageStreakResult(
-    userId,
-    5,
-    scenarioId,
-    STAGE5_GRADUATE_STREAK,
-    judged.turn.overallPass === true,
-    "stage5_scenario"
-  );
+  const [{ streak, graduated }] = await Promise.all([
+    reportStageStreakResult(
+      userId,
+      5,
+      scenarioId,
+      STAGE5_GRADUATE_STREAK,
+      judged.turn.overallPass === true,
+      "stage5_scenario"
+    ),
+    tagsDone,
+  ]);
 
   // テッペンクワたん強制羽化（ロードマップ完走の瞬間）。日常・ビジネスどちらのトラックで
   // 初めてStage5シナリオを卒業しても、この瞬間を「完走」として扱う。forceHatchTeppenToAdultは

@@ -31,21 +31,30 @@ export default async function RoadmapPage() {
 
   // 安全網：エークワたんのタマゴは新規登録時にDBトリガーが渡すが、何かの理由で持っていない場合に備えて、
   // 部屋に入るたびに「未所持なら渡す」(べき等)。失敗しても部屋の表示は続ける。
-  await recordStageClearCatch(user.id, 1).catch(() => {});
-
-  const streakStats = await getStreakStats(user.id);
-  const stageReadiness = await getRoadmapStageReadiness(user.id);
-  const plan = await getPlan(user.id);
-  const notebookCapped = await isNotebookBoostCapped(user.id, plan).catch(() => false);
-  const notices = await getRoadmapNotices(user.id).catch(() => ({
-    showAdvice: false,
-    announcements: [],
-    newEggs: [],
-    newHatches: [],
-    stageUps: [],
-    trivia: null,
-    rareChance: null,
-  }));
+  // 互いに依存しない取得は同時に走らせて、待ち時間を重ねない(部屋の表示が遅くなるため)。
+  // お知らせの系列(タマゴ安全網→お知らせ)だけが直列で、それ以外とは同時に走らせる。
+  const streakP = getStreakStats(user.id);
+  const planP = getPlan(user.id);
+  const noticesP = recordStageClearCatch(user.id, 1)
+    .catch(() => {})
+    .then(async () =>
+      getRoadmapNotices(user.id, { state, totalDays: (await streakP).totalDays }).catch(() => ({
+        showAdvice: false,
+        announcements: [],
+        newEggs: [],
+        newHatches: [],
+        stageUps: [],
+        trivia: null,
+        rareChance: null,
+      }))
+    );
+  const [streakStats, stageReadiness, plan, notebookCapped, notices] = await Promise.all([
+    streakP,
+    getRoadmapStageReadiness(user.id, state),
+    planP,
+    planP.then((p) => isNotebookBoostCapped(user.id, p).catch(() => false)),
+    noticesP,
+  ]);
 
   return (
     <>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { trackEvent, trackEventOnce } from "@/lib/analytics";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -10,6 +11,7 @@ import {
   Bug,
   Crown,
   FastForward,
+  Flag,
   Loader2,
   MessageCircle,
   Mic,
@@ -59,7 +61,28 @@ const PRO_ONLY: { icon: LucideIcon; label: ReactNode; featured?: boolean }[] = [
       </>
     ),
   },
-  { icon: FastForward, label: "Stageスキップ（先のStageから始められる）" },
+  {
+    icon: Flag,
+    featured: true,
+    label: (
+      <>
+        <span className="mx-0.5 rounded-md bg-amber-200/80 px-1.5 py-0.5 text-lg font-black text-amber-700">苦手単語の登録</span>
+        ＆
+        <span className="mx-0.5 rounded-md bg-amber-200/80 px-1.5 py-0.5 text-lg font-black text-amber-700">苦手テスト</span>
+        が無制限
+      </>
+    ),
+  },
+  {
+    icon: FastForward,
+    featured: true,
+    label: (
+      <>
+        <span className="mx-0.5 rounded-md bg-amber-200/80 px-1.5 py-0.5 text-lg font-black text-amber-700">Stageスキップ</span>
+        （先のStageから始められる）
+      </>
+    ),
+  },
 ];
 
 // 本体のUpskillEnglishもProになる特典。
@@ -74,24 +97,52 @@ export function RoadmapProPlan({
   checkoutResult,
   screenshots,
   shelfCap,
+  from,
+  purchasedInterval,
+  checkoutSessionId,
 }: {
+  from: string;
+  purchasedInterval: BillingInterval | null;
+  checkoutSessionId: string | null;
   isPro: boolean;
   shelfCap: number;
-  checkoutResult: "success" | null;
+  checkoutResult: "success" | "cancelled" | null;
   screenshots: string[];
 }) {
   const [interval, setInterval] = useState<BillingInterval>("monthly");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // 計測：Pro案内ページを見た／決済から戻った（課金・キャンセル）。from＝どのPro導線から来たか。
+  useEffect(() => {
+    if (checkoutResult === "success") {
+      const interval = purchasedInterval ?? "monthly";
+      trackEventOnce(`pro_purchase:${checkoutSessionId ?? Date.now()}`, "purchase", {
+        transaction_id: checkoutSessionId ?? undefined,
+        value: interval === "annual" ? 6800 : 680,
+        currency: "JPY",
+        item_name: `UpskillEnglish Pro (${interval})`,
+        from: from || "direct",
+        app: "kuwatan",
+      });
+      return;
+    }
+    if (checkoutResult === "cancelled") {
+      trackEvent("pro_checkout_cancel", { from: from || "direct", interval: purchasedInterval ?? undefined });
+      return;
+    }
+    trackEvent("pro_page_view", { from: from || "direct", is_pro: isPro });
+  }, [checkoutResult, purchasedInterval, checkoutSessionId, from, isPro]);
+
   async function startCheckout() {
+    trackEvent("pro_checkout_start", { from: from || "direct", interval });
     setPending(true);
     setError(null);
     try {
       const res = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ interval, returnTo: "roadmap" }),
+        body: JSON.stringify({ interval, returnTo: "roadmap", from }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || typeof json.url !== "string") {

@@ -31,14 +31,14 @@ export default async function RoadmapLayout({
     <RoadmapSoundProvider>
       <div className="min-h-dvh bg-gradient-to-b from-amber-50 via-white to-sky-50">
         <header className="border-b border-amber-100/80 bg-white/60 backdrop-blur-sm">
-          <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-3">
+          <div className="mx-auto flex max-w-3xl items-center justify-between px-3 py-1.5 sm:px-6 sm:py-3">
             <Link
               href="/"
               aria-label="UpskillEnglishへ戻る"
               className="flex items-center"
             >
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent/10 ring-1 ring-accent/20">
-                <span className="font-mono text-xs font-semibold text-accent">
+              <div className="flex h-6 w-6 items-center justify-center rounded-lg sm:h-7 sm:w-7 bg-accent/10 ring-1 ring-accent/20">
+                <span className="font-mono text-[10px] font-semibold text-accent sm:text-xs">
                   Up
                 </span>
               </div>
@@ -46,7 +46,7 @@ export default async function RoadmapLayout({
             <div className="flex items-center gap-3">
               <Link
                 href="/roadmap/title/version?from=room"
-                className="rounded-full bg-amber-100/80 px-2.5 py-1 text-xs font-bold text-amber-800 transition-colors hover:bg-amber-200/80"
+                className="rounded-full bg-amber-100/80 px-2 py-0.5 text-[10px] font-bold text-amber-800 sm:px-2.5 sm:py-1 sm:text-xs transition-colors hover:bg-amber-200/80"
               >
                 v{APP_VERSION}
               </Link>
@@ -55,7 +55,7 @@ export default async function RoadmapLayout({
           </div>
         </header>
 
-        <main className="mx-auto max-w-3xl px-6 py-8">
+        <main className="mx-auto max-w-3xl px-2 pb-8 pt-1 sm:px-6 sm:py-8">
           <RoadmapAdBreakProvider enabled={showAds}>{children}</RoadmapAdBreakProvider>
         </main>
       </div>

@@ -1,5 +1,6 @@
 // 練習日数・習得数の節目で、既知種のタマゴを配る。
 import { supabaseAdmin } from "@/lib/supabase/server";
+import type { UserRoadmapState } from "@/components/roadmap/types";
 import { getStreakStats, getUserRoadmapState } from "@/lib/supabase/speaking-roadmap";
 import {
   KUWAGATA_RARE_GUARANTEE_MILESTONE,
@@ -25,8 +26,30 @@ function reachedMilestones(value: number, milestones: number[], repeat: number):
 // 習得数がレア確定の採集チャンスの節目（50の倍数）に達したことを、部屋に入ったときに1度だけ知らせる。
 // 台帳（kuwagata_egg_events）に「rare:50」の形で記録して二重に出さない。
 // 複数の節目をまとめて飛び越えた場合は、一番大きい節目だけ知らせる。
-export async function claimRareChanceNotice(userId: string): Promise<number | null> {
-  const state = await getUserRoadmapState(userId);
+// 台帳(kuwagata_egg_events)の記録済みキーを返す。呼び出し側で1回だけ読んで共有するために使う。
+export type LoadGrantedKeys = () => Promise<Set<string>>;
+
+export function createGrantedKeysLoader(userId: string): LoadGrantedKeys {
+  let cached: Promise<Set<string>> | null = null;
+  return () => {
+    cached ??= (async () => {
+      const { data, error } = await supabaseAdmin
+        .from("kuwagata_egg_events")
+        .select("event_key")
+        .eq("user_id", userId);
+      if (error) throw new Error(`タマゴの配布記録の取得に失敗しました: ${error.message}`);
+      return new Set((data ?? []).map((row) => row.event_key as string));
+    })();
+    return cached;
+  };
+}
+
+export async function claimRareChanceNotice(
+  userId: string,
+  knownState?: UserRoadmapState | null,
+  loadGrantedKeys?: LoadGrantedKeys
+): Promise<number | null> {
+  const state = knownState !== undefined ? knownState : await getUserRoadmapState(userId);
   if (!state) return null;
 
   const milestones: number[] = [];
@@ -35,14 +58,7 @@ export async function claimRareChanceNotice(userId: string): Promise<number | nu
   }
   if (milestones.length === 0) return null;
 
-  const { data: granted, error } = await supabaseAdmin
-    .from("kuwagata_egg_events")
-    .select("event_key")
-    .eq("user_id", userId)
-    .like("event_key", "rare:%");
-  if (error) throw new Error(`レア確定チャンスの通知記録の取得に失敗しました: ${error.message}`);
-
-  const grantedKeys = new Set((granted ?? []).map((row) => row.event_key as string));
+  const grantedKeys = await (loadGrantedKeys ?? createGrantedKeysLoader(userId))();
   const pending = milestones.filter((m) => !grantedKeys.has(`rare:${m}`));
   if (pending.length === 0) return null;
 
@@ -77,24 +93,22 @@ async function getEggSpeciesPool(userId: string) {
 
 // 節目に達していて、まだ配っていないタマゴを配る（部屋に入ったときに呼ぶ）。
 // 配った節目は台帳（kuwagata_egg_events）に記録するので、二重には配らない。
-export async function grantMilestoneEggs(userId: string): Promise<void> {
-  const state = await getUserRoadmapState(userId);
+export async function grantMilestoneEggs(
+  userId: string,
+  known?: { state: UserRoadmapState | null; totalDays: number },
+  loadGrantedKeys?: LoadGrantedKeys
+): Promise<void> {
+  const state = known ? known.state : await getUserRoadmapState(userId);
   if (!state) return;
 
-  const { totalDays } = await getStreakStats(userId);
+  const totalDays = known ? known.totalDays : (await getStreakStats(userId)).totalDays;
   const eventKeys = [
     ...reachedMilestones(totalDays, PRACTICE_DAY_MILESTONES, PRACTICE_DAY_REPEAT).map((m) => `days:${m}`),
     ...reachedMilestones(state.totalMasteredCount, MASTERED_MILESTONES, MASTERED_REPEAT).map((m) => `mastered:${m}`),
   ];
   if (eventKeys.length === 0) return;
 
-  const { data: granted, error } = await supabaseAdmin
-    .from("kuwagata_egg_events")
-    .select("event_key")
-    .eq("user_id", userId);
-  if (error) throw new Error(`タマゴの配布記録の取得に失敗しました: ${error.message}`);
-
-  const grantedKeys = new Set((granted ?? []).map((row) => row.event_key as string));
+  const grantedKeys = await (loadGrantedKeys ?? createGrantedKeysLoader(userId))();
   const pending = eventKeys.filter((key) => !grantedKeys.has(key));
   if (pending.length === 0) return;
 

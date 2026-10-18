@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type CSSProperties, type ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { Bug } from "lucide-react";
 
 // タマゴ入手時の演出用。クラッカーのように、タマゴの位置から紙吹雪が扇状に弾けて、ひらひら落ちる。
@@ -136,6 +136,7 @@ export function CelebrationOverlay({
   eyebrow,
   message,
   description,
+  captureRef,
   children,
 }: {
   artSrc?: string;
@@ -146,6 +147,8 @@ export function CelebrationOverlay({
   eyebrow?: string;
   message: string;
   description?: string | null;
+  // 絵と文言の部分(ボタンは含めない)。共有ボタンが画像にするときの対象。
+  captureRef?: RefObject<HTMLDivElement | null>;
   children: ReactNode;
 }) {
   const [artFailed, setArtFailed] = useState(false);
@@ -153,6 +156,7 @@ export function CelebrationOverlay({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 overflow-hidden bg-black/75 px-8 text-center">
+      <div ref={captureRef} className="flex flex-col items-center gap-6 px-6 py-4">
       <div className="relative flex h-56 w-56 items-center justify-center">
         <CelebrationBurst />
         {art ? (
@@ -184,6 +188,7 @@ export function CelebrationOverlay({
             {description}
           </p>
         )}
+      </div>
       </div>
       <div className="flex w-full max-w-xs flex-col items-center gap-2">
         {children}

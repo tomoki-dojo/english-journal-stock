@@ -8,6 +8,7 @@ import { RoundHeader } from "./round-header";
 import { GrowthBadge } from "./growth-badge";
 import { GrowingKuwagataPanel } from "./growing-kuwagata-panel";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
+import { TappableText } from "./tappable-text";
 import {
   parseStage1Scene,
   STAGE1_SCENE_OPTIONS,
@@ -196,13 +197,13 @@ export function Stage1Practice() {
 
   // シーン選択（「すべて」＋12シーン）。1行のセレクトに畳んで、スマホでも縦に長くならないようにしている。
   const sceneSelector = (
-    <div className="mb-4">
+    <div className="mb-3 sm:mb-4">
       <label className="relative inline-flex max-w-full items-center">
         <span className="sr-only">シーン</span>
         <select
           value={scene ?? ""}
           onChange={(e) => handleSelectScene(parseStage1Scene(e.target.value))}
-          className="max-w-full appearance-none truncate rounded-full py-2 pl-4 pr-9 text-sm font-bold text-white shadow-sm outline-none transition-all duration-150 active:scale-[.97]"
+          className="max-w-full appearance-none truncate rounded-full py-1.5 pl-3 pr-8 text-xs font-bold text-white sm:py-2 sm:pl-4 sm:pr-9 sm:text-sm shadow-sm outline-none transition-all duration-150 active:scale-[.97]"
           style={{ backgroundColor: STAGE_COLOR }}
         >
           <option value="">すべてのシーン</option>
@@ -212,7 +213,7 @@ export function Stage1Practice() {
             </option>
           ))}
         </select>
-        <ChevronDown className="pointer-events-none absolute right-3 h-4 w-4 text-white" />
+        <ChevronDown className="pointer-events-none absolute right-2.5 h-3.5 w-3.5 text-white sm:right-3 sm:h-4 sm:w-4" />
       </label>
     </div>
   );
@@ -358,14 +359,18 @@ export function Stage1Practice() {
         }
       >
         {currentQuestion.hasAudio && (
-          <p className="mb-3 text-xs text-zinc-400">
+          <p className="mb-1.5 text-[10px] leading-tight text-zinc-400 sm:mb-3 sm:text-xs sm:leading-normal">
             音声を真似して声に出す→一緒に言う→少し遅れて言う、と徐々にレベルを上げてみましょう。
           </p>
         )}
 
         <div className="mb-1 flex items-center gap-2">
           <GrowthBadge stage={1} warmth={currentQuestion.warmth} />
-          <p className="text-lg font-medium text-zinc-900">{currentQuestion.expressionEn}</p>
+          <TappableText
+            text={currentQuestion.expressionEn}
+            accentColor={STAGE_COLOR}
+            className="text-lg font-medium text-zinc-900"
+          />
         </div>
         {currentQuestion.meaningJa && <p className="mb-4 text-sm text-zinc-500">{currentQuestion.meaningJa}</p>}
 
@@ -381,24 +386,24 @@ export function Stage1Practice() {
           </button>
         )}
 
-        <div className="flex gap-3">
+        <div className="flex gap-2 sm:gap-3">
           <button
             type="button"
             disabled={submitting}
             onClick={() => handleReport(true)}
             style={{ backgroundColor: STAGE_COLOR }}
-            className="flex flex-1 scale-100 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97] disabled:opacity-50"
+            className="flex flex-1 scale-100 items-center justify-center gap-1 whitespace-nowrap rounded-lg px-2 py-2 text-xs font-semibold text-white sm:gap-1.5 sm:px-4 sm:py-2.5 sm:text-sm transition-all duration-150 hover:opacity-90 active:scale-[.97] disabled:opacity-50"
           >
-            <Check className="h-4 w-4" />
+            <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             言えた
           </button>
           <button
             type="button"
             disabled={submitting}
             onClick={() => handleReport(false)}
-            className="flex flex-1 scale-100 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-600 transition-all duration-150 hover:border-zinc-400 active:scale-[.97] disabled:opacity-50"
+            className="flex flex-1 scale-100 items-center justify-center gap-1 whitespace-nowrap rounded-lg border border-zinc-300 bg-white px-2 py-2 text-xs font-medium sm:gap-1.5 sm:px-4 sm:py-2.5 sm:text-sm text-zinc-600 transition-all duration-150 hover:border-zinc-400 active:scale-[.97] disabled:opacity-50"
           >
-            <X className="h-4 w-4" />
+            <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             言えなかった
           </button>
         </div>

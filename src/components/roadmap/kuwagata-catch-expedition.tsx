@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { TrackOnMount } from "@/components/analytics/track-on-mount";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Sparkles, ArrowRight } from "lucide-react";
@@ -80,6 +81,7 @@ export function KuwagataCatchExpedition({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CatchResponse | null>(null);
+  const shareCaptureRef = useRef<HTMLDivElement | null>(null);
   const { notifyBreak } = useRoadmapAdBreak();
   // ミニゲーム中のエリア。ミニゲームが終わったら、その成績つきで採集を実行する。
   const [challengeArea, setChallengeArea] = useState<KuwagataAreaCode | null>(
@@ -259,6 +261,7 @@ export function KuwagataCatchExpedition({
 
       {result && (
         <CelebrationOverlay
+          captureRef={shareCaptureRef}
           accentClassName={RARITY_STYLE[result.rarity].celebrateText}
           eyebrow={
             RARITY_STYLE[result.rarity].label
@@ -281,6 +284,7 @@ export function KuwagataCatchExpedition({
           {result.rarity !== "コモン" && <GetSeOnMount />}
           {result.hiddenOnShelf && (
             <div className="w-full rounded-xl bg-white/10 px-3 py-2.5 text-center ring-1 ring-white/25">
+              <TrackOnMount event="shelf_cap_hit" params={{ species: result.speciesCode }} />
               <p className="text-xs font-semibold text-white">棚がいっぱいで、この子は飾れない…</p>
               <Link
                 href="/roadmap/pro?from=catch"
@@ -301,6 +305,7 @@ export function KuwagataCatchExpedition({
           {result.rarity !== "コモン" && (
             <ShareButton
               campaign="catch_rare"
+              captureRef={shareCaptureRef}
               label="みんなに自慢する"
               text={`英クワたんで${result.rarity}の「${result.speciesName}」をゲットした！ #英クワたん`}
               className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border-2 border-white/70 bg-white/10 py-2 text-sm font-bold text-white transition-transform active:scale-95"

@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
 // Server Component や Route Handler から「今ログイン中のユーザー」を取得する用。
 // これは既存の server.ts（service_role・RLSを無視する管理者権限）とは別物。
@@ -31,10 +32,27 @@ export async function createClientServer() {
 }
 
 // APIルートなどで「ログイン中のユーザーID」だけ手早く取りたい場合のヘルパー
-export async function getCurrentUser() {
+export type CurrentUser = { id: string; email: string | undefined };
+
+// 同じリクエスト内(layoutとpageなど)で何度呼んでも、判定は1回だけにする。
+// まずJWTの署名をローカルで検証する(getClaims。Authへのネットワーク往復なし)。
+// 検証できなかったとき(旧方式の鍵・期限切れなど)は、従来どおりAuthに問い合わせるgetUserに戻す。
+// なお、セッションの失効(ログアウトなど)はJWTの有効期限までここでは反映されない。
+// ミドルウェアは毎回getUserで検証しているので、画面側では弾かれる。
+// MFAを要求する管理画面のガード(admin-guard.ts)は、このヘルパーを使わずgetUserのまま。
+export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const supabase = await createClientServer();
+  try {
+    const { data, error } = await supabase.auth.getClaims();
+    const claims = data?.claims;
+    if (!error && claims?.sub) {
+      return { id: claims.sub, email: typeof claims.email === "string" ? claims.email : undefined };
+    }
+  } catch {
+    // 下のgetUserで確認する。
+  }
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  return user;
-}
+  return user ? { id: user.id, email: user.email } : null;
+});

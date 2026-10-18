@@ -29,8 +29,9 @@ import type { Plan } from "@/lib/plan";
 
 // Proは固定。Freeは、このStageを初めて遊んだ日（stage5_usageの最初のday_key）から
 // STAGE45_FREE_WELCOME_DAYS日間だけ、はじめてボーナスの回数にする（まだ一度も遊んでいなければボーナス扱い）。
-async function dailyLimitFor(userId: string, plan: Plan): Promise<number> {
-  if (plan !== "free") return STAGE5_PRO_DAILY_LIMIT;
+// welcomeDaysLeftは、ボーナス期間中の残り日数（今日を含む）。ボーナス中でなければ未定義。
+async function dailyLimitFor(userId: string, plan: Plan): Promise<{ limit: number; welcomeDaysLeft?: number }> {
+  if (plan !== "free") return { limit: STAGE5_PRO_DAILY_LIMIT };
   const { data, error } = await supabaseAdmin
     .from("stage5_usage")
     .select("day_key")
@@ -39,20 +40,22 @@ async function dailyLimitFor(userId: string, plan: Plan): Promise<number> {
     .limit(1)
     .maybeSingle();
   if (error) throw new Error(`Stage5の初回利用日の取得に失敗しました: ${error.message}`);
-  if (!data) return STAGE5_FREE_WELCOME_DAILY_LIMIT;
+  if (!data) return { limit: STAGE5_FREE_WELCOME_DAILY_LIMIT, welcomeDaysLeft: STAGE45_FREE_WELCOME_DAYS };
   const firstDay = Date.parse(`${data.day_key}T00:00:00Z`);
   const today = Date.parse(`${getTodayDateKey()}T00:00:00Z`);
   const elapsedDays = Math.floor((today - firstDay) / 86_400_000);
-  return elapsedDays < STAGE45_FREE_WELCOME_DAYS ? STAGE5_FREE_WELCOME_DAILY_LIMIT : STAGE5_FREE_DAILY_LIMIT;
+  return elapsedDays < STAGE45_FREE_WELCOME_DAYS
+    ? { limit: STAGE5_FREE_WELCOME_DAILY_LIMIT, welcomeDaysLeft: STAGE45_FREE_WELCOME_DAYS - elapsedDays }
+    : { limit: STAGE5_FREE_DAILY_LIMIT };
 }
 
 export type Stage5UsageCheckResult =
-  | { allowed: true; remaining: number; limit: number; currentCount: number }
-  | { allowed: false; remaining: 0; limit: number };
+  | { allowed: true; remaining: number; limit: number; currentCount: number; welcomeDaysLeft?: number }
+  | { allowed: false; remaining: 0; limit: number; welcomeDaysLeft?: number };
 
 // 今日のセッション開始回数を確認するだけ（消費しない）。セッションの最初のターンでのみ呼ぶ。
 export async function checkStage5Usage(userId: string, plan: Plan): Promise<Stage5UsageCheckResult> {
-  const limit = await dailyLimitFor(userId, plan);
+  const { limit, welcomeDaysLeft } = await dailyLimitFor(userId, plan);
   const dayKey = getTodayDateKey();
 
   const { data: existing, error: fetchError } = await supabaseAdmin
@@ -68,10 +71,10 @@ export async function checkStage5Usage(userId: string, plan: Plan): Promise<Stag
 
   const currentCount = existing?.request_count ?? 0;
   if (currentCount >= limit) {
-    return { allowed: false, remaining: 0, limit };
+    return { allowed: false, remaining: 0, limit, welcomeDaysLeft };
   }
 
-  return { allowed: true, remaining: limit - currentCount - 1, limit, currentCount };
+  return { allowed: true, remaining: limit - currentCount - 1, limit, currentCount, welcomeDaysLeft };
 }
 
 async function incrementStage5Usage(userId: string, currentCount: number): Promise<void> {
@@ -89,10 +92,13 @@ async function incrementStage5Usage(userId: string, currentCount: number): Promi
 
 // 今日あと何回セッションを開始できるかだけを返す（消費しない）。turnIndex>1のターンで
 // usage表示を継続するために使う。
-export async function peekStage5Usage(userId: string, plan: Plan): Promise<{ remaining: number; limit: number }> {
+export async function peekStage5Usage(
+  userId: string,
+  plan: Plan
+): Promise<{ remaining: number; limit: number; welcomeDaysLeft?: number }> {
   const check = await checkStage5Usage(userId, plan);
-  if (!check.allowed) return { remaining: 0, limit: check.limit };
-  return { remaining: check.remaining + 1, limit: check.limit };
+  if (!check.allowed) return { remaining: 0, limit: check.limit, welcomeDaysLeft: check.welcomeDaysLeft };
+  return { remaining: check.remaining + 1, limit: check.limit, welcomeDaysLeft: check.welcomeDaysLeft };
 }
 
 export type JudgeStage5TurnParams = JudgeStage5TurnInput & {
@@ -103,7 +109,7 @@ export type JudgeStage5TurnParams = JudgeStage5TurnInput & {
 };
 
 export type JudgeStage5TurnCallResult =
-  | { ok: true; turn: ParsedStage5Turn; usage: { remaining: number; limit: number } }
+  | { ok: true; turn: ParsedStage5Turn; usage: { remaining: number; limit: number; welcomeDaysLeft?: number } }
   | { ok: false; reason: "limit_exceeded"; limit: number }
   | { ok: false; reason: "provider_error"; message: string };
 
@@ -112,7 +118,7 @@ export type JudgeStage5TurnCallResult =
 export async function judgeStage5Turn(params: JudgeStage5TurnParams): Promise<JudgeStage5TurnCallResult> {
   const isSessionStart = params.turnIndex <= 1;
 
-  let usage: { remaining: number; limit: number };
+  let usage: { remaining: number; limit: number; welcomeDaysLeft?: number };
   let usageCheckForIncrement: Stage5UsageCheckResult | null = null;
 
   if (isSessionStart) {
@@ -121,7 +127,7 @@ export async function judgeStage5Turn(params: JudgeStage5TurnParams): Promise<Ju
       return { ok: false, reason: "limit_exceeded", limit: check.limit };
     }
     usageCheckForIncrement = check;
-    usage = { remaining: check.remaining, limit: check.limit };
+    usage = { remaining: check.remaining, limit: check.limit, welcomeDaysLeft: check.welcomeDaysLeft };
   } else {
     usage = await peekStage5Usage(params.userId, params.plan);
   }

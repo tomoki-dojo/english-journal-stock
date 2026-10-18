@@ -10,6 +10,8 @@ type RoundHeaderProps = {
   subFormatLabel?: string;
   // サブ形式の隣に出す補足の小タグ(Stage3の「Stage1卒業 ◯個から出題」など)。
   poolLabel?: string;
+  // 利用回数の隣に出す小さなバッジ（Stage4・5の「はじめてボーナス 残り◯日」）。
+  usageBonusLabel?: string;
   // アーサーの表情。未指定なら問題の切り替わりで口パクする
   arthurMood?: ArthurMood;
 } & (
@@ -43,46 +45,66 @@ const STAGE_META = {
   5: { label: "Stage5", icon: RadioTower },
 } as const;
 
-export function RoundHeader({ stage, subFormatLabel, poolLabel, arthurMood, current, total, usageLabel }: RoundHeaderProps) {
+export function UsageBonusBadge({ label }: { label: string }) {
+  return (
+    <span className="ml-1.5 whitespace-nowrap rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
+      {label}
+    </span>
+  );
+}
+
+export function RoundHeader({
+  stage,
+  subFormatLabel,
+  poolLabel,
+  usageBonusLabel,
+  arthurMood,
+  current,
+  total,
+  usageLabel,
+}: RoundHeaderProps) {
   const meta = STAGE_META[stage];
   const Icon = meta.icon;
   const color = STAGE_COLORS[stage];
 
   return (
-    <div className="mb-4">
+    <div className="mb-2 sm:mb-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span
-            className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold"
+            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold sm:px-2.5 sm:py-1 sm:text-xs"
             style={{ backgroundColor: withAlpha(color, "1a"), color }}
           >
-            <Icon className="h-3.5 w-3.5" />
+            <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
             {meta.label}
           </span>
           {subFormatLabel && (
-            <span className="rounded-full bg-zinc-200/70 px-2 py-1 text-xs font-medium text-zinc-600">
+            <span className="rounded-full bg-zinc-200/70 px-2 py-0.5 text-[10px] font-medium text-zinc-600 sm:py-1 sm:text-xs">
               {subFormatLabel}
             </span>
           )}
           {poolLabel && (
-            <span className="rounded-full bg-zinc-200/70 px-2 py-1 text-xs font-medium text-zinc-600">
+            <span className="rounded-full bg-zinc-200/70 px-2 py-0.5 text-[10px] font-medium text-zinc-600 sm:py-1 sm:text-xs">
               {poolLabel}
             </span>
           )}
         </div>
 
         {current === undefined ? (
-          <span className="text-xs text-zinc-400">{usageLabel}</span>
+          <span className="text-[10px] text-zinc-400 sm:text-xs">
+            {usageLabel}
+            {usageBonusLabel && <UsageBonusBadge label={usageBonusLabel} />}
+          </span>
         ) : (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-zinc-400">
+            <span className="text-[10px] text-zinc-400 sm:text-xs">
               {current}/{total}問目
             </span>
             <div className="flex items-center gap-1">
               {Array.from({ length: total }).map((_, i) => (
                 <span
                   key={i}
-                  className="h-1.5 w-1.5 rounded-full transition-colors"
+                  className="h-1 w-1 rounded-full transition-colors sm:h-1.5 sm:w-1.5"
                   style={{ backgroundColor: i < current ? color : "#e4e4e7" }}
                 />
               ))}
@@ -92,11 +114,14 @@ export function RoundHeader({ stage, subFormatLabel, poolLabel, arthurMood, curr
       </div>
 
       {current !== undefined && usageLabel && (
-        <p className="mt-1.5 text-right text-xs text-zinc-400">{usageLabel}</p>
+        <p className="mt-1 text-right text-[10px] text-zinc-400 sm:mt-1.5 sm:text-xs">
+          {usageLabel}
+          {usageBonusLabel && <UsageBonusBadge label={usageBonusLabel} />}
+        </p>
       )}
 
       {/* アーサー（練習相手）と水槽。Stage0〜5すべての練習画面共通。問題が切り替わるたびに口パクする。 */}
-      <ArthurScene className="mt-3" mood={arthurMood} talkKey={current ?? usageLabel} />
+      <ArthurScene className="mt-1.5 sm:mt-3" mood={arthurMood} talkKey={current ?? usageLabel} />
     </div>
   );
 }

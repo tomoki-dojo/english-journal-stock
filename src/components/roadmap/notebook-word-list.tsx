@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Flag } from "lucide-react";
 import { DIFFICULTY_STYLE, NOTEBOOK_DIFFICULTIES_UI } from "./notebook-levels";
 
 type Status = "mastered" | "weak" | "learning" | "unseen";
@@ -11,6 +12,7 @@ type Item = {
   meaning: string;
   difficulty: number;
   status: Status;
+  flagged: boolean;
   exampleEn: string | null;
   exampleJa: string | null;
   otherMeanings: string[];
@@ -19,21 +21,36 @@ type Item = {
 type ListResponse = { items: Item[]; total: number; page: number; pageSize: number };
 
 const STATUS_OPTIONS: { value: Status; label: string; className: string }[] = [
+  { value: "weak", label: "苦手", className: "bg-red-100 text-red-600" },
   { value: "mastered", label: "覚えた", className: "bg-emerald-100 text-emerald-700" },
   { value: "learning", label: "学習中", className: "bg-sky-100 text-sky-700" },
-  { value: "weak", label: "苦手", className: "bg-red-100 text-red-600" },
   { value: "unseen", label: "未学習", className: "bg-zinc-100 text-zinc-500" },
 ];
 const POS_OPTIONS = ["名詞", "動詞", "形容詞", "副詞", "その他"];
 
-function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function Chip({
+  active,
+  onClick,
+  children,
+  danger = false,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  danger?: boolean;
+}) {
+  const style = danger
+    ? active
+      ? "border-red-500 bg-red-500 text-white"
+      : "border-red-300 bg-red-50 text-red-600"
+    : active
+      ? "border-amber-500 bg-amber-500 text-white"
+      : "border-zinc-300 bg-white text-zinc-600";
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full border px-3 py-1 text-xs font-bold transition-colors ${
-        active ? "border-amber-500 bg-amber-500 text-white" : "border-zinc-300 bg-white text-zinc-600"
-      }`}
+      className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-bold transition-colors ${style}`}
     >
       {children}
     </button>
@@ -75,6 +92,26 @@ export function NotebookWordList() {
     void load();
   }, [load]);
 
+  async function toggleFlag(item: Item) {
+    const next = !item.flagged;
+    try {
+      const res = await fetch("/api/roadmap/weak-words", {
+        method: next ? "POST" : "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wordId: item.id }),
+      });
+      if (res.status === 429) {
+        setError("苦手登録は10語までです（Proで無制限）");
+        return;
+      }
+      if (!res.ok) throw new Error("toggle failed");
+      // 手動の入れ外しは、その場で状態に反映する（外したら元の状態に戻すため再取得する）
+      await load();
+    } catch {
+      setError("更新できませんでした。時間を置いて再度お試しください。");
+    }
+  }
+
   function pick<T>(setter: (v: T | null) => void, current: T | null, value: T) {
     setter(current === value ? null : value);
     setPage(1);
@@ -94,7 +131,13 @@ export function NotebookWordList() {
         </div>
         <div className="flex flex-wrap gap-1.5">
           {STATUS_OPTIONS.map((s) => (
-            <Chip key={s.value} active={status === s.value} onClick={() => pick(setStatus, status, s.value)}>
+            <Chip
+              key={s.value}
+              active={status === s.value}
+              danger={s.value === "weak"}
+              onClick={() => pick(setStatus, status, s.value)}
+            >
+              {s.value === "weak" && <Flag className="h-3 w-3" />}
               {s.label}
             </Chip>
           ))}
@@ -134,6 +177,18 @@ export function NotebookWordList() {
                 <p className="mt-1 flex gap-1">
                   <span className={`rounded-full border px-1.5 py-px text-[10px] font-bold ${diff.className}`}>{item.difficulty}</span>
                   <span className={`rounded-full px-1.5 py-px text-[10px] font-bold ${st.className}`}>{st.label}</span>
+                  <button
+                    type="button"
+                    onClick={() => void toggleFlag(item)}
+                    aria-label={item.flagged ? "苦手から外す" : "苦手に入れる"}
+                    className={`rounded-full border px-1.5 py-px ${
+                      item.flagged
+                        ? "border-red-300 bg-red-50 text-red-600"
+                        : "border-zinc-300 bg-white text-zinc-400 hover:text-red-600"
+                    }`}
+                  >
+                    <Flag className="h-3 w-3" />
+                  </button>
                 </p>
               </div>
               <div className="min-w-0 text-zinc-600">
