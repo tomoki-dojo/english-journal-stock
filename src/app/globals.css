@@ -2122,3 +2122,111 @@ body {
 .animate-kuwagata-splash-right {
   animation: kuwagata-splash-right 0.8s ease-out infinite;
 }
+
+/* タイトル画面の入場演出。背景→ロゴが落ちて弾む→吹き出し→メガホン・虫→ボタンの順に出る。 */
+@keyframes title-bg-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes title-logo-drop {
+  0% {
+    transform: translateY(-45%);
+    opacity: 0;
+  }
+  50% {
+    transform: translateY(3%);
+    opacity: 1;
+  }
+  70% {
+    transform: translateY(-1.5%);
+  }
+  85% {
+    transform: translateY(0.6%);
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes title-pop {
+  0% {
+    transform: scale(0.2) rotate(-8deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.12) rotate(2deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+}
+
+@keyframes title-buttons-in {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-title-bg {
+  animation: title-bg-in 0.5s ease-out both;
+}
+
+.animate-title-logo {
+  animation: title-logo-drop 0.9s cubic-bezier(0.22, 0.61, 0.36, 1) 0.4s both;
+}
+
+/* 定位置に着いたあとの「呼吸」(メガホン・虫とボタンがゆっくり拡大縮小する)。 */
+@keyframes title-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.animate-title-bubble {
+  animation: title-pop 0.5s ease-out 1.2s both;
+  transform-origin: 20% 27%;
+}
+
+.animate-title-mega {
+  animation:
+    title-pop 0.45s ease-out 1.5s both,
+    title-breathe 2.6s ease-in-out 1.95s infinite;
+  transform-origin: 50% 32%;
+}
+
+.animate-title-buttons {
+  animation: title-buttons-in 0.5s ease-out 1.9s both;
+}
+
+/* ボタン本体だけが呼吸する(名前表示は動かさない)。入場のあとに始まる。 */
+.animate-title-breathe {
+  animation: title-breathe 2.6s ease-in-out 2.4s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-title-bg,
+  .animate-title-logo,
+  .animate-title-bubble,
+  .animate-title-mega,
+  .animate-title-buttons,
+  .animate-title-breathe {
+    animation: none;
+  }
+}

@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/supabase/server-auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { ROADMAP_TITLE_PATH, sanitizeRoadmapNext } from "@/lib/roadmap-title";
 import { APP_VERSION } from "@/lib/app-version";
+import { TitleBgm } from "@/components/roadmap/title-bgm";
 
 export const metadata: Metadata = { title: { absolute: "喋って！育てろ！英クワたん" } };
 
@@ -34,22 +35,43 @@ export default async function RoadmapTitlePage({ searchParams }: TitlePageProps)
   const signupHref = `${loginHref}&mode=magic`;
 
   const primaryButton =
-    "rounded-full border-4 border-[#eaaccb] bg-[#e5215a] px-6 py-3 text-center text-lg font-black tracking-wide text-white shadow-[0_4px_0_#a8153f] transition-transform hover:scale-[1.02] active:translate-y-0.5 active:shadow-none";
+    "animate-title-breathe rounded-full border-4 border-[#eaaccb] bg-[#e5215a] px-6 py-3 text-center text-lg font-black tracking-wide text-white shadow-[0_4px_0_#a8153f] transition-transform hover:scale-[1.02] active:translate-y-0.5 active:shadow-none";
   const secondaryButton =
-    "rounded-full border-4 border-[#eaaccb] bg-white px-6 py-3 text-center text-lg font-black tracking-wide text-[#e5215a] shadow-[0_4px_0_#d9a1bd] transition-transform hover:scale-[1.02] active:translate-y-0.5 active:shadow-none";
+    "animate-title-breathe rounded-full border-4 border-[#eaaccb] bg-white px-6 py-3 text-center text-lg font-black tracking-wide text-[#e5215a] shadow-[0_4px_0_#d9a1bd] transition-transform hover:scale-[1.02] active:translate-y-0.5 active:shadow-none";
 
   // タイトル画面は1枚絵(9:16)。画面に収まる最大の大きさで中央に置き、絵の下の余白にボタンを重ねる。
   return (
     <div className="relative flex h-dvh items-center justify-center overflow-hidden bg-[#fffaeb]">
+      <TitleBgm />
       <div className="relative" style={{ aspectRatio: "9 / 16", height: "min(100dvh, calc(100vw * 16 / 9))" }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {/* タイトル絵はレイヤーごとのSVGを重ねたもの(入場演出でロゴ・吹き出しを個別に動かす)。 */}
+        {/* eslint-disable @next/next/no-img-element */}
         <img
-          src="/roadmap/title/title_bg.webp"
+          src="/roadmap/title/title_layer_bg.webp"
           alt="英クワたん 喋って！育てろ！"
-          className="absolute inset-0 h-full w-full select-none"
+          className="animate-title-bg absolute inset-0 h-full w-full select-none"
           draggable={false}
         />
-        <div className="absolute inset-x-0 top-[76%] flex flex-col items-center gap-3 px-[12%]">
+        <img
+          src="/roadmap/title/title_layer_logo.svg"
+          alt=""
+          className="animate-title-logo absolute inset-0 h-full w-full select-none"
+          draggable={false}
+        />
+        <img
+          src="/roadmap/title/title_layer_bubble.svg"
+          alt=""
+          className="animate-title-bubble absolute inset-0 h-full w-full select-none"
+          draggable={false}
+        />
+        <img
+          src="/roadmap/title/title_layer_mega.svg"
+          alt=""
+          className="animate-title-mega absolute inset-0 h-full w-full select-none"
+          draggable={false}
+        />
+        {/* eslint-enable @next/next/no-img-element */}
+        <div className="animate-title-buttons absolute inset-x-0 top-[76%] flex flex-col items-center gap-3 px-[12%]">
           {user ? (
             <>
               {displayName && <p className="text-sm font-bold text-zinc-600">{displayName}</p>}
