@@ -33,18 +33,19 @@ const MIC_DUCK_VOLUME = 0.004;
 const MINIGAME_SE_SRC = "/roadmap/sound/se_minigame.mp3";
 const MINIGAME_SE_VOLUME = 0.25;
 const FANFARE_SRC = "/roadmap/sound/se_fanfare.mp3";
-const FANFARE_VOLUME = 0.2;
+const FANFARE_VOLUME = 0.14;
 const GROWTH_SRC = "/roadmap/sound/se_growth.mp3";
-const GROWTH_VOLUME = 0.12;
+const GROWTH_VOLUME = 0.085;
 const GET_SRC = "/roadmap/sound/se_get.mp3";
 const GET_VOLUME = 0.15;
 const STORAGE_KEY = "roadmap_sound_level";
 const LEGACY_STORAGE_KEY = "roadmap_sound_enabled"; // 旧: ON/OFFのみ。"0"ならミュートとして引き継ぐ。
 
-// 音量は 0=ミュート / 1 / 2 / 3 の4段階。上の各音量(BGM_VOLUMEなど)は「2」のときの値で、段階ごとに倍率をかける。
+// 音量は 0=ミュート / 1 / 2 / 3 の4段階。上の各音量(BGM_VOLUMEなど)は基準値で、段階ごとに倍率をかける(1=0.5倍、3=2.5倍、2はその中間)。
+// 最大の2.5倍は、最も大きい基準値(単語ノートのBGM 0.4)がちょうど上限1になる値。これ以上にすると音の大きさの比が崩れる。
 export const SOUND_MAX_LEVEL = 3;
 const DEFAULT_LEVEL = 2;
-const LEVEL_FACTORS = [0, 0.5, 1, 1.8];
+const LEVEL_FACTORS = [0, 0.5, 1.5, 2.5];
 
 // BGMを流す画面（部屋・棚・図鑑）。Stageの練習画面などでは止める。
 const BGM_PATHS = new Set([

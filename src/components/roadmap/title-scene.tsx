@@ -8,7 +8,7 @@ import { setAudioVolume, unlockAudio } from "@/lib/audio-volume";
 // 音量は部屋のBGMと同じ設定(roadmap_sound_level)に合わせる。
 const TITLE_BGM_SRC = "/roadmap/sound/bgm_title.mp3";
 const TITLE_BGM_VOLUME = 0.07;
-const LEVEL_FACTORS = [0, 0.5, 1, 1.8];
+const LEVEL_FACTORS = [0, 0.5, 1.5, 2.5];
 const STORAGE_KEY = "roadmap_sound_level";
 // ボタンを押したときと同じ音(roadmap-sound.tsx のタップ音と同じ音源・音量)。
 const TAP_SRC = "/roadmap/sound/se_tap.mp3";
