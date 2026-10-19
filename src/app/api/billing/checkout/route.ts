@@ -101,10 +101,10 @@ export async function POST(request: Request) {
   // 2. Checkoutセッションを作成
   const origin = getRequestOrigin(request);
 
-  try {
-    const session = await stripe.checkout.sessions.create({
+  const createSession = (customer: string) =>
+    stripe.checkout.sessions.create({
       mode: "subscription",
-      customer: customerId,
+      customer,
       line_items: [{ price: priceId, quantity: 1 }],
       // {CHECKOUT_SESSION_ID}はStripeが実際のセッションIDに置き換える（GA4のpurchaseの重複防止に使う）。
       success_url: `${origin}${returnPath}?checkout=success${trackingQuery}&session_id={CHECKOUT_SESSION_ID}`,
@@ -116,6 +116,26 @@ export async function POST(request: Request) {
       },
     });
 
+  try {
+    let session;
+    try {
+      session = await createSession(customerId!);
+    } catch (err) {
+      // 保存済みのStripe顧客が、いま使っているキーの環境(テスト/本番)に存在しないとき(DBを開発と本番で共有しているため起こる)は、
+      // 顧客を作り直して1回だけやり直す。
+      const code = (err as { code?: string } | null)?.code;
+      if (code !== "resource_missing") throw err;
+      const customer = await stripe.customers.create({
+        email: user.email ?? undefined,
+        metadata: { userId: user.id },
+      });
+      await supabaseAdmin
+        .from("profiles")
+        .update({ stripe_customer_id: customer.id })
+        .eq("user_id", user.id);
+      session = await createSession(customer.id);
+    }
+
     if (!session.url) {
       return NextResponse.json(
         { error: "Checkout URLの取得に失敗しました" },
@@ -125,6 +145,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url: session.url });
   } catch (err) {
+    console.error("Checkoutセッションの作成に失敗しました", err);
     return NextResponse.json(
       {
         error: "Checkoutセッションの作成に失敗しました",

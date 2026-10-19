@@ -10,7 +10,7 @@ const MIN_LENGTH = 8;
 // ログイン中のユーザーがパスワードを新規設定/変更するためのフォーム。
 // updateUser はセッションが必要なため、未ログイン状態では使えない
 // （呼び出し元の /settings ページで未ログイン時はリダイレクトしている）。
-export function PasswordSettingsForm() {
+export function PasswordSettingsForm({ compact = false }: { compact?: boolean } = {}) {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [status, setStatus] = useState<Status>("idle");
@@ -52,9 +52,11 @@ export function PasswordSettingsForm() {
     <section className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-100/50 p-5">
       <div>
         <h2 className="text-base font-semibold text-zinc-900">パスワードでログイン</h2>
-        <p className="mt-1 text-xs text-zinc-500">
-          パスワードを設定すると、次回からマジックリンクなしでログインできます。
-        </p>
+        {!compact && (
+          <p className="mt-1 text-xs text-zinc-500">
+            パスワードを設定すると、次回からメールのリンクなしでログインできます。
+          </p>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-3">

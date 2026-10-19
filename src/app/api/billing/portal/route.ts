@@ -38,11 +38,17 @@ export async function POST(request: Request) {
   }
 
   const origin = getRequestOrigin(request);
+  // 戻り先は、このサイト内のパスだけ許可する（未指定なら本体の設定画面）。
+  const body = (await request.json().catch(() => ({}))) as { returnPath?: unknown };
+  const returnPath =
+    typeof body.returnPath === "string" && body.returnPath.startsWith("/") && !body.returnPath.startsWith("//")
+      ? body.returnPath
+      : "/settings";
 
   try {
     const session = await stripe.billingPortal.sessions.create({
       customer: profile.stripe_customer_id,
-      return_url: `${origin}/settings`,
+      return_url: `${origin}${returnPath}`,
     });
 
     return NextResponse.json({ url: session.url });

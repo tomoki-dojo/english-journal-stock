@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Settings } from "lucide-react";
 import {
   RoadmapSoundProvider,
   SoundToggleButton,
@@ -51,6 +52,13 @@ export default async function RoadmapLayout({
                 className="rounded-full bg-amber-100/80 px-2 py-0.5 text-[10px] font-bold text-amber-800 sm:px-2.5 sm:py-1 sm:text-xs transition-colors hover:bg-amber-200/80"
               >
                 v{APP_VERSION}
+              </Link>
+              <Link
+                href="/roadmap/settings"
+                aria-label="設定"
+                className="flex h-6 w-6 items-center justify-center rounded-full text-zinc-600 transition-colors hover:bg-amber-100/70 active:scale-95 sm:h-8 sm:w-8"
+              >
+                <Settings className="h-4 w-4 sm:h-5 sm:w-5" />
               </Link>
               <SoundToggleButton />
             </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { X } from "lucide-react";
+import { ChevronRight, X } from "lucide-react";
 import { navItems } from "./nav-items";
 import { PLAN_LABELS, type Plan } from "@/lib/plan";
 import { AdUnit } from "@/components/ads/ad-unit";
@@ -69,6 +69,16 @@ export function Sidebar({ isOpen, onClose, account }: SidebarProps) {
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+          <Link
+            href="/roadmap/title"
+            onClick={onClose}
+            className="mb-3 flex items-center gap-3 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 p-3 text-white shadow-md ring-2 ring-amber-200 transition-transform hover:scale-[1.02] active:scale-95"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/icon.png" alt="" className="h-10 w-10 shrink-0 rounded-lg bg-white/90 p-0.5" />
+            <span className="flex-1 text-sm font-black leading-tight">喋って！育てろ！英クワたん</span>
+            <ChevronRight className="h-5 w-5 shrink-0" />
+          </Link>
           {navItems.map((item) => {
             const Icon = item.icon;
             return (

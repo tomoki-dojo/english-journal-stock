@@ -131,7 +131,7 @@ export function LoginForm({ reason, next, mode: initialMode }: LoginFormProps) {
             mode === "magic" ? "bg-black text-white" : "text-gray-600"
           }`}
         >
-          マジックリンク
+          メールでログイン
         </button>
       </div>
 
@@ -164,7 +164,7 @@ export function LoginForm({ reason, next, mode: initialMode }: LoginFormProps) {
             <p className="text-red-600 text-sm">{pwError}</p>
           )}
           <p className="text-xs text-gray-500">
-            まだパスワード未設定の場合は、一度マジックリンクでログイン後、
+            まだパスワード未設定の場合は、一度メールでログイン後、
             アカウント設定画面でパスワードを設定してください。
           </p>
         </form>
@@ -173,6 +173,16 @@ export function LoginForm({ reason, next, mode: initialMode }: LoginFormProps) {
           <p>
             {email} 宛にログイン用のリンクを送信しました。メールを確認してください。
           </p>
+          <p className="mt-3 text-sm text-gray-600">
+            届かないときは、迷惑メールフォルダもご確認ください。
+          </p>
+          <button
+            type="button"
+            onClick={() => setMagicStatus("idle")}
+            className="mt-4 text-sm text-gray-500 underline hover:text-gray-700"
+          >
+            メールアドレスを入れ直す
+          </button>
         </div>
       ) : (
         <form onSubmit={handleMagicSubmit} className="flex flex-col gap-3">
