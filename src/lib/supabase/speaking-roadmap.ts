@@ -49,6 +49,7 @@ import {
   type OnboardingQuizResult,
   type RoadmapStage,
   type Stage0ReportResult,
+  type Stage0RoundQuestion,
   type Stage0RoundResponse,
   type Stage1ReportResult,
   type Stage1RoundResponse,
@@ -1086,26 +1087,56 @@ export async function getStage0Round(userId: string, errorTag?: string): Promise
     return { status: "done", totalCount };
   }
 
-  const sampled = shuffleArray(activeSet).slice(0, Math.min(STAGE0_ROUND_SIZE, activeSet.length));
+  const sampled = shuffleArray(activeSet)
+    .slice(0, Math.min(STAGE0_ROUND_SIZE, activeSet.length))
+    .filter((rule) => rule.prompts.length > 0);
+
+  const toQuestion = (
+    rule: (typeof sampled)[number],
+    prompt: (typeof sampled)[number]["prompts"][number],
+    practiceOnly: boolean
+  ): Stage0RoundQuestion => ({
+    usageRuleId: rule.id,
+    errorTag: rule.errorTag,
+    title: rule.title,
+    promptJa: prompt.promptJa,
+    answerEn: prompt.answerEn,
+    // 出題文ごとの解説(note_ja)があればそれを、無ければルール全体の解説を出す。
+    coreImageJa: prompt.noteJa?.trim() ? prompt.noteJa : rule.coreImageJa,
+    deepDiveJa: rule.deepDiveJa,
+    warmth: computeWarmth(rule.streak, STAGE0_GRADUATE_STREAK),
+    ...(practiceOnly ? { practiceOnly: true } : {}),
+  });
+
+  // 各ruleにつき出題文を1つランダムに選ぶ(これだけが連続正解に記録される)。
+  const usedPrompts = new Map<string, Set<string>>();
+  const questions: Stage0RoundQuestion[] = sampled.map((rule) => {
+    const prompt = rule.prompts[Math.floor(Math.random() * rule.prompts.length)];
+    usedPrompts.set(rule.id, new Set([prompt.promptJa]));
+    return toQuestion(rule, prompt, false);
+  });
+
+  // カテゴリ絞り込み時にruleが少なくて問題数が足りないときは、同じruleの別の出題文で埋める。
+  if (errorTag) {
+    let added = true;
+    while (questions.length < STAGE0_ROUND_SIZE && added) {
+      added = false;
+      for (const rule of sampled) {
+        if (questions.length >= STAGE0_ROUND_SIZE) break;
+        const used = usedPrompts.get(rule.id)!;
+        const rest = rule.prompts.filter((p) => !used.has(p.promptJa));
+        if (rest.length === 0) continue;
+        const prompt = rest[Math.floor(Math.random() * rest.length)];
+        used.add(prompt.promptJa);
+        questions.push(toQuestion(rule, prompt, true));
+        added = true;
+      }
+    }
+  }
 
   return {
     status: "round",
-    questions: sampled
-      .filter((rule) => rule.prompts.length > 0)
-      .map((rule) => {
-        const prompt = rule.prompts[Math.floor(Math.random() * rule.prompts.length)];
-        return {
-          usageRuleId: rule.id,
-          errorTag: rule.errorTag,
-          title: rule.title,
-          promptJa: prompt.promptJa,
-          answerEn: prompt.answerEn,
-          // 出題文ごとの解説(note_ja)があればそれを、無ければルール全体の解説を出す。
-          coreImageJa: prompt.noteJa?.trim() ? prompt.noteJa : rule.coreImageJa,
-          deepDiveJa: rule.deepDiveJa,
-          warmth: computeWarmth(rule.streak, STAGE0_GRADUATE_STREAK),
-        };
-      }),
+    questions,
     remainingCount,
     totalCount,
   };

@@ -139,6 +139,14 @@ export function Stage0Practice({ availableErrorTags }: Stage0PracticeProps) {
     setError(null);
 
     try {
+      // 同じルールの追加問題(practiceOnly)は練習だけで、連続正解には記録しない。
+      if (currentQuestion.practiceOnly) {
+        setReaction(correct ? "happy" : "sad");
+        setTimeout(() => setReaction(null), 1100);
+        advanceToNext();
+        return;
+      }
+
       const res = await fetch("/api/roadmap/stage0/report", {
         method: "POST",
         headers: { "content-type": "application/json" },

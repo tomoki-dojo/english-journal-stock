@@ -259,6 +259,9 @@ export type Stage0RoundQuestion = {
   // 「他のケースも見る」で開く、ルール全体の掘り下げ(理由・他のケース・例外)。
   deepDiveJa: string | null;
   warmth: WarmthLevel;
+  // カテゴリ絞り込み時、ルールが少なくて問題数が足りない分を同じルールの別問題で埋めたもの。
+  // 練習として出すだけで、連続正解(卒業判定)には記録しない。
+  practiceOnly?: boolean;
 };
 
 export type Stage0RoundResponse =
