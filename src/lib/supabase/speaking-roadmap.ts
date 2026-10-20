@@ -140,9 +140,8 @@ export async function setProSkip(userId: string, startStage: 2 | 3 | 4 | 5): Pro
   // （startStage以下(<=)が対象）。Stage5から始める場合だけテッペンクワたんの卵も届く。
   // 羽化はこれまでどおりStage5の実卒業で起きる。
   const unlockedTriggers = [2, 3, 4, 5].filter((trigger) => trigger <= startStage);
-  for (const trigger of unlockedTriggers) {
-    await recordStageClearCatch(userId, trigger);
-  }
+  // Stageごとに別の種なので並列で問題ない（直列だと最大12回のDB往復が積み上がる）。
+  await Promise.all(unlockedTriggers.map((trigger) => recordStageClearCatch(userId, trigger)));
 }
 
 // 会話クイズの回答から、開始Stage（1 or 2）とトラックを判定する。
