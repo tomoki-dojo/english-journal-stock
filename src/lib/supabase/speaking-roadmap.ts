@@ -132,7 +132,9 @@ export async function setProSkip(userId: string, startStage: 2 | 3 | 4): Promise
   // stage_trigger=5（テッペンクワたん）はStage5実卒業時の特別な強制羽化と結びついているため、
   // スキップの一括配布対象にはしない（Stage5自体はproSkipEnabledで即解放されるが、
   // 卵の配布はStage4卒業の実データに基づくgetStage5DomainReadiness判定を経由する）。
-  const skippedTriggers = [2, 3, 4].filter((trigger) => trigger < startStage);
+  // 「Stage◯から」を選ぶとそのStage自体も解放されるので、startStage以下(<=)が対象。
+  // （以前は < だったため、Stage4から始めてもStage4解放のフルクワたんの卵が届かなかった）
+  const skippedTriggers = [2, 3, 4].filter((trigger) => trigger <= startStage);
   for (const trigger of skippedTriggers) {
     await recordStageClearCatch(userId, trigger);
   }

@@ -44,6 +44,11 @@ export async function updateSession(request: NextRequest) {
       const url = request.nextUrl.clone();
       url.pathname = ROADMAP_TITLE_PATH;
       url.search = `?next=${encodeURIComponent(sanitizeRoadmapNext(`${pathname}${search}`))}`;
+      // utm_*（流入元の計測用）は転送先のURLにもそのまま付ける。nextの中に埋もれると、GA4が
+      // 最初に開いたページ（タイトル画面）のURLから流入元を読めず、Zenn・X等からの流入が数えられないため。
+      request.nextUrl.searchParams.forEach((value, key) => {
+        if (key.startsWith("utm_")) url.searchParams.set(key, value);
+      });
       const redirect = NextResponse.redirect(url);
       supabaseResponse.cookies.getAll().forEach((c) => redirect.cookies.set(c));
       return redirect;
