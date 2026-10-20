@@ -908,7 +908,7 @@ export async function getUncelebratedEggs(
     }
   }
 
-  return (data ?? []).flatMap((row) => {
+  const eggs = (data ?? []).flatMap((row) => {
     const species = Array.isArray(row.kuwagata_species) ? row.kuwagata_species[0] : row.kuwagata_species;
     return species
       ? [
@@ -922,6 +922,10 @@ export async function getUncelebratedEggs(
         ]
       : [];
   });
+  // スキップで複数Stageの卵が同時に配られるとobtained_atがほぼ同時刻になるため、
+  // Stage解放の卵はStage番号の順（2→3→4→5）に並べる。節目のイベントの卵は元の順のまま後ろへ。
+  const stageEggs = eggs.filter((e) => e.stageTrigger !== null).sort((a, b) => a.stageTrigger! - b.stageTrigger!);
+  return [...stageEggs, ...eggs.filter((e) => e.stageTrigger === null)];
 }
 
 // 「羽化した！」演出をまだ見せていない個体（Stage5卒業でテッペンクワたんが成虫になったとき）。
