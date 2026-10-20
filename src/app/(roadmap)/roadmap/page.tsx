@@ -58,7 +58,10 @@ export default async function RoadmapPage() {
 
   return (
     <>
+      {/* queueは初回表示時のpropsで作られるため、スキップ直後のrefreshで新しいタマゴが届いたときも
+          すぐ演出が出るよう、未読タマゴ・羽化が変わったらkeyで作り直す。 */}
       <RoomNoticeModal
+        key={`${notices.newEggs.map((e) => e.id).join(",")}|${notices.newHatches.map((h) => h.id).join(",")}`}
         showAdvice={notices.showAdvice}
         announcements={notices.announcements}
         newEggs={notices.newEggs}
