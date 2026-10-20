@@ -34,10 +34,9 @@ export type UserRoadmapState = {
   onboardingQuizCompleted: boolean;
   onboardingTrack: OnboardingTrack | null;
   totalMasteredCount: number;
-  // Pro限定のStageスキップ機能（#156、2026-09-14設計）。有効な間はStage2/3/4を
-  // 箱庭地図・APIとも常に解放扱いにする（進捗データ自体は変更しない）。
-  // proSkipStartStageは「どこから始めるか」選んだStage番号で、現在地ハイライト・
-  // 遷移先表示にのみ使う（進捗を汚さないため解放範囲の判定には使わない）。
+  // Pro限定のStageスキップ機能（#156、2026-09-14設計）。有効な間は
+  // proSkipStartStage以下のStage（2〜5）を箱庭地図・APIとも解放扱いにする
+  // （進捗データ自体は変更しない）。それより先のStageは通常の卒業条件で解放される。
   proSkipEnabled: boolean;
   proSkipStartStage: 2 | 3 | 4 | 5 | null;
 };

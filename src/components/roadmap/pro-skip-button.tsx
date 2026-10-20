@@ -87,7 +87,7 @@ export function ProSkipButton({ plan, proSkipEnabled, proSkipStartStage }: ProSk
       {open && isPro && (
         <div className="mt-2 rounded-lg border border-zinc-200 bg-white p-3 shadow-sm">
           <p className="mb-2 text-xs text-zinc-500">
-            どこから始めますか？（Stage1〜3はスキップ後もいつでも自由に練習できます）
+            どこから始めますか？（スキップしたStageもいつでも自由に練習できます）
           </p>
           <div className="flex flex-wrap gap-2">
             {STAGE_OPTIONS.map(({ stage, label }) => (
