@@ -113,7 +113,13 @@ export async function getUserRoadmapState(userId: string): Promise<UserRoadmapSt
 // 想定（user_roadmap_stateの行は必ず存在する）なのでupdateでよい。既に有効な状態で別のStageを
 // 選び直した場合も、同じ呼び出しで単純に上書きする（無効化用の別関数は用意しない。
 // 「今どこから始めたいか」を選び直すだけのUXにしているため）。
-export async function setProSkip(userId: string, startStage: 2 | 3 | 4): Promise<void> {
+// スキップ設定が、そのStage（以下）まで解放しているか。「Stage◯から」を選ぶと、◯より前は飛ばされ、
+// ◯までのStageが解放される（◯より先は通常どおり、前のStageの卒業実績で解放する）。
+function skipReaches(state: UserRoadmapState | null, stage: number): boolean {
+  return Boolean(state?.proSkipEnabled && (state.proSkipStartStage ?? 0) >= stage);
+}
+
+export async function setProSkip(userId: string, startStage: 2 | 3 | 4 | 5): Promise<void> {
   const { error } = await supabaseAdmin
     .from("user_roadmap_state")
     .update({ pro_skip_enabled: true, pro_skip_start_stage: startStage })
@@ -129,18 +135,14 @@ export async function setProSkip(userId: string, startStage: 2 | 3 | 4): Promise
   // そのため、スキップ発動時に「スキップした区間」に対応する既知種をまとめて確定配布する
   // （設計doc「Free/Proの扱い」参照）。startStageより前のstage_trigger（2〜4の範囲）が対象。
   // stage_trigger=1（エークワたん）はサインアップ時点で既に配布済みのため対象外。
-  // stage_trigger=5（テッペンクワたん）はStage5実卒業時の特別な強制羽化と結びついているため、
-  // スキップの一括配布対象にはしない（Stage5自体はproSkipEnabledで即解放されるが、
-  // 卵の配布はStage4卒業の実データに基づくgetStage5DomainReadiness判定を経由する）。
-  // 「Stage◯から」を選ぶとそのStage自体も解放されるので、startStage以下(<=)が対象。
-  // （以前は < だったため、Stage4から始めてもStage4解放のフルクワたんの卵が届かなかった）
-  const skippedTriggers = [2, 3, 4].filter((trigger) => trigger <= startStage);
-  for (const trigger of skippedTriggers) {
+  // 「Stage◯から」を選ぶと、◯より前は飛ばされ、◯までが解放される。解放される各Stageの
+  // 既知種の卵（Stage2=ヒビ、3=シャベ、4=フル、5=テッペン）をここでまとめて配る
+  // （startStage以下(<=)が対象）。Stage5から始める場合だけテッペンクワたんの卵も届く。
+  // 羽化はこれまでどおりStage5の実卒業で起きる。
+  const unlockedTriggers = [2, 3, 4, 5].filter((trigger) => trigger <= startStage);
+  for (const trigger of unlockedTriggers) {
     await recordStageClearCatch(userId, trigger);
   }
-  // Stage5はスキップで即解放されるので、通常の「Stage5解放の日に届く卵」と同じく、テッペンクワたんの卵もここで配る。
-  // 羽化はこれまでどおりStage5の実卒業で起きる。
-  await recordStageClearCatch(userId, 5);
 }
 
 // 会話クイズの回答から、開始Stage（1 or 2）とトラックを判定する。
@@ -1280,7 +1282,7 @@ export async function isStage4Unlocked(userId: string): Promise<boolean> {
     countStage3Graduations(userId),
     getUserRoadmapState(userId),
   ]);
-  return graduationCount >= STAGE4_UNLOCK_STAGE3_GRADUATIONS || (state?.proSkipEnabled ?? false);
+  return graduationCount >= STAGE4_UNLOCK_STAGE3_GRADUATIONS || skipReaches(state, 4);
 }
 
 // Stage4卒業済みシナリオのscene_tagから、日常/ビジネスそれぞれのドメインで
@@ -1330,18 +1332,16 @@ async function getStage5DomainReadiness(
   };
 }
 
-// Stage5への実アクセス可否。トラック別に独立して判定する（proSkipEnabledが有効な場合は
-// 両トラックとも一律で解放——スキップ自体が「全ゲートを一律で通す」既存の意味を踏襲するため、
-// トラックで差をつける理由がない）。Stage4と同じく、地図の表示・scenarios API・turn APIの
+// Stage5への実アクセス可否。トラック別に独立して判定する（「Stage5から」のスキップを選んだ場合は
+// 両トラックとも一律で解放。それ以外のスキップでは、Stage4の卒業実績で解放する）。Stage4と同じく、地図の表示・scenarios API・turn APIの
 // 3箇所すべてでこの関数を使うこと。
 export async function isStage5TrackUnlocked(userId: string, track: Stage5Track): Promise<boolean> {
   const [readiness, state] = await Promise.all([
     getStage5DomainReadiness(userId),
     getUserRoadmapState(userId),
   ]);
-  const proSkipEnabled = state?.proSkipEnabled ?? false;
   const domainReady = track === "daily" ? readiness.dailyReady : readiness.businessReady;
-  return domainReady || proSkipEnabled;
+  return domainReady || skipReaches(state, 5);
 }
 
 // knownState: 呼び出し側が取得済みのstateがあれば渡す(同じ行を二度読まないため)。
@@ -1362,14 +1362,13 @@ export async function getRoadmapStageReadiness(
     getStage5DomainReadiness(userId),
     knownState !== undefined ? Promise.resolve(knownState) : getUserRoadmapState(userId),
   ]);
-  const proSkipEnabled = state?.proSkipEnabled ?? false;
 
   return {
-    stage2Ready: stage2.activeSet.length >= STAGE2_ACTIVE_SET_SIZE || proSkipEnabled,
-    stage3Ready: graduatedStage1Ids.size >= STAGE3_UNLOCK_STAGE1_GRADUATIONS || proSkipEnabled,
-    stage4Ready: stage3GraduationCount >= STAGE4_UNLOCK_STAGE3_GRADUATIONS || proSkipEnabled,
-    stage5DailyReady: stage5Readiness.dailyReady || proSkipEnabled,
-    stage5BusinessReady: stage5Readiness.businessReady || proSkipEnabled,
+    stage2Ready: stage2.activeSet.length >= STAGE2_ACTIVE_SET_SIZE || skipReaches(state, 2),
+    stage3Ready: graduatedStage1Ids.size >= STAGE3_UNLOCK_STAGE1_GRADUATIONS || skipReaches(state, 3),
+    stage4Ready: stage3GraduationCount >= STAGE4_UNLOCK_STAGE3_GRADUATIONS || skipReaches(state, 4),
+    stage5DailyReady: stage5Readiness.dailyReady || skipReaches(state, 5),
+    stage5BusinessReady: stage5Readiness.businessReady || skipReaches(state, 5),
   };
 }
 

@@ -10,21 +10,21 @@ import type { Plan } from "@/lib/plan";
 type ProSkipButtonProps = {
   plan: Plan;
   proSkipEnabled: boolean;
-  proSkipStartStage: 2 | 3 | 4 | null;
+  proSkipStartStage: 2 | 3 | 4 | 5 | null;
 };
 
-const STAGE_OPTIONS: { stage: 2 | 3 | 4; label: string }[] = [
+const STAGE_OPTIONS: { stage: 2 | 3 | 4 | 5; label: string }[] = [
   { stage: 2, label: "Stage2から" },
   { stage: 3, label: "Stage3から" },
   { stage: 4, label: "Stage4から" },
+  { stage: 5, label: "Stage5から" },
 ];
 
 // Stageスキップ（#156、Pro限定・2026-09-14実装）。日常会話パート（Stage1〜3）を飛ばして
 // 先のStageから始めたいPro会員向けのボタン。箱庭画面（RoadmapMapの上）に常設する。
-// 選んだStage以降がまとめて解放される単一フラグ方式（進捗データは一切変更しない。
-// 詳細は_reference/speaking-roadmap-design.md「将来検討：Stageスキップ」参照）ため、
-// 「どこから始めるか」はあくまで現在地表示・導線の初期値であり、Stage1〜3はスキップ後も
-// 常に自由に練習できる。
+// 「Stage◯から」を選ぶと、◯より前が飛ばされて、◯までのStageが解放される（進捗データは一切
+// 変更しない。◯より先のStageは、通常どおり前のStageの卒業で解放される）。
+// Stage1〜3はスキップ後も常に自由に練習できる。
 export function ProSkipButton({ plan, proSkipEnabled, proSkipStartStage }: ProSkipButtonProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -32,7 +32,7 @@ export function ProSkipButton({ plan, proSkipEnabled, proSkipStartStage }: ProSk
   const [error, setError] = useState<string | null>(null);
   const isPro = plan !== "free";
 
-  async function selectStage(stage: 2 | 3 | 4) {
+  async function selectStage(stage: 2 | 3 | 4 | 5) {
     setSubmitting(true);
     setError(null);
     try {

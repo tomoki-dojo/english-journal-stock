@@ -140,7 +140,7 @@ type RoadmapRoomProps = {
     stage5DailyReady: boolean;
     stage5BusinessReady: boolean;
   };
-  proSkipStartStage?: 2 | 3 | 4 | null;
+  proSkipStartStage?: 2 | 3 | 4 | 5 | null;
   plan: Plan;
   proSkipEnabled: boolean;
   totalMasteredCount: number;

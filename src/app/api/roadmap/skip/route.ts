@@ -4,13 +4,13 @@ import { getPlan } from "@/lib/supabase/profile";
 import { setProSkip } from "@/lib/supabase/speaking-roadmap";
 
 type SkipRequestBody = {
-  startStage: 2 | 3 | 4;
+  startStage: 2 | 3 | 4 | 5;
 };
 
 function isSkipRequestBody(value: unknown): value is SkipRequestBody {
   if (typeof value !== "object" || value === null) return false;
   const v = value as Record<string, unknown>;
-  return v.startStage === 2 || v.startStage === 3 || v.startStage === 4;
+  return v.startStage === 2 || v.startStage === 3 || v.startStage === 4 || v.startStage === 5;
 }
 
 // Stageスキップ（#156、Pro限定）の設定を保存する。箱庭地図の「スキップする」ボタンから
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
   }
 
   if (!isSkipRequestBody(json)) {
-    return NextResponse.json({ error: "startStage（2・3・4のいずれか）が必要です" }, { status: 400 });
+    return NextResponse.json({ error: "startStage（2・3・4・5のいずれか）が必要です" }, { status: 400 });
   }
 
   try {
