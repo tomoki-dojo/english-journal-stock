@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
 import { ProSkipButton } from "./pro-skip-button";
+import { RoomProOfferButton } from "./room-pro-offer-button";
 import { ArthurAvatar } from "./arthur";
 import type { Plan } from "@/lib/plan";
 import type { StreakStats } from "@/lib/supabase/speaking-roadmap";
@@ -144,6 +145,8 @@ type RoadmapRoomProps = {
   plan: Plan;
   proSkipEnabled: boolean;
   proSkipAllowed: boolean;
+  // Free会員向けの先行者価格・お試しの案内（出せない人・Proの人はnull）
+  proOffer?: { founderActive: boolean; trialEligible: boolean } | null;
   totalMasteredCount: number;
   streakStats: StreakStats;
   // 単語ノートの今日のブースト上限に達している(見た目をうっすら暗くする)
@@ -295,6 +298,7 @@ export function RoadmapRoom({
   plan,
   proSkipEnabled,
   proSkipAllowed,
+  proOffer = null,
   totalMasteredCount,
   streakStats,
   notebookCapped = false,
@@ -341,6 +345,10 @@ export function RoadmapRoom({
       </div>
 
       {isRecordTying && <p className="mb-2 text-right text-[10px] font-bold text-amber-600">連続記録更新中！</p>}
+
+      {plan === "free" && proOffer && (
+        <RoomProOfferButton founderActive={proOffer.founderActive} trialEligible={proOffer.trialEligible} />
+      )}
 
       <ProSkipButton
         plan={plan}

@@ -9,6 +9,11 @@
 
 export const FOUNDER_DEADLINE_ISO = "2026-12-31T23:59:59+09:00";
 export const FOUNDER_DEADLINE_LABEL = "2026年12月31日";
+// ボタンなど短い表示用（「12月31日」）。FOUNDER_DEADLINE_ISOの日付部分から作るので、期限を変えれば連動する。
+export const FOUNDER_DEADLINE_SHORT_LABEL = (() => {
+  const [, month, day] = FOUNDER_DEADLINE_ISO.slice(0, 10).split("-");
+  return `${Number(month)}月${Number(day)}日`;
+})();
 export const FOUNDER_MONTHLY_PRICE = 480;
 export const REGULAR_MONTHLY_PRICE = 680;
 export const REGULAR_ANNUAL_PRICE = 6800;

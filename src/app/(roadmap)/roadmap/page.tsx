@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
 import { getPlan } from "@/lib/supabase/profile";
+import { getProOfferState } from "@/lib/pro-offer-server";
 import {
   getStreakStats,
   getRoadmapStageReadiness,
@@ -48,12 +49,15 @@ export default async function RoadmapPage() {
         rareChance: null,
       }))
     );
-  const [streakStats, stageReadiness, plan, notebookCapped, notices] = await Promise.all([
+  // Free会員にだけ、先行者価格・無料お試しの案内ボタンを出す（判定に失敗したら出さないだけ）。
+  const offerP = planP.then((p) => (p === "free" ? getProOfferState(user.id).catch(() => null) : null));
+  const [streakStats, stageReadiness, plan, notebookCapped, notices, offer] = await Promise.all([
     streakP,
     getRoadmapStageReadiness(user.id, state),
     planP,
     planP.then((p) => isNotebookBoostCapped(user.id, p).catch(() => false)),
     noticesP,
+    offerP,
   ]);
 
   return (
@@ -76,6 +80,7 @@ export default async function RoadmapPage() {
         plan={plan}
         proSkipEnabled={state.proSkipEnabled}
         proSkipAllowed={state.proSkipAllowed}
+        proOffer={offer ? { founderActive: offer.founderActive, trialEligible: offer.trialEligible } : null}
         totalMasteredCount={state.totalMasteredCount}
         streakStats={streakStats}
         notebookCapped={notebookCapped}
