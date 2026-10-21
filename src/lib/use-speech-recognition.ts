@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { micPermissionHelpMessage } from "@/lib/mic-permission-help";
 
 // ブラウザ内蔵のWeb Speech API（SpeechRecognition）を最小限ラップしたフック。
 // サーバー側STTを使わないため追加コスト・レイテンシがゼロ（Stage3設計の前提）。
@@ -100,8 +101,9 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}):
       // 特に"not-allowed"はマイク権限がブロックされている場合に頻発するため、対処法まで示す）。
       const message: Record<string, string> = {
         "no-speech": "発話が聞き取れませんでした。もう一度お試しください",
-        "not-allowed": "マイクの使用が許可されていません。ブラウザのアドレスバーからマイクの許可を確認してください",
-        "service-not-allowed": "マイクの使用が許可されていません。ブラウザのアドレスバーからマイクの許可を確認してください",
+        // 許可の場所は端末・ブラウザで違う（iPhoneは「音声認識」の許可も要る）ので出し分ける。lib/mic-permission-help.ts
+        "not-allowed": micPermissionHelpMessage(),
+        "service-not-allowed": micPermissionHelpMessage(),
         "audio-capture": "マイクが見つかりませんでした。マイクが接続されているか確認してください",
         network: "音声認識サービスに接続できませんでした。通信環境を確認してもう一度お試しください",
         aborted: "音声入力が中断されました。もう一度お試しください",
