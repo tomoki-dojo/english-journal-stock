@@ -46,8 +46,9 @@ export async function updateSession(request: NextRequest) {
       url.search = `?next=${encodeURIComponent(sanitizeRoadmapNext(`${pathname}${search}`))}`;
       // utm_*（流入元の計測用）は転送先のURLにもそのまま付ける。nextの中に埋もれると、GA4が
       // 最初に開いたページ（タイトル画面）のURLから流入元を読めず、Zenn・X等からの流入が数えられないため。
+      // ga_internal（自分のテストのアクセスをGA4から除く印。lib/analytics-internal.ts）も同じ理由で引き継ぐ。
       request.nextUrl.searchParams.forEach((value, key) => {
-        if (key.startsWith("utm_")) url.searchParams.set(key, value);
+        if (key.startsWith("utm_") || key === "ga_internal") url.searchParams.set(key, value);
       });
       const redirect = NextResponse.redirect(url);
       supabaseResponse.cookies.getAll().forEach((c) => redirect.cookies.set(c));

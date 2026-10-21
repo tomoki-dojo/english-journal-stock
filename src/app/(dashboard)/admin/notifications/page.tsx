@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { checkAdminAccess } from "@/lib/supabase/admin-guard";
 import { listNotifications } from "@/lib/supabase/notifications";
 import { NotificationsAdminPanel } from "@/components/admin/notifications-admin-panel";
+import { MarkInternalTraffic } from "@/components/analytics/mark-internal-traffic";
 
 export default async function AdminNotificationsPage() {
   const access = await checkAdminAccess();
@@ -27,6 +28,7 @@ export default async function AdminNotificationsPage() {
       </div>
 
       <NotificationsAdminPanel initialNotifications={notifications} />
+      <MarkInternalTraffic />
     </div>
   );
 }
