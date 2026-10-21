@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
-import { getPlan } from "@/lib/supabase/profile";
+import { getProOfferState } from "@/lib/pro-offer-server";
 import { ROADMAP_TITLE_PATH } from "@/lib/roadmap-title";
 import { PasswordSettingsForm } from "@/components/account/password-settings-form";
 import { LogoutButton } from "@/components/account/logout-button";
@@ -16,7 +16,8 @@ export default async function RoadmapSettingsPage() {
     redirect("/login?reason=roadmap&next=/roadmap/settings");
   }
 
-  const isPro = (await getPlan(user.id)) !== "free";
+  const offer = await getProOfferState(user.id);
+  const isPro = offer.isPro;
 
   return (
     <div className="mx-auto max-w-lg space-y-5 px-1">
@@ -43,6 +44,11 @@ export default async function RoadmapSettingsPage() {
         <div className="pt-4">
           <RoadmapProPlan
             isPro={false}
+            isTrialing={false}
+            founderActive={offer.founderActive}
+            trialEligible={offer.trialEligible}
+            startedTrial={false}
+            startedWithFounderPrice={false}
             checkoutResult={null}
             from="settings"
             purchasedInterval={null}

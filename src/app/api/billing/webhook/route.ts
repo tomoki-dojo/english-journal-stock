@@ -68,13 +68,24 @@ export async function POST(request: Request) {
           : session.subscription?.id;
 
       if (userId && plan && customerId) {
+        // 無料トライアルで始めた場合は"trialing"。サブスクリプションの実際の状態を読んで保存する
+        // （取れなければ従来どおり"active"。customer.subscription.created/updatedでも後追いで同期される）。
+        let status = "active";
+        if (subscriptionId) {
+          try {
+            const sub = await getStripeClient().subscriptions.retrieve(subscriptionId);
+            status = sub.status;
+          } catch (err) {
+            console.error("[stripe webhook] subscription retrieve failed", err);
+          }
+        }
         const { error } = await supabaseAdmin
           .from("profiles")
           .update({
             plan,
             stripe_customer_id: customerId,
             stripe_subscription_id: subscriptionId ?? null,
-            subscription_status: "active",
+            subscription_status: status,
           })
           .eq("user_id", userId);
 

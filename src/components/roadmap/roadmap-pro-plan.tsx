@@ -27,12 +27,23 @@ import {
   STAGE4_PRO_DAILY_LIMIT,
 } from "./types";
 import type { BillingInterval } from "@/lib/stripe";
+import {
+  FOUNDER_DEADLINE_LABEL,
+  FOUNDER_MONTHLY_PRICE,
+  PRO_TRIAL_DAYS,
+  REGULAR_ANNUAL_PRICE,
+  REGULAR_MONTHLY_PRICE,
+  formatYen,
+} from "@/lib/pro-offer";
 
-// 価格は表示用。実際の請求額はStripe側のPriceが正(本体の plan-billing-card.tsx と同じ値)。
-const PRICE_LABEL: Record<BillingInterval, { main: string; sub: string }> = {
-  monthly: { main: "¥680", sub: "/月" },
-  annual: { main: "¥6,800", sub: "/年（2か月分おトク）" },
-};
+// 価格は表示用。実際の請求額はStripe側のPriceが正（先行者価格・トライアルの判定はサーバー側、lib/pro-offer.ts）。
+function priceLabel(interval: BillingInterval, founderActive: boolean): { main: string; sub: string; regular?: string } {
+  if (interval === "annual") return { main: formatYen(REGULAR_ANNUAL_PRICE), sub: "/年（2か月分おトク）" };
+  if (founderActive) {
+    return { main: formatYen(FOUNDER_MONTHLY_PRICE), sub: "/月", regular: formatYen(REGULAR_MONTHLY_PRICE) };
+  }
+  return { main: formatYen(REGULAR_MONTHLY_PRICE), sub: "/月" };
+}
 
 // 「Freeとここが違う」の大きな数字カード。Free→Proの変化を一目で見せる。
 type Stat = { icon: LucideIcon; label: string; free: string; pro: string; unit?: string };
@@ -94,6 +105,11 @@ const APP_PERKS: { icon: LucideIcon; label: string }[] = [
 
 export function RoadmapProPlan({
   isPro,
+  isTrialing,
+  founderActive,
+  trialEligible,
+  startedTrial,
+  startedWithFounderPrice,
   checkoutResult,
   screenshots,
   shelfCap,
@@ -105,6 +121,11 @@ export function RoadmapProPlan({
   purchasedInterval: BillingInterval | null;
   checkoutSessionId: string | null;
   isPro: boolean;
+  isTrialing: boolean;
+  founderActive: boolean;
+  trialEligible: boolean;
+  startedTrial: boolean;
+  startedWithFounderPrice: boolean;
   shelfCap: number;
   checkoutResult: "success" | "cancelled" | null;
   screenshots: string[];
@@ -117,9 +138,23 @@ export function RoadmapProPlan({
   useEffect(() => {
     if (checkoutResult === "success") {
       const interval = purchasedInterval ?? "monthly";
+      if (startedTrial) {
+        // 無料トライアルの開始（この時点では課金されていないので purchase とは分ける）
+        trackEventOnce(`pro_trial:${checkoutSessionId ?? Date.now()}`, "pro_trial_start", {
+          from: from || "direct",
+          founder: startedWithFounderPrice,
+          app: "kuwatan",
+        });
+        return;
+      }
       trackEventOnce(`pro_purchase:${checkoutSessionId ?? Date.now()}`, "purchase", {
         transaction_id: checkoutSessionId ?? undefined,
-        value: interval === "annual" ? 6800 : 680,
+        value:
+          interval === "annual"
+            ? REGULAR_ANNUAL_PRICE
+            : startedWithFounderPrice
+              ? FOUNDER_MONTHLY_PRICE
+              : REGULAR_MONTHLY_PRICE,
         currency: "JPY",
         item_name: `UpskillEnglish Pro (${interval})`,
         from: from || "direct",
@@ -132,10 +167,10 @@ export function RoadmapProPlan({
       return;
     }
     trackEvent("pro_page_view", { from: from || "direct", is_pro: isPro });
-  }, [checkoutResult, purchasedInterval, checkoutSessionId, from, isPro]);
+  }, [checkoutResult, purchasedInterval, checkoutSessionId, from, isPro, startedTrial, startedWithFounderPrice]);
 
   async function startCheckout() {
-    trackEvent("pro_checkout_start", { from: from || "direct", interval });
+    trackEvent("pro_checkout_start", { from: from || "direct", interval, trial: interval === "monthly" && trialEligible });
     setPending(true);
     setError(null);
     try {
@@ -171,7 +206,9 @@ export function RoadmapProPlan({
               href="#plan"
               className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white px-6 py-2.5 text-sm font-black text-amber-600 shadow-md transition-transform active:scale-95"
             >
-              {PRICE_LABEL.monthly.main}{PRICE_LABEL.monthly.sub}でProにする
+              {trialEligible
+                ? `${PRO_TRIAL_DAYS}日間無料で試す`
+                : `${priceLabel("monthly", founderActive).main}${priceLabel("monthly", founderActive).sub}でProにする`}
               <ArrowRight className="h-4 w-4" strokeWidth={3} />
             </a>
           )}
@@ -181,8 +218,12 @@ export function RoadmapProPlan({
       {checkoutResult === "success" && (
         <div className="rounded-2xl bg-amber-500 px-5 py-4 text-center text-white shadow">
           <Sparkles className="mx-auto mb-1 h-6 w-6" />
-          <p className="font-bold">Pro会員になりました！</p>
-          <p className="mt-1 text-xs text-white/90">反映まで少し時間がかかることがあります。</p>
+          <p className="font-bold">{startedTrial ? `${PRO_TRIAL_DAYS}日間の無料お試しが始まりました！` : "Pro会員になりました！"}</p>
+          <p className="mt-1 text-xs text-white/90">
+            {startedTrial
+              ? "続けるときは、お試し中にカードを登録してください。登録しなければ自動で終わり、課金はされません。"
+              : "反映まで少し時間がかかることがあります。"}
+          </p>
           <Link
             href="/roadmap/shelf"
             className="mt-3 inline-block rounded-full bg-white px-5 py-2 text-sm font-bold text-amber-600"
@@ -263,13 +304,28 @@ export function RoadmapProPlan({
 
       {isPro ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-center">
-          <p className="font-bold text-amber-900">Pro会員です</p>
-          <Link href="/settings" className="mt-1 inline-block text-xs text-amber-700 underline underline-offset-2">
-            お支払い・解約の管理
+          <p className="font-bold text-amber-900">{isTrialing ? "Proを無料でお試し中です" : "Pro会員です"}</p>
+          {isTrialing && (
+            <p className="mt-1 text-xs text-amber-800">
+              続けるときは、お試し期間中にカードを登録してください。登録しなければ自動で終わり、課金はされません。
+            </p>
+          )}
+          <Link href="/roadmap/settings" className="mt-1 inline-block text-xs text-amber-700 underline underline-offset-2">
+            {isTrialing ? "カードを登録する・お支払いの管理" : "お支払い・解約の管理"}
           </Link>
         </div>
       ) : (
         <div id="plan" className="scroll-mt-4 rounded-2xl border-2 border-amber-300 bg-white p-5 shadow-md">
+          {founderActive && (
+            <div className="mb-4 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-3 text-center text-white shadow">
+              <p className="text-xs font-black tracking-wide">リリース記念・先行者価格</p>
+              <p className="mt-0.5 text-sm font-bold">
+                {FOUNDER_DEADLINE_LABEL}までに月払いで始めた人は、
+                <br className="sm:hidden" />
+                ずっと<span className="mx-0.5 text-lg font-black">{formatYen(FOUNDER_MONTHLY_PRICE)}</span>/月
+              </p>
+            </div>
+          )}
           <div className="mb-4 grid grid-cols-2 gap-2 rounded-full bg-amber-50 p-1">
             {(["monthly", "annual"] as const).map((v) => (
               <button
@@ -285,9 +341,17 @@ export function RoadmapProPlan({
             ))}
           </div>
           <p className="text-center">
-            <span className="text-3xl font-black text-zinc-900">{PRICE_LABEL[interval].main}</span>
-            <span className="text-sm text-zinc-500">{PRICE_LABEL[interval].sub}</span>
+            {priceLabel(interval, founderActive).regular && (
+              <span className="mr-2 text-base font-bold text-zinc-400 line-through">{priceLabel(interval, founderActive).regular}</span>
+            )}
+            <span className="text-3xl font-black text-zinc-900">{priceLabel(interval, founderActive).main}</span>
+            <span className="text-sm text-zinc-500">{priceLabel(interval, founderActive).sub}</span>
           </p>
+          {interval === "monthly" && trialEligible && (
+            <p className="mt-1 text-center text-xs font-bold text-emerald-700">
+              最初の{PRO_TRIAL_DAYS}日間は無料（カード登録なし）
+            </p>
+          )}
           <button
             type="button"
             onClick={startCheckout}
@@ -295,9 +359,15 @@ export function RoadmapProPlan({
             className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-amber-500 py-3 text-base font-black text-white shadow transition-transform active:scale-95 disabled:opacity-60"
           >
             {pending && <Loader2 className="h-4 w-4 animate-spin" />}
-            Proにする
+            {interval === "monthly" && trialEligible ? `${PRO_TRIAL_DAYS}日間無料で試す` : "Proにする"}
           </button>
           {error && <p className="mt-2 text-center text-xs text-red-500">{error}</p>}
+          {interval === "monthly" && trialEligible && (
+            <p className="mt-3 text-center text-[11px] leading-relaxed text-zinc-500">
+              お試し中にカードを登録すると、{PRO_TRIAL_DAYS}日後から{priceLabel("monthly", founderActive).main}/月でそのまま続きます。
+              登録しなければ自動で終わり、課金はされません。
+            </p>
+          )}
           <p className="mt-3 text-center text-[11px] text-zinc-400">
             いつでも解約できます（
             <Link href="/tokushoho" className="underline underline-offset-2">

@@ -7,6 +7,8 @@ import {
 } from "@/components/roadmap/roadmap-sound";
 import { RefreshOnReturn } from "@/components/roadmap/refresh-on-return";
 import { RoadmapAdBreakProvider } from "@/components/roadmap/roadmap-ad-break";
+import { TrialReminderBanner } from "@/components/roadmap/trial-reminder-banner";
+import { getTrialStatus } from "@/lib/pro-trial-status";
 import { APP_VERSION } from "@/lib/app-version";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
 import { getPlan } from "@/lib/supabase/profile";
@@ -27,7 +29,10 @@ export default async function RoadmapLayout({
 }) {
   // 区切り広告はFree会員だけ（Pro会員・未ログインには出さない）
   const user = await getCurrentUser();
-  const showAds = user ? (await getPlan(user.id)) === "free" : false;
+  const plan = user ? await getPlan(user.id) : null;
+  const showAds = plan === "free";
+  // 無料お試し中で、まだカードを登録していない人には「あと◯日でProが終わります」を出す
+  const trial = user && plan && plan !== "free" ? await getTrialStatus(user.id) : null;
 
   return (
     <RoadmapSoundProvider>
@@ -66,6 +71,9 @@ export default async function RoadmapLayout({
         </header>
 
         <main className="mx-auto max-w-3xl px-2 pb-8 pt-1 sm:px-6 sm:py-8">
+          {trial && !trial.hasPaymentMethod && (
+            <TrialReminderBanner daysLeft={trial.daysLeft} monthlyAmount={trial.monthlyAmount} />
+          )}
           <RoadmapAdBreakProvider enabled={showAds}>{children}</RoadmapAdBreakProvider>
         </main>
       </div>

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
-import { getPlan } from "@/lib/supabase/profile";
+import { getProOfferState } from "@/lib/pro-offer-server";
 import { FREE_SHELF_NEW_SPECIES_TANK_CAP } from "@/lib/supabase/kuwagata";
 import { RoadmapProPlan } from "@/components/roadmap/roadmap-pro-plan";
 
@@ -30,14 +30,21 @@ function findScreenshots(): string[] {
 export default async function RoadmapProPage({
   searchParams,
 }: {
-  searchParams: Promise<{ checkout?: string; from?: string; interval?: string; session_id?: string }>;
+  searchParams: Promise<{
+    checkout?: string;
+    from?: string;
+    interval?: string;
+    session_id?: string;
+    trial?: string;
+    founder?: string;
+  }>;
 }) {
   const user = await getCurrentUser();
   if (!user) {
     redirect("/login?reason=roadmap&next=/roadmap/pro");
   }
 
-  const [plan, params] = await Promise.all([getPlan(user.id), searchParams]);
+  const [offer, params] = await Promise.all([getProOfferState(user.id), searchParams]);
 
   return (
     <div>
@@ -49,7 +56,12 @@ export default async function RoadmapProPage({
         部屋に戻る
       </Link>
       <RoadmapProPlan
-        isPro={plan !== "free"}
+        isPro={offer.isPro}
+        isTrialing={offer.isTrialing}
+        founderActive={offer.founderActive}
+        trialEligible={offer.trialEligible}
+        startedTrial={params.trial === "1"}
+        startedWithFounderPrice={params.founder === "1"}
         checkoutResult={params.checkout === "success" ? "success" : params.checkout === "cancelled" ? "cancelled" : null}
         from={typeof params.from === "string" && /^[a-z0-9_]{1,20}$/.test(params.from) ? params.from : ""}
         purchasedInterval={params.interval === "annual" ? "annual" : params.interval === "monthly" ? "monthly" : null}

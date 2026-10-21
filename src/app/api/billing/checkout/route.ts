@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { getStripeClient, STRIPE_PRICE_IDS, type BillingInterval } from "@/lib/stripe";
+import {
+  getStripeClient,
+  isFounderPriceAvailable,
+  isTrialEligible,
+  STRIPE_PRICE_IDS,
+  type BillingInterval,
+} from "@/lib/stripe";
+import { PRO_TRIAL_DAYS } from "@/lib/pro-offer";
 import { getRequestOrigin } from "@/lib/request-origin";
 
 // Pro（月額/年額）アップグレード用のStripe Checkoutセッションを作る。
@@ -47,7 +54,9 @@ export async function POST(request: Request) {
   const from = typeof rawFrom === "string" && /^[a-z0-9_]{1,20}$/.test(rawFrom) ? rawFrom : "";
   const trackingQuery = `&interval=${interval}${from ? `&from=${from}` : ""}`;
 
-  const priceId = STRIPE_PRICE_IDS.pro[interval];
+  // 月払いは、先行者価格の期間中なら先行者価格（lib/pro-offer.ts）。年払いは常に通常価格。
+  const useFounderPrice = interval === "monthly" && isFounderPriceAvailable();
+  const priceId = useFounderPrice ? STRIPE_PRICE_IDS.pro.monthlyFounder : STRIPE_PRICE_IDS.pro[interval];
   if (!priceId) {
     const envKey = interval === "monthly" ? "STRIPE_PRICE_ID_PRO_MONTHLY" : "STRIPE_PRICE_ID_PRO_ANNUAL";
     return NextResponse.json(
@@ -101,19 +110,38 @@ export async function POST(request: Request) {
   // 2. Checkoutセッションを作成
   const origin = getRequestOrigin(request);
 
+  // 無料トライアル（月払いのみ・1アカウント1回・カード登録なし）。期限までにカードを登録しなければ
+  // サブスクリプションは自動でキャンセルされ、課金はされない。判定に失敗したらトライアルなしで続ける。
+  let withTrial = false;
+  if (interval === "monthly") {
+    try {
+      withTrial = await isTrialEligible(stripe, customerId);
+    } catch (err) {
+      console.error("[checkout] trial eligibility check failed", err);
+    }
+  }
+  const offerQuery = `${withTrial ? "&trial=1" : ""}${useFounderPrice ? "&founder=1" : ""}`;
+
   const createSession = (customer: string) =>
     stripe.checkout.sessions.create({
       mode: "subscription",
       customer,
       line_items: [{ price: priceId, quantity: 1 }],
       // {CHECKOUT_SESSION_ID}はStripeが実際のセッションIDに置き換える（GA4のpurchaseの重複防止に使う）。
-      success_url: `${origin}${returnPath}?checkout=success${trackingQuery}&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${origin}${returnPath}?checkout=success${trackingQuery}${offerQuery}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}${returnPath}?checkout=cancelled${trackingQuery}`,
       allow_promotion_codes: true,
       metadata: { userId: user.id, plan: "pro", interval, from },
       subscription_data: {
-        metadata: { userId: user.id, plan: "pro", interval, from },
+        metadata: { userId: user.id, plan: "pro", interval, from, founder: useFounderPrice ? "1" : "0" },
+        ...(withTrial
+          ? {
+              trial_period_days: PRO_TRIAL_DAYS,
+              trial_settings: { end_behavior: { missing_payment_method: "cancel" as const } },
+            }
+          : {}),
       },
+      ...(withTrial ? { payment_method_collection: "if_required" as const } : {}),
     });
 
   try {
