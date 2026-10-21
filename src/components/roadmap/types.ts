@@ -39,6 +39,8 @@ export type UserRoadmapState = {
   // （進捗データ自体は変更しない）。それより先のStageは通常の卒業条件で解放される。
   proSkipEnabled: boolean;
   proSkipStartStage: 2 | 3 | 4 | 5 | null;
+  // スキップを使える会員か（有料のProのみ。お試し期間中・freeは不可）。
+  proSkipAllowed: boolean;
 };
 
 // 会話クイズの回答。1〜3問目は3択の正誤判定、4問目はトラック選択、5問目は経験の自己申告。

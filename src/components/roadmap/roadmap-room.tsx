@@ -143,6 +143,7 @@ type RoadmapRoomProps = {
   proSkipStartStage?: 2 | 3 | 4 | 5 | null;
   plan: Plan;
   proSkipEnabled: boolean;
+  proSkipAllowed: boolean;
   totalMasteredCount: number;
   streakStats: StreakStats;
   // 単語ノートの今日のブースト上限に達している(見た目をうっすら暗くする)
@@ -293,6 +294,7 @@ export function RoadmapRoom({
   proSkipStartStage = null,
   plan,
   proSkipEnabled,
+  proSkipAllowed,
   totalMasteredCount,
   streakStats,
   notebookCapped = false,
@@ -340,7 +342,12 @@ export function RoadmapRoom({
 
       {isRecordTying && <p className="mb-2 text-right text-[10px] font-bold text-amber-600">連続記録更新中！</p>}
 
-      <ProSkipButton plan={plan} proSkipEnabled={proSkipEnabled} proSkipStartStage={proSkipStartStage} />
+      <ProSkipButton
+        plan={plan}
+        proSkipEnabled={proSkipEnabled}
+        proSkipAllowed={proSkipAllowed}
+        proSkipStartStage={proSkipStartStage}
+      />
 
       {/*
         縦横比はCSSのaspect-ratioで固定し、幅に応じて高さも連動して伸縮するようにしている。

@@ -20,6 +20,7 @@ import {
   stockCatchChanceOnMasteredCountUpdate,
   forceHatchTeppenToAdult,
 } from "@/lib/supabase/kuwagata";
+import { canUseStageSkip } from "@/lib/supabase/profile";
 import type { Plan } from "@/lib/plan";
 import {
   STAGE0_ACTIVE_SET_SIZE,
@@ -81,32 +82,39 @@ type DbRoadmapStateRow = {
   pro_skip_start_stage: number | null;
 };
 
-function fromDbRoadmapStateRow(row: DbRoadmapStateRow): UserRoadmapState {
+function fromDbRoadmapStateRow(row: DbRoadmapStateRow, skipAllowed: boolean): UserRoadmapState {
+  // スキップの設定が保存されていても、有料のProでない間（お試し期間中・freeに戻った後）は効かせない。
+  // 設定そのものは消さないので、有料のProになれば自動で元に戻る。
+  const skipActive = row.pro_skip_enabled && skipAllowed;
   return {
     currentStage: row.current_stage as RoadmapStage,
     onboardingQuizCompleted: row.onboarding_quiz_completed,
     onboardingTrack: row.onboarding_track as UserRoadmapState["onboardingTrack"],
     totalMasteredCount: row.total_mastered_count,
-    proSkipEnabled: row.pro_skip_enabled,
-    proSkipStartStage: row.pro_skip_start_stage as UserRoadmapState["proSkipStartStage"],
+    proSkipEnabled: skipActive,
+    proSkipStartStage: skipActive ? (row.pro_skip_start_stage as UserRoadmapState["proSkipStartStage"]) : null,
+    proSkipAllowed: skipAllowed,
   };
 }
 
 // ユーザーのロードマップ状態を取得する。まだ会話クイズに答えていない（行が存在しない）場合はnull。
 export async function getUserRoadmapState(userId: string): Promise<UserRoadmapState | null> {
-  const { data, error } = await supabaseAdmin
-    .from("user_roadmap_state")
-    .select(
-      "current_stage, onboarding_quiz_completed, onboarding_track, total_mastered_count, pro_skip_enabled, pro_skip_start_stage"
-    )
-    .eq("user_id", userId)
-    .maybeSingle();
+  const [{ data, error }, skipAllowed] = await Promise.all([
+    supabaseAdmin
+      .from("user_roadmap_state")
+      .select(
+        "current_stage, onboarding_quiz_completed, onboarding_track, total_mastered_count, pro_skip_enabled, pro_skip_start_stage"
+      )
+      .eq("user_id", userId)
+      .maybeSingle(),
+    canUseStageSkip(userId),
+  ]);
 
   if (error) {
     throw new Error(`ロードマップ状態の取得に失敗しました: ${error.message}`);
   }
 
-  return data ? fromDbRoadmapStateRow(data) : null;
+  return data ? fromDbRoadmapStateRow(data, skipAllowed) : null;
 }
 
 // Stageスキップ（#156、Pro限定）の設定を保存する。オンボーディング診断済みのユーザーのみ呼ばれる

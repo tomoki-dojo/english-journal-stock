@@ -75,6 +75,7 @@ export default async function RoadmapPage() {
         proSkipStartStage={state.proSkipStartStage}
         plan={plan}
         proSkipEnabled={state.proSkipEnabled}
+        proSkipAllowed={state.proSkipAllowed}
         totalMasteredCount={state.totalMasteredCount}
         streakStats={streakStats}
         notebookCapped={notebookCapped}

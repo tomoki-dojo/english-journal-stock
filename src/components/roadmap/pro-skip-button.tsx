@@ -10,6 +10,8 @@ import type { Plan } from "@/lib/plan";
 type ProSkipButtonProps = {
   plan: Plan;
   proSkipEnabled: boolean;
+  // 有料のProか（お試し期間中は、Proでも使えない）
+  proSkipAllowed: boolean;
   proSkipStartStage: 2 | 3 | 4 | 5 | null;
 };
 
@@ -25,7 +27,7 @@ const STAGE_OPTIONS: { stage: 2 | 3 | 4 | 5; label: string }[] = [
 // 「Stage◯から」を選ぶと、◯より前が飛ばされて、◯までのStageが解放される（進捗データは一切
 // 変更しない。◯より先のStageは、通常どおり前のStageの卒業で解放される）。
 // Stage1〜3はスキップ後も常に自由に練習できる。
-export function ProSkipButton({ plan, proSkipEnabled, proSkipStartStage }: ProSkipButtonProps) {
+export function ProSkipButton({ plan, proSkipEnabled, proSkipAllowed, proSkipStartStage }: ProSkipButtonProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -68,7 +70,7 @@ export function ProSkipButton({ plan, proSkipEnabled, proSkipStartStage }: ProSk
         onClick={() => setOpen((v) => !v)}
         className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-zinc-300 bg-white/70 px-2.5 py-1.5 text-[11px] font-medium text-zinc-600 backdrop-blur-sm transition-colors hover:border-accent/50 hover:bg-white/90 hover:text-accent"
       >
-        {!isPro && <Lock className="h-3.5 w-3.5 text-zinc-400" aria-hidden="true" />}
+        {!proSkipAllowed && <Lock className="h-3.5 w-3.5 text-zinc-400" aria-hidden="true" />}
         <Rocket className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
         {proSkipEnabled
           ? `スキップ中（Stage${proSkipStartStage}から）・変更する`
@@ -84,7 +86,13 @@ export function ProSkipButton({ plan, proSkipEnabled, proSkipStartStage }: ProSk
         </div>
       )}
 
-      {open && isPro && (
+      {open && isPro && !proSkipAllowed && (
+        <div className="mt-2 rounded-lg bg-accent/10 px-3 py-2 text-xs text-accent ring-1 ring-accent/20">
+          お試し期間中はStageスキップを使えません。有料のProで使えます。
+        </div>
+      )}
+
+      {open && isPro && proSkipAllowed && (
         <div className="mt-2 rounded-lg border border-zinc-200 bg-white p-3 shadow-sm">
           <p className="mb-2 text-xs text-zinc-500">
             どこから始めますか？（スキップしたStageもいつでも自由に練習できます）

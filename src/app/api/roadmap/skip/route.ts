@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
-import { getPlan } from "@/lib/supabase/profile";
+import { getBillingProfile } from "@/lib/supabase/profile";
 import { setProSkip } from "@/lib/supabase/speaking-roadmap";
 
 type SkipRequestBody = {
@@ -37,10 +37,16 @@ export async function POST(request: Request) {
   }
 
   try {
-    const plan = await getPlan(user.id);
+    const { plan, subscriptionStatus } = await getBillingProfile(user.id);
     if (plan === "free") {
       return NextResponse.json(
         { error: "Stageスキップ機能はPro会員限定です" },
+        { status: 403 }
+      );
+    }
+    if (subscriptionStatus === "trialing") {
+      return NextResponse.json(
+        { error: "お試し期間中はStageスキップを使えません。有料のProでご利用いただけます" },
         { status: 403 }
       );
     }
