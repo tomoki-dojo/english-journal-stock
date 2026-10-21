@@ -14,6 +14,7 @@
 // 日常会話のシーン（買い物・外食・旅行・友人・体調）の表現だけ作りたい場合は:
 //   npx tsx scripts/generate-expression-audio.ts --fields=expression --daily
 // 件数だけ確認したい（生成しない）場合は --dry-run を付ける。
+// 1回に作る件数を絞りたい場合は --limit=50 のように付ける（未作成の分から先頭50件だけ作る）。
 //
 // 音声量の目安: 50件×最大3フィールド×数十文字なので、Google Cloud TTSの無料枠
 // （Neural2ボイスで月100万文字まで無料）に収まる想定。心配なら--onlyで数件ずつ試すこと。
@@ -56,6 +57,13 @@ const onlyArg = args.find((a) => a.startsWith("--only="));
 const onlyCodes = onlyArg ? onlyArg.replace("--only=", "").split(",").map((c) => c.trim()) : null;
 const dailyOnly = args.includes("--daily");
 const dryRun = args.includes("--dry-run");
+// 1回の実行で生成する最大件数（無料枠を少しずつ使うため。例: --limit=50）。未指定なら全件。
+const limitArg = args.find((a) => a.startsWith("--limit="));
+const limit = limitArg ? Number(limitArg.replace("--limit=", "")) : Infinity;
+if (!(limit > 0)) {
+  console.error("--limitには1以上の数を指定してください");
+  process.exit(1);
+}
 const fieldsArg = args.find((a) => a.startsWith("--fields="));
 const ALL_FIELDS = ["expression", "example1", "example2"] as const;
 const targetFields: readonly (typeof ALL_FIELDS)[number][] = fieldsArg
@@ -117,30 +125,43 @@ async function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Supabaseは1回の取得が最大1000件までなので、range()でページ分けして全件取得する
+// （1000件を超えると、コード順の後ろの表現が対象から漏れていた）。
+async function fetchAllRows(): Promise<ExpressionRow[]> {
+  const PAGE_SIZE = 1000;
+  const all: ExpressionRow[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    let query = supabase
+      .from("expressions")
+      .select(
+        "id, code, expression_en, example_1_en, example_2_en, audio_expression_path, audio_example_1_path, audio_example_2_path"
+      )
+      .eq("publish_status", "公開")
+      .order("code")
+      .range(from, from + PAGE_SIZE - 1);
+
+    if (dailyOnly) {
+      query = query.overlaps("scene_tags", DAILY_SCENE_TAGS);
+    }
+
+    if (onlyCodes) {
+      query = query.in("code", onlyCodes);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error("表現の取得に失敗:", error.message);
+      process.exit(1);
+    }
+    const page = data as ExpressionRow[];
+    all.push(...page);
+    if (page.length < PAGE_SIZE) break;
+  }
+  return all;
+}
+
 async function main() {
-  let query = supabase
-    .from("expressions")
-    .select(
-      "id, code, expression_en, example_1_en, example_2_en, audio_expression_path, audio_example_1_path, audio_example_2_path"
-    )
-    .eq("publish_status", "公開")
-    .order("code");
-
-  if (dailyOnly) {
-    query = query.overlaps("scene_tags", DAILY_SCENE_TAGS);
-  }
-
-  if (onlyCodes) {
-    query = query.in("code", onlyCodes);
-  }
-
-  const { data, error } = await query;
-  if (error) {
-    console.error("表現の取得に失敗:", error.message);
-    process.exit(1);
-  }
-
-  const rows = data as ExpressionRow[];
+  const rows = await fetchAllRows();
   console.log(
     `対象: ${rows.length}件${onlyCodes ? ` (--only=${onlyCodes.join(",")})` : ""}${dailyOnly ? " (--daily)" : ""} / フィールド: ${targetFields.join(",")}`
   );
@@ -151,7 +172,9 @@ async function main() {
   let totalChars = 0;
 
   for (const row of rows) {
+    if (generated >= limit) break;
     for (const field of targetFields) {
+      if (generated >= limit) break;
       const { textKey, pathKey, fileName } = FIELD_CONFIG[field];
       const text = row[textKey] as string | null;
       const existingPath = row[pathKey] as string | null;
