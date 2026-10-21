@@ -141,7 +141,17 @@ export async function POST(request: Request) {
             }
           : {}),
       },
-      ...(withTrial ? { payment_method_collection: "if_required" as const } : {}),
+      ...(withTrial
+        ? {
+            payment_method_collection: "if_required" as const,
+            // 決済画面の「申し込む」ボタンの近くに出す説明。勝手に課金されないことを明記して、始めるハードルを下げる。
+            custom_text: {
+              submit: {
+                message: `${PRO_TRIAL_DAYS}日間のお試しが終わると、自動的にFreeプランに戻ります。カードを登録しない限り、お支払いが発生することはありません。続けたい場合は、お試し中にカードを登録すると、そのまま有料プランに切り替わります。`,
+              },
+            },
+          }
+        : {}),
     });
 
   try {
