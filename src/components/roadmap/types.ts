@@ -417,6 +417,7 @@ export type Stage4Scenario = {
 export type Stage4ScenarioListItem = Stage4Scenario & {
   status: "未着手" | "練習中" | "習得済み";
   warmth: WarmthLevel;
+  lastPracticedAt: string | null;
 };
 
 export type Stage4Turn = { role: "ai" | "user"; text: string };
@@ -500,6 +501,7 @@ export type Stage5Scenario = {
 export type Stage5ScenarioListItem = Stage5Scenario & {
   status: "未着手" | "練習中" | "習得済み";
   warmth: WarmthLevel;
+  lastPracticedAt: string | null;
 };
 
 // ターンの型自体はStage4と全く同じ形だが、Stage4/Stage5は「同じ理由で分離している」という

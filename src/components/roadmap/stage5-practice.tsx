@@ -7,7 +7,7 @@ import { Crown, Mic, PartyPopper, RotateCcw, Square, User2 } from "lucide-react"
 import { cn } from "@/lib/utils";
 import { TappableText } from "./tappable-text";
 import { RoundHeader, UsageBonusBadge } from "./round-header";
-import { GrowthBadge } from "./growth-badge";
+import { SceneScenarioPicker } from "./scene-scenario-picker";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
 import { ARTHUR_NAME, ArthurAvatar } from "./arthur";
 import { useSpeechRecognition } from "@/lib/use-speech-recognition";
@@ -232,36 +232,12 @@ export function Stage5Practice({ track }: Stage5PracticeProps) {
         {scenarios.length === 0 ? (
           <p className="text-sm text-zinc-400">現在、選べるシナリオがありません。</p>
         ) : (
-          <div className="flex flex-col gap-3">
-            {scenarios.map((scenario) => {
-              const disabled = usage ? usage.remaining <= 0 : false;
-              return (
-                <button
-                  key={scenario.id}
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => startScenario(scenario)}
-                  className="flex items-start gap-3 rounded-xl border border-zinc-200 bg-zinc-100/50 p-4 text-left transition-colors hover:border-accent/50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <GrowthBadge stage={5} warmth={scenario.warmth} />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-zinc-900">{scenario.titleJa}</p>
-                      <span className="rounded-full bg-zinc-200/70 px-2 py-0.5 text-[10px] font-medium text-zinc-500">
-                        {scenario.sceneTag}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs text-zinc-500">{scenario.situationJa}</p>
-                    {scenario.status === "習得済み" && (
-                      <p className="mt-1.5 text-xs font-medium" style={{ color: STAGE_COLOR }}>
-                        話せるようになりました
-                      </p>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+          <SceneScenarioPicker
+            stage={5}
+            scenarios={scenarios}
+            disabled={usage ? usage.remaining <= 0 : false}
+            onStart={startScenario}
+          />
         )}
       </div>
     );
@@ -298,7 +274,7 @@ export function Stage5Practice({ track }: Stage5PracticeProps) {
           <div className="mt-5 flex gap-3">
             <button
               type="button"
-              onClick={() => startScenario({ ...activeScenario, track, status: "練習中", warmth: 0 })}
+              onClick={() => startScenario({ ...activeScenario, track, status: "練習中", warmth: 0, lastPracticedAt: null })}
               style={{ backgroundColor: STAGE_COLOR }}
               className="flex flex-1 items-center justify-center gap-1 sm:gap-1.5 rounded-lg px-2 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97]"
             >

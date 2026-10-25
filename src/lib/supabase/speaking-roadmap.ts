@@ -1643,7 +1643,7 @@ export async function listStage4Scenarios(
     listPublishedStage4Scenarios(),
     supabaseAdmin
       .from("speaking_stage_progress")
-      .select("phrase_id, status, correct_streak")
+      .select("phrase_id, status, correct_streak, last_practiced_at")
       .eq("user_id", userId)
       .eq("stage", 4)
       .eq("phrase_source", "stage4_scenario"),
@@ -1653,11 +1653,12 @@ export async function listStage4Scenarios(
     throw new Error(`Stage4進捗の取得に失敗しました: ${progressError.message}`);
   }
 
-  const progressMap = new Map<string, { status: string; correct_streak: number }>();
+  const progressMap = new Map<string, { status: string; correct_streak: number; last_practiced_at: string | null }>();
   for (const row of progressRows ?? []) {
     progressMap.set(row.phrase_id as string, {
       status: row.status as string,
       correct_streak: row.correct_streak as number,
+      last_practiced_at: (row.last_practiced_at as string | null) ?? null,
     });
   }
 
@@ -1678,6 +1679,7 @@ export async function listStage4Scenarios(
       level: row.level as "初級" | "中級" | "上級",
       status: (progress?.status as "未着手" | "練習中" | "習得済み" | undefined) ?? "未着手",
       warmth: computeWarmth(streak, STAGE4_GRADUATE_STREAK),
+      lastPracticedAt: progress?.last_practiced_at ?? null,
     };
   });
 }
@@ -1824,7 +1826,7 @@ export async function listStage5Scenarios(
     listPublishedStage5Scenarios(),
     supabaseAdmin
       .from("speaking_stage_progress")
-      .select("phrase_id, status, correct_streak")
+      .select("phrase_id, status, correct_streak, last_practiced_at")
       .eq("user_id", userId)
       .eq("stage", 5)
       .eq("phrase_source", "stage5_scenario"),
@@ -1835,11 +1837,12 @@ export async function listStage5Scenarios(
     throw new Error(`Stage5進捗の取得に失敗しました: ${progressError.message}`);
   }
 
-  const progressMap = new Map<string, { status: string; correct_streak: number }>();
+  const progressMap = new Map<string, { status: string; correct_streak: number; last_practiced_at: string | null }>();
   for (const row of progressRows ?? []) {
     progressMap.set(row.phrase_id as string, {
       status: row.status as string,
       correct_streak: row.correct_streak as number,
+      last_practiced_at: (row.last_practiced_at as string | null) ?? null,
     });
   }
 
@@ -1858,6 +1861,7 @@ export async function listStage5Scenarios(
       level: row.level as "中級" | "上級",
       status: (progress?.status as "未着手" | "練習中" | "習得済み" | undefined) ?? "未着手",
       warmth: computeWarmth(streak, STAGE5_GRADUATE_STREAK),
+      lastPracticedAt: progress?.last_practiced_at ?? null,
     };
   });
 }
