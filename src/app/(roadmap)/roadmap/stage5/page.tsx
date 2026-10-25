@@ -33,7 +33,7 @@ export default async function RoadmapStage5Page() {
       description: "不動産屋でアパートを借りる、市役所で手続きをするなど、難しめの日常シーンを話す。",
       href: "/roadmap/stage5/daily",
       unlocked: dailyUnlocked,
-      lockedMessage: "Stage4（日常シーン）のシナリオを5つ卒業すると開きます。",
+      lockedMessage: "Stage4（日常シーン）のシナリオを5つ習得すると開きます。",
     },
     {
       key: "business",
@@ -41,7 +41,7 @@ export default async function RoadmapStage5Page() {
       description: "契約交渉や経営陣へのプレゼンなど、難しめのビジネスシーンを話す。",
       href: "/roadmap/stage5/business",
       unlocked: businessUnlocked,
-      lockedMessage: "Stage4（ビジネスシーン）のシナリオを5つ卒業すると開きます。",
+      lockedMessage: "Stage4（ビジネスシーン）のシナリオを5つ習得すると開きます。",
     },
   ] as const;
 

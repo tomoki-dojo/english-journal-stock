@@ -16,6 +16,7 @@ import {
   addGrowthBoost,
   addSizeGrowthPoints,
   KUWAGATA_GRADUATION_BOOST_DAYS,
+  KUWAGATA_MASTERED_COUNT_WEIGHT,
   recordStageClearCatch,
   stockCatchChanceOnMasteredCountUpdate,
   forceHatchTeppenToAdult,
@@ -560,11 +561,11 @@ async function reportStageStreakResult(
 
   // クワガタ育成機能：初めて習得済みになった回だけ、育成中の個体の成長をブーストし、成虫の個体を大きくする
   // （同じ項目を再挑戦して稼げないよう、既に習得済みだった場合は対象外）。
-  // Stage5は卒業でテッペンクワたんが即成虫になるため、ブースト対象外。
+  const newlyMastered = graduated && !wasGraduated;
   const grantBoost = async () => {
-    if (!(graduated && !wasGraduated && stage <= 4)) return;
+    if (!newlyMastered) return;
     try {
-      const reward = KUWAGATA_GRADUATION_BOOST_DAYS[stage as 0 | 1 | 2 | 3 | 4];
+      const reward = KUWAGATA_GRADUATION_BOOST_DAYS[stage];
       // 育成中の個体は成長日数、成虫の個体は成長ポイント（サイズレベルの元）として同じ重みで加算する。
       await Promise.all([addGrowthBoost(userId, reward), addSizeGrowthPoints(userId, reward)]);
     } catch (err) {
@@ -577,7 +578,8 @@ async function reportStageStreakResult(
     saveProgress(),
     recordDailyPractice(userId),
     incrementDailyActivity(userId),
-    graduated ? incrementTotalMasteredCount(userId) : Promise.resolve(),
+    // 総習得数は、初めて習得した回だけStageごとの重みで加算する（再挑戦で稼げないように）。
+    newlyMastered ? incrementTotalMasteredCount(userId, KUWAGATA_MASTERED_COUNT_WEIGHT[stage]) : Promise.resolve(),
     grantBoost(),
   ]);
 
@@ -622,8 +624,8 @@ export async function reportStage1Result(
   return { streak, subStep: getStage1SubStep(streak), graduated, stage2JustUnlocked };
 }
 
-// user_roadmap_state.total_mastered_countを+1する（都度集計を避けるためのキャッシュ更新）。
-async function incrementTotalMasteredCount(userId: string): Promise<void> {
+// user_roadmap_state.total_mastered_countをamountだけ加算する（都度集計を避けるためのキャッシュ更新）。
+async function incrementTotalMasteredCount(userId: string, amount: number = 1): Promise<void> {
   const { data, error: fetchError } = await supabaseAdmin
     .from("user_roadmap_state")
     .select("total_mastered_count")
@@ -635,7 +637,7 @@ async function incrementTotalMasteredCount(userId: string): Promise<void> {
   }
 
   const current = data?.total_mastered_count ?? 0;
-  const newTotal = current + 1;
+  const newTotal = current + amount;
 
   const { error: updateError } = await supabaseAdmin
     .from("user_roadmap_state")
@@ -648,7 +650,7 @@ async function incrementTotalMasteredCount(userId: string): Promise<void> {
 
   // クワガタ育成機能：新種の採集チャンスのストック（間隔の倍数に達した回だけ内部で+1される。
   // 実際の抽選はプレイヤーが「採集に出かける」を選んだ時にconsumePendingCatchで行う）。
-  await stockCatchChanceOnMasteredCountUpdate(userId, newTotal);
+  await stockCatchChanceOnMasteredCountUpdate(userId, newTotal, current);
 }
 
 // Stage1練習画面専用の音声URL発行。

@@ -33,7 +33,7 @@ export default async function RoadmapStage5DailyPage() {
         <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-100/30 px-6 py-10 text-center">
           <Hourglass className="mx-auto mb-3 h-6 w-6 text-zinc-400" />
           <p className="text-sm text-zinc-500">
-            Stage5日常編はStage4（日常シーン）のシナリオを5つ卒業すると開きます。
+            Stage5日常編はStage4（日常シーン）のシナリオを5つ習得すると開きます。
           </p>
           <Link
             href="/roadmap/stage4"

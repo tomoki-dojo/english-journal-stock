@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     const [unlocked, plan] = await Promise.all([isStage4Unlocked(user.id), getPlan(user.id)]);
     if (!unlocked) {
       return NextResponse.json(
-        { error: "Stage4はStage3の表現を6つ卒業すると開きます" },
+        { error: "Stage4はStage3の表現を6つ習得すると開きます" },
         { status: 403 }
       );
     }

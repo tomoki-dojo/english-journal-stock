@@ -159,7 +159,7 @@ export function Stage2Practice() {
     return (
       <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-100/30 px-6 py-10 text-center">
         <Hourglass className="mx-auto mb-3 h-6 w-6 text-zinc-400" />
-        <p className="text-sm text-zinc-500">Stage2はStage1をあと{remainingToUnlock}個卒業すると開きます。</p>
+        <p className="text-sm text-zinc-500">Stage2はStage1の表現をあと{remainingToUnlock}個習得すると開きます。</p>
         <Link
           href="/roadmap/stage1"
           className="mt-4 inline-flex items-center gap-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
@@ -174,7 +174,7 @@ export function Stage2Practice() {
     return (
       <div className="rounded-xl border border-zinc-200 bg-zinc-100/50 px-6 py-10 text-center">
         <PartyPopper className="mx-auto mb-3 h-6 w-6" style={{ color: STAGE_COLOR }} />
-        <p className="text-sm text-zinc-700">今のところ、Stage2に出題できる範囲は全て卒業しました。</p>
+        <p className="text-sm text-zinc-700">今のところ、Stage2に出題できる範囲は全て習得しました。</p>
         <p className="mt-1 text-xs text-zinc-400">Stage1をさらに進めると、次のフレーズがStage2に出てきます。</p>
         <Link
           href="/roadmap"
@@ -218,7 +218,7 @@ export function Stage2Practice() {
 
         {graduated.length > 0 && (
           <div className="relative mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-left text-sm text-emerald-800">
-            <p className="mb-1 font-medium">卒業したフレーズ</p>
+            <p className="mb-1 font-medium">習得したフレーズ</p>
             <ul className="space-y-0.5">
               {graduated.map((r) => (
                 <li key={r.expressionId}>{r.expressionEn}</li>

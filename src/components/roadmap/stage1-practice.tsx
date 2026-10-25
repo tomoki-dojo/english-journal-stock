@@ -238,7 +238,7 @@ export function Stage1Practice() {
         <div className="rounded-xl border border-zinc-200 bg-zinc-100/50 px-6 py-10 text-center">
           <PartyPopper className="mx-auto mb-3 h-6 w-6" style={{ color: STAGE_COLOR }} />
           <p className="text-sm text-zinc-700">
-            {scene ? `「${scene}」のStage1は全て卒業しました。` : "Stage1（音読・シャドーイング）は全て卒業しました。"}
+            {scene ? `「${scene}」のStage1は全て習得しました。` : "Stage1（音読・シャドーイング）は全て習得しました。"}
           </p>
           <Link
             href="/roadmap"
@@ -284,7 +284,7 @@ export function Stage1Practice() {
 
         {graduated.length > 0 && (
           <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-left text-sm text-emerald-800">
-            <p className="mb-1 font-medium">卒業したフレーズ</p>
+            <p className="mb-1 font-medium">習得したフレーズ</p>
             <ul className="space-y-0.5">
               {graduated.map((r) => (
                 <li key={r.expressionId}>{r.expressionEn}</li>

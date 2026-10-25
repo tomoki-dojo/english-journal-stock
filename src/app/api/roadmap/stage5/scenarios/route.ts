@@ -34,7 +34,7 @@ export async function GET(request: Request) {
     if (!unlocked) {
       const label = track === "daily" ? "日常編" : "ビジネス編";
       return NextResponse.json(
-        { error: `Stage5${label}は対応するStage4シナリオを5つ卒業すると開きます` },
+        { error: `Stage5${label}は対応するStage4シナリオを5つ習得すると開きます` },
         { status: 403 }
       );
     }

@@ -231,8 +231,8 @@ export function Stage0Practice({ availableErrorTags }: Stage0PracticeProps) {
           <PartyPopper className="mx-auto mb-3 h-6 w-6" style={{ color: STAGE_COLOR }} />
           <p className="text-sm text-zinc-700">
             {selectedErrorTag
-              ? `今のところ、「${selectedErrorTag}」の感覚は全て卒業しました。`
-              : "今のところ、Stage0の感覚は全て卒業しました。"}
+              ? `今のところ、「${selectedErrorTag}」の感覚は全て習得しました。`
+              : "今のところ、Stage0の感覚は全て習得しました。"}
           </p>
           <p className="mt-1 text-xs text-zinc-400">新しい感覚が追加されたら、またここに出てきます。</p>
           <Link

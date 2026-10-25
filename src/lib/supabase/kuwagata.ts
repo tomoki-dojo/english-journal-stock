@@ -113,14 +113,27 @@ const GROWTH_STAGE_RANGES: { stage: KuwagataGrowthStage; start: number; end: num
   { stage: "蛹", start: 4, end: 7 },
 ];
 
-// 習得済み（卒業）1回あたりのブースト日数。Freeの1日の上限（Stage3は8回、Stage4は3回）でも
-// 1日に卒業できる数が限られるため、難しいStageほど大きくする。Stage5は卒業で即成虫なので対象外。
-export const KUWAGATA_GRADUATION_BOOST_DAYS: Record<0 | 1 | 2 | 3 | 4, number> = {
+// 習得1回あたりのブースト日数。Freeの1日の上限（Stage3は8回、Stage4は3回）でも
+// 1日に習得できる数が限られるため、難しいStageほど大きくする。
+// Stage5は、テッペンクワたんの羽化（卒業）とは別に、他の育成中の個体・限定種のために加算する。
+export const KUWAGATA_GRADUATION_BOOST_DAYS: Record<0 | 1 | 2 | 3 | 4 | 5, number> = {
   0: 0.05,
   1: 0.05,
   2: 0.1,
   3: 0.2,
   4: 0.4,
+  5: 0.5,
+};
+
+// 習得1回で総習得数（total_mastered_count）に加算する数。難しいStageほど大きくして、
+// Stage0〜2の周回だけより、Stage3〜5を練習したほうが採集チャンスが早く貯まるようにする。
+export const KUWAGATA_MASTERED_COUNT_WEIGHT: Record<0 | 1 | 2 | 3 | 4 | 5, number> = {
+  0: 1,
+  1: 1,
+  2: 1,
+  3: 2,
+  4: 4,
+  5: 8,
 };
 
 // 1日1回、ログイン時の豆知識を読んだときのご褒美（練習1回分の半分以下）。
@@ -1157,21 +1170,31 @@ export async function getPendingCatchState(userId: string): Promise<KuwagataPend
   };
 }
 
-export async function stockCatchChanceOnMasteredCountUpdate(userId: string, newTotal: number): Promise<void> {
+// 総習得数が previousTotal → newTotal に増えた間に、採集間隔（Free10/Pro5）の倍数をまたいだ回数だけ
+// 採集チャンスをストックする。Stage3〜5は1回で2〜8加算されるため、「ちょうど倍数になった時だけ」
+// では取りこぼす。50の倍数をまたいだ分はレア確定にする。
+export async function stockCatchChanceOnMasteredCountUpdate(
+  userId: string,
+  newTotal: number,
+  previousTotal: number = newTotal - 1
+): Promise<void> {
   const plan = await getPlan(userId);
   const interval = plan === "free" ? KUWAGATA_MASTERED_COUNT_ROLL_INTERVAL : KUWAGATA_MASTERED_COUNT_ROLL_INTERVAL_PRO;
-  if (newTotal % interval !== 0) return;
 
-  const isGuaranteedRareMilestone = newTotal % KUWAGATA_RARE_GUARANTEE_MILESTONE === 0;
+  for (let total = previousTotal + 1; total <= newTotal; total++) {
+    if (total % interval !== 0) continue;
 
-  // 読んで書くと同時実行で加算が失われるため、DB側で1回のSQLとして加算する。
-  const { error } = await supabaseAdmin.rpc("add_kuwagata_catch_chance", {
-    p_user_id: userId,
-    p_guaranteed: isGuaranteedRareMilestone,
-  });
+    const isGuaranteedRareMilestone = total % KUWAGATA_RARE_GUARANTEE_MILESTONE === 0;
 
-  if (error) {
-    throw new Error(`採集チャンスの更新に失敗しました: ${error.message}`);
+    // 読んで書くと同時実行で加算が失われるため、DB側で1回のSQLとして加算する。
+    const { error } = await supabaseAdmin.rpc("add_kuwagata_catch_chance", {
+      p_user_id: userId,
+      p_guaranteed: isGuaranteedRareMilestone,
+    });
+
+    if (error) {
+      throw new Error(`採集チャンスの更新に失敗しました: ${error.message}`);
+    }
   }
 }
 
