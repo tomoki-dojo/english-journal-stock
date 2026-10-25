@@ -14,8 +14,10 @@ import {
   type RoadmapAnnouncement,
   type RoadmapNewEgg,
   type RoadmapNewHatch,
+  type RoadmapNewShizuku,
   type RoadmapStageUp,
 } from "@/lib/roadmap-notices";
+import { tintFilter } from "@/lib/kuwagata-tint";
 import { HatchOverlay } from "./hatch-overlay";
 import { GrowthStageOverlay } from "./growth-stage-overlay";
 
@@ -27,6 +29,7 @@ type Item =
   | { kind: "rareChance"; count: number }
   | { kind: "egg"; egg: RoadmapNewEgg }
   | { kind: "hatch"; hatch: RoadmapNewHatch }
+  | { kind: "shizuku"; shizuku: RoadmapNewShizuku }
   | { kind: "growth"; stageUps: RoadmapStageUp[] }
   | { kind: "announcement"; announcement: RoadmapAnnouncement }
   | { kind: "trivia"; trivia: { id: string; body: string } };
@@ -77,6 +80,8 @@ function RareChanceScreen({ count, onClose }: { count: number; onClose: () => vo
 // 残った古いデータで同じ演出がもう一度出てしまうのを防ぐ。ページを読み込み直せばサーバーの既読が効く。
 const shownEggIds = new Set<string>();
 const shownHatchIds = new Set<string>();
+// 色の実は、シーン名と個数の組で覚える（同じシーンの実が増えたときは、増えた分だけもう一度出す）。
+const shownShizukuKeys = new Set<string>();
 // 導入・アドバイスを見せ終えたか(同じ理由で、戻ったときに古いキャッシュで再表示されるのを防ぐ)。
 let introShown = false;
 const shownRareCounts = new Set<number>();
@@ -91,6 +96,7 @@ export function RoomNoticeModal({
   announcements,
   newEggs,
   newHatches = [],
+  newShizuku = [],
   stageUps = [],
   trivia = null,
   rareChance = null,
@@ -99,6 +105,7 @@ export function RoomNoticeModal({
   announcements: RoadmapAnnouncement[];
   newEggs: RoadmapNewEgg[];
   newHatches?: RoadmapNewHatch[];
+  newShizuku?: RoadmapNewShizuku[];
   stageUps?: RoadmapStageUp[];
   trivia?: { id: string; body: string } | null;
   rareChance?: number | null;
@@ -127,6 +134,10 @@ export function RoomNoticeModal({
     ...newHatches
       .filter((hatch) => !shownHatchIds.has(hatch.id))
       .map((hatch) => ({ kind: "hatch" as const, hatch })),
+    // 虫のあとに、習得で手に入れた色の実を虫と同じ演出で見せる
+    ...newShizuku
+      .filter((z) => !shownShizukuKeys.has(`${z.sceneKey}:${z.count}`))
+      .map((shizuku) => ({ kind: "shizuku" as const, shizuku })),
     // 日数がたって成長したクワたん（練習のご褒美で成長した分は、結果画面でその場で見せる）
     ...(stageUps.some((s) => !shownStageUpIds.has(s.id))
       ? ([{ kind: "growth", stageUps: stageUps.filter((s) => !shownStageUpIds.has(s.id)) }] as Item[])
@@ -331,6 +342,43 @@ export function RoomNoticeModal({
           OK
         </button>
       </HatchOverlay>
+    );
+  }
+
+  if (current.kind === "shizuku") {
+    const { shizuku } = current;
+    const closeShizuku = () => {
+      shownShizukuKeys.add(`${shizuku.sceneKey}:${shizuku.count}`);
+      void fetch("/api/roadmap/notices/seen", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "shizuku", id: shizuku.sceneKey }),
+      }).catch(() => {});
+      setQueue((q) => q.slice(1));
+    };
+    return (
+      <CelebrationOverlay
+        key={`shizuku-${shizuku.sceneKey}-${shizuku.count}`}
+        art={
+          // eslint-disable-next-line @next/next/no-img-element -- 自前SVGアート
+          <img
+            src="/roadmap/items/shizuku.svg"
+            alt=""
+            className="h-28 w-28 object-contain"
+            style={{ filter: tintFilter(shizuku.sceneKey) }}
+          />
+        }
+        message={`「${shizuku.sceneKey}」の色の実を${shizuku.count > 1 ? `${shizuku.count}つ` : "1つ"}手に入れた！`}
+      >
+        <GetSeOnMount />
+        <button
+          type="button"
+          onClick={closeShizuku}
+          className="w-full rounded-full bg-amber-500 py-2.5 text-sm font-bold text-white transition-transform active:scale-95"
+        >
+          OK
+        </button>
+      </CelebrationOverlay>
     );
   }
 

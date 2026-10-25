@@ -34,6 +34,9 @@ export type RoadmapNewHatch = {
   hatchedFrom: string | null;
 };
 
+// 習得で手に入れた色の実（まだ演出を見せていないもの）。sceneKeyはシーン名、countはその個数。
+export type RoadmapNewShizuku = { sceneKey: string; count: number };
+
 // 成長段階が上がったクワたん（「〇〇が□に成長した！」の演出に使う）。
 export type RoadmapStageUp = {
   id: string;

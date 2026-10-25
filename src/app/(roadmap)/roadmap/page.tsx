@@ -44,6 +44,7 @@ export default async function RoadmapPage() {
         announcements: [],
         newEggs: [],
         newHatches: [],
+        newShizuku: [],
         stageUps: [],
         trivia: null,
         rareChance: null,
@@ -65,11 +66,12 @@ export default async function RoadmapPage() {
       {/* queueは初回表示時のpropsで作られるため、スキップ直後のrefreshで新しいタマゴが届いたときも
           すぐ演出が出るよう、未読タマゴ・羽化が変わったらkeyで作り直す。 */}
       <RoomNoticeModal
-        key={`${notices.newEggs.map((e) => e.id).join(",")}|${notices.newHatches.map((h) => h.id).join(",")}`}
+        key={`${notices.newEggs.map((e) => e.id).join(",")}|${notices.newHatches.map((h) => h.id).join(",")}|${notices.newShizuku.map((z) => `${z.sceneKey}:${z.count}`).join(",")}`}
         showAdvice={notices.showAdvice}
         announcements={notices.announcements}
         newEggs={notices.newEggs}
         newHatches={notices.newHatches}
+        newShizuku={notices.newShizuku}
         stageUps={notices.stageUps}
         trivia={notices.trivia}
         rareChance={notices.rareChance}

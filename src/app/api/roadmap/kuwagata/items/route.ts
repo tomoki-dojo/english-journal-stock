@@ -1,0 +1,22 @@
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/supabase/server-auth";
+import { getUserKuwagataItems } from "@/lib/supabase/kuwagata";
+
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
+// 持ち物（色の実など）の一覧。個数が1以上のものだけ返す。
+export async function GET() {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "この機能を利用するにはログインが必要です" }, { status: 401 });
+  }
+
+  try {
+    const items = await getUserKuwagataItems(user.id);
+    return NextResponse.json({ items }, { headers: { "Cache-Control": "no-store, must-revalidate" } });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "持ち物の取得に失敗しました";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

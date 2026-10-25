@@ -2,8 +2,28 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
-import { Bug, Check, ChevronLeft, ChevronRight, Crown, Lock, Pencil, X } from "lucide-react";
-import type { KuwagataGrowthStage, KuwagataShelfTank } from "@/lib/supabase/kuwagata";
+import {
+  Backpack,
+  Bug,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Crown,
+  Lock,
+  Paintbrush,
+  Pencil,
+  X,
+} from "lucide-react";
+import type {
+  KuwagataGrowthStage,
+  KuwagataShelfTank,
+} from "@/lib/supabase/kuwagata";
+import {
+  ITEM_TYPE_SHIZUKU,
+  shizukuSwatchColor,
+  tintFilter,
+  type KuwagataItem,
+} from "@/lib/kuwagata-tint";
 import {
   DEFAULT_BODY_SHAPE,
   bodyCircle,
@@ -1409,25 +1429,133 @@ function legClassName(kind: CreaturePartArt["kind"], code: string, scythe: boole
   return "animate-kuwagata-leg";
 }
 
+
+type TintCeremonyInfo = {
+  speciesCode: string;
+  mandibleVariant: number;
+  growthStage: KuwagataGrowthStage;
+  sizeScale: number;
+  fromKey: string | null;
+  toKey: string;
+};
+
+// 色の実をあげたときの演出。画面が静かに暗くなり、個体の前に実が降りてくる。
+// 個体が実を3口でかじって食べきると、体の色がゆっくり移る。獲得演出のような華やかさはなく、
+// 短く終わる（タップで早送り）。
+function TintCeremony({ info, onDone }: { info: TintCeremonyInfo; onDone: () => void }) {
+  // 0: 暗転 / 1: 実が降りる / 2〜4: 1口目〜3口目 / 5: 食べ終わって色が移る / 6: 暗転が明ける
+  const [stage, setStage] = useState(0);
+  const doneRef = useRef(onDone);
+  doneRef.current = onDone;
+  useEffect(() => {
+    const timers = [
+      setTimeout(() => setStage(1), 450),
+      setTimeout(() => setStage(2), 1500),
+      setTimeout(() => setStage(3), 1950),
+      setTimeout(() => setStage(4), 2400),
+      setTimeout(() => setStage(5), 2850),
+      setTimeout(() => setStage(6), 4700),
+      setTimeout(() => doneRef.current(), 5300),
+    ];
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  const visualScale = Math.min(Math.max(info.sizeScale, 0.6), 1.6) * 5.5;
+  const dark = stage >= 6 ? 0 : 0.78;
+  const biting = stage >= 2 && stage <= 4;
+  const fruitScale = stage <= 1 ? 1 : stage === 2 ? 0.72 : stage === 3 ? 0.45 : stage === 4 ? 0.2 : 0;
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex cursor-pointer items-center justify-center"
+      style={{ backgroundColor: `rgba(8,10,14,${dark})`, transition: "background-color 600ms ease" }}
+      onClick={() => doneRef.current()}
+      role="presentation"
+    >
+      <style>{`@keyframes tint-chomp { 0% { transform: scale(1, 1); } 40% { transform: scale(1.07, 0.93); } 100% { transform: scale(1, 1); } }`}</style>
+      <div className="relative flex items-center justify-center" style={{ width: 240, height: 240 }}>
+        {/* 食べ終わったあと、色が移るあいだ足もとにやわらかい光の輪が広がる */}
+        <div
+          className="absolute rounded-full"
+          style={{
+            width: 220,
+            height: 220,
+            background: `radial-gradient(circle, ${shizukuSwatchColor(info.toKey)}55 0%, transparent 70%)`,
+            opacity: stage === 5 ? 1 : 0,
+            transform: stage === 5 ? "scale(1.15)" : "scale(0.6)",
+            transition: "opacity 900ms ease, transform 1400ms ease-out",
+          }}
+        />
+        <div
+          key={biting ? stage : "idle"}
+          style={{
+            filter: tintFilter(stage >= 5 ? info.toKey : info.fromKey, info.speciesCode),
+            transition: "filter 1700ms ease-in-out, opacity 600ms ease",
+            opacity: stage >= 6 ? 0 : 1,
+            animation: biting ? "tint-chomp 260ms ease-out" : undefined,
+          }}
+        >
+          <TankOccupant
+            color="#52525b"
+            sizeScale={visualScale}
+            speciesCode={info.speciesCode}
+            mandibleVariant={info.mandibleVariant}
+            growthStage={info.growthStage}
+          />
+        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element -- 自前SVGアート */}
+        <img
+          src="/roadmap/items/shizuku.svg"
+          alt=""
+          className="absolute left-1/2 h-14 w-14 object-contain"
+          style={{
+            top: 0,
+            filter: tintFilter(info.toKey),
+            transform:
+              stage === 0
+                ? "translate(calc(-50% - 60px), -140px) scale(1)"
+                : `translate(calc(-50% - 60px), 135px) scale(${fruitScale})`,
+            opacity: stage === 0 || stage >= 5 ? 0 : 1,
+            transition:
+              stage === 1
+                ? "transform 1000ms cubic-bezier(0.3, 0, 0.5, 1), opacity 500ms ease"
+                : "transform 180ms ease-out, opacity 300ms ease",
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function TankOccupant({
   color,
   sizeScale,
   speciesCode,
   mandibleVariant = 1,
   growthStage = "成虫",
+  tintKey = null,
 }: {
   color: string;
   sizeScale: number;
   speciesCode?: string;
   mandibleVariant?: number;
   growthStage?: KuwagataGrowthStage;
+  // 色の実で色づけしたシーンのキー（色づけなしはnull）。
+  tintKey?: string | null;
 }) {
   const basePx = 28;
   const px = basePx * sizeScale;
   if (speciesCode && KNOWN_CREATURE_ART[speciesCode]) {
     return (
-      <div className="relative" style={{ width: px, height: px }}>
-        <KnownCreatureSprite code={speciesCode} facing="front" mandibleVariant={mandibleVariant} growthStage={growthStage} />
+      <div
+        className="relative"
+        style={{ width: px, height: px, filter: tintFilter(tintKey, speciesCode) }}
+      >
+        <KnownCreatureSprite
+          code={speciesCode}
+          facing="front"
+          mandibleVariant={mandibleVariant}
+          growthStage={growthStage}
+        />
       </div>
     );
   }
@@ -2694,8 +2822,11 @@ function WanderingCreature({
   hasCompanions,
   geo,
   showCollision = false,
+  tintKey = null,
 }: {
   seedKey: string;
+  // 色の実で色づけしたシーンのキー（色づけなしはnull）。
+  tintKey?: string | null;
   initialSpot: { u: number; v: number };
   widthPct: number;
   hasArt: boolean;
@@ -2883,12 +3014,14 @@ function WanderingCreature({
 
   return (
     <div
+      data-individual-id={seedKey}
       className="absolute -translate-y-full"
       style={{
         left: `${pt.left}%`,
         top: `${pt.top}%`,
         width: `${widthPct}%`,
         aspectRatio: hasArt ? "1 / 1" : undefined,
+        filter: tintFilter(tintKey, speciesCode),
         transition: moveTransition,
         // 実アートは左右反転しない(反転すると脚の左右が逆になってしまうため)。
         // Bugアイコンのフォールバックのみ、個体ごとに左右反転して向きにバリエーションを出す。
@@ -3177,10 +3310,19 @@ function EnlargedTankVisual({
   tank,
   color,
   nicknameOf,
+  tintOf,
+  onTapIndividual,
 }: {
   tank: KuwagataShelfTank;
   color: string;
-  nicknameOf: (individual: { id: string; nickname: string | null }) => string | null;
+  nicknameOf: (individual: {
+    id: string;
+    nickname: string | null;
+  }) => string | null;
+  // 個体の色づけ（色の実）。プレビュー中の色もここで返す。
+  tintOf: (individual: { id: string; tintKey: string | null }) => string | null;
+  // 水槽の中の個体をタップしたとき（ダブルタップのズームとは区別する）。
+  onTapIndividual: (individualId: string) => void;
 }) {
   const isAquarium = tank.speciesAreaCode === "aquarium";
   const isAncient = tank.speciesAreaCode === "ancient";
@@ -3237,10 +3379,31 @@ function EnlargedTankVisual({
   const contentRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef({ s: 1, x: 0, y: 0 });
   const pointersRef = useRef(new Map<number, { x: number; y: number }>());
-  const gestureRef = useRef<{ dist: number; s: number; x: number; y: number; mx: number; my: number } | null>(null);
-  const tapRef = useRef<{ t: number; x: number; y: number; moved: boolean } | null>(null);
+  const gestureRef = useRef<{
+    dist: number;
+    s: number;
+    x: number;
+    y: number;
+    mx: number;
+    my: number;
+  } | null>(null);
+  const tapRef = useRef<{
+    t: number;
+    x: number;
+    y: number;
+    cx: number;
+    cy: number;
+    moved: boolean;
+  } | null>(null);
+  const tapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTapRef = useRef(0);
   const [zoomed, setZoomed] = useState(false);
+  useEffect(
+    () => () => {
+      if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+    },
+    [],
+  );
 
   const applyView = (s: number, x: number, y: number) => {
     const frame = frameRef.current;
@@ -3284,7 +3447,14 @@ function EnlargedTankVisual({
     pointersRef.current.set(e.pointerId, pt);
     e.currentTarget.setPointerCapture(e.pointerId);
     if (pointersRef.current.size === 1) {
-      tapRef.current = { t: Date.now(), x: pt.x, y: pt.y, moved: false };
+      tapRef.current = {
+        t: Date.now(),
+        x: pt.x,
+        y: pt.y,
+        cx: e.clientX,
+        cy: e.clientY,
+        moved: false,
+      };
     } else if (pointersRef.current.size === 2) {
       const [a, b] = [...pointersRef.current.values()];
       const { s, x, y } = viewRef.current;
@@ -3324,11 +3494,23 @@ function EnlargedTankVisual({
     if (pointersRef.current.size === 0 && tap && !tap.moved && Date.now() - tap.t < 300) {
       // ダブルタップ: 拡大中なら元に戻し、等倍なら2.2倍にする。
       if (Date.now() - lastTapRef.current < 300) {
+        if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+        tapTimerRef.current = null;
         if (viewRef.current.s > 1.001) applyView(1, 0, 0);
         else zoomAt(2.2, tap.x, tap.y);
         lastTapRef.current = 0;
       } else {
         lastTapRef.current = Date.now();
+        // 1回だけのタップは、ダブルタップではないと分かってから、その位置の個体を選ぶ。
+        const { cx, cy } = tap;
+        tapTimerRef.current = setTimeout(() => {
+          tapTimerRef.current = null;
+          const hit = document
+            .elementsFromPoint(cx, cy)
+            .find((el) => el instanceof HTMLElement && el.dataset.individualId);
+          if (hit instanceof HTMLElement && hit.dataset.individualId)
+            onTapIndividual(hit.dataset.individualId);
+        }, 300);
       }
     }
     if (pointersRef.current.size === 0) tapRef.current = null;
@@ -3401,6 +3583,7 @@ function EnlargedTankVisual({
             speciesCode={individual.speciesCode}
             mandibleVariant={individual.mandibleVariant}
             growthStage={individual.growthStage}
+            tintKey={tintOf(individual)}
             nickname={nicknameOf(individual) ?? individual.speciesName}
             color={color}
             mirror={!hasArt && index % 2 === 1}
@@ -3637,10 +3820,102 @@ export function KuwagataShelf({
   const [draftNickname, setDraftNickname] = useState("");
   const [savingNickname, setSavingNickname] = useState(false);
   const [nicknameError, setNicknameError] = useState<string | null>(null);
-  const nicknameOf = (individual: { id: string; nickname: string | null }): string | null =>
-    individual.id in nicknameOverrides ? nicknameOverrides[individual.id] : individual.nickname;
+  const nicknameOf = (individual: {
+    id: string;
+    nickname: string | null;
+  }): string | null =>
+    individual.id in nicknameOverrides
+      ? nicknameOverrides[individual.id]
+      : individual.nickname;
 
-  const startEditingNickname = (individual: { id: string; nickname: string | null }) => {
+  // 色の実（持ち物）と個体の色づけ。保存に成功した分は、ここで上書きして即反映する。
+  const [items, setItems] = useState<KuwagataItem[]>([]);
+  const [tintOverrides, setTintOverrides] = useState<Record<string, string>>(
+    {},
+  );
+  const [tintTargetId, setTintTargetId] = useState<string | null>(null);
+  const [tintPreview, setTintPreview] = useState<string | null>(null);
+  const [tintBusy, setTintBusy] = useState(false);
+  const [tintError, setTintError] = useState<string | null>(null);
+  const [itemsOpen, setItemsOpen] = useState(false);
+  const shizukuItems = items.filter(
+    (item) => item.itemType === ITEM_TYPE_SHIZUKU && item.quantity > 0,
+  );
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/roadmap/kuwagata/items", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json: { items?: KuwagataItem[] } | null) => {
+        if (!cancelled && json?.items) setItems(json.items);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  // 水槽に出す色づけ。プレビュー中の個体は、選んだ色を仮に当てる。
+  const tintOf = (individual: {
+    id: string;
+    tintKey: string | null;
+  }): string | null => {
+    if (tintTargetId === individual.id && tintPreview) return tintPreview;
+    return individual.id in tintOverrides
+      ? tintOverrides[individual.id]
+      : individual.tintKey;
+  };
+  const closeTintPanel = () => {
+    setTintTargetId(null);
+    setTintPreview(null);
+    setTintError(null);
+  };
+  const [tintCeremony, setTintCeremony] = useState<TintCeremonyInfo | null>(null);
+  const applyTint = async (
+    target: { id: string; speciesCode: string; mandibleVariant: number; growthStage: KuwagataGrowthStage; sizeScale: number; tintKey: string | null },
+    sceneKey: string
+  ) => {
+    const individualId = target.id;
+    const fromKey = individualId in tintOverrides ? tintOverrides[individualId] : target.tintKey;
+    setTintBusy(true);
+    setTintError(null);
+    try {
+      const res = await fetch("/api/roadmap/kuwagata/tint", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ individualId, sceneKey }),
+      });
+      const json = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !json.ok) {
+        setTintError(json.error ?? "色づけに失敗しました");
+        return;
+      }
+      setTintCeremony({
+        speciesCode: target.speciesCode,
+        mandibleVariant: target.mandibleVariant,
+        growthStage: target.growthStage,
+        sizeScale: target.sizeScale,
+        fromKey,
+        toKey: sceneKey,
+      });
+      setTintOverrides((prev) => ({ ...prev, [individualId]: sceneKey }));
+      setItems((prev) =>
+        prev.map((item) =>
+          item.itemType === ITEM_TYPE_SHIZUKU && item.itemKey === sceneKey
+            ? { ...item, quantity: item.quantity - 1 }
+            : item,
+        ),
+      );
+      closeTintPanel();
+    } catch {
+      setTintError("色づけに失敗しました");
+    } finally {
+      setTintBusy(false);
+    }
+  };
+
+  const startEditingNickname = (individual: {
+    id: string;
+    nickname: string | null;
+  }) => {
     setEditingId(individual.id);
     setDraftNickname(nicknameOf(individual) ?? "");
     setNicknameError(null);
@@ -3723,6 +3998,21 @@ export function KuwagataShelf({
 
   return (
     <div>
+      <div className="mb-2 flex justify-end">
+        <button
+          type="button"
+          onClick={() => setItemsOpen(true)}
+          className="flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm hover:border-amber-300 hover:text-amber-700"
+        >
+          <Backpack className="h-3.5 w-3.5" />
+          持ち物
+          {shizukuItems.length > 0 && (
+            <span className="rounded-full bg-amber-500 px-1.5 text-[10px] font-bold tabular-nums text-white">
+              {shizukuItems.reduce((sum, item) => sum + item.quantity, 0)}
+            </span>
+          )}
+        </button>
+      </div>
       <div className="relative px-[10px]">
         <div className="absolute inset-y-0 left-0 w-[10px] rounded-t-sm" style={RACK_POST_STYLE} />
         <div className="absolute inset-y-0 right-0 w-[10px] rounded-t-sm" style={RACK_POST_STYLE} />
@@ -3833,10 +4123,66 @@ export function KuwagataShelf({
         </div>
       </div>
 
+      {tintCeremony && <TintCeremony info={tintCeremony} onDone={() => setTintCeremony(null)} />}
+
+      {itemsOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setItemsOpen(false)}
+        >
+          <div
+            className="max-h-[80vh] w-full max-w-sm overflow-y-auto rounded-2xl bg-white p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-base font-bold text-zinc-800">持ち物</h2>
+              <button
+                type="button"
+                onClick={() => setItemsOpen(false)}
+                className="rounded-full p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"
+                aria-label="閉じる"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="mb-2 text-xs font-semibold text-zinc-500">色の実</p>
+            {shizukuItems.length === 0 ? (
+              <p className="text-sm text-zinc-400">なし</p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {shizukuItems.map((item) => (
+                  <li
+                    key={item.itemKey}
+                    className="flex items-center gap-3 rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element -- 自前SVGアート */}
+                    <img
+                      src="/roadmap/items/shizuku.svg"
+                      alt=""
+                      className="h-8 w-8 object-contain"
+                      style={{ filter: tintFilter(item.itemKey) }}
+                    />
+                    <span className="flex-1 text-sm font-semibold text-zinc-800">
+                      {item.itemKey}
+                    </span>
+                    <span className="text-sm font-bold tabular-nums text-zinc-600">
+                      ×{item.quantity}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
       {selectedTank && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-2 sm:p-4"
-          onClick={() => setSelectedTankId(null)}
+          onClick={() => {
+            setSelectedTankId(null);
+            closeTintPanel();
+          }}
         >
           <div
             className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-1.5 shadow-xl sm:p-6"
@@ -3850,7 +4196,10 @@ export function KuwagataShelf({
               </h2>
               <button
                 type="button"
-                onClick={() => setSelectedTankId(null)}
+                onClick={() => {
+                  setSelectedTankId(null);
+                  closeTintPanel();
+                }}
                 className="rounded-full p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"
                 aria-label="閉じる"
               >
@@ -3884,7 +4233,110 @@ export function KuwagataShelf({
               </div>
             )}
 
-            <EnlargedTankVisual key={selectedTank.tankId} tank={selectedTank} color={tankColor(selectedTank)} nicknameOf={nicknameOf} />
+            <EnlargedTankVisual
+              key={selectedTank.tankId}
+              tank={selectedTank}
+              color={tankColor(selectedTank)}
+              nicknameOf={nicknameOf}
+              tintOf={tintOf}
+              onTapIndividual={(id) => {
+                if (
+                  selectedTank.individuals.find((i) => i.id === id)
+                    ?.growthStage !== "成虫"
+                )
+                  return;
+                setTintTargetId(id);
+                setTintPreview(null);
+                setTintError(null);
+              }}
+            />
+
+            {tintTargetId &&
+              (() => {
+                const target = selectedTank.individuals.find(
+                  (i) => i.id === tintTargetId,
+                );
+                if (!target) return null;
+                return (
+                  <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50/60 p-3">
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-sm font-bold text-zinc-800">
+                        {nicknameOf(target) ?? target.speciesName}
+                        <span className="ml-2 text-xs font-normal text-zinc-500">
+                          {GROWTH_STAGE_LABEL[target.growthStage]}
+                          {target.growthStage === "成虫"
+                            ? `・サイズ${target.sizeLevel}`
+                            : ""}
+                        </span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={closeTintPanel}
+                        className="rounded-full p-1 text-zinc-400 hover:bg-amber-100 hover:text-zinc-600"
+                        aria-label="閉じる"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    {shizukuItems.length === 0 ? (
+                      <p className="text-xs text-zinc-500">
+                        色の実がありません
+                      </p>
+                    ) : (
+                      <>
+                        <div className="mb-2 flex flex-wrap gap-1.5">
+                          {shizukuItems.map((item) => (
+                            <button
+                              key={item.itemKey}
+                              type="button"
+                              onClick={() =>
+                                setTintPreview(
+                                  tintPreview === item.itemKey
+                                    ? null
+                                    : item.itemKey,
+                                )
+                              }
+                              className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors ${
+                                tintPreview === item.itemKey
+                                  ? "border-amber-500 bg-white text-zinc-900"
+                                  : "border-zinc-200 bg-white/70 text-zinc-600"
+                              }`}
+                            >
+                              <span
+                                className="h-3 w-3 rounded-full"
+                                style={{
+                                  backgroundColor: shizukuSwatchColor(
+                                    item.itemKey,
+                                  ),
+                                }}
+                              />
+                              {item.itemKey}
+                              <span className="tabular-nums text-zinc-400">
+                                ×{item.quantity}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          disabled={!tintPreview || tintBusy}
+                          onClick={() =>
+                            tintPreview &&
+                            void applyTint(target, tintPreview)
+                          }
+                          className="flex w-full items-center justify-center gap-1.5 rounded-full bg-amber-500 py-2 text-sm font-bold text-white transition-transform active:scale-95 disabled:opacity-40"
+                        >
+                          <Paintbrush className="h-4 w-4" />
+                          色の実をあげる
+                        </button>
+                      </>
+                    )}
+                    {tintError && (
+                      <p className="mt-2 text-xs text-red-500">{tintError}</p>
+                    )}
+                  </div>
+                );
+              })()}
 
             <ul className="flex flex-col gap-2">
               {selectedTank.individuals.map((individual) => (
@@ -3899,6 +4351,7 @@ export function KuwagataShelf({
                       speciesCode={individual.speciesCode}
                       mandibleVariant={individual.mandibleVariant}
                       growthStage={individual.growthStage}
+                      tintKey={tintOf(individual)}
                     />
                     {individual.growthGauge && <GrowthGauge gauge={individual.growthGauge} />}
                     {individual.growthStage === "成虫" && (
@@ -3948,8 +4401,26 @@ export function KuwagataShelf({
                         </button>
                       </span>
                     )}
-                    <span className="text-zinc-400">{formatDate(individual.obtainedAt)}</span>
-                    {editingId === individual.id && nicknameError && <span className="text-red-500">{nicknameError}</span>}
+                    <span className="text-zinc-400">
+                      {formatDate(individual.obtainedAt)}
+                    </span>
+                    {individual.growthStage === "成虫" && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTintTargetId(individual.id);
+                          setTintPreview(null);
+                          setTintError(null);
+                        }}
+                        className="mt-1 flex w-fit items-center gap-1 rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-zinc-500 hover:border-amber-300 hover:text-amber-700"
+                      >
+                        <Paintbrush className="h-3 w-3" />
+                        色づけ
+                      </button>
+                    )}
+                    {editingId === individual.id && nicknameError && (
+                      <span className="text-red-500">{nicknameError}</span>
+                    )}
                   </div>
                 </li>
               ))}

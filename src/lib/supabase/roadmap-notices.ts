@@ -6,9 +6,10 @@ import {
   type RoadmapAnnouncement,
   type RoadmapNewEgg,
   type RoadmapNewHatch,
+  type RoadmapNewShizuku,
   type RoadmapStageUp,
 } from "@/lib/roadmap-notices";
-import { getLoginStageUps, getUncelebratedEggs, getUncelebratedHatches } from "@/lib/supabase/kuwagata";
+import { getLoginStageUps, getUncelebratedEggs, getUncelebratedHatches, getUnseenShizuku } from "@/lib/supabase/kuwagata";
 import { getTodaysTrivia, type ArthurTrivia } from "@/lib/supabase/arthur-trivia";
 import { claimRareChanceNotice, createGrantedKeysLoader, grantMilestoneEggs } from "@/lib/supabase/kuwagata-egg-events";
 
@@ -19,6 +20,8 @@ export type RoadmapNotices = {
   newEggs: RoadmapNewEgg[];
   // まだ「羽化した！」演出を見せていない個体（Stage5卒業）
   newHatches: RoadmapNewHatch[];
+  // まだ演出を見せていない色の実（シナリオ習得のご褒美）
+  newShizuku: RoadmapNewShizuku[];
   // 日数がたって成長段階が上がったのに、まだ演出を見せていないクワたん
   stageUps: RoadmapStageUp[];
   // 今日まだ見ていない、アーサーの豆知識（お知らせのあとに1日1回）。初回ユーザーには出さない。
@@ -49,16 +52,17 @@ export async function getRoadmapNotices(
   ]);
 
   if (!data)
-    return { showAdvice: false, announcements: [], newEggs: [], newHatches: [], stageUps: [], trivia: null, rareChance: null };
+    return { showAdvice: false, announcements: [], newEggs: [], newHatches: [], newShizuku: [], stageUps: [], trivia: null, rareChance: null };
 
-  const [newEggs, newHatches, stageUps] = await Promise.all([
+  const [newEggs, newHatches, newShizuku, stageUps] = await Promise.all([
     getUncelebratedEggs(userId),
     getUncelebratedHatches(userId),
+    getUnseenShizuku(userId).catch(() => []),
     getLoginStageUps(userId).catch(() => []),
   ]);
 
   if (!data.roadmap_advice_seen_at)
-    return { showAdvice: true, announcements: [], newEggs, newHatches, stageUps: [], trivia: null, rareChance };
+    return { showAdvice: true, announcements: [], newEggs, newHatches, newShizuku, stageUps: [], trivia: null, rareChance };
 
   const lastSeen = data.roadmap_last_seen_announcement_id ?? 0;
   const trivia = await getTodaysTrivia(userId).catch(() => null);
@@ -67,6 +71,7 @@ export async function getRoadmapNotices(
     announcements: ANNOUNCEMENTS.filter((a) => a.id > lastSeen),
     newEggs,
     newHatches,
+    newShizuku,
     stageUps,
     trivia,
     rareChance,

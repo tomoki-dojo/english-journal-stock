@@ -15,6 +15,7 @@ import { getOrGenerateStage3HintBlank } from "@/lib/stage3-hint-blank";
 import {
   addGrowthBoost,
   addSizeGrowthPoints,
+  grantShizuku,
   KUWAGATA_GRADUATION_BOOST_DAYS,
   KUWAGATA_MASTERED_COUNT_WEIGHT,
   recordStageClearCatch,
@@ -574,6 +575,19 @@ async function reportStageStreakResult(
     }
   };
 
+  // Stage4/5で初めてシナリオを習得したら、そのシーンの色の実を1つ渡す（棚で個体を色づけできる）。
+  const grantShizukuReward = async () => {
+    if (!newlyMastered || (stage !== 4 && stage !== 5)) return;
+    try {
+      const scenarios = stage === 4 ? await listPublishedStage4Scenarios() : await listPublishedStage5Scenarios();
+      const sceneKey = scenarios.find((row) => row.id === expressionId)?.scene_tag as string | undefined;
+      if (sceneKey) await grantShizuku(userId, sceneKey);
+    } catch (err) {
+      // ご褒美の付与に失敗しても、練習の記録自体は成功扱いにする。
+      console.error(err);
+    }
+  };
+
   await Promise.all([
     saveProgress(),
     recordDailyPractice(userId),
@@ -581,6 +595,7 @@ async function reportStageStreakResult(
     // 総習得数は、初めて習得した回だけStageごとの重みで加算する（再挑戦で稼げないように）。
     newlyMastered ? incrementTotalMasteredCount(userId, KUWAGATA_MASTERED_COUNT_WEIGHT[stage]) : Promise.resolve(),
     grantBoost(),
+    grantShizukuReward(),
   ]);
 
   return { streak: newStreak, graduated };

@@ -1,5 +1,6 @@
 // クワガタ育成機能（棚・図鑑）のデータアクセス層。
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { ITEM_TYPE_SHIZUKU, isShizukuScene, type KuwagataItem } from "@/lib/kuwagata-tint";
 import { getPlan } from "@/lib/supabase/profile";
 import { ttlCached } from "@/lib/ttl-cache";
 import { describeEggEvent, type RoadmapStageUp } from "@/lib/roadmap-notices";
@@ -95,6 +96,8 @@ export type KuwagataIndividual = {
   stageSeen: KuwagataGrowthStage;
   // ユーザーが付けた名前(未命名はnull)。
   nickname: string | null;
+  // 色の実で色づけしたシーンのキー(色づけなしはnull)。
+  tintKey: string | null;
 };
 
 export type KuwagataAreaProgress = {
@@ -606,7 +609,7 @@ export async function getUserKuwagataIndividuals(userId: string): Promise<Kuwaga
   const { data, error } = await supabaseAdmin
     .from("kuwagata_individuals")
     .select(
-      "id, species_id, obtained_via, obtained_at, size_scale, mandible_variant, hatched_at, boost_days, login_boost_days, size_growth_points, size_level_seen, stage_seen, nickname, kuwagata_species(code, name, kind, rarity, area_code)"
+      "id, species_id, obtained_via, obtained_at, size_scale, mandible_variant, hatched_at, boost_days, login_boost_days, size_growth_points, size_level_seen, stage_seen, nickname, tint_key, kuwagata_species(code, name, kind, rarity, area_code)"
     )
     .eq("user_id", userId)
     .order("obtained_at", { ascending: true });
@@ -642,6 +645,7 @@ export async function getUserKuwagataIndividuals(userId: string): Promise<Kuwaga
       sizeGrowthPoints: Number(row.size_growth_points ?? 0),
       sizeLevelSeen: Number(row.size_level_seen ?? 0),
       stageSeen: (row.stage_seen as KuwagataGrowthStage | null) ?? "卵",
+      tintKey: (row.tint_key as string | null) ?? null,
     };
   });
 }
@@ -1281,4 +1285,107 @@ export async function forceHatchTeppenToAdult(userId: string): Promise<void> {
   if (updateError) {
     throw new Error(`テッペンクワたんの羽化処理に失敗しました: ${updateError.message}`);
   }
+}
+
+
+// ---- 持ち物（色の実）と色づけ ----
+
+// シナリオを習得したときに、そのシーンの色の実を1つ付与する（演出が未表示の分としても数える）。
+export async function grantShizuku(userId: string, sceneKey: string, amount = 1): Promise<void> {
+  if (!isShizukuScene(sceneKey)) return;
+  const { error } = await supabaseAdmin.rpc("grant_kuwagata_item", {
+    p_user_id: userId,
+    p_item_type: ITEM_TYPE_SHIZUKU,
+    p_item_key: sceneKey,
+    p_amount: amount,
+  });
+  if (error) {
+    throw new Error(`色の実の付与に失敗しました: ${error.message}`);
+  }
+}
+
+// 持ち物の一覧（個数が1以上のものだけ）。
+export async function getUserKuwagataItems(userId: string): Promise<KuwagataItem[]> {
+  const { data, error } = await supabaseAdmin
+    .from("kuwagata_user_items")
+    .select("item_type, item_key, quantity")
+    .eq("user_id", userId)
+    .gt("quantity", 0);
+  if (error) {
+    throw new Error(`持ち物の取得に失敗しました: ${error.message}`);
+  }
+  return (data ?? []).map((row) => ({
+    itemType: row.item_type as string,
+    itemKey: row.item_key as string,
+    quantity: row.quantity as number,
+  }));
+}
+
+// 「手に入れた！」演出をまだ見せていない色の実（シーンごとの個数）。
+export async function getUnseenShizuku(userId: string): Promise<{ sceneKey: string; count: number }[]> {
+  const { data, error } = await supabaseAdmin
+    .from("kuwagata_user_items")
+    .select("item_key, unseen_quantity")
+    .eq("user_id", userId)
+    .eq("item_type", ITEM_TYPE_SHIZUKU)
+    .gt("unseen_quantity", 0)
+    .order("updated_at", { ascending: true });
+  if (error) {
+    throw new Error(`未演出の色の実の取得に失敗しました: ${error.message}`);
+  }
+  return (data ?? []).map((row) => ({ sceneKey: row.item_key as string, count: row.unseen_quantity as number }));
+}
+
+export async function markShizukuSeen(userId: string, sceneKey: string): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from("kuwagata_user_items")
+    .update({ unseen_quantity: 0 })
+    .eq("user_id", userId)
+    .eq("item_type", ITEM_TYPE_SHIZUKU)
+    .eq("item_key", sceneKey);
+  if (error) {
+    throw new Error(`色の実の既読保存に失敗しました: ${error.message}`);
+  }
+}
+
+// 色の実を1つ使って、個体を色づけする。重ね付けは上書き（元に戻す手段はない）。
+// 成功したらtrue。しずくが無い・本人の個体でない場合はfalse（実は減らさない）。
+export async function applyShizukuToIndividual(
+  userId: string,
+  individualId: string,
+  sceneKey: string
+): Promise<boolean> {
+  if (!isShizukuScene(sceneKey)) return false;
+
+  // 色づけは成虫だけ。自分の個体かどうかも、ここでまとめて確認する。
+  const individuals = await getUserKuwagataIndividuals(userId);
+  const target = individuals.find((individual) => individual.id === individualId);
+  if (!target || getIndividualGrowthStage(target) !== "成虫") return false;
+
+  const { data: consumed, error: consumeError } = await supabaseAdmin.rpc("consume_kuwagata_item", {
+    p_user_id: userId,
+    p_item_type: ITEM_TYPE_SHIZUKU,
+    p_item_key: sceneKey,
+  });
+  if (consumeError) {
+    throw new Error(`色の実の消費に失敗しました: ${consumeError.message}`);
+  }
+  if (!consumed) return false;
+
+  const { error: updateError } = await supabaseAdmin
+    .from("kuwagata_individuals")
+    .update({ tint_key: sceneKey })
+    .eq("id", individualId)
+    .eq("user_id", userId);
+  if (updateError) {
+    // 色づけに失敗したら、消費した実を返す。
+    await supabaseAdmin.rpc("grant_kuwagata_item", {
+      p_user_id: userId,
+      p_item_type: ITEM_TYPE_SHIZUKU,
+      p_item_key: sceneKey,
+      p_amount: 1,
+    });
+    throw new Error(`色づけの保存に失敗しました: ${updateError.message}`);
+  }
+  return true;
 }
