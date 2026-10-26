@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { KnownCreatureIcon } from "@/components/roadmap/kuwagata-shelf";
 import { GrowthBadge } from "./growth-badge";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
 import type { WarmthLevel } from "./types";
@@ -117,15 +118,7 @@ export function SceneScenarioPicker<T extends PickerScenario>({
               {(() => {
                 const icon = sceneIcon?.(scene.name);
                 if (!icon) return null;
-                return (
-                  // eslint-disable-next-line @next/next/no-img-element -- 自前SVGアート
-                  <img
-                    src={`/roadmap/kuwagata/kuwagata_${icon.code}_front_body.svg`}
-                    alt=""
-                    className="h-10 w-10 shrink-0 object-contain"
-                    style={icon.owned ? undefined : { filter: "brightness(0)", opacity: 0.22 }}
-                  />
-                );
+                return <KnownCreatureIcon code={icon.code} owned={icon.owned} />;
               })()}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">

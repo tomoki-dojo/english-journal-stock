@@ -1053,7 +1053,11 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
   "KW-0059": buildNewSpeciesWalkerArt("KW-0059", { frontOrigin: "50% 70%", backOrigin: "70% 60%" }),
   // ケイクワたん(銀行・契約のシーン。ツノ=mandible_01は固定のまま)
   "KW-0060": buildNewSpeciesWalkerArt("KW-0060", { frontOrigin: "50% 70%", backOrigin: "70% 60%" }),
-  "KW-0061": buildNewSpeciesWalkerArt("KW-0061", { frontOrigin: "50% 70%", backOrigin: "70% 60%" }),
+  // ジョウクワたん(生活サービスのシーン)。背面のときだけ、大顎を体の奥(後ろ)に描く
+  "KW-0061": (() => {
+    const art = buildNewSpeciesWalkerArt("KW-0061", { frontOrigin: "50% 70%", backOrigin: "70% 60%" });
+    return { front: art.front, back: art.back && { ...art.back, mandibleBehindBody: true } };
+  })(),
   // タスクワたん(トラブル対応のシーン)。背面だけ、奥側の脚 back_leg_L1 が体の奥に加わる
   "KW-0062": (() => {
     const art = buildNewSpeciesWalkerArt("KW-0062", { frontOrigin: "50% 70%", backOrigin: "70% 60%" });
@@ -1164,6 +1168,16 @@ const KNOWN_STAGE_ART: Partial<Record<string, KnownStageArt>> = {
   "KW-0066": buildKnownStageArt("KW-0066"),
 };
 
+// シーン選択画面などで使う、止まった姿の小さなアイコン(大顎・脚つき)。実アートが無い種は何も出さない。
+export function KnownCreatureIcon({ code, owned = true, className = "h-10 w-10" }: { code: string; owned?: boolean; className?: string }) {
+  if (!KNOWN_CREATURE_ART[code]) return null;
+  return (
+    <div className={`relative shrink-0 ${className}`} style={owned ? undefined : { filter: "brightness(0)", opacity: 0.22 }}>
+      <KnownCreatureSprite code={code} facing="front" mandibleVariant={1} still />
+    </div>
+  );
+}
+
 // 卵・蛹は動かない(その場に置いたまま)。幼虫・成虫(と、実アートが無い種のBugアイコン)は歩き回る。
 function isStationaryStage(code: string, growthStage: KuwagataGrowthStage): boolean {
   const stageArt = KNOWN_STAGE_ART[code];
@@ -1185,7 +1199,7 @@ function isStationaryStage(code: string, growthStage: KuwagataGrowthStage): bool
 // growthStageが卵・幼虫・蛹で、その種にKNOWN_STAGE_ARTがあれば成虫のアートの代わりに
 // 成長段階のアートを描画する(無ければ成虫のアートにフォールバック)。
 // headingは幼虫専用(左向き1方向のみの絵なので、右へ進むときだけ左右反転する)。
-function KnownCreatureSprite({
+export function KnownCreatureSprite({
   code,
   facing,
   mandibleVariant,
@@ -4449,6 +4463,9 @@ function LockedTankLink({ count }: { count: number }) {
 // 新種の棚の1ページの個数。PC/タブレット(sm以上)は3列×3段=9、スマホは2列×4段=8。
 const NEW_SHELF_PAGE_SIZE_WIDE = 9;
 const NEW_SHELF_PAGE_SIZE_NARROW = 8;
+// クワたんシリーズの棚は2行ずつ(横3列なら6個、横2列なら4個)。
+const KNOWN_SHELF_PAGE_SIZE_WIDE = 6;
+const KNOWN_SHELF_PAGE_SIZE_NARROW = 4;
 
 export function KuwagataShelf({
   tanks,
@@ -4723,6 +4740,7 @@ export function KuwagataShelf({
   };
 
   const newShelfRef = useRef<HTMLDivElement>(null);
+  const knownShelfRef = useRef<HTMLDivElement>(null);
   const [isWideShelf, setIsWideShelf] = useState(true);
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 640px)");
@@ -4735,6 +4753,18 @@ export function KuwagataShelf({
     mq.addEventListener("change", update);
     return () => mq.removeEventListener("change", update);
   }, []);
+  const [knownPage, setKnownPage] = useState(0);
+  const handleKnownShelfScroll = () => {
+    const el = knownShelfRef.current;
+    if (el && el.clientWidth > 0) setKnownPage(Math.round(el.scrollLeft / el.clientWidth));
+  };
+  const scrollKnownShelf = (dir: 1 | -1) => {
+    const el = knownShelfRef.current;
+    if (!el) return;
+    const last = Math.max(0, Math.ceil(el.scrollWidth / el.clientWidth) - 1);
+    const next = Math.min(last, Math.max(0, knownPage + dir));
+    el.scrollTo({ left: next * el.clientWidth, behavior: "smooth" });
+  };
   const [newPage, setNewPage] = useState(0);
   const handleNewShelfScroll = () => {
     const el = newShelfRef.current;
@@ -4752,6 +4782,9 @@ export function KuwagataShelf({
   const selectedTank = lookupTanks.find((t) => t.tankId === selectedTankId) ?? null;
   const knownGroups = groupBySpecies(knownTanks);
   const newGroups = groupBySpecies(tanks);
+  const knownPageSize = isWideShelf ? KNOWN_SHELF_PAGE_SIZE_WIDE : KNOWN_SHELF_PAGE_SIZE_NARROW;
+  const knownPages: KuwagataShelfTank[][][] = [];
+  for (let i = 0; i < knownGroups.length; i += knownPageSize) knownPages.push(knownGroups.slice(i, i + knownPageSize));
   // 新種の棚は9個(3×3)ずつのページに分け、右スクロールで次のページを見せる。
   const newPageSize = isWideShelf ? NEW_SHELF_PAGE_SIZE_WIDE : NEW_SHELF_PAGE_SIZE_NARROW;
   // 新種の棚の並び。表示枠を超えて隠れている種類があれば、最後に鍵付きの水槽(null)を1つ並べる。
@@ -4797,31 +4830,69 @@ export function KuwagataShelf({
         <div className="bg-gradient-to-b from-zinc-100 to-zinc-50 shadow-sm">
           <div className="h-3 border-b border-zinc-400" style={RACK_BAR_STYLE} />
           {knownTanks.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-3">
-              {knownGroups.map((group) => {
-                const tank = group[0];
-                const representative = pickRepresentative(group);
-                const count = group.reduce((sum, t) => sum + t.individuals.length, 0);
-                return (
-                  <RackCell key={tank.speciesId}>
-                    <TankButton
-                      onClick={() => setSelectedTankId(tank.tankId)}
-                      variant="known"
-                      name={tank.speciesName}
-                      sub={count > 1 ? `${count}匹` : GROWTH_STAGE_LABEL[representative.growthStage]}
+            <div className="relative">
+              <div
+                ref={knownShelfRef}
+                onScroll={handleKnownShelfScroll}
+                className="flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              >
+                {knownPages.map((pageGroups, pageIndex) => (
+                  <div key={pageIndex} className="grid w-full shrink-0 snap-start grid-cols-2 content-start sm:grid-cols-3">
+                    {pageGroups.map((group) => {
+                      const tank = group[0];
+                      const representative = pickRepresentative(group);
+                      const count = group.reduce((sum, t) => sum + t.individuals.length, 0);
+                      return (
+                        <RackCell key={tank.speciesId}>
+                          <TankButton
+                            onClick={() => setSelectedTankId(tank.tankId)}
+                            variant="known"
+                            name={tank.speciesName}
+                            sub={count > 1 ? `${count}匹` : GROWTH_STAGE_LABEL[representative.growthStage]}
+                          >
+                            <TankOccupant
+                              color={KNOWN_SPECIES_COLOR}
+                              sizeScale={representative.sizeScale}
+                              speciesCode={representative.speciesCode}
+                              mandibleVariant={representative.mandibleVariant}
+                              growthStage={representative.growthStage}
+                            />
+                          </TankButton>
+                        </RackCell>
+                      );
+                    })}
+                    {knownPages.length > 1 ? (
+                      <RackEmptyCells count={knownPageSize - pageGroups.length} />
+                    ) : (
+                      <RackFillers count={pageGroups.length} />
+                    )}
+                  </div>
+                ))}
+              </div>
+              {knownPages.length > 1 && (
+                <div className="absolute left-1/2 top-1 z-10 flex -translate-x-1/2 gap-2">
+                  {knownPage > 0 && (
+                    <button
+                      type="button"
+                      aria-label="前の棚へ"
+                      onClick={() => scrollKnownShelf(-1)}
+                      className="flex h-9 w-9 items-center justify-center rounded-full bg-white/50 text-zinc-500 shadow ring-1 ring-zinc-300/70 backdrop-blur-sm transition hover:bg-white/80 active:scale-95"
                     >
-                      <TankOccupant
-                        color={KNOWN_SPECIES_COLOR}
-                        sizeScale={representative.sizeScale}
-                        speciesCode={representative.speciesCode}
-                        mandibleVariant={representative.mandibleVariant}
-                        growthStage={representative.growthStage}
-                      />
-                    </TankButton>
-                  </RackCell>
-                );
-              })}
-              <RackFillers count={knownGroups.length} />
+                      <ChevronLeft className="h-5 w-5" strokeWidth={1.75} />
+                    </button>
+                  )}
+                  {knownPage < knownPages.length - 1 && (
+                    <button
+                      type="button"
+                      aria-label="次の棚へ"
+                      onClick={() => scrollKnownShelf(1)}
+                      className="flex h-9 w-9 items-center justify-center rounded-full bg-white/50 text-zinc-500 shadow ring-1 ring-zinc-300/70 backdrop-blur-sm transition hover:bg-white/80 active:scale-95"
+                    >
+                      <ChevronRight className="h-5 w-5" strokeWidth={1.75} />
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
