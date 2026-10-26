@@ -308,6 +308,13 @@ export function RoadmapSoundProvider({
   );
 }
 
+// ミュート中(音量0)かどうか。音声(例文・つぶやき)の再生側が、鳴らす前に見る。
+// サウンドの外(ロードマップ以外の画面)では常にfalse。
+export function useSoundMuted(): boolean {
+  const ctx = useContext(SoundContext);
+  return ctx ? ctx.level === 0 : false;
+}
+
 export function usePagePlayer() {
   return useContext(SoundContext)?.playPage ?? (() => {});
 }

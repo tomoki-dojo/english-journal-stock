@@ -7,6 +7,8 @@ import {
   isStage5TrackUnlocked,
 } from "@/lib/supabase/speaking-roadmap";
 import type { Stage5Track } from "@/components/roadmap/types";
+import { getUserKuwagataIndividuals } from "@/lib/supabase/kuwagata";
+import { LIMITED_SPECIES_CODES } from "@/lib/kuwagata-limited";
 
 // Stage5（上級ロールプレイ）のシナリオ選択画面用の一覧。?track=daily|businessでトラックを
 // 指定する（Stage4と違い、日常編・ビジネス編は完全に独立したトラックのため）。
@@ -40,13 +42,16 @@ export async function GET(request: Request) {
     }
 
     const plan = await getPlan(user.id);
-    const [scenarios, usage] = await Promise.all([
+    const [scenarios, usage, individuals] = await Promise.all([
       listStage5Scenarios(user.id, track),
       getStage5UsageInfo(user.id, plan),
+      getUserKuwagataIndividuals(user.id).catch(() => []),
     ]);
+    // 持っている限定種（シーンカードのアイコンを、実画像かシルエットかで出し分ける）
+    const ownedLimitedSpecies = LIMITED_SPECIES_CODES.filter((code) => individuals.some((i) => i.speciesCode === code));
 
     return NextResponse.json(
-      { scenarios, usage },
+      { scenarios, usage, ownedLimitedSpecies },
       { headers: { "Cache-Control": "no-store, must-revalidate" } }
     );
   } catch (err) {

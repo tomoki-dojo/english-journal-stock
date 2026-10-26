@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { TappableText } from "./tappable-text";
 import { RoundHeader, UsageBonusBadge } from "./round-header";
 import { SceneScenarioPicker } from "./scene-scenario-picker";
+import { LIMITED_SPECIES_BY_SCENE } from "@/lib/kuwagata-limited";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
 import { ARTHUR_NAME, ArthurAvatar } from "./arthur";
 import { useSpeechRecognition } from "@/lib/use-speech-recognition";
@@ -40,6 +41,7 @@ export function Stage5Practice({ track }: Stage5PracticeProps) {
   const [state, setState] = useState<ViewState>("loading");
   const [scenarios, setScenarios] = useState<Stage5ScenarioListItem[]>([]);
   const [usage, setUsage] = useState<Stage5UsageInfo | null>(null);
+  const [ownedLimited, setOwnedLimited] = useState<string[]>([]);
   const [limit, setLimit] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [notReadyMessage, setNotReadyMessage] = useState("");
@@ -71,6 +73,7 @@ export function Stage5Practice({ track }: Stage5PracticeProps) {
       }
       setScenarios(json.scenarios as Stage5ScenarioListItem[]);
       setUsage(json.usage as Stage5UsageInfo);
+      setOwnedLimited((json.ownedLimitedSpecies as string[] | undefined) ?? []);
       setState("picker");
     } catch (err) {
       setError(err instanceof Error ? err.message : "シナリオ一覧の取得に失敗しました");
@@ -237,6 +240,10 @@ export function Stage5Practice({ track }: Stage5PracticeProps) {
             scenarios={scenarios}
             disabled={usage ? usage.remaining <= 0 : false}
             onStart={startScenario}
+            sceneIcon={(sceneName) => {
+              const code = LIMITED_SPECIES_BY_SCENE[sceneName];
+              return code ? { code, owned: ownedLimited.includes(code) } : null;
+            }}
           />
         )}
       </div>

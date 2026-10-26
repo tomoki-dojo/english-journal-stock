@@ -56,4 +56,12 @@ export const KUWAGATA_BASE_HUE: Record<string, number | null> = {
   "KW-0056": 118,
   "KW-0057": 64,
   "KW-0058": 152,
+  "KW-0059": 45,
+  "KW-0060": 212,
+  "KW-0061": 54,
+  "KW-0062": 30,
+  "KW-0063": 299,
+  "KW-0064": 350,
+  "KW-0065": 176,
+  "KW-0066": 94,
 };

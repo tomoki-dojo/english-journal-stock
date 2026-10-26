@@ -11,7 +11,8 @@ import {
 } from "@/lib/roadmap-notices";
 import { getLoginStageUps, getUncelebratedEggs, getUncelebratedHatches, getUnseenShizuku } from "@/lib/supabase/kuwagata";
 import { getTodaysTrivia, type ArthurTrivia } from "@/lib/supabase/arthur-trivia";
-import { claimRareChanceNotice, createGrantedKeysLoader, grantMilestoneEggs } from "@/lib/supabase/kuwagata-egg-events";
+import { grantDecoItems, grantRimItems } from "@/lib/supabase/kuwagata-rewards";
+import { claimRareChanceNotice, createGrantedKeysLoader, grantLimitedEggs, grantMilestoneEggs } from "@/lib/supabase/kuwagata-egg-events";
 
 export type RoadmapNotices = {
   showAdvice: boolean;
@@ -47,7 +48,15 @@ export async function getRoadmapNotices(
       .select("roadmap_advice_seen_at, roadmap_last_seen_announcement_id")
       .eq("user_id", userId)
       .maybeSingle(),
-    grantMilestoneEggs(userId, known, loadGrantedKeys).catch(() => {}),
+    // 節目のタマゴと限定種のタマゴは同じ台帳を使うので、続けて配る（同時に走らせない）。
+    grantMilestoneEggs(userId, known, loadGrantedKeys)
+      .catch(() => {})
+      .then(() => grantLimitedEggs(userId, loadGrantedKeys))
+      .catch(() => {})
+      .then(() => grantRimItems(userId, loadGrantedKeys))
+      .catch(() => {})
+      .then(() => grantDecoItems(userId, loadGrantedKeys))
+      .catch(() => {}),
     claimRareChanceNotice(userId, known?.state, loadGrantedKeys).catch(() => null),
   ]);
 

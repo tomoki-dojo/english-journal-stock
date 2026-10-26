@@ -17,6 +17,7 @@ export type RoadmapNewEgg = {
 // 節目のタマゴ（kuwagata_egg_events.event_key）の、もらえた理由。「days:7」「mastered:30」の形。
 export function describeEggEvent(eventKey: string): string | null {
   const [kind, value] = eventKey.split(":");
+  if (kind === "limited") return "シナリオを習得した！";
   const count = Number(value);
   if (!Number.isFinite(count)) return null;
   if (kind === "days") return `練習日数が${count}日になった！`;

@@ -52,11 +52,14 @@ export function SceneScenarioPicker<T extends PickerScenario>({
   scenarios,
   disabled,
   onStart,
+  sceneIcon,
 }: {
   stage: 4 | 5;
   scenarios: T[];
   disabled: boolean;
   onStart: (scenario: T) => void;
+  // シーンごとの限定種アイコン（持っていれば実画像、まだならシルエット）。無いシーンは出さない。
+  sceneIcon?: (sceneName: string) => { code: string; owned: boolean } | null;
 }) {
   const color = STAGE_COLORS[stage];
   const scenes = useMemo(() => groupByScene(scenarios), [scenarios]);
@@ -111,6 +114,19 @@ export function SceneScenarioPicker<T extends PickerScenario>({
               }}
               className="flex cursor-pointer items-center gap-3 p-3"
             >
+              {(() => {
+                const icon = sceneIcon?.(scene.name);
+                if (!icon) return null;
+                return (
+                  // eslint-disable-next-line @next/next/no-img-element -- 自前SVGアート
+                  <img
+                    src={`/roadmap/kuwagata/kuwagata_${icon.code}_front_body.svg`}
+                    alt=""
+                    className="h-10 w-10 shrink-0 object-contain"
+                    style={icon.owned ? undefined : { filter: "brightness(0)", opacity: 0.22 }}
+                  />
+                );
+              })()}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-bold text-zinc-900">{scene.name}</p>

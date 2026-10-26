@@ -2245,3 +2245,163 @@ body {
     animation: none;
   }
 }
+
+/* 共通・特別アクション（体全体を動かす。時間は kuwagata-actions.ts と合わせる） */
+@keyframes kw-act-hop { 0%,100%{transform:translateY(0)} 20%{transform:translateY(-14%)} 40%{transform:translateY(0)} 60%{transform:translateY(-14%)} 80%{transform:translateY(0)} }
+@keyframes kw-act-chew { 0%,100%{transform:scale(1)} 15%,45%,75%{transform:scale(1.06,.94)} 30%,60%,90%{transform:scale(.96,1.04)} }
+@keyframes kw-act-sway { 0%,100%{transform:rotate(0)} 25%{transform:rotate(-7deg) translateX(-3%)} 75%{transform:rotate(7deg) translateX(3%)} }
+@keyframes kw-act-roll { 0%{transform:rotate(0)} 100%{transform:rotate(360deg)} }
+@keyframes kw-act-stretch { 0%,100%{transform:scale(1)} 40%,60%{transform:scale(.9,1.14) translateY(-4%)} }
+@keyframes kw-act-chatter { 0%,100%{transform:translateY(0)} 10%,30%,50%,70%,90%{transform:translateY(-4%) scale(1.03)} 20%,40%,60%,80%{transform:translateY(0)} }
+@keyframes kw-act-nod { 0%,100%{transform:rotate(0)} 20%,60%{transform:rotate(6deg) translateY(2%)} 40%,80%{transform:rotate(0)} }
+@keyframes kw-act-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-22%)} }
+@keyframes kw-act-spin { 0%{transform:rotate(0)} 100%{transform:rotate(720deg)} }
+@keyframes kw-act-puff { 0%,100%{transform:scale(1)} 30%,70%{transform:scale(1.16)} }
+@keyframes kw-act-lunge { 0%,100%{transform:translateX(0)} 35%{transform:translateX(-6%)} 55%{transform:translateX(14%)} }
+@keyframes kw-act-bow { 0%,100%{transform:rotate(0)} 40%,70%{transform:rotate(18deg) translateY(4%)} }
+@keyframes kw-flash-ring { 0% { opacity: .9; transform: translate(-50%,-50%) scale(.3); } 100% { opacity: 0; transform: translate(-50%,-50%) scale(2.2); } }
+.kw-flash-ring { position: absolute; left: 50%; top: 50%; width: 70%; aspect-ratio: 1/1; border-radius: 9999px; opacity: 0; animation: kw-flash-ring 1000ms ease-out 3; }
+.kw-flash-ring-silver { border: 3px solid #eaf3ff; box-shadow: 0 0 14px #9fc4ff, inset 0 0 14px #9fc4ff; }
+.kw-flash-ring-gold { border: 4px solid #ffd24a; box-shadow: 0 0 20px #ffb300, inset 0 0 20px #ffb300; }
+
+/* プレクワたんのビーム: 緑のマルが光って(charge)、左下へ光線(ray)が伸びる。時間は kuwagata-actions.ts の beam と合わせる */
+@keyframes kw-act-beam { 0%,100%{transform:translate(0,0)} 20%,30%{transform:translate(1.5%,-1%) scale(1.02)} 70%{transform:translate(-1.5%,1%)} }
+@keyframes kw-beam-charge { 0%{opacity:0;transform:translate(-50%,-50%) scale(.3)} 30%{opacity:1;transform:translate(-50%,-50%) scale(1.6)} 70%{opacity:1;transform:translate(-50%,-50%) scale(1.2)} 100%{opacity:0;transform:translate(-50%,-50%) scale(.3)} }
+@keyframes kw-beam-ray { 0%,25%{transform:scaleX(0);opacity:0} 35%{transform:scaleX(1);opacity:1} 75%{transform:scaleX(1);opacity:1} 100%{transform:scaleX(1);opacity:0} }
+.kw-beam-charge { position:absolute; left:0; top:0; width:16px; height:16px; border-radius:9999px; background:radial-gradient(circle,#fff 0%,#b6ff9e 40%,rgba(120,194,105,0) 75%); box-shadow:0 0 10px 4px #78c269; animation:kw-beam-charge 2000ms ease-in-out; }
+.kw-beam-ray { position:absolute; left:0; top:0; width:180px; height:7px; margin-top:-3.5px; border-radius:9999px; transform-origin:0 50%; rotate:155deg; background:linear-gradient(90deg,#fff 0%,#b6ff9e 20%,#78c269 70%,rgba(120,194,105,0) 100%); box-shadow:0 0 10px 3px rgba(120,194,105,.8); animation:kw-beam-ray 2000ms ease-out; }
+
+/* ネゴクワたんの地鳴り: 少し浮いて、ドシンと落ちる(3回)。落ちるたびに体が潰れ、足元に輪が広がる。時間は kuwagata-actions.ts の stomp と合わせる */
+@keyframes kw-act-stomp {
+  0%,100% { transform: translate(0,0) scale(1,1); }
+  8% { transform: translateY(-9%) scale(.98,1.04); }
+  16% { transform: translateY(0) scale(1.1,.88); }
+  22% { transform: translate(-1.2%,0) scale(1,1); }
+  26% { transform: translate(1.2%,0); }
+  33% { transform: translateY(-9%) scale(.98,1.04); }
+  41% { transform: translateY(0) scale(1.1,.88); }
+  47% { transform: translate(-1.2%,0) scale(1,1); }
+  51% { transform: translate(1.2%,0); }
+  58% { transform: translateY(-9%) scale(.98,1.04); }
+  66% { transform: translateY(0) scale(1.12,.86); }
+  72% { transform: translate(-1.5%,0) scale(1,1); }
+  78% { transform: translate(1.5%,0); }
+  86% { transform: translate(0,0); }
+}
+@keyframes kw-stomp-ring { 0% { opacity:.8; transform: translate(-50%,0) scale(.2,.1); } 100% { opacity:0; transform: translate(-50%,0) scale(1.6,.5); } }
+.kw-stomp-ring { position:absolute; left:50%; bottom:0; width:70%; aspect-ratio:2/1; border-radius:9999px; border:3px solid rgba(113,113,122,.7); opacity:0; animation: kw-stomp-ring 520ms ease-out both; }
+
+/* テレクワたんの電波: 小さな弧が上へ広がって消える(3本が少しずつずれて出る)。時間は kuwagata-actions.ts の radio と合わせる */
+@keyframes kw-act-radio { 0%,100% { transform: translate(0,0); } 10%,30%,50% { transform: translate(-.8%,0) rotate(-1deg); } 20%,40%,60% { transform: translate(.8%,0) rotate(1deg); } 70% { transform: translate(0,0); } }
+@keyframes kw-radio-wave { 0% { opacity:0; transform: translate(-50%,0) scale(.3); } 20% { opacity:1; } 100% { opacity:0; transform: translate(-50%,-90%) scale(1.8); } }
+.kw-radio-wave { position:absolute; left:0; top:0; width:44px; height:22px; border-radius:44px 44px 0 0; border:4px solid #7fd8ff; border-bottom:none; box-shadow:0 0 8px rgba(127,216,255,.8); opacity:0; animation: kw-radio-wave 1000ms ease-out both; }
+
+/* ほっこり: ふわっと大きく弾んでハートが舞う / キリッ: 背筋を伸ばして青く光る / きらきらダンス: 虹色に光って左右に踊る */
+.kw-flash-ring-pink { border: 3px solid #ff9ec4; box-shadow: 0 0 16px #ff7eb0, inset 0 0 14px #ff9ec4; }
+.kw-flash-ring-blue { border: 3px solid #4aa8ff; box-shadow: 0 0 18px #4aa8ff, inset 0 0 14px #a8d8ff; }
+.kw-flash-ring-rainbow { border: 4px solid transparent; background: conic-gradient(from 0deg, #ff6b6b, #ffd93d, #6bff9e, #6bcbff, #c77dff, #ff6b6b) border-box; -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; box-shadow: 0 0 18px rgba(255,255,255,.7); }
+
+/* ほっこり: 少し横に潰れて、ゆっくりフワフワ揺れる(タマゴをもっとゆっくりした感じ) */
+@keyframes kw-act-sp-daily {
+  0%,100% { transform: scale(1.06,.94) translate(0,0) rotate(0); filter: drop-shadow(0 0 8px #ffc2d9); }
+  20% { transform: scale(1.08,.92) translate(-2%,-5%) rotate(-3deg); }
+  40% { transform: scale(1.05,.95) translate(0,-8%) rotate(0); filter: drop-shadow(0 0 12px #ffc2d9) brightness(1.08); }
+  60% { transform: scale(1.08,.92) translate(2%,-5%) rotate(3deg); }
+  80% { transform: scale(1.05,.95) translate(0,-2%) rotate(0); }
+}
+@keyframes kw-soft-ring { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.6); } 40% { opacity: .5; } 100% { opacity: 0; transform: translate(-50%,-50%) scale(1.5); } }
+/* キリッ: 光を弱めた版(動きはそのまま) */
+@keyframes kw-act-sp-business {
+  0%,100% { transform: scale(1) rotate(0); filter: none; }
+  12% { transform: translateY(-16%) scale(.94,1.16); filter: drop-shadow(0 0 6px #4aa8ff) brightness(1.15); }
+  24% { transform: translateY(0) scale(1.06,.96); filter: drop-shadow(0 0 8px #a8d8ff) brightness(1.25); }
+  40% { transform: translateY(0) scale(1,1.08); filter: drop-shadow(0 0 6px #4aa8ff) brightness(1.1); }
+  60% { transform: translateY(-16%) scale(.94,1.16); filter: drop-shadow(0 0 6px #4aa8ff) brightness(1.15); }
+  72% { transform: translateY(0) scale(1.06,.96); filter: drop-shadow(0 0 9px #a8d8ff) brightness(1.3); }
+  90% { transform: scale(1.04); filter: drop-shadow(0 0 6px #4aa8ff) brightness(1.1); }
+}
+/* きらきらダンス: 反復横跳び(左右にすばやくステップ)。体の光は虹色に変わる */
+
+/* きらきらダンス: 反復横跳びのあと、1回転して決める。体の光は虹色に変わる */
+@keyframes kw-act-sp-limited {
+  0%,100% { transform: translateX(0) rotate(0); filter: drop-shadow(0 0 12px #ff6b6b) brightness(1.2); }
+  6% { transform: translateX(-16%); }
+  12% { transform: translateX(16%); filter: drop-shadow(0 0 14px #ffd93d) brightness(1.3); }
+  18% { transform: translateX(-16%); }
+  24% { transform: translateX(16%); filter: drop-shadow(0 0 14px #6bff9e) brightness(1.3); }
+  30% { transform: translateX(-16%); }
+  36% { transform: translateX(16%); filter: drop-shadow(0 0 16px #6bcbff) brightness(1.4); }
+  42% { transform: translateX(0) rotate(0); }
+  50% { transform: translateY(-14%) rotate(180deg) scale(1.12); filter: drop-shadow(0 0 18px #c77dff) brightness(1.5); }
+  60% { transform: translateY(-6%) rotate(360deg) scale(1.15); filter: drop-shadow(0 0 20px #ff6b6b) brightness(1.5); }
+  72% { transform: translateY(0) rotate(360deg) scale(1.05); filter: drop-shadow(0 0 14px #ffd93d) brightness(1.3); }
+  85% { transform: scale(1) rotate(360deg); filter: drop-shadow(0 0 10px #6bff9e) brightness(1.15); }
+}
+
+/* 飾りの✦などは、体の中心から外側(コンテナ幅・高さに対する%)へ飛び出して消える */
+@keyframes kw-flash-star { 0% { opacity: 0; left: 50%; top: 50%; transform: translate(-50%,-50%) scale(.2); } 25% { opacity: 1; } 100% { opacity: 0; left: calc(50% + var(--fx)); top: calc(50% + var(--fy)); transform: translate(-50%,-50%) scale(1.3) rotate(120deg); } }
+@keyframes kw-soft-float { 0% { opacity: 0; left: 50%; top: 50%; transform: translate(-50%,-50%) scale(.6); } 30% { opacity: .8; } 100% { opacity: 0; left: calc(50% + var(--fx)); top: calc(50% + var(--fy) - 10%); transform: translate(-50%,-50%) scale(1) rotate(15deg); } }
+.kw-flash-star { position: absolute; left: 50%; top: 50%; font-size: 18px; opacity: 0; animation: kw-flash-star 1000ms ease-out infinite; }
+.kw-soft-float { position: absolute; left: 50%; top: 50%; font-size: 14px; animation: kw-soft-float 2200ms ease-in-out infinite; }
+/* ぎんぎら/こがねの舞: 光をひかえめにした版 */
+@keyframes kw-act-sp-silver {
+  0%,100% { transform: scale(1) rotate(0); filter: none; }
+  15% { transform: translateY(-14%) scale(1.12) rotate(-8deg); filter: drop-shadow(0 0 6px #eaf3ff) brightness(1.15); }
+  30% { transform: translateY(0) scale(1.05) rotate(8deg); filter: drop-shadow(0 0 8px #ffffff) brightness(1.25); }
+  45% { transform: translateY(-14%) scale(1.12) rotate(-8deg); filter: drop-shadow(0 0 6px #eaf3ff) brightness(1.15); }
+  60% { transform: translateY(0) scale(1.05) rotate(8deg); filter: drop-shadow(0 0 8px #ffffff) brightness(1.25); }
+  80% { transform: scale(1.1) rotate(0); filter: drop-shadow(0 0 10px #ffffff) brightness(1.2); }
+}
+@keyframes kw-act-sp-gold {
+  0%,100% { transform: scale(1) rotate(0); filter: none; }
+  10% { transform: translateY(-18%) scale(1.18) rotate(-10deg); filter: drop-shadow(0 0 7px #ffd24a) brightness(1.2); }
+  22% { transform: translateY(0) scale(1.08) rotate(10deg); filter: drop-shadow(0 0 9px #fff3b0) brightness(1.3); }
+  34% { transform: translateY(-18%) scale(1.18) rotate(-10deg); filter: drop-shadow(0 0 7px #ffd24a) brightness(1.2); }
+  46% { transform: translateY(0) scale(1.08) rotate(10deg); filter: drop-shadow(0 0 9px #fff3b0) brightness(1.3); }
+  62% { transform: translateY(-10%) scale(1.2) rotate(360deg); filter: drop-shadow(0 0 10px #fff3b0) brightness(1.35); }
+  85% { transform: scale(1.12) rotate(360deg); filter: drop-shadow(0 0 12px #ffffff) brightness(1.25); }
+}
+.kw-flash-ring-silver { box-shadow: 0 0 8px #9fc4ff, inset 0 0 8px #9fc4ff !important; }
+.kw-flash-ring-gold { box-shadow: 0 0 10px #ffb300, inset 0 0 10px #ffb300 !important; }
+
+/* つぶやきの吹き出し: ふわっと出る */
+@keyframes kw-murmur-in { from { opacity: 0; margin-bottom: -6px; } to { opacity: 1; margin-bottom: 0; } }
+.kw-murmur { animation: kw-murmur-in 400ms ease-out; }
+
+/* 置物に来たときの動き(伸び縮み。専用の動きは後で差し替え) */
+@keyframes kw-deco-hop-on {
+  0% { transform: scale(1, 1); }
+  12% { transform: scale(1.18, 0.78); }
+  30% { transform: translateY(-45%) scale(0.86, 1.25); }
+  42% { transform: translateY(-30%) scale(1.1, 0.88); }
+  55% { transform: translateY(-30%) scale(0.94, 1.1); }
+  70% { transform: translateY(-30%) scale(1, 1); }
+  82% { transform: translateY(-30%) scale(1.1, 0.85); }
+  92% { transform: translateY(-38%) scale(0.9, 1.15); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+@keyframes kw-deco-peek {
+  0%, 100% { transform: scale(1, 1) rotate(0deg); }
+  25% { transform: scale(0.92, 1.22) rotate(-8deg); }
+  50% { transform: scale(1, 1) rotate(0deg); }
+  75% { transform: scale(0.92, 1.22) rotate(-8deg); }
+}
+@keyframes kw-deco-touch {
+  0%, 100% { transform: scale(1, 1); }
+  20% { transform: translateX(10%) scale(1.25, 0.88); }
+  40% { transform: scale(1, 1); }
+  60% { transform: translateX(10%) scale(1.25, 0.88); }
+  80% { transform: scale(1, 1); }
+}
+@keyframes kw-deco-look {
+  0%, 100% { transform: scale(1, 1) rotate(0deg); }
+  20% { transform: scale(0.94, 1.16) rotate(-10deg); }
+  50% { transform: scale(1.1, 0.94) rotate(10deg); }
+  80% { transform: scale(0.94, 1.12) rotate(-6deg); }
+}
+@keyframes kw-deco-badge {
+  0% { opacity: 0; transform: translate(-50%, 30%) scale(0.5); }
+  25% { opacity: 1; transform: translate(-50%, -10%) scale(1.1); }
+  40%, 100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+.kw-deco-badge { animation: kw-deco-badge 500ms ease-out both; filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }

@@ -8,6 +8,13 @@
 import { KUWAGATA_BASE_HUE } from "./kuwagata-base-hue";
 
 export const ITEM_TYPE_SHIZUKU = "shizuku";
+// 金・銀の縁（Stage全シーン習得のごほうび。個体1体にだけ付けられる）。item_key は silver / gold。
+export const ITEM_TYPE_RIM = "rim";
+export type RimKey = "silver" | "gold";
+export function isRimKey(key: string): key is RimKey {
+  return key === "silver" || key === "gold";
+}
+
 
 // 色の実が出るシーン（scene_tag）。Stage5（8）→Stage4（12）の順。
 // 並び順は色の角度の決め方に使うので、途中に挿入せず、末尾に足す。
@@ -86,6 +93,27 @@ export function tintFilter(key: string | null | undefined, speciesCode?: string)
 // 持ち物一覧・演出で色の実の「しるし」に使う色（実そのものの色）。
 export function shizukuSwatchColor(key: string): string {
   return `hsl(${shizukuTargetHue(key) ?? 0} 80% 55%)`;
+}
+
+// 金・銀の縁のfilter。体の色はそのままで、縁取りと光だけ足す（色づけのfilterのあとに重ねる）。
+const RIM_COLOR: Record<RimKey, { edge: string; glow: string }> = {
+  silver: { edge: "#eaf3ff", glow: "rgba(234,243,255,0.75)" },
+  gold: { edge: "#ffd24a", glow: "rgba(255,210,74,0.8)" },
+};
+export function rimFilter(rim: RimKey | null | undefined): string | undefined {
+  if (!rim) return undefined;
+  const c = RIM_COLOR[rim];
+  return `drop-shadow(0 0 1.2px ${c.edge}) drop-shadow(0 0 1.2px ${c.edge}) drop-shadow(0 0 4px ${c.edge}) drop-shadow(0 0 14px ${c.glow})`;
+}
+
+// 色づけ（tintFilter）と縁（rimFilter）を1つのfilterにまとめる。
+export function individualFilter(
+  tintKey: string | null | undefined,
+  speciesCode: string | undefined,
+  rim: RimKey | null | undefined
+): string | undefined {
+  const parts = [tintFilter(tintKey, speciesCode), rimFilter(rim)].filter(Boolean);
+  return parts.length > 0 ? parts.join(" ") : undefined;
 }
 
 export type KuwagataItem = {

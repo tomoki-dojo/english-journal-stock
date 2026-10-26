@@ -1,5 +1,6 @@
 "use client";
 
+import { DECO_BY_KEY } from "@/lib/kuwagata-decos";
 import { useEffect, useState } from "react";
 import { GetSeOnMount, useFanfare } from "./roadmap-sound";
 import { ArthurAvatar } from "./arthur";
@@ -362,13 +363,19 @@ export function RoomNoticeModal({
         art={
           // eslint-disable-next-line @next/next/no-img-element -- 自前SVGアート
           <img
-            src="/roadmap/items/shizuku.svg"
+            src={shizuku.sceneKey.startsWith("deco:") ? (DECO_BY_KEY[shizuku.sceneKey.slice(5)]?.file ?? "/roadmap/items/shizuku.svg") : shizuku.sceneKey.startsWith("rim:") ? `/roadmap/items/rim-${shizuku.sceneKey.slice(4)}.svg` : "/roadmap/items/shizuku.svg"}
             alt=""
             className="h-28 w-28 object-contain"
-            style={{ filter: tintFilter(shizuku.sceneKey) }}
+            style={{ filter: shizuku.sceneKey.startsWith("rim:") || shizuku.sceneKey.startsWith("deco:") ? undefined : tintFilter(shizuku.sceneKey) }}
           />
         }
-        message={`「${shizuku.sceneKey}」の色の実を${shizuku.count > 1 ? `${shizuku.count}つ` : "1つ"}手に入れた！`}
+        message={
+          shizuku.sceneKey.startsWith("deco:")
+            ? `置物「${DECO_BY_KEY[shizuku.sceneKey.slice(5)]?.label ?? ""}」を手に入れた！`
+            : shizuku.sceneKey.startsWith("rim:")
+            ? `${shizuku.sceneKey === "rim:gold" ? "金" : "銀"}星のカケラを手に入れた！`
+            : `「${shizuku.sceneKey}」の色の実を${shizuku.count > 1 ? `${shizuku.count}つ` : "1つ"}手に入れた！`
+        }
       >
         <GetSeOnMount />
         <button

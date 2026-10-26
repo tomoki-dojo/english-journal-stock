@@ -22,8 +22,17 @@ import {
   ITEM_TYPE_SHIZUKU,
   shizukuSwatchColor,
   tintFilter,
+  individualFilter,
+  ITEM_TYPE_RIM,
+  rimFilter,
+  isRimKey,
+  type RimKey,
   type KuwagataItem,
 } from "@/lib/kuwagata-tint";
+import { useSoundMuted } from "@/components/roadmap/roadmap-sound";
+import { pickMurmur, type Murmur } from "@/lib/kuwagata-murmur";
+import { DECOS, DECO_BY_KEY, ITEM_TYPE_DECO, MAX_DECOS_PER_TANK, baseDecoKey, isBaseDecoKey } from "@/lib/kuwagata-decos";
+import { ACTIONS, NO_ACTION_FLAGS, availableActions, type ActionFlags, type ActionId } from "@/lib/kuwagata-actions";
 import {
   DEFAULT_BODY_SHAPE,
   bodyCircle,
@@ -1039,6 +1048,65 @@ const KNOWN_CREATURE_ART: Partial<Record<string, Partial<Record<Facing, KnownCre
     backOrigin: "76% 38%",
     backBehindBody: true,
   }),
+  // 限定種(仮の絵。Stage5のシーンを習得するともらえる。絵を差し替えたらここも直す)
+  // ジュウクワたん(家の形。住まい・手続きのシーン。ツノ=mandible_01は固定のまま)
+  "KW-0059": buildNewSpeciesWalkerArt("KW-0059", { frontOrigin: "50% 70%", backOrigin: "70% 60%" }),
+  // ケイクワたん(銀行・契約のシーン。ツノ=mandible_01は固定のまま)
+  "KW-0060": buildNewSpeciesWalkerArt("KW-0060", { frontOrigin: "50% 70%", backOrigin: "70% 60%" }),
+  "KW-0061": buildNewSpeciesWalkerArt("KW-0061", { frontOrigin: "50% 70%", backOrigin: "70% 60%" }),
+  // タスクワたん(トラブル対応のシーン)。背面だけ、奥側の脚 back_leg_L1 が体の奥に加わる
+  "KW-0062": (() => {
+    const art = buildNewSpeciesWalkerArt("KW-0062", { frontOrigin: "50% 70%", backOrigin: "70% 60%" });
+    return {
+      // 大顎は正面・背面とも体より奥に描く
+      front: art.front && { ...art.front, mandibleBehindBody: true },
+      back: art.back && {
+        ...art.back,
+        mandibleBehindBody: true,
+        legsBehindBody: [{ src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0062_back_leg_L1.svg`, delay: "-0.45s" }, ...art.back.legsBehindBody],
+      },
+    };
+  })(),
+  // プレクワたん(プレゼン・面接のシーン)。タスクワたんと同じ描き方: 大顎は体より奥、背面は奥側の脚 back_leg_L1 つき
+  "KW-0063": (() => {
+    const art = buildNewSpeciesWalkerArt("KW-0063", { frontOrigin: "50% 70%", backOrigin: "70% 60%" });
+    return {
+      front: art.front && { ...art.front, mandibleBehindBody: true },
+      back: art.back && {
+        ...art.back,
+        mandibleBehindBody: true,
+        legsBehindBody: [{ src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0063_back_leg_L1.svg`, delay: "-0.45s" }, ...art.back.legsBehindBody],
+      },
+    };
+  })(),
+  // ネゴクワたん(交渉・依頼のシーン)。タスクワたんと同じ描き方: 大顎は体より奥、背面は奥側の脚 back_leg_L1 つき
+  "KW-0064": (() => {
+    const art = buildNewSpeciesWalkerArt("KW-0064", { frontOrigin: "50% 70%", backOrigin: "70% 60%" });
+    return {
+      front: art.front && { ...art.front, mandibleBehindBody: true },
+      back: art.back && {
+        ...art.back,
+        mandibleBehindBody: true,
+        legsBehindBody: [{ src: `${KUWAGATA_ART_DIR}/kuwagata_KW-0064_back_leg_L1.svg`, delay: "-0.45s" }, ...art.back.legsBehindBody],
+      },
+    };
+  })(),
+  // モウクワたん(会議・報告のシーン)。大顎は正面・背面とも体より奥に描く
+  "KW-0065": (() => {
+    const art = buildNewSpeciesWalkerArt("KW-0065", { frontOrigin: "50% 70%", backOrigin: "70% 60%" });
+    return {
+      front: art.front && { ...art.front, mandibleBehindBody: true },
+      back: art.back && { ...art.back, mandibleBehindBody: true },
+    };
+  })(),
+  // テレクワたん(電話・メールのシーン)。大顎は正面・背面とも体より奥に描く
+  "KW-0066": (() => {
+    const art = buildNewSpeciesWalkerArt("KW-0066", { frontOrigin: "50% 70%", backOrigin: "70% 60%" });
+    return {
+      front: art.front && { ...art.front, mandibleBehindBody: true },
+      back: art.back && { ...art.back, mandibleBehindBody: true },
+    };
+  })(),
   "KW-0001": buildKnownCreatureArt("KW-0001"),
   // ヒビクワたん(背中に波紋模様)
   "KW-0002": buildKnownCreatureArt("KW-0002"),
@@ -1086,6 +1154,14 @@ const KNOWN_STAGE_ART: Partial<Record<string, KnownStageArt>> = {
   "KW-0003": buildKnownStageArt("KW-0003"),
   "KW-0008": buildKnownStageArt("KW-0008"),
   "KW-0004": buildKnownStageArt("KW-0004"),
+  "KW-0059": buildKnownStageArt("KW-0059"),
+  "KW-0060": buildKnownStageArt("KW-0060"),
+  "KW-0061": buildKnownStageArt("KW-0061"),
+  "KW-0062": buildKnownStageArt("KW-0062"),
+  "KW-0063": buildKnownStageArt("KW-0063"),
+  "KW-0064": buildKnownStageArt("KW-0064"),
+  "KW-0065": buildKnownStageArt("KW-0065"),
+  "KW-0066": buildKnownStageArt("KW-0066"),
 };
 
 // 卵・蛹は動かない(その場に置いたまま)。幼虫・成虫(と、実アートが無い種のBugアイコン)は歩き回る。
@@ -1442,6 +1518,99 @@ type TintCeremonyInfo = {
 // 色の実をあげたときの演出。画面が静かに暗くなり、個体の前に実が降りてくる。
 // 個体が実を3口でかじって食べきると、体の色がゆっくり移る。獲得演出のような華やかさはなく、
 // 短く終わる（タップで早送り）。
+type RimCeremonyInfo = {
+  speciesCode: string;
+  mandibleVariant: number;
+  growthStage: KuwagataGrowthStage;
+  sizeScale: number;
+  tintKey: string | null;
+  rim: RimKey;
+};
+
+// 星のカケラをふりかけたときの演出。画面が静かに暗くなり、星のカケラが降りてきて、
+// 個体の上でキラキラと砕け、輪郭が金（銀）に光る。色の実と同じく短く終わる（タップで早送り）。
+function RimCeremony({ info, onDone }: { info: RimCeremonyInfo; onDone: () => void }) {
+  // 0: 暗転 / 1: カケラが降りる / 2: 砕けて粒が舞う / 3: 輪郭が光る / 4: 暗転が明ける
+  const [stage, setStage] = useState(0);
+  const doneRef = useRef(onDone);
+  doneRef.current = onDone;
+  useEffect(() => {
+    const timers = [
+      setTimeout(() => setStage(1), 450),
+      setTimeout(() => setStage(2), 1700),
+      setTimeout(() => setStage(3), 2500),
+      setTimeout(() => setStage(4), 4400),
+      setTimeout(() => doneRef.current(), 5000),
+    ];
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  const visualScale = Math.min(Math.max(info.sizeScale, 0.6), 1.6) * 5.5;
+  const dark = stage >= 4 ? 0 : 0.78;
+  const glow = info.rim === "gold" ? "#ffd24a" : "#eaf3ff";
+  const sparks = [
+    { x: -90, y: -70, d: 0 }, { x: 80, y: -90, d: 0.08 }, { x: -110, y: 10, d: 0.16 }, { x: 105, y: 20, d: 0.04 },
+    { x: -60, y: 85, d: 0.12 }, { x: 70, y: 80, d: 0.2 }, { x: 0, y: -110, d: 0.1 }, { x: 0, y: 100, d: 0.18 },
+  ];
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex cursor-pointer items-center justify-center"
+      style={{ backgroundColor: `rgba(8,10,14,${dark})`, transition: "background-color 600ms ease" }}
+      onClick={() => doneRef.current()}
+      role="presentation"
+    >
+      <style>{`
+        @keyframes rim-shard-fall { 0% { transform: translateY(-160px) rotate(-20deg); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(-40px) rotate(10deg); opacity: 1; } }
+        @keyframes rim-shard-burst { 0% { transform: translate(0,0) scale(.4); opacity: 1; } 100% { transform: translate(var(--bx), var(--by)) scale(1.1); opacity: 0; } }
+      `}</style>
+      <div className="relative flex items-center justify-center" style={{ width: 240, height: 240 }}>
+        <div
+          style={{
+            filter: individualFilter(info.tintKey, info.speciesCode, stage >= 3 && stage < 4 ? info.rim : null),
+            transition: "filter 900ms ease-in-out, opacity 600ms ease",
+            opacity: stage >= 4 ? 0 : 1,
+          }}
+        >
+          <TankOccupant
+            color="#52525b"
+            sizeScale={visualScale}
+            speciesCode={info.speciesCode}
+            mandibleVariant={info.mandibleVariant}
+            growthStage={info.growthStage}
+          />
+        </div>
+        {stage === 1 && (
+          // eslint-disable-next-line @next/next/no-img-element -- 自前SVGアート
+          <img
+            src={`/roadmap/items/rim-${info.rim}.svg`}
+            alt=""
+            className="pointer-events-none absolute h-16 w-16 object-contain"
+            style={{ top: 10, animation: "rim-shard-fall 1100ms ease-in both" }}
+          />
+        )}
+        {stage === 2 &&
+          sparks.map((sp, i) => (
+            <span
+              key={i}
+              className="pointer-events-none absolute text-lg"
+              style={
+                {
+                  color: glow,
+                  textShadow: `0 0 6px ${glow}`,
+                  animation: `rim-shard-burst 800ms ease-out ${sp.d}s both`,
+                  "--bx": `${sp.x}px`,
+                  "--by": `${sp.y}px`,
+                } as CSSProperties
+              }
+            >
+              ✦
+            </span>
+          ))}
+      </div>
+    </div>
+  );
+}
+
 function TintCeremony({ info, onDone }: { info: TintCeremonyInfo; onDone: () => void }) {
   // 0: 暗転 / 1: 実が降りる / 2〜4: 1口目〜3口目 / 5: 食べ終わって色が移る / 6: 暗転が明ける
   const [stage, setStage] = useState(0);
@@ -1533,6 +1702,7 @@ export function TankOccupant({
   mandibleVariant = 1,
   growthStage = "成虫",
   tintKey = null,
+  rimKey = null,
 }: {
   color: string;
   sizeScale: number;
@@ -1541,6 +1711,7 @@ export function TankOccupant({
   growthStage?: KuwagataGrowthStage;
   // 色の実で色づけしたシーンのキー（色づけなしはnull）。
   tintKey?: string | null;
+  rimKey?: RimKey | null;
 }) {
   const basePx = 28;
   const px = basePx * sizeScale;
@@ -1548,7 +1719,7 @@ export function TankOccupant({
     return (
       <div
         className="relative"
-        style={{ width: px, height: px, filter: tintFilter(tintKey, speciesCode) }}
+        style={{ width: px, height: px, filter: individualFilter(tintKey, speciesCode, rimKey) }}
       >
         <KnownCreatureSprite
           code={speciesCode}
@@ -1743,6 +1914,22 @@ function surfacePoint(u: number, v: number, geo: TankGeometry = TERRARIUM_GEOMET
   return { left, top };
 }
 
+// 画面の位置(水槽に対する%)から、天面の(u,v)を求める(surfacePointの逆)。置物を置く位置の指定に使う。
+function uvFromScreen(left: number, top: number, geo: TankGeometry = TERRARIUM_GEOMETRY): { u: number; v: number } | null {
+  const a = geo.right.left - geo.back.left;
+  const b = geo.left.left - geo.back.left;
+  const c = geo.right.top - geo.back.top;
+  const d = geo.left.top - geo.back.top;
+  const det = a * d - b * c;
+  if (Math.abs(det) < 1e-6) return null;
+  const dl = left - geo.back.left;
+  const dt = top - geo.back.top;
+  const u = (dl * d - b * dt) / det;
+  const v = (a * dt - c * dl) / det;
+  const clamp = (n: number) => Math.min(0.92, Math.max(0.08, n));
+  return { u: clamp(u), v: clamp(v) };
+}
+
 // 歩き回る・置かれる位置(u,v)の候補を、天面のほぼ全体(縁から0.08だけ内側)から選ぶ。
 // ただし虫は幅の半分ほどが左右にはみ出すので、アンカーの横位置は水槽の端から
 // 「虫の幅の約35%」以上内側に制限する(大きい虫ほど左右の端に寄れない)。
@@ -1903,6 +2090,14 @@ const BODY_FIT: Record<string, [number, number, number, number]> = {
   "KW-0056": [0.08, 0.52, 0.41, 0.36],
   "KW-0057": [0.02, 0.39, 0.37, 0.33],
   "KW-0058": [0.05, 0.38, 0.40, 0.32],
+  "KW-0059": [0.05, 0.56, 0.42, 0.35],
+  "KW-0060": [0.03, 0.49, 0.41, 0.32],
+  "KW-0061": [0.01, 0.53, 0.40, 0.27],
+  "KW-0062": [0.00, 0.51, 0.44, 0.32],
+  "KW-0063": [0.03, 0.45, 0.45, 0.31],
+  "KW-0064": [0.05, 0.53, 0.41, 0.34],
+  "KW-0065": [0.07, 0.34, 0.40, 0.27],
+  "KW-0066": [0.03, 0.45, 0.39, 0.29],
 };
 const BODY_FIT_MARGIN = 0.95;
 // 種類ごとの当たり判定の形。成虫は胴体に合わせた楕円(横長は横に、縦長は縦に並べた3つの円)。
@@ -2823,10 +3018,27 @@ function WanderingCreature({
   geo,
   showCollision = false,
   tintKey = null,
+  actions = [],
+  debugAction = null,
+  murmurs = [],
+  rimKey = null,
+  visitTargets = [],
+  debugDeco = null,
 }: {
+  // 開発中の動作確認用: 指定した置物のところへ歩いて行き、置物アクションを今すぐ見せる。
+  debugDeco?: { key: string; n: number } | null;
   seedKey: string;
+  // 置物の位置。成虫はときどき歩いて行き、動きと一緒にそのシーンの表現をつぶやく。
+  visitTargets?: { key: string; u: number; v: number; pattern: string; scene: string; widthPct: number }[];
   // 色の実で色づけしたシーンのキー（色づけなしはnull）。
   tintKey?: string | null;
+  rimKey?: RimKey | null;
+  // 見せられるアクション（成虫のみ）。
+  actions?: ActionId[];
+  // つぶやき(習得した表現)の候補。成虫だけが、ときどき吹き出しで英語をつぶやく。
+  murmurs?: Murmur[];
+  // 開発中の動作確認用: 指定したアクションを今すぐ見せる(nが変わるたびに発火)。
+  debugAction?: { id: ActionId; n: number } | null;
   initialSpot: { u: number; v: number };
   widthPct: number;
   hasArt: boolean;
@@ -2847,6 +3059,7 @@ function WanderingCreature({
   // この水槽の立体の実測(底の面と水面の高さ)。テラリウムとアクアリウムで違う。
   geo: TankGeometry;
 }) {
+  const muted = useSoundMuted();
   const chatTriggerRef = useRef<(() => void) | null>(null);
   const chatterBubble = useChatter(
     hasCompanions && speciesCode === CHATTER_SPECIES_CODE && growthStage === "成虫" && hasArt,
@@ -2989,13 +3202,207 @@ function WanderingCreature({
   // 怒りっぽい種は、ぶつかると「！」の代わりに「💢」を出して全身を赤く光らせる。
   const angryLook = bumpReactionFor(speciesCode) === "angry";
   const spot = swimmer ? swim.spot : walk.spot;
-  const travelMs = swimmer ? swim.travelMs : walk.travelMs;
+  const walkTravelMs = swimmer ? swim.travelMs : walk.travelMs;
   const swimming = swimmer && swim.moving;
-  const pt = surfacePoint(spot.u, spot.v, geo, swimmer ? swim.spot.w : 0);
   // 飛ぶ種は縦横で別のイージングにして、目的地まで直線ではなく滑らかな曲線(弧)を描いて飛ぶ。
   // 弧の向き(上に膨らむ/下に膨らむ)は目的地ごとに決まる。
   const flyingCurve = isCurveFlight(speciesCode) && growthStage === "成虫";
   const arcUp = Math.round(spot.u * 100 + spot.v * 100) % 2 === 0;
+  const [actionId, setActionId] = useState<ActionId | null>(null);
+  const [murmur, setMurmur] = useState<Murmur | null>(null);
+  const [murmurOpen, setMurmurOpen] = useState(false);
+  const murmurPrevRef = useRef<string | null>(null);
+  const murmurHoldRef = useRef(false);
+  const murmurCount = murmurs.length;
+  const murmursRef = useRef(murmurs);
+  murmursRef.current = murmurs;
+  const tintKeyRef = useRef(tintKey);
+  tintKeyRef.current = tintKey;
+  useEffect(() => {
+    if (growthStage !== "成虫" || murmurCount === 0) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const rnd = seededRandom(seedKey + ":murmur");
+    const next = (first: boolean) => {
+      const wait = first ? 6000 + rnd() * 20000 : 25000 + Math.random() * 25000;
+      timer = setTimeout(() => {
+        if (cancelled) return;
+        const picked = pickMurmur(murmursRef.current, tintKeyRef.current, murmurPrevRef.current);
+        if (!picked) return next(false);
+        murmurPrevRef.current = picked.id;
+        murmurHoldRef.current = false;
+        setMurmurOpen(false);
+        setMurmur(picked);
+        timer = setTimeout(function hide() {
+          if (cancelled) return;
+          if (murmurHoldRef.current) {
+            timer = setTimeout(hide, 2500);
+            return;
+          }
+          setMurmur(null);
+          next(false);
+        }, 5000);
+      }, wait);
+    };
+    next(true);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      setMurmur(null);
+    };
+  }, [growthStage, murmurCount, seedKey]);
+  const [visit, setVisit] = useState<{ left: number; top: number; ms: number } | null>(null);
+  const [decoMotion, setDecoMotion] = useState<string | null>(null);
+  const visitTargetsRef = useRef(visitTargets);
+  visitTargetsRef.current = visitTargets;
+  const visitCount = visitTargets.length;
+  const triggerRef = useRef<((t: (typeof visitTargets)[number], walkFirst: boolean) => void) | null>(null);
+  useEffect(() => {
+    if (!debugDeco || debugDeco.n === 0) return;
+    const t = visitTargetsRef.current.find((x) => x.key === debugDeco.key);
+    if (t) triggerRef.current?.(t, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debugDeco?.n]);
+  useEffect(() => {
+    if (growthStage !== "成虫" || visitCount === 0) return;
+    let cancelled = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const later = (fn: () => void, ms: number) => {
+      timers.push(setTimeout(() => !cancelled && fn(), ms));
+    };
+    // 置物の近くを通りかかったら反応する(近づいていくのではなく、通過中に判定)。
+    let busy = false;
+    let nextOkAt = Date.now() + 6000 + Math.random() * 8000;
+    const startVisit = (t: (typeof visitTargets)[number], walkFirst: boolean) => {
+      const me = document.querySelector(`[data-individual-id="${CSS.escape(seedKey)}"]`);
+      if (!me) return;
+      busy = true;
+      // 置物のところまで歩いて行ってから始める(近くを通りかかった場合は短く、動作確認ボタンは少し長く)。
+      // 飛び乗るは置物の真上、のぞくは置物の右、さわる・見回すは置物の左に立つ。
+      const dur = walkFirst ? 1500 : 900;
+      const walkMs = dur + 100;
+      const p = surfacePoint(t.u, t.v, geo);
+      const dx = t.pattern === "peek" ? t.widthPct * 0.5 : t.pattern === "hop-on" ? 0 : -t.widthPct * 0.55;
+      setVisit({ left: p.left + dx, top: p.top, ms: dur });
+      later(() => {
+        // 1) その場で止まる(いまの表示位置に固定)。
+        const parent = (me as HTMLElement).offsetParent as HTMLElement | null;
+        const cs = getComputedStyle(me);
+        if (parent && parent.clientWidth > 0) {
+          setVisit({ left: (parseFloat(cs.left) / parent.clientWidth) * 100, top: (parseFloat(cs.top) / parent.clientHeight) * 100, ms: 0 });
+        }
+        // 2) 少し止まってから、伸び縮みする動きとつぶやき。
+        later(() => {
+          setDecoMotion(t.pattern);
+          const picked = pickMurmur(murmursRef.current, t.scene, murmurPrevRef.current);
+          if (picked) {
+            murmurPrevRef.current = picked.id;
+            murmurHoldRef.current = false;
+            setMurmurOpen(false);
+            setMurmur(picked);
+          }
+          later(() => setDecoMotion(null), 2800);
+          later(function leave() {
+            if (murmurHoldRef.current) return void later(leave, 2000);
+            setMurmur(null);
+            setVisit(null);
+            busy = false;
+            nextOkAt = Date.now() + 30000 + Math.random() * 30000;
+          }, 5800);
+        }, 800);
+      }, walkMs);
+    };
+    triggerRef.current = startVisit;
+    const poll = setInterval(() => {
+      if (cancelled || busy || Date.now() < nextOkAt) return;
+      const me = document.querySelector(`[data-individual-id="${CSS.escape(seedKey)}"]`);
+      if (!me) return;
+      const mr = me.getBoundingClientRect();
+      const mx = mr.left + mr.width / 2;
+      const my = mr.bottom;
+      let hit: (typeof visitTargets)[number] | null = null;
+      for (const t of visitTargetsRef.current) {
+        const el = document.querySelector(`[data-deco-key="${CSS.escape(t.key)}"]`);
+        if (!el) continue;
+        const r = el.getBoundingClientRect();
+        const dx = mx - (r.left + r.width / 2);
+        const dy = my - r.bottom;
+        if (Math.hypot(dx, dy) < Math.max(r.width, mr.width) * 0.9) {
+          hit = t;
+          break;
+        }
+      }
+      if (!hit) return;
+      startVisit(hit, false);
+    }, 500);
+    timers.push(poll as unknown as ReturnType<typeof setTimeout>);
+    return () => {
+      cancelled = true;
+      timers.forEach((t) => { clearTimeout(t); clearInterval(t as unknown as ReturnType<typeof setInterval>); });
+      setVisit(null);
+      setDecoMotion(null);
+    };
+  }, [growthStage, visitCount, seedKey]);
+  const pt = visit ? { left: visit.left, top: visit.top } : surfacePoint(spot.u, spot.v, geo, swimmer ? swim.spot.w : 0);
+  const travelMs = visit ? visit.ms : walkTravelMs;
+  const tapMurmur = async () => {
+    if (!murmur) return;
+    // 開いている吹き出しをもう一度タップしたら、閉じる。
+    if (murmurOpen) {
+      murmurHoldRef.current = false;
+      setMurmurOpen(false);
+      setMurmur(null);
+      return;
+    }
+    murmurHoldRef.current = true;
+    setMurmurOpen(true);
+    // ミュート中は日本語訳だけ出して、音声は鳴らさない。
+    if (muted) return;
+    try {
+      const res = await fetch(`/api/roadmap/kuwagata/murmur-audio?id=${encodeURIComponent(murmur.id)}`);
+      if (!res.ok) return;
+      const json = (await res.json()) as { url?: string };
+      if (json.url) await new Audio(json.url).play();
+    } catch {
+      // 音が出なくても、訳は出ているので何もしない
+    }
+  };
+
+  const debugN = debugAction?.n ?? 0;
+  const debugId = debugAction?.id ?? null;
+  useEffect(() => {
+    if (!debugId || debugN === 0 || growthStage !== "成虫") return;
+    setActionId(debugId);
+    const t = setTimeout(() => setActionId(null), ACTIONS[debugId].durationMs);
+    return () => clearTimeout(t);
+  }, [debugN, debugId, growthStage]);
+  const actionKey = actions.join(",");
+  useEffect(() => {
+    if (growthStage !== "成虫" || !actionKey) return;
+    const list = actionKey.split(",") as ActionId[];
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const rnd = seededRandom(seedKey + ":action");
+    const schedule = () => {
+      timer = setTimeout(() => {
+        if (cancelled) return;
+        const id = list[Math.floor(Math.random() * list.length)];
+        setActionId(id);
+        timer = setTimeout(() => {
+          if (cancelled) return;
+          setActionId(null);
+          schedule();
+        }, ACTIONS[id].durationMs);
+      }, 9000 + Math.random() * 14000);
+    };
+    timer = setTimeout(schedule, rnd() * 6000);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      setActionId(null);
+    };
+  }, [actionKey, growthStage, seedKey]);
+
   const straightFlight = isDragonfly(speciesCode) && growthStage === "成虫";
   // 泳ぐ種は、掻いて勢いよく出て、だんだん減速して止まる(ゆっくり漂うように着く)。
   const moveTransition = swimmer
@@ -3021,7 +3428,7 @@ function WanderingCreature({
         top: `${pt.top}%`,
         width: `${widthPct}%`,
         aspectRatio: hasArt ? "1 / 1" : undefined,
-        filter: tintFilter(tintKey, speciesCode),
+        filter: individualFilter(tintKey, speciesCode, rimKey),
         transition: moveTransition,
         // 実アートは左右反転しない(反転すると脚の左右が逆になってしまうため)。
         // Bugアイコンのフォールバックのみ、個体ごとに左右反転して向きにバリエーションを出す。
@@ -3029,6 +3436,10 @@ function WanderingCreature({
       }}
     >
       {hasArt ? (
+        <div
+          className="relative h-full w-full"
+          style={actionId ? { animation: `kw-act-${actionId} ${ACTIONS[actionId].durationMs}ms ease-in-out` } : decoMotion ? { animation: `kw-deco-${decoMotion} 2800ms ease-in-out`, transformOrigin: "50% 100%" } : undefined}
+        >
         <div
           className={`h-full w-full ${bumped ? "animate-kuwagata-bump" : ""} ${chatting ? "animate-kuwagata-chat" : ""} ${fighting ? "animate-kuwagata-fight" : ""} ${proud ? "animate-kuwagata-proud" : ""} ${hopping ? (speciesCode === HIGH_HOP_SPECIES_CODE ? "animate-kuwagata-hop-high" : "animate-kuwagata-hop") : ""} ${charging ? (isPounce(speciesCode) ? "animate-kuwagata-stalk" : "animate-kuwagata-charge") : ""} ${stinking ? "animate-kuwagata-stink" : ""}`}
           style={leaping || (bumped && angryLook) ? { filter: bumped && angryLook ? ANGRY_FILTER : undefined, animation: leaping ?  `${isPounce(speciesCode) ? "kuwagata-pounce" : speciesCode === SNAKEFLY_SPECIES_CODE ? "kuwagata-fly-short" : speciesCode === CLICK_BEETLE_SPECIES_CODE ? "kuwagata-click-leap" : "kuwagata-leap"} ${travelMs}ms linear ${windupMs}ms` : undefined } : undefined}
@@ -3058,8 +3469,116 @@ function WanderingCreature({
             phaseSeed={seedKey}
           />
         </div>
+          {(actionId === "sp-silver" || actionId === "sp-gold") && (
+            // ぎんぎら/こがねの舞: 体のまわりに光の輪と✦が次々に弾ける(金は数も量も多め)
+            <span className="pointer-events-none absolute inset-0">
+              <span className={actionId === "sp-gold" ? "kw-flash-ring kw-flash-ring-gold" : "kw-flash-ring kw-flash-ring-silver"} />
+              {Array.from({ length: actionId === "sp-gold" ? 14 : 9 }).map((_, i, arr) => {
+                const ang = (i / arr.length) * Math.PI * 2;
+                const rad = 62 + (i % 3) * 12;
+                return (
+                  <span
+                    key={i}
+                    className="kw-flash-star"
+                    style={
+                      {
+                        color: actionId === "sp-gold" ? "#ffd24a" : "#eaf3ff",
+                        textShadow: `0 0 6px ${actionId === "sp-gold" ? "#ffb300" : "#9fc4ff"}`,
+                        "--fx": `${Math.cos(ang) * rad}%`,
+                        "--fy": `${Math.sin(ang) * rad * 0.8}%`,
+                        animationDelay: `${(i % 5) * 0.25}s`,
+                      } as CSSProperties
+                    }
+                  >
+                    ✦
+                  </span>
+                );
+              })}
+            </span>
+          )}
+          {(actionId === "sp-daily" || actionId === "sp-business" || actionId === "sp-limited") && (
+            // ほっこり(ハートとお花)/キリッ(青い光とキラリ)/きらきらダンス(虹色の紙吹雪): 光の輪と飾りがあふれる
+            <span className="pointer-events-none absolute inset-0">
+              <span className={`kw-flash-ring kw-flash-ring-${actionId === "sp-daily" ? "pink" : actionId === "sp-business" ? "blue" : "rainbow"}`} style={actionId === "sp-limited" ? undefined : { opacity: 0, animationName: actionId === "sp-daily" ? "kw-soft-ring" : "kw-flash-ring", animationDuration: actionId === "sp-daily" ? "2400ms" : "1000ms", filter: actionId === "sp-business" ? "opacity(.45)" : "opacity(.55)" }} />
+              {Array.from({ length: actionId === "sp-limited" ? 16 : actionId === "sp-daily" ? 6 : 11 }).map((_, i, arr) => {
+                const ang = (i / arr.length) * Math.PI * 2;
+                const rad = 62 + (i % 3) * 12;
+                const glyphs = actionId === "sp-daily" ? ["♥", "✿", "♥"] : actionId === "sp-business" ? ["✦", "◆", "✦"] : ["★", "✦", "●", "♪"];
+                const colors =
+                  actionId === "sp-daily"
+                    ? ["#ff7eb0", "#ffb3cf", "#ff5c9a"]
+                    : actionId === "sp-business"
+                    ? ["#4aa8ff", "#a8d8ff", "#2f7de0"]
+                    : ["#ff6b6b", "#ffd93d", "#6bcbff", "#c77dff", "#6bff9e"];
+                const color = colors[i % colors.length];
+                return (
+                  <span
+                    key={i}
+                    className={actionId === "sp-daily" ? "kw-soft-float" : "kw-flash-star"}
+                    style={
+                      {
+                        color,
+                        textShadow: `0 0 6px ${color}`,
+                        ...(actionId === "sp-daily" ? { opacity: 0 } : {}),
+                        fontSize: actionId === "sp-limited" ? 16 : 18,
+                        "--fx": `${Math.cos(ang) * rad}%`,
+                        "--fy": `${Math.sin(ang) * rad * 0.8 - (actionId === "sp-daily" ? 12 : 0)}%`,
+                        animationDelay: actionId === "sp-daily" ? `${i * 0.4}s` : `${(i % 6) * 0.22}s`,
+                      } as CSSProperties
+                    }
+                  >
+                    {glyphs[i % glyphs.length]}
+                  </span>
+                );
+              })}
+            </span>
+          )}
+          {actionId === "radio" && (
+            // テレクワたん: 体の上から、電波の弧が3本、順に広がって消える
+            <span className="pointer-events-none absolute" style={{ left: "46%", top: "30%", width: 0, height: 0 }}>
+              {[0, 1, 2].map((i) => (
+                <span key={i} className="kw-radio-wave" style={{ animationDelay: `${0.2 + i * 0.35}s` }} />
+              ))}
+            </span>
+          )}
+          {actionId === "stomp" && (
+            // ネゴクワたん: ドシンと踏みしめるたびに、足元から地鳴りの輪が広がる(3回)
+            <span className="pointer-events-none absolute inset-x-0" style={{ bottom: "6%", height: 0 }}>
+              {[0, 1, 2].map((i) => (
+                <span key={i} className="kw-stomp-ring" style={{ animationDelay: `${0.3 + i * 0.5}s` }} />
+              ))}
+            </span>
+          )}
+          {actionId === "beam" && (
+            // プレクワたん: 額の緑のマル(正面の絵で左から約36%・上から約51%)から、顔の向き(左下)へビームを出す
+            // 背面のときは、頭(右側)から逆向き(右へ)に出す
+            <span
+              className="pointer-events-none absolute"
+              style={{ left: facing === "back" ? "84%" : "36%", top: facing === "back" ? "44%" : "51%", width: 0, height: 0 }}
+            >
+              <span className="kw-beam-charge" />
+              <span className="kw-beam-ray" style={facing === "back" ? { rotate: "-25deg" } : undefined} />
+            </span>
+          )}
+        </div>
       ) : (
         <Bug className="block w-full h-auto drop-shadow-sm" style={{ color }} strokeWidth={1.75} />
+      )}
+      {murmur && (
+        // つぶやき: 頭の上に英文の吹き出し。タップで音声が鳴り、日本語訳が出る。
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            void tapMurmur();
+          }}
+          data-murmur-bubble="1"
+          className={`kw-murmur absolute z-20 w-max max-w-[11rem] rounded-xl border px-2 py-1 text-left text-[11px] leading-tight shadow-md ${visit ? "border-amber-300 bg-amber-50 text-amber-900" : "border-zinc-200 bg-white text-zinc-700"}`}
+          style={{ left: "50%", bottom: "100%", transform: "translateX(-50%)" }}
+        >
+          <span className="block font-semibold">{murmur.en}</span>
+          {murmurOpen && <span className="mt-0.5 block text-[10px] text-zinc-500">{murmur.ja}</span>}
+        </button>
       )}
       {wading && (
         // 川の中を歩いている間の水しぶき: 体の左右の外側へ、足元から小さな水玉が弧を描いて跳ね上がる。
@@ -3311,6 +3830,16 @@ function EnlargedTankVisual({
   color,
   nicknameOf,
   tintOf,
+  rimOf,
+  actionsOf,
+  debugAction,
+  murmurs,
+  placedDecos,
+  decoEdit,
+  decoSelectedKey,
+  onDecoTap,
+  onDecoMove,
+  debugDeco,
   onTapIndividual,
 }: {
   tank: KuwagataShelfTank;
@@ -3321,6 +3850,19 @@ function EnlargedTankVisual({
   }) => string | null;
   // 個体の色づけ（色の実）。プレビュー中の色もここで返す。
   tintOf: (individual: { id: string; tintKey: string | null }) => string | null;
+  rimOf: (individual: { id: string; rimKey: RimKey | null }) => RimKey | null;
+  actionsOf: (individual: { id: string; tintKey: string | null; rimKey: RimKey | null; speciesCode: string }) => ActionId[];
+  debugAction: { id: ActionId; n: number } | null;
+  murmurs: Murmur[];
+  // この水槽に置いた置物（無ければ、従来どおり石・エサを出す）。
+  placedDecos: { itemKey: string; u: number; v: number }[];
+  // 置物を置くモード。タップ位置(u,v)と、タップした置物のキーを返す。
+  decoEdit: boolean;
+  decoSelectedKey: string | null;
+  onDecoTap: (hitKey: string | null, u: number, v: number) => void;
+  // 置物をドラッグして動かし終えたとき。
+  onDecoMove: (key: string, u: number, v: number) => void;
+  debugDeco: { key: string; n: number } | null;
   // 水槽の中の個体をタップしたとき（ダブルタップのズームとは区別する）。
   onTapIndividual: (individualId: string) => void;
 }) {
@@ -3344,7 +3886,23 @@ function EnlargedTankVisual({
   // そのまま使い回す(描画用の配置情報と衝突回避用の座標リストを二重管理しない)。
   // widthPctも一緒に持たせ、衝突判定側でアイテムごとの実際の大きさを加味できるようにする。
   // 古代の森は背景絵に置物が描き込んであるので、置物は出さず、背景の障害物(ANCIENT_OBSTACLES)を避けさせる。
-  const decorations = useMemo(() => (isAquarium || isAncient ? [] : pickDecorations(tank)), [tank, isAquarium, isAncient]);
+  const [dragPos, setDragPos] = useState<{ key: string; u: number; v: number } | null>(null);
+  const dragRef = useRef<{ key: string; offX: number; offY: number } | null>(null);
+  // PCでマウスを動かしているとき、選んだ置物が置かれる位置に出す半透明の見本。
+  const [ghost, setGhost] = useState<{ u: number; v: number } | null>(null);
+  const decorations = useMemo(() => {
+    if (isAquarium || isAncient) return [];
+    // 石・エサは常に出す(置いた位置があればそこ)。置物は石・エサに加えて置く。
+    const base = pickDecorations(tank).map((d, i) => {
+      const key = baseDecoKey(tank.tankId, i);
+      const p = placedDecos.find((x) => x.itemKey === key);
+      return { ...d, key: key as string | null, spot: p ? { u: p.u, v: p.v } : d.spot };
+    });
+    const placed = placedDecos
+      .filter((p) => DECO_BY_KEY[p.itemKey])
+      .map((p) => ({ key: p.itemKey as string | null, file: DECO_BY_KEY[p.itemKey].file, widthPct: DECO_BY_KEY[p.itemKey].widthPct, spot: { u: p.u, v: p.v } }));
+    return [...base, ...placed].map((d) => (dragPos && d.key === dragPos.key ? { ...d, spot: { u: dragPos.u, v: dragPos.v } } : d));
+  }, [tank, isAquarium, isAncient, placedDecos, dragPos]);
   const allDecorationSpots = useMemo<DecoSpot[]>(
     () => (isAncient ? ANCIENT_OBSTACLES : decorations.map((d) => ({ u: d.spot.u, v: d.spot.v, widthPct: d.widthPct }))),
     [decorations, isAncient],
@@ -3442,10 +4000,26 @@ function EnlargedTankVisual({
     return () => frame.removeEventListener("wheel", onWheel);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  // 置物は足元(下端)が基準なので、触れた場所が置物の中心あたりになるよう、置物の高さの半分ほど下にずらす。
+  const decoShiftPx = (boxWidthPx: number): number => {
+    if (!decoSelectedKey) return 0;
+    const el = document.querySelector(`[data-deco-key="${CSS.escape(decoSelectedKey)}"]`);
+    if (el) return el.getBoundingClientRect().height * 0.5;
+    const def = DECO_BY_KEY[decoSelectedKey];
+    return def ? ((def.widthPct * boxWidthPx) / 100) * 0.75 * 0.5 : 0;
+  };
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     const pt = localPoint(e);
     pointersRef.current.set(e.pointerId, pt);
     e.currentTarget.setPointerCapture(e.pointerId);
+    if (pointersRef.current.size === 1 && decoEdit) {
+      // 置物を置くモード: 置物の上で押したら、ドラッグで動かせるようにする。
+      const hitEl = document.elementsFromPoint(e.clientX, e.clientY).find((el) => el instanceof HTMLElement && el.dataset.decoKey);
+      if (hitEl instanceof HTMLElement && hitEl.dataset.decoKey) {
+        const r = hitEl.getBoundingClientRect();
+        dragRef.current = { key: hitEl.dataset.decoKey, offX: e.clientX - (r.left + r.width / 2), offY: e.clientY - r.bottom };
+      }
+    }
     if (pointersRef.current.size === 1) {
       tapRef.current = {
         t: Date.now(),
@@ -3470,11 +4044,28 @@ function EnlargedTankVisual({
     }
   };
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (decoEdit && decoSelectedKey && e.pointerType === "mouse" && !dragRef.current) {
+      const box = contentRef.current?.getBoundingClientRect();
+      if (box && box.width > 0) {
+        const uv = uvFromScreen(((e.clientX - box.left) / box.width) * 100, ((e.clientY + decoShiftPx(box.width) - box.top) / box.height) * 100, geo);
+        setGhost(uv);
+      }
+    } else if (ghost) {
+      setGhost(null);
+    }
     const prev = pointersRef.current.get(e.pointerId);
     if (!prev) return;
     const pt = localPoint(e);
     pointersRef.current.set(e.pointerId, pt);
     if (tapRef.current && Math.hypot(pt.x - tapRef.current.x, pt.y - tapRef.current.y) > 8) tapRef.current.moved = true;
+    if (dragRef.current && tapRef.current?.moved && pointersRef.current.size === 1) {
+      const box = contentRef.current?.getBoundingClientRect();
+      if (box && box.width > 0) {
+        const uv = uvFromScreen(((e.clientX - dragRef.current.offX - box.left) / box.width) * 100, ((e.clientY - dragRef.current.offY - box.top) / box.height) * 100, geo);
+        if (uv) setDragPos({ key: dragRef.current.key, ...uv });
+      }
+      return;
+    }
     if (pointersRef.current.size >= 2 && gestureRef.current) {
       const [a, b] = [...pointersRef.current.values()];
       const g = gestureRef.current;
@@ -3490,6 +4081,17 @@ function EnlargedTankVisual({
   const handlePointerEnd = (e: React.PointerEvent<HTMLDivElement>) => {
     pointersRef.current.delete(e.pointerId);
     gestureRef.current = null;
+    if (dragRef.current) {
+      const moved = dragPos;
+      dragRef.current = null;
+      if (moved) {
+        onDecoMove(moved.key, moved.u, moved.v);
+        // 保存の反映(親の置物リスト更新)を待たずに戻ると一瞬元の位置に見えるので、少しだけ保持する。
+        setTimeout(() => setDragPos(null), 400);
+        tapRef.current = null;
+        return;
+      }
+    }
     const tap = tapRef.current;
     if (pointersRef.current.size === 0 && tap && !tap.moved && Date.now() - tap.t < 300) {
       // ダブルタップ: 拡大中なら元に戻し、等倍なら2.2倍にする。
@@ -3505,9 +4107,27 @@ function EnlargedTankVisual({
         const { cx, cy } = tap;
         tapTimerRef.current = setTimeout(() => {
           tapTimerRef.current = null;
-          const hit = document
-            .elementsFromPoint(cx, cy)
-            .find((el) => el instanceof HTMLElement && el.dataset.individualId);
+          // つぶやきの吹き出しの上なら、個体ではなく吹き出し(音声と訳)を優先する。
+          // (枠がポインターを捕まえているので、吹き出しのクリックは自分で呼ぶ)
+          const els = document.elementsFromPoint(cx, cy);
+          if (decoEdit) {
+            // 置物を置くモード: 置物をタップならそれを選び、床をタップならその位置を伝える。
+            const decoEl = els.find((el) => el instanceof HTMLElement && el.dataset.decoKey);
+            const box = contentRef.current?.getBoundingClientRect();
+            if (box && box.width > 0) {
+              // 置物は足元(下端)が基準なので、指で触れた場所が置物の中心あたりになるよう、置物の高さの半分ほど下にずらす。
+              const shiftPx = decoShiftPx(box.width);
+              const uv = uvFromScreen(((cx - box.left) / box.width) * 100, ((cy + shiftPx - box.top) / box.height) * 100, geo);
+              if (uv) onDecoTap(decoEl instanceof HTMLElement ? decoEl.dataset.decoKey ?? null : null, uv.u, uv.v);
+            }
+            return;
+          }
+          const bubble = els.find((el) => el instanceof HTMLElement && el.dataset.murmurBubble);
+          if (bubble instanceof HTMLElement) {
+            bubble.click();
+            return;
+          }
+          const hit = els.find((el) => el instanceof HTMLElement && el.dataset.individualId);
           if (hit instanceof HTMLElement && hit.dataset.individualId)
             onTapIndividual(hit.dataset.individualId);
         }, 300);
@@ -3520,7 +4140,9 @@ function EnlargedTankVisual({
     <div
       ref={frameRef}
       className="relative mb-3.5 w-full select-none overflow-hidden rounded-lg border border-zinc-200"
-      style={{ touchAction: "pan-y" }}
+      style={{ touchAction: decoEdit ? "none" : "pan-y" }}
+      onDragStart={(e) => e.preventDefault()}
+      onPointerLeave={() => setGhost(null)}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerEnd}
@@ -3547,14 +4169,31 @@ function EnlargedTankVisual({
           const pt = surfacePoint(deco.spot.u, deco.spot.v, geo);
           return (
             <div
-              key={index}
+              key={deco.key ?? index}
+              data-deco-key={deco.key ?? undefined}
               className="absolute -translate-x-1/2 -translate-y-full"
-              style={{ left: `${pt.left}%`, top: `${pt.top}%`, width: `${deco.widthPct}%` }}
+              style={{
+                left: `${pt.left}%`,
+                top: `${pt.top}%`,
+                width: `${deco.widthPct}%`,
+                outline: decoEdit && deco.key && deco.key === decoSelectedKey ? "2px dashed #f59e0b" : undefined,
+                outlineOffset: 2,
+              }}
             >
-              <img src={deco.file} alt="" className="block w-full object-contain drop-shadow-sm" />
+              <img src={deco.file} alt="" draggable={false} className="pointer-events-none block w-full select-none object-contain drop-shadow-sm" />
             </div>
           );
         })}
+      {ghost && decoSelectedKey && !isAquarium && (() => {
+        const file = decorations.find((d) => d.key === decoSelectedKey)?.file ?? DECO_BY_KEY[decoSelectedKey]?.file;
+        const widthPct = decorations.find((d) => d.key === decoSelectedKey)?.widthPct ?? DECO_BY_KEY[decoSelectedKey]?.widthPct;
+        if (!file || !widthPct) return null;
+        const gp = surfacePoint(ghost.u, ghost.v, geo);
+        return (
+          // eslint-disable-next-line @next/next/no-img-element -- 自前アート
+          <img src={file} alt="" draggable={false} className="pointer-events-none absolute -translate-x-1/2 -translate-y-full select-none object-contain opacity-50" style={{ left: `${gp.left}%`, top: `${gp.top}%`, width: `${widthPct}%` }} />
+        );
+      })()}
       {tank.individuals.map((individual, index) => {
         if (isAquarium && !KNOWN_CREATURE_ART[individual.speciesCode]) {
           // 実アートが無いアクアリウムの種は、従来どおりの簡易配置のまま
@@ -3584,6 +4223,14 @@ function EnlargedTankVisual({
             mandibleVariant={individual.mandibleVariant}
             growthStage={individual.growthStage}
             tintKey={tintOf(individual)}
+            rimKey={rimOf(individual)}
+            actions={actionsOf(individual)}
+            debugAction={debugAction}
+            murmurs={murmurs}
+            debugDeco={tank.individuals.find((i) => i.growthStage === "成虫")?.id === individual.id ? debugDeco : null}
+            visitTargets={decorations
+              .filter((d) => d.key && DECO_BY_KEY[d.key])
+              .map((d) => ({ key: d.key as string, u: d.spot.u, v: d.spot.v, pattern: DECO_BY_KEY[d.key as string].pattern, scene: DECO_BY_KEY[d.key as string].scene, widthPct: DECO_BY_KEY[d.key as string].widthPct }))}
             nickname={nicknameOf(individual) ?? individual.speciesName}
             color={color}
             mirror={!hasArt && index % 2 === 1}
@@ -3838,6 +4485,70 @@ export function KuwagataShelf({
   const [tintBusy, setTintBusy] = useState(false);
   const [tintError, setTintError] = useState<string | null>(null);
   const [itemsOpen, setItemsOpen] = useState(false);
+  const [murmurs, setMurmurs] = useState<Murmur[]>([]);
+  const [actionFlags, setActionFlags] = useState<ActionFlags>(NO_ACTION_FLAGS);
+  const [rimOverrides, setRimOverrides] = useState<Record<string, RimKey>>({});
+  const [rimPreview, setRimPreview] = useState<RimKey | null>(null);
+  // 置物: 置いている位置(全水槽ぶん)と、水槽の拡大表示での配置モード。
+  const [placedDecos, setPlacedDecos] = useState<{ itemKey: string; tankId: string; u: number; v: number }[]>([]);
+  const [decoEdit, setDecoEdit] = useState(false);
+  const [decoSelectedKey, setDecoSelectedKey] = useState<string | null>(null);
+  const [decoError, setDecoError] = useState<string | null>(null);
+  const [debugDeco, setDebugDeco] = useState<{ key: string; n: number } | null>(null);
+  const decoItems = items.filter((i) => i.itemType === ITEM_TYPE_DECO && i.quantity > 0 && DECO_BY_KEY[i.itemKey]);
+  const postDeco = async (body: Record<string, unknown>) => {
+    setDecoError(null);
+    try {
+      const res = await fetch("/api/roadmap/kuwagata/decos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      return true;
+    } catch {
+      setDecoError("保存できなかった");
+      return false;
+    }
+  };
+  const handleDecoTap = async (hitKey: string | null, u: number, v: number) => {
+    if (!selectedTank) return;
+    if (hitKey && hitKey !== decoSelectedKey) {
+      setDecoSelectedKey(hitKey);
+      return;
+    }
+    const key = decoSelectedKey;
+    if (!key) return;
+    void placeDecoAt(key, u, v);
+  };
+  const placeDecoAt = async (key: string, u: number, v: number) => {
+    if (!selectedTank) return;
+    const tankId = selectedTank.tankId;
+    const countHere = placedDecos.filter((p) => p.tankId === tankId && p.itemKey !== key && !isBaseDecoKey(p.itemKey)).length;
+    if (!isBaseDecoKey(key) && countHere >= MAX_DECOS_PER_TANK) {
+      setDecoError(`1つの水槽に${MAX_DECOS_PER_TANK}つまで`);
+      return;
+    }
+    const prev = placedDecos;
+    setPlacedDecos([...placedDecos.filter((p) => p.itemKey !== key), { itemKey: key, tankId, u, v }]);
+    const ok = await postDeco({ action: "place", itemKey: key, tankId, u, v });
+    if (!ok) setPlacedDecos(prev);
+  };
+  const handleDecoMove = (key: string, u: number, v: number) => {
+    setDecoSelectedKey(key);
+    void placeDecoAt(key, u, v);
+  };
+  const handleDecoRemove = async (key: string) => {
+    const prev = placedDecos;
+    setPlacedDecos(placedDecos.filter((p) => p.itemKey !== key));
+    const ok = await postDeco({ action: "remove", itemKey: key });
+    if (!ok) setPlacedDecos(prev);
+  };
+  const itemCount = items.reduce(
+    (sum, item) => (item.itemType === ITEM_TYPE_SHIZUKU || item.itemType === ITEM_TYPE_RIM || item.itemType === ITEM_TYPE_DECO ? sum + Math.max(item.quantity, 0) : sum),
+    0,
+  );
+  const rimItems = items.filter((item) => item.itemType === ITEM_TYPE_RIM && item.quantity > 0 && isRimKey(item.itemKey));
   const shizukuItems = items.filter(
     (item) => item.itemType === ITEM_TYPE_SHIZUKU && item.quantity > 0,
   );
@@ -3845,8 +4556,23 @@ export function KuwagataShelf({
     let cancelled = false;
     fetch("/api/roadmap/kuwagata/items", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
-      .then((json: { items?: KuwagataItem[] } | null) => {
-        if (!cancelled && json?.items) setItems(json.items);
+      .then((json: { items?: KuwagataItem[]; actionFlags?: ActionFlags; placedDecos?: { itemKey: string; tankId: string; u: number; v: number }[] } | null) => {
+        if (cancelled) return;
+        if (json?.items) setItems(json.items);
+        if (json?.actionFlags) setActionFlags(json.actionFlags);
+        if (json?.placedDecos) setPlacedDecos(json.placedDecos);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/roadmap/kuwagata/murmurs", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json: { murmurs?: Murmur[] } | null) => {
+        if (!cancelled && json?.murmurs) setMurmurs(json.murmurs);
       })
       .catch(() => {});
     return () => {
@@ -3863,12 +4589,64 @@ export function KuwagataShelf({
       ? tintOverrides[individual.id]
       : individual.tintKey;
   };
+  const rimOf = (individual: { id: string; rimKey: RimKey | null }): RimKey | null => {
+    if (tintTargetId === individual.id && rimPreview) return rimPreview;
+    return individual.id in rimOverrides ? rimOverrides[individual.id] : individual.rimKey;
+  };
+  const actionsOf = (individual: { id: string; tintKey: string | null; rimKey: RimKey | null; speciesCode: string }): ActionId[] =>
+    availableActions(
+      individual.id in tintOverrides ? tintOverrides[individual.id] : individual.tintKey,
+      individual.id in rimOverrides ? rimOverrides[individual.id] : individual.rimKey,
+      actionFlags,
+      individual.speciesCode,
+    );
+  const applyRim = async (
+    target: { id: string; speciesCode: string; mandibleVariant: number; growthStage: KuwagataGrowthStage; sizeScale: number; tintKey: string | null },
+    rim: RimKey,
+  ) => {
+    setTintBusy(true);
+    setTintError(null);
+    try {
+      const res = await fetch("/api/roadmap/kuwagata/tint", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ individualId: target.id, sceneKey: rim, kind: "rim" }),
+      });
+      const json = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !json.ok) {
+        setTintError(json.error ?? "星のカケラをふりかけられませんでした");
+        return;
+      }
+      setRimCeremony({
+        speciesCode: target.speciesCode,
+        mandibleVariant: target.mandibleVariant,
+        growthStage: target.growthStage,
+        sizeScale: target.sizeScale,
+        tintKey: target.id in tintOverrides ? tintOverrides[target.id] : target.tintKey,
+        rim,
+      });
+      setRimOverrides((prev) => ({ ...prev, [target.id]: rim }));
+      setItems((prev) =>
+        prev.map((item) =>
+          item.itemType === ITEM_TYPE_RIM && item.itemKey === rim ? { ...item, quantity: item.quantity - 1 } : item,
+        ),
+      );
+      closeTintPanel();
+    } catch {
+      setTintError("星のカケラをふりかけられませんでした");
+    } finally {
+      setTintBusy(false);
+    }
+  };
   const closeTintPanel = () => {
     setTintTargetId(null);
     setTintPreview(null);
+    setRimPreview(null);
     setTintError(null);
   };
   const [tintCeremony, setTintCeremony] = useState<TintCeremonyInfo | null>(null);
+  const [debugAction, setDebugAction] = useState<{ id: ActionId; n: number } | null>(null);
+  const [rimCeremony, setRimCeremony] = useState<RimCeremonyInfo | null>(null);
   const applyTint = async (
     target: { id: string; speciesCode: string; mandibleVariant: number; growthStage: KuwagataGrowthStage; sizeScale: number; tintKey: string | null },
     sceneKey: string
@@ -4002,13 +4780,13 @@ export function KuwagataShelf({
         <button
           type="button"
           onClick={() => setItemsOpen(true)}
-          className="flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm hover:border-amber-300 hover:text-amber-700"
+          className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-black text-zinc-600 shadow-md transition-transform hover:border-amber-300 hover:text-amber-700 active:scale-95"
         >
-          <Backpack className="h-3.5 w-3.5" />
+          <Backpack className="h-4 w-4" />
           持ち物
-          {shizukuItems.length > 0 && (
-            <span className="rounded-full bg-amber-500 px-1.5 text-[10px] font-bold tabular-nums text-white">
-              {shizukuItems.reduce((sum, item) => sum + item.quantity, 0)}
+          {itemCount > 0 && (
+            <span className="rounded-full bg-amber-500 px-1.5 text-xs font-bold tabular-nums text-white">
+              {itemCount}
             </span>
           )}
         </button>
@@ -4124,6 +4902,7 @@ export function KuwagataShelf({
       </div>
 
       {tintCeremony && <TintCeremony info={tintCeremony} onDone={() => setTintCeremony(null)} />}
+      {rimCeremony && <RimCeremony info={rimCeremony} onDone={() => setRimCeremony(null)} />}
 
       {itemsOpen && (
         <div
@@ -4172,6 +4951,35 @@ export function KuwagataShelf({
                 ))}
               </ul>
             )}
+            {rimItems.length > 0 && (
+              <>
+                <p className="mb-2 mt-4 text-xs font-semibold text-zinc-500">星のカケラ</p>
+                <ul className="flex flex-col gap-2">
+                  {rimItems.map((item) => (
+                    <li key={item.itemKey} className="flex items-center gap-3 rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- 自前SVGアート */}
+                      <img src={`/roadmap/items/rim-${item.itemKey}.svg`} alt="" className="h-8 w-8 object-contain" />
+                      <span className="flex-1 text-sm font-semibold text-zinc-800">{item.itemKey === "gold" ? "金星のカケラ" : "銀星のカケラ"}</span>
+                      <span className="text-sm font-bold tabular-nums text-zinc-600">×{item.quantity}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {decoItems.length > 0 && (
+              <>
+                <p className="mb-2 mt-4 text-xs font-semibold text-zinc-500">置物</p>
+                <ul className="flex flex-col gap-2">
+                  {decoItems.map((item) => (
+                    <li key={item.itemKey} className="flex items-center gap-3 rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- 自前SVGアート */}
+                      <img src={DECO_BY_KEY[item.itemKey].file} alt="" className="h-8 w-8 object-contain" />
+                      <span className="flex-1 text-sm font-semibold text-zinc-800">{DECO_BY_KEY[item.itemKey].label}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -4181,6 +4989,8 @@ export function KuwagataShelf({
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-2 sm:p-4"
           onClick={() => {
             setSelectedTankId(null);
+            setDecoEdit(false);
+            setDecoSelectedKey(null);
             closeTintPanel();
           }}
         >
@@ -4239,6 +5049,16 @@ export function KuwagataShelf({
               color={tankColor(selectedTank)}
               nicknameOf={nicknameOf}
               tintOf={tintOf}
+              rimOf={rimOf}
+              actionsOf={actionsOf}
+              debugAction={debugAction}
+              murmurs={murmurs}
+              placedDecos={placedDecos.filter((p) => p.tankId === selectedTank.tankId)}
+              decoEdit={decoEdit}
+              decoSelectedKey={decoSelectedKey}
+              onDecoTap={handleDecoTap}
+              onDecoMove={handleDecoMove}
+              debugDeco={debugDeco}
               onTapIndividual={(id) => {
                 if (
                   selectedTank.individuals.find((i) => i.id === id)
@@ -4250,6 +5070,85 @@ export function KuwagataShelf({
                 setTintError(null);
               }}
             />
+
+            {selectedTank.speciesAreaCode !== "aquarium" && selectedTank.speciesAreaCode !== "ancient" && (
+              <div className="mb-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDecoEdit((v) => !v);
+                    setDecoSelectedKey(null);
+                    setDecoError(null);
+                  }}
+                  className={`rounded-full border px-3 py-1 text-xs font-semibold ${decoEdit ? "border-amber-400 bg-amber-50 text-amber-700" : "border-zinc-200 bg-white text-zinc-600"}`}
+                >
+                  置物 {placedDecos.filter((p) => p.tankId === selectedTank.tankId && !isBaseDecoKey(p.itemKey)).length}/{MAX_DECOS_PER_TANK}
+                </button>
+                {decoEdit && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {decoItems.map((item) => {
+                      const def = DECO_BY_KEY[item.itemKey];
+                      const p = placedDecos.find((x) => x.itemKey === item.itemKey);
+                      const here = p?.tankId === selectedTank.tankId;
+                      const sel = decoSelectedKey === item.itemKey;
+                      return (
+                        <button
+                          key={item.itemKey}
+                          type="button"
+                          onClick={() => setDecoSelectedKey(sel ? null : item.itemKey)}
+                          className={`relative flex items-center gap-1 rounded-lg border px-2 py-1 text-xs ${sel ? "border-amber-400 bg-amber-50" : "border-zinc-200 bg-white"} ${p && !here ? "opacity-60" : ""}`}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element -- 自前SVGアート */}
+                          <img src={def.file} alt="" className="h-6 w-6 object-contain" />
+                          <span>{def.label}</span>
+                          {here && <Check className="h-3 w-3 text-emerald-600" />}
+                        </button>
+                      );
+                    })}
+                    {decoSelectedKey && !isBaseDecoKey(decoSelectedKey) && placedDecos.some((p) => p.itemKey === decoSelectedKey) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void handleDecoRemove(decoSelectedKey);
+                          setDecoSelectedKey(null);
+                        }}
+                        className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs text-zinc-600"
+                      >
+                        外す
+                      </button>
+                    )}
+                    {decoError && <span className="text-xs text-red-500">{decoError}</span>}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {process.env.NODE_ENV === "development" && (
+              <div className="mb-2 flex flex-wrap gap-1 rounded-lg border border-dashed border-zinc-300 p-2">
+                {(Object.keys(ACTIONS) as ActionId[]).map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setDebugAction((prev) => ({ id, n: (prev?.n ?? 0) + 1 }))}
+                    className="rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-[11px] text-zinc-600 hover:border-amber-400"
+                  >
+                    {ACTIONS[id].label}
+                  </button>
+                ))}
+                {placedDecos
+                  .filter((p) => p.tankId === selectedTank.tankId && DECO_BY_KEY[p.itemKey])
+                  .map((p) => (
+                    <button
+                      key={p.itemKey}
+                      type="button"
+                      onClick={() => setDebugDeco((prev) => ({ key: p.itemKey, n: (prev?.n ?? 0) + 1 }))}
+                      className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] text-amber-700"
+                    >
+                      置物: {DECO_BY_KEY[p.itemKey].label}
+                    </button>
+                  ))}
+              </div>
+            )}
 
             {tintTargetId &&
               (() => {
@@ -4278,10 +5177,38 @@ export function KuwagataShelf({
                         <X className="h-4 w-4" />
                       </button>
                     </div>
+                    {rimItems.length > 0 && (
+                      <>
+                        <div className="mb-2 flex flex-wrap gap-1.5">
+                          {rimItems.map((item) => (
+                            <button
+                              key={item.itemKey}
+                              type="button"
+                              onClick={() => setRimPreview(rimPreview === item.itemKey ? null : (item.itemKey as RimKey))}
+                              className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors ${
+                                rimPreview === item.itemKey ? "border-amber-500 bg-white text-zinc-900" : "border-zinc-200 bg-white/70 text-zinc-600"
+                              }`}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element -- 自前SVGアート */}
+                              <img src={`/roadmap/items/rim-${item.itemKey}.svg`} alt="" className="h-4 w-4 object-contain" />
+                              {item.itemKey === "gold" ? "金星のカケラ" : "銀星のカケラ"}
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          disabled={!rimPreview || tintBusy}
+                          onClick={() => rimPreview && void applyRim(target, rimPreview)}
+                          className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-full bg-zinc-700 py-2 text-sm font-bold text-white transition-transform active:scale-95 disabled:opacity-40"
+                        >
+                          星のカケラをふりかける
+                        </button>
+                      </>
+                    )}
                     {shizukuItems.length === 0 ? (
-                      <p className="text-xs text-zinc-500">
-                        色の実がありません
-                      </p>
+                      rimItems.length === 0 ? (
+                        <p className="text-xs text-zinc-500">色の実がありません</p>
+                      ) : null
                     ) : (
                       <>
                         <div className="mb-2 flex flex-wrap gap-1.5">
@@ -4352,6 +5279,7 @@ export function KuwagataShelf({
                       mandibleVariant={individual.mandibleVariant}
                       growthStage={individual.growthStage}
                       tintKey={tintOf(individual)}
+                      rimKey={rimOf(individual)}
                     />
                     {individual.growthGauge && <GrowthGauge gauge={individual.growthGauge} />}
                     {individual.growthStage === "成虫" && (

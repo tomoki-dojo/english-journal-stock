@@ -1,6 +1,7 @@
 // クワガタ育成機能（棚・図鑑）のデータアクセス層。
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { ITEM_TYPE_SHIZUKU, isShizukuScene, type KuwagataItem } from "@/lib/kuwagata-tint";
+import { ITEM_TYPE_DECO } from "@/lib/kuwagata-decos";
+import { ITEM_TYPE_RIM, ITEM_TYPE_SHIZUKU, isShizukuScene, type KuwagataItem } from "@/lib/kuwagata-tint";
 import { getPlan } from "@/lib/supabase/profile";
 import { ttlCached } from "@/lib/ttl-cache";
 import { describeEggEvent, type RoadmapStageUp } from "@/lib/roadmap-notices";
@@ -98,6 +99,8 @@ export type KuwagataIndividual = {
   nickname: string | null;
   // 色の実で色づけしたシーンのキー(色づけなしはnull)。
   tintKey: string | null;
+  // 金・銀の縁(銀=Stage4全シーン習得、金=Stage5全シーン習得のごほうび)。無しはnull。
+  rimKey: "silver" | "gold" | null;
 };
 
 export type KuwagataAreaProgress = {
@@ -609,7 +612,7 @@ export async function getUserKuwagataIndividuals(userId: string): Promise<Kuwaga
   const { data, error } = await supabaseAdmin
     .from("kuwagata_individuals")
     .select(
-      "id, species_id, obtained_via, obtained_at, size_scale, mandible_variant, hatched_at, boost_days, login_boost_days, size_growth_points, size_level_seen, stage_seen, nickname, tint_key, kuwagata_species(code, name, kind, rarity, area_code)"
+      "id, species_id, obtained_via, obtained_at, size_scale, mandible_variant, hatched_at, boost_days, login_boost_days, size_growth_points, size_level_seen, stage_seen, nickname, tint_key, rim_key, kuwagata_species(code, name, kind, rarity, area_code)"
     )
     .eq("user_id", userId)
     .order("obtained_at", { ascending: true });
@@ -646,6 +649,7 @@ export async function getUserKuwagataIndividuals(userId: string): Promise<Kuwaga
       sizeLevelSeen: Number(row.size_level_seen ?? 0),
       stageSeen: (row.stage_seen as KuwagataGrowthStage | null) ?? "卵",
       tintKey: (row.tint_key as string | null) ?? null,
+      rimKey: (row.rim_key as "silver" | "gold" | null) ?? null,
     };
   });
 }
@@ -1321,30 +1325,40 @@ export async function getUserKuwagataItems(userId: string): Promise<KuwagataItem
   }));
 }
 
-// 「手に入れた！」演出をまだ見せていない色の実（シーンごとの個数）。
+// 「手に入れた！」演出をまだ見せていない持ち物。色の実はシーン名、金・銀の縁は「rim:silver」「rim:gold」で返す。
 export async function getUnseenShizuku(userId: string): Promise<{ sceneKey: string; count: number }[]> {
   const { data, error } = await supabaseAdmin
     .from("kuwagata_user_items")
-    .select("item_key, unseen_quantity")
+    .select("item_type, item_key, unseen_quantity")
     .eq("user_id", userId)
-    .eq("item_type", ITEM_TYPE_SHIZUKU)
+    .in("item_type", [ITEM_TYPE_SHIZUKU, ITEM_TYPE_RIM, ITEM_TYPE_DECO])
     .gt("unseen_quantity", 0)
     .order("updated_at", { ascending: true });
   if (error) {
-    throw new Error(`未演出の色の実の取得に失敗しました: ${error.message}`);
+    throw new Error(`未演出の持ち物の取得に失敗しました: ${error.message}`);
   }
-  return (data ?? []).map((row) => ({ sceneKey: row.item_key as string, count: row.unseen_quantity as number }));
+  return (data ?? []).map((row) => ({
+    sceneKey:
+      row.item_type === ITEM_TYPE_RIM
+        ? `rim:${row.item_key as string}`
+        : row.item_type === ITEM_TYPE_DECO
+        ? `deco:${row.item_key as string}`
+        : (row.item_key as string),
+    count: row.unseen_quantity as number,
+  }));
 }
 
 export async function markShizukuSeen(userId: string, sceneKey: string): Promise<void> {
+  const isRim = sceneKey.startsWith("rim:");
+  const isDeco = sceneKey.startsWith("deco:");
   const { error } = await supabaseAdmin
     .from("kuwagata_user_items")
     .update({ unseen_quantity: 0 })
     .eq("user_id", userId)
-    .eq("item_type", ITEM_TYPE_SHIZUKU)
-    .eq("item_key", sceneKey);
+    .eq("item_type", isRim ? ITEM_TYPE_RIM : isDeco ? ITEM_TYPE_DECO : ITEM_TYPE_SHIZUKU)
+    .eq("item_key", isRim ? sceneKey.slice(4) : isDeco ? sceneKey.slice(5) : sceneKey);
   if (error) {
-    throw new Error(`色の実の既読保存に失敗しました: ${error.message}`);
+    throw new Error(`持ち物の既読保存に失敗しました: ${error.message}`);
   }
 }
 

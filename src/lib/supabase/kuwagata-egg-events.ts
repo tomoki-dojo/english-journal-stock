@@ -1,5 +1,6 @@
 // 練習日数・習得数の節目で、既知種のタマゴを配る。
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { LIMITED_EVENT_PREFIX, LIMITED_SPECIES_BY_SCENE } from "@/lib/kuwagata-limited";
 import type { UserRoadmapState } from "@/components/roadmap/types";
 import { getStreakStats, getUserRoadmapState } from "@/lib/supabase/speaking-roadmap";
 import {
@@ -141,6 +142,73 @@ export async function grantMilestoneEggs(
       // タマゴを作れなかったときは記録を戻して、次の機会にやり直す。
       await supabaseAdmin.from("kuwagata_egg_events").delete().eq("user_id", userId).eq("event_key", eventKey);
       throw new Error(`節目のタマゴの登録に失敗しました: ${insertError?.message ?? "不明なエラー"}`);
+    }
+
+    await supabaseAdmin
+      .from("kuwagata_egg_events")
+      .update({ individual_id: inserted.id })
+      .eq("user_id", userId)
+      .eq("event_key", eventKey);
+  }
+}
+
+
+// Stage5のシナリオを習得した分だけ、そのシーンの限定種の卵を配る（部屋に入ったときに呼ぶ）。
+// 習得済みのシナリオごとに台帳へ「limited:<シナリオID>」を記録するので、二重には配らない。
+// 機能の追加前に習得済みだったシナリオも、初回の呼び出しでまとめて配られる。
+export async function grantLimitedEggs(userId: string, loadGrantedKeys?: LoadGrantedKeys): Promise<void> {
+  const [scenariosRes, progressRes, speciesList] = await Promise.all([
+    supabaseAdmin.from("stage5_scenarios").select("id, scene_tag").eq("publish_status", "公開"),
+    supabaseAdmin
+      .from("speaking_stage_progress")
+      .select("phrase_id")
+      .eq("user_id", userId)
+      .eq("stage", 5)
+      .eq("phrase_source", "stage5_scenario")
+      .eq("status", "習得済み"),
+    getKuwagataSpeciesList(),
+  ]);
+  if (scenariosRes.error || progressRes.error) return;
+
+  const sceneById = new Map((scenariosRes.data ?? []).map((row) => [row.id as string, row.scene_tag as string]));
+  const masteredIds = (progressRes.data ?? []).map((row) => row.phrase_id as string).filter((id) => sceneById.has(id));
+  if (masteredIds.length === 0) return;
+
+  const grantedKeys = await (loadGrantedKeys ?? createGrantedKeysLoader(userId))();
+  const pending = masteredIds.filter((id) => !grantedKeys.has(`${LIMITED_EVENT_PREFIX}${id}`));
+  if (pending.length === 0) return;
+
+  const speciesByCode = new Map(speciesList.map((s) => [s.code, s]));
+
+  for (const scenarioId of pending) {
+    const code = LIMITED_SPECIES_BY_SCENE[sceneById.get(scenarioId) ?? ""];
+    const species = code ? speciesByCode.get(code) : undefined;
+    if (!species) continue; // 限定種がまだ公開されていないシーン。
+    const eventKey = `${LIMITED_EVENT_PREFIX}${scenarioId}`;
+
+    // 先に台帳へ記録して、同時に開いた別の画面と二重に配らないようにする。
+    const { data: claimed, error: claimError } = await supabaseAdmin
+      .from("kuwagata_egg_events")
+      .upsert({ user_id: userId, event_key: eventKey }, { onConflict: "user_id,event_key", ignoreDuplicates: true })
+      .select("event_key");
+    if (claimError) throw new Error(`限定種のタマゴの配布記録に失敗しました: ${claimError.message}`);
+    if ((claimed?.length ?? 0) === 0) continue;
+
+    const { data: inserted, error: insertError } = await supabaseAdmin
+      .from("kuwagata_individuals")
+      .insert({
+        user_id: userId,
+        species_id: species.id,
+        obtained_via: "event",
+        size_scale: species.baseSize,
+        mandible_variant: 1, // 限定種は大顎のバリエーションなし
+      })
+      .select("id")
+      .single();
+
+    if (insertError || !inserted) {
+      await supabaseAdmin.from("kuwagata_egg_events").delete().eq("user_id", userId).eq("event_key", eventKey);
+      throw new Error(`限定種のタマゴの登録に失敗しました: ${insertError?.message ?? "不明なエラー"}`);
     }
 
     await supabaseAdmin

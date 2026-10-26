@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useSoundMuted } from "@/components/roadmap/roadmap-sound";
 import Link from "next/link";
 import { Loader2, Lock, Volume2 } from "lucide-react";
 import type { AudioField } from "./types";
@@ -26,6 +27,7 @@ export function AudioPlayButton({
   loggedIn = true,
   hasAudio,
 }: AudioPlayButtonProps) {
+  const muted = useSoundMuted();
   const [status, setStatus] = useState<"idle" | "loading" | "playing" | "error">("idle");
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -60,7 +62,8 @@ export function AudioPlayButton({
   }
 
   async function handleClick() {
-    if (status === "loading") return;
+    // ロードマップでミュート中は鳴らさない(通常の画面では常にfalse)。
+    if (status === "loading" || muted) return;
 
     if (status === "playing") {
       audioRef.current?.pause();

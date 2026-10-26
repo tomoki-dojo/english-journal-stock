@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSoundMuted } from "@/components/roadmap/roadmap-sound";
 import Link from "next/link";
 import { Check, ChevronDown, PartyPopper, PenLine, Volume2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -66,6 +67,7 @@ const RESULT_SPARKLES = Array.from({ length: 10 }).map((_, i) => {
 // 1問終わるごとに次のフレーズに切り替わるので、1フレーズを卒業するまで固定、という単調さを避ける。
 // AIによる正誤判定はせず、「言えた/言えなかった」の自己申告で進める。
 export function Stage1Practice() {
+  const muted = useSoundMuted();
   const [state, setState] = useState<ViewState>("loading");
   const [questions, setQuestions] = useState<Stage1RoundQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -119,7 +121,7 @@ export function Stage1Practice() {
   }, []);
 
   async function handlePlayAudio() {
-    if (!currentQuestion || !currentQuestion.hasAudio || audioLoading) return;
+    if (!currentQuestion || !currentQuestion.hasAudio || audioLoading || muted) return;
     setAudioLoading(true);
     try {
       const res = await fetch(

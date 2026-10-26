@@ -48,7 +48,11 @@ export async function getTrialStatus(userId: string): Promise<TrialStatus | null
 
     return { daysLeft, trialEndIso: trialEnd.toISOString(), hasPaymentMethod, monthlyAmount: unitAmount };
   } catch (err) {
-    console.error("[pro-trial-status] failed", err);
+    // DBは本番と共有だが、ローカルはStripeのテストキーなので、本番の契約IDは「存在しない」と返ることがある。
+    // その場合は想定内なので、Next.jsの開発用エラー表示が出ないよう警告にとどめる。
+    const missing = typeof err === "object" && err !== null && (err as { code?: string }).code === "resource_missing";
+    if (missing) console.warn("[pro-trial-status] subscription not found in this Stripe mode");
+    else console.error("[pro-trial-status] failed", err);
     return null;
   }
 }

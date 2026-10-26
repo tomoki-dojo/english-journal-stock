@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_レイヤー_10" data-name="レイヤー 10" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 112 112">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #f09235;
+        stroke: #454545;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 3px;
+      }
+    </style>
+  </defs>
+  <path class="cls-1" d="M95.46,86.44c.58,2.81,3.18,5.13,5.43,4.85.47-1.2.39-2.77-.19-4.11s-1.67-2.42-2.84-2.74"/>
+  <path class="cls-1" d="M87.76,82c2.59,3.22,6.96,4.91,11.04,4.26.33-.7.23-1.55-.12-2.24s-.94-1.24-1.57-1.68c-2.16-1.51-4.9-1.93-7.53-1.86-.46.01-1,.09-1.2.5"/>
+</svg>
