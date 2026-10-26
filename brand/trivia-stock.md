@@ -182,8 +182,8 @@ DBテーブル `arthur_trivia`（category: word=語源 / culture=英語圏の文
 ## 追加分野(2026-10-13 レビュー済み・採用)
 - abbreviation = 略語(RSVP、SOS、scubaなど)
 - english_history = 英語の歴史(thou/you、綴りの固定、古英語など)
-- sns_net = SNS・ネットの英語(emoticon、meme、phishingなど。2026-10-20 レビュー待ち)
-- name_origin = 人名・地名の由来(America、California、Canadaなど。2026-10-20 レビュー待ち)
+- sns_net = SNS・ネットの英語(emoticon、meme、phishingなど。2026-10-20 レビュー済み・採用)
+- name_origin = 人名・地名の由来(America、California、Canadaなど。2026-10-20 レビュー済み・採用)
 
 ## レビューでの教訓(2026-10-20)
 - **読者が知っている前提のネタはボツ**: 「cello は『チェロ』と読む」のように、その言葉を目にする人はすでに知っているネタは、不思議さがない。
