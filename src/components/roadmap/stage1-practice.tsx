@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { RoundHeader } from "./round-header";
 import { GrowthBadge } from "./growth-badge";
 import { GrowingKuwagataPanel } from "./growing-kuwagata-panel";
+import { GuestRegisterBanner } from "./guest-register-banner";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
 import { TappableText } from "./tappable-text";
 import {
@@ -66,7 +67,7 @@ const RESULT_SPARKLES = Array.from({ length: 10 }).map((_, i) => {
 // アクティブセット（未卒業フレーズの先頭7件）から5件ランダムに出題する「ラウンド」単位で進行する。
 // 1問終わるごとに次のフレーズに切り替わるので、1フレーズを卒業するまで固定、という単調さを避ける。
 // AIによる正誤判定はせず、「言えた/言えなかった」の自己申告で進める。
-export function Stage1Practice() {
+export function Stage1Practice({ guest = false }: { guest?: boolean } = {}) {
   const muted = useSoundMuted();
   const [state, setState] = useState<ViewState>("loading");
   const [questions, setQuestions] = useState<Stage1RoundQuestion[]>([]);
@@ -77,6 +78,8 @@ export function Stage1Practice() {
   const [error, setError] = useState<string | null>(null);
   const [reaction, setReaction] = useState<"happy" | "sad" | null>(null);
   const [scene, setScene] = useState<Stage1Scene | null>(null);
+  // ゲスト: 1ラウンド終えたら採集チャンスが1回届く
+  const [guestCatchChance, setGuestCatchChance] = useState(false);
 
   const currentQuestion = questions[currentIndex];
 
@@ -119,6 +122,20 @@ export function Stage1Practice() {
     loadRound(saved);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!guest || state !== "round_complete") return;
+    let cancelled = false;
+    fetch("/api/roadmap/guest/round-complete", { method: "POST" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json: { catchChance?: boolean } | null) => {
+        if (!cancelled && json?.catchChance) setGuestCatchChance(true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [guest, state]);
 
   async function handlePlayAudio() {
     if (!currentQuestion || !currentQuestion.hasAudio || audioLoading || muted) return;
@@ -242,7 +259,7 @@ export function Stage1Practice() {
           <p className="text-sm text-zinc-700">
             {scene ? `「${scene}」のStage1は全て習得しました。` : "Stage1（音読・シャドーイング）は全て習得しました。"}
           </p>
-          <Link
+            <Link
             href="/roadmap"
             className="mt-4 inline-flex items-center gap-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
           >
@@ -314,21 +331,39 @@ export function Stage1Practice() {
           </div>
         )}
 
+        {guest && <div className="mt-4"><GuestRegisterBanner source="round" /></div>}
+
         <div className="mt-6 flex gap-3">
+          {guest && guestCatchChance && (
+            <Link
+              href="/roadmap/shelf"
+              style={{ backgroundColor: STAGE_COLOR }}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97]"
+            >
+              採集に行く
+            </Link>
+          )}
           <button
             type="button"
             onClick={() => loadRound()}
-            style={{ backgroundColor: STAGE_COLOR }}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97]"
+            style={guest && guestCatchChance ? undefined : { backgroundColor: STAGE_COLOR }}
+            className={cn(
+              "flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all duration-150 active:scale-[.97]",
+              guest && guestCatchChance
+                ? "border border-zinc-300 bg-white text-zinc-700 hover:border-zinc-400"
+                : "text-white hover:opacity-90",
+            )}
           >
             もう1ラウンド
           </button>
-          <Link
-            href="/roadmap"
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
-          >
-            部屋に戻る
-          </Link>
+          {!(guest && guestCatchChance) && (
+            <Link
+              href={guest ? "/roadmap/shelf" : "/roadmap"}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
+            >
+              {guest ? "棚を見る" : "部屋に戻る"}
+            </Link>
+          )}
         </div>
       </div>
     );

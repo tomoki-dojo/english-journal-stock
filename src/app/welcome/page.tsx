@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Bug, MessageCircle, Mic } from "lucide-react";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
 import { ROADMAP_TITLE_PATH } from "@/lib/roadmap-title";
+import { GuestStartButton } from "@/components/roadmap/guest-start-button";
 import { ShareButton } from "@/components/share-button";
 
 // 紹介ページ(LP)。ログイン不要。シェアされたリンクの行き先になる。
@@ -50,6 +51,9 @@ const GALLERY = [
 const primaryButton =
   "block w-full rounded-full border-4 border-[#eaaccb] bg-[#e5215a] px-6 py-3.5 text-center text-lg font-black tracking-wide text-white shadow-[0_4px_0_#a8153f] transition-transform hover:scale-[1.02] active:translate-y-0.5 active:shadow-none";
 
+const secondaryButton =
+  "block w-full rounded-full border-4 border-[#eaaccb] bg-white px-6 py-3 text-center text-lg font-black tracking-wide text-[#e5215a] shadow-[0_4px_0_#d9a1bd] transition-transform hover:scale-[1.02] active:translate-y-0.5 active:shadow-none";
+
 export default async function WelcomePage() {
   const user = await getCurrentUser();
 
@@ -64,7 +68,8 @@ export default async function WelcomePage() {
     </Link>
   ) : (
     <>
-      <Link href={signupHref} className={primaryButton}>
+      <GuestStartButton className={primaryButton} />
+      <Link href={signupHref} className={`${secondaryButton} mt-3`}>
         無料で始める
       </Link>
       <p className="mt-3 text-center text-sm font-semibold text-zinc-500">

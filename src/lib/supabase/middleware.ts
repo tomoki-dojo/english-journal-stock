@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { guestGuardDecision } from "@/lib/guest-access";
 import { ROADMAP_TITLE_PATH, TITLE_SEEN_COOKIE, TITLE_SEEN_MAX_AGE, sanitizeRoadmapNext } from "@/lib/roadmap-title";
 
 // 各リクエストでSupabaseのセッションCookieを検証・更新する
@@ -30,7 +31,28 @@ export async function updateSession(request: NextRequest) {
 
   // セッションを検証（getUserはトークンをSupabase側に問い合わせて検証するため、
   // getSessionより安全。ここで呼んでおくとCookieが自動で更新される）
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // ゲスト(匿名ログイン)は、Stage1・採集・棚と登録の画面だけ。AI判定・課金などは使わせない(コスト・乱用対策)。
+  if (user?.is_anonymous === true) {
+    const decision = guestGuardDecision(request.nextUrl.pathname);
+    if (decision === "api_forbidden") {
+      return NextResponse.json(
+        { error: "登録すると使えます", code: "guest_restricted" },
+        { status: 403, headers: { "Cache-Control": "no-store" } }
+      );
+    }
+    if (decision === "redirect") {
+      const url = request.nextUrl.clone();
+      url.pathname = request.nextUrl.pathname === "/login" ? "/roadmap/register" : "/roadmap/stage1";
+      url.search = "";
+      const redirect = NextResponse.redirect(url);
+      supabaseResponse.cookies.getAll().forEach((c) => redirect.cookies.set(c));
+      return redirect;
+    }
+  }
 
   // ロードマップ配下は、タイトル画面を踏んでいない（クッキー無し or 12時間経過）場合タイトルへ転送する。
   // ブックマーク・URL直打ちでも同じ。操作のたびにクッキーを延長するので「最後の操作から12時間」で失効する。

@@ -5,6 +5,7 @@ import {
   RoadmapSoundProvider,
   SoundToggleButton,
 } from "@/components/roadmap/roadmap-sound";
+import { GuestSignupTracker } from "@/components/analytics/guest-signup-tracker";
 import { RefreshOnReturn } from "@/components/roadmap/refresh-on-return";
 import { RoadmapAdBreakProvider } from "@/components/roadmap/roadmap-ad-break";
 import { TrialReminderBanner } from "@/components/roadmap/trial-reminder-banner";
@@ -37,6 +38,7 @@ export default async function RoadmapLayout({
   return (
     <RoadmapSoundProvider>
       <RefreshOnReturn />
+      <GuestSignupTracker isAnonymous={user?.isAnonymous === true} />
       <div className="min-h-dvh bg-gradient-to-b from-amber-50 via-white to-sky-50">
         <header className="border-b border-amber-100/80 bg-white/60 backdrop-blur-sm">
           <div className="mx-auto flex max-w-3xl items-center justify-between px-3 py-1.5 sm:px-6 sm:py-3">

@@ -14,6 +14,7 @@ import type { KuwagataAreaCode } from "@/lib/supabase/kuwagata";
 import { ShareButton } from "@/components/share-button";
 import { useRoadmapAdBreak } from "./roadmap-ad-break";
 import { GetSeOnMount } from "./roadmap-sound";
+import { GuestRegisterBanner } from "./guest-register-banner";
 
 // 採集エリア選択ではPro限定エリアに注記を付ける。
 const AREA_LABEL: Record<KuwagataAreaCode, string> = Object.fromEntries(
@@ -63,7 +64,10 @@ export function KuwagataCatchExpedition({
   initialGuaranteedCount = 0,
   initialUnlockedAreas,
   proLockedAreas = [],
+  guest = false,
 }: {
+  // ゲスト(匿名ログイン)。結果画面で登録を案内する。
+  guest?: boolean;
   initialPendingCount: number;
   initialGuaranteedCount?: number;
   initialUnlockedAreas: KuwagataAreaCode[];
@@ -282,6 +286,12 @@ export function KuwagataCatchExpedition({
           description={result.flavorTextJa}
         >
           {result.rarity !== "コモン" && <GetSeOnMount />}
+          {guest && (
+            <>
+              <TrackOnMount event="guest_caught_bug" params={{ species: result.speciesCode }} onceKey="guest_caught_bug" />
+              <GuestRegisterBanner source="catch" variant="dark" />
+            </>
+          )}
           {result.hiddenOnShelf && (
             <div className="w-full rounded-xl bg-white/10 px-3 py-2.5 text-center ring-1 ring-white/25">
               <TrackOnMount event="shelf_cap_hit" params={{ species: result.speciesCode }} />
@@ -312,7 +322,7 @@ export function KuwagataCatchExpedition({
             />
           )}
           <Link
-            href="/roadmap"
+            href={guest ? "/roadmap/stage1" : "/roadmap"}
             className="flex items-center gap-1 rounded-full px-4 py-1.5 text-xs font-semibold text-white/80 hover:text-white"
           >
             つづきを練習する

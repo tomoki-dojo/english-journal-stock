@@ -11,6 +11,8 @@ import {
   getUnlockedAreas,
   ANCIENT_AREA_CODE,
 } from "@/lib/supabase/kuwagata";
+import { ensureGuestRoadmapState } from "@/lib/supabase/guest";
+import { GuestRegisterBanner } from "@/components/roadmap/guest-register-banner";
 import { OnboardingQuiz } from "@/components/roadmap/onboarding-quiz";
 import { KuwagataShelf } from "@/components/roadmap/kuwagata-shelf";
 import { KuwagataCatchExpedition } from "@/components/roadmap/kuwagata-catch-expedition";
@@ -21,6 +23,8 @@ export default async function KuwagataShelfPage() {
   if (!user) {
     redirect("/login?reason=roadmap&next=/roadmap/shelf");
   }
+
+  if (user.isAnonymous) await ensureGuestRoadmapState(user.id);
 
   const state = await getUserRoadmapState(user.id);
   if (!state || !state.onboardingQuizCompleted) {
@@ -63,20 +67,24 @@ export default async function KuwagataShelfPage() {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <Link
-          href="/roadmap"
+          href={user.isAnonymous ? "/roadmap/stage1" : "/roadmap"}
           className="inline-flex items-center gap-1 text-sm text-zinc-500 transition-colors hover:text-zinc-900"
         >
           <ChevronLeft className="h-4 w-4" />
-          部屋に戻る
+          {user.isAnonymous ? "練習に戻る" : "部屋に戻る"}
         </Link>
-        <Link
-          href="/roadmap/encyclopedia"
-          className="inline-flex items-center gap-1.5 rounded-full bg-amber-900 px-4 py-2 text-sm font-black text-amber-50 shadow-md ring-2 ring-amber-900/20 transition-transform hover:bg-amber-800 active:scale-95"
-        >
-          <BookOpen className="h-4 w-4" />
-          図鑑を見る
-        </Link>
+        {!user.isAnonymous && (
+          <Link
+            href="/roadmap/encyclopedia"
+            className="inline-flex items-center gap-1.5 rounded-full bg-amber-900 px-4 py-2 text-sm font-black text-amber-50 shadow-md ring-2 ring-amber-900/20 transition-transform hover:bg-amber-800 active:scale-95"
+          >
+            <BookOpen className="h-4 w-4" />
+            図鑑を見る
+          </Link>
+        )}
       </div>
+
+      {user.isAnonymous && <GuestRegisterBanner source="shelf" />}
 
       <h1 className="mb-5 text-lg font-bold text-zinc-800">クワたんの棚</h1>
 
@@ -88,6 +96,7 @@ export default async function KuwagataShelfPage() {
             <KuwagataAreaUnlockCelebration unlockedAreas={unlockedAreas} newAreas={newAreas} />
           )}
           <KuwagataCatchExpedition
+            guest={user.isAnonymous}
             initialPendingCount={pendingCatchCount}
             initialGuaranteedCount={pendingGuaranteedCount}
             initialUnlockedAreas={unlockedAreas}
