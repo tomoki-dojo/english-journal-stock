@@ -86,21 +86,35 @@ export function RoomArrows({ listeningUnlocked = false }: { listeningUnlocked?: 
     [router]
   );
 
-  // スワイプ(指を左へ動かすと右の部屋、右へ動かすと左の部屋)。ポップアップや、横にスクロール・ドラッグする場所は除く。
+  // スワイプ(指を左へ動かすと右の部屋、右へ動かすと左の部屋)。ポップアップや、ドラッグする場所は除く。
+  // 横にスライドする場所(data-room-swipe-edge。棚のスライドなど)は、端まで来たあとさらに同じ向きに
+  // スワイプしたときだけ、部屋を移動する(スライド自体の動きとは被らない)。
   useEffect(() => {
     if (!current) return;
     let startX = 0;
     let startY = 0;
     let tracking = false;
+    let edgeEl: HTMLElement | null = null;
+    let atStart = false;
+    let atEnd = false;
+    const isAtStart = (el: HTMLElement) => el.scrollLeft <= 1;
+    const isAtEnd = (el: HTMLElement) => el.scrollLeft >= el.scrollWidth - el.clientWidth - 1;
     const onStart = (e: TouchEvent) => {
       const target = e.target as Element | null;
       tracking =
         e.touches.length === 1 &&
         !target?.closest('[data-no-room-swipe], input, textarea, select, [role="dialog"]') &&
         !insideFixedElement(target);
-      if (tracking) {
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
+      edgeEl = null;
+      if (!tracking) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      edgeEl = (target?.closest("[data-room-swipe-edge]") as HTMLElement | null) ?? null;
+      if (edgeEl) {
+        atStart = isAtStart(edgeEl);
+        atEnd = isAtEnd(edgeEl);
+        // 途中のページでは、スライドの動きだけ(部屋は移動しない)
+        if (!atStart && !atEnd) tracking = false;
       }
     };
     const onEnd = (e: TouchEvent) => {
@@ -109,6 +123,12 @@ export function RoomArrows({ listeningUnlocked = false }: { listeningUnlocked?: 
       const dx = e.changedTouches[0].clientX - startX;
       const dy = e.changedTouches[0].clientY - startY;
       if (Math.abs(dx) < SWIPE_MIN_PX || Math.abs(dx) < Math.abs(dy) * 2) return;
+      if (edgeEl) {
+        // 左端で右へ、右端で左へ(その向きにはスライドできない)、かつ実際に動いていないときだけ
+        const stillAtStart = atStart && dx > 0 && isAtStart(edgeEl);
+        const stillAtEnd = atEnd && dx < 0 && isAtEnd(edgeEl);
+        if (!stillAtStart && !stillAtEnd) return;
+      }
       const { left, right } = neighborsRef.current;
       if (dx < 0 && right) go("right", right, true);
       if (dx > 0 && left) go("left", left, true);
