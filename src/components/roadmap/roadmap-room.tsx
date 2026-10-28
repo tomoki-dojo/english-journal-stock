@@ -10,7 +10,6 @@ import {
   Pipette,
   Microscope,
   StickyNote,
-  Bug,
   Lock,
   Sparkles,
   Flame,
@@ -24,7 +23,6 @@ import type { Plan } from "@/lib/plan";
 import type { StreakStats } from "@/lib/supabase/speaking-roadmap";
 
 const BOARD_COLOR = "#e11d48";
-const SHELF_COLOR = "#92400e";
 const NOTEBOOK_COLOR = "#0d9488";
 
 // 部屋背景の実アート配置先。brand/kuwagata-asset-spec.mdの命名規則どおり
@@ -101,34 +99,32 @@ type ItemPlacement = {
 };
 
 const ITEM_PLACEMENT: Record<string, ItemPlacement> = {
-  stage0: { left: 21.6, top: 83, rotate: 0, widthPct: 13 },
-  stage1: { left: 64, top: 79, rotate: 0, widthPct: 21 },
-  stage2: { left: 20, top: 57, rotate: 0, widthPct: 14 },
-  stage3: { left: 62, top: 22, rotate: 0, widthPct: 13 },
-  stage4: { left: 40.5, top: 77.4, rotate: 0, widthPct: 12 },
-  // 机面に接地して見えるよう、widthPct拡大に合わせてtopも下げて調整
-  stage5: { left: 38.4, top: 56, rotate: 0, widthPct: 13 },
-  board: { left: 25, top: 23, rotate: 0, widthPct: 40, labelOverlapPx: 50 },
-  // 棚は一回り大きくして、画像自体をほぼ床に接地するまで下げる。
-  // ラベルは画像下端ではなく中央に完全に重ねる表示にする。
-  shelf: { left: 92, top: 64, rotate: 0, widthPct: 22, labelPosition: "center" },
-  // 単語ノート(小さな本棚)。机の右奥に置く。位置・幅は、ユーザーの配置イメージ(部屋の完成イメージ画像)から実測。
-  notebook: { left: 58, top: 49, rotate: 0, widthPct: 20 },
+  // 机は左右いっぱいに広げてあり、3列(左22・中央49・右76)×手前/奥の2段に並べる。
+  // 手前の列(Stage0・4・1)は、奥の列(Stage2・5・単語ノート)より左に6%ずらして、段差をつける。
+  stage0: { left: 16, top: 83, rotate: 0, widthPct: 13 },
+  stage1: { left: 70, top: 78, rotate: 0, widthPct: 21 },
+  stage2: { left: 22, top: 56, rotate: 0, widthPct: 14 },
+  stage3: { left: 70, top: 22, rotate: 0, widthPct: 13 },
+  stage4: { left: 43, top: 80, rotate: 0, widthPct: 12 },
+  stage5: { left: 49, top: 55.5, rotate: 0, widthPct: 13 },
+  board: { left: 28, top: 23, rotate: 0, widthPct: 40, labelOverlapPx: 50 },
+  // 単語ノート(小さな本棚)。机の右奥に置く。
+  notebook: { left: 76, top: 50.5, rotate: 0, widthPct: 20 },
 };
 
 // スマホ(sm未満)用の縦長(3:4)背景に合わせた配置。
 // rotate・labelPosition等は共通のITEM_PLACEMENTを使い、座標と幅だけ上書きする。
 const MOBILE_PLACEMENT: Record<string, { left: number; top: number; widthPct: number }> = {
-  // ユーザーが示した完成イメージ(実測)に合わせた値。棚は右端で見切れる配置。
-  board: { left: 27.3, top: 15.1, widthPct: 49.6 },
-  shelf: { left: 88, top: 69.3, widthPct: 30 },
-  stage3: { left: 76.9, top: 19.5, widthPct: 19.6 },
-  stage2: { left: 9.2, top: 45, widthPct: 14 },
-  notebook: { left: 46.7, top: 38.1, widthPct: 26.5 },
-  stage5: { left: 26.9, top: 53.7, widthPct: 20 },
-  stage1: { left: 54.5, top: 78.9, widthPct: 28.7 },
-  stage0: { left: 13.3, top: 84, widthPct: 22 },
-  stage4: { left: 24.5, top: 71.5, widthPct: 17 },
+  // 左右の矢印(画面の端)に重ならないよう、アイテムの中心は左右18〜82%の内側に置く。
+  board: { left: 30, top: 15.5, widthPct: 49.6 },
+  stage3: { left: 77, top: 19.5, widthPct: 19.6 },
+  stage2: { left: 22, top: 50, widthPct: 14 },
+  // 単語ノートの下端を、机の奥の縁(背景の上から50%)に合わせる。
+  notebook: { left: 73, top: 40.3, widthPct: 26.5 },
+  stage5: { left: 47, top: 51, widthPct: 20 },
+  stage1: { left: 66, top: 77, widthPct: 28.7 },
+  stage0: { left: 26, top: 85, widthPct: 22 },
+  stage4: { left: 28, top: 69, widthPct: 17 },
 };
 
 const ROOM_BG_MOBILE_URL = "/roadmap/room/room_bg_mobile.png";
@@ -419,18 +415,6 @@ export function RoadmapRoom({
           current={false}
           placement={ITEM_PLACEMENT.board}
           mobilePlacement={MOBILE_PLACEMENT.board}
-        />
-        <StageCase
-          color={SHELF_COLOR}
-          icon={Bug}
-          imageSrc={roomItemImageSrc("shelf")}
-          label="飼育棚"
-          caption="クワたん一覧"
-          href="/roadmap/shelf"
-          locked={false}
-          current={false}
-          placement={ITEM_PLACEMENT.shelf}
-          mobilePlacement={MOBILE_PLACEMENT.shelf}
         />
         <StageCase
           color={NOTEBOOK_COLOR}

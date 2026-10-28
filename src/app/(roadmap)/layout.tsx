@@ -6,6 +6,7 @@ import {
   SoundToggleButton,
 } from "@/components/roadmap/roadmap-sound";
 import { GuestSignupTracker } from "@/components/analytics/guest-signup-tracker";
+import { RoomArrows } from "@/components/roadmap/room-arrows";
 import { RefreshOnReturn } from "@/components/roadmap/refresh-on-return";
 import { RoadmapAdBreakProvider } from "@/components/roadmap/roadmap-ad-break";
 import { TrialReminderBanner } from "@/components/roadmap/trial-reminder-banner";
@@ -77,6 +78,8 @@ export default async function RoadmapLayout({
             <TrialReminderBanner daysLeft={trial.daysLeft} monthlyAmount={trial.monthlyAmount} />
           )}
           <RoadmapAdBreakProvider enabled={showAds}>{children}</RoadmapAdBreakProvider>
+          {/* 部屋を行き来する矢印(ゲストは棚とStage1だけなので出さない) */}
+          {user && !user.isAnonymous && <RoomArrows />}
         </main>
       </div>
     </RoadmapSoundProvider>

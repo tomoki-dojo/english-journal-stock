@@ -4153,6 +4153,7 @@ function EnlargedTankVisual({
   return (
     <div
       ref={frameRef}
+      data-no-room-swipe
       className="relative mb-3.5 w-full select-none overflow-hidden rounded-lg border border-zinc-200"
       style={{ touchAction: decoEdit ? "none" : "pan-y" }}
       onDragStart={(e) => e.preventDefault()}
@@ -4833,6 +4834,7 @@ export function KuwagataShelf({
             <div className="relative">
               <div
                 ref={knownShelfRef}
+                data-no-room-swipe
                 onScroll={handleKnownShelfScroll}
                 className="flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               >

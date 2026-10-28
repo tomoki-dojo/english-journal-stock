@@ -2234,6 +2234,42 @@ body {
   animation: title-breathe 2.6s ease-in-out 2.4s infinite;
 }
 
+/* 部屋の矢印。向かう方向へ少し寄りながら、ゆっくり呼吸する。 */
+@keyframes room-arrow-left {
+  0%,
+  100% {
+    transform: translateX(0) scale(1);
+  }
+  50% {
+    transform: translateX(-4px) scale(1.1);
+  }
+}
+
+@keyframes room-arrow-right {
+  0%,
+  100% {
+    transform: translateX(0) scale(1);
+  }
+  50% {
+    transform: translateX(4px) scale(1.1);
+  }
+}
+
+.animate-room-arrow-left {
+  animation: room-arrow-left 2.2s ease-in-out infinite;
+}
+
+.animate-room-arrow-right {
+  animation: room-arrow-right 2.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-room-arrow-left,
+  .animate-room-arrow-right {
+    animation: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-title-blink,
   .animate-title-bg,

@@ -65,14 +65,16 @@ export default async function KuwagataShelfPage() {
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <Link
-          href={user.isAnonymous ? "/roadmap/stage1" : "/roadmap"}
-          className="inline-flex items-center gap-1 text-sm text-zinc-500 transition-colors hover:text-zinc-900"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          {user.isAnonymous ? "練習に戻る" : "部屋に戻る"}
-        </Link>
+      <div className={`mb-4 flex items-center ${user.isAnonymous ? "justify-between" : "justify-end"}`}>
+        {user.isAnonymous && (
+          <Link
+            href="/roadmap/stage1"
+            className="inline-flex items-center gap-1 text-sm text-zinc-500 transition-colors hover:text-zinc-900"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            練習に戻る
+          </Link>
+        )}
         {!user.isAnonymous && (
           <Link
             href="/roadmap/encyclopedia"
