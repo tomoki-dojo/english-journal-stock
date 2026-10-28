@@ -73,11 +73,14 @@ export default async function RoadmapLayout({
           </div>
         </header>
 
-        <main className="mx-auto max-w-3xl px-2 pb-8 pt-1 sm:px-6 sm:py-8">
+        <main className="mx-auto max-w-3xl overflow-x-clip px-2 pb-8 pt-1 sm:px-6 sm:py-8">
           {trial && !trial.hasPaymentMethod && (
             <TrialReminderBanner daysLeft={trial.daysLeft} monthlyAmount={trial.monthlyAmount} />
           )}
-          <RoadmapAdBreakProvider enabled={showAds}>{children}</RoadmapAdBreakProvider>
+          <RoadmapAdBreakProvider enabled={showAds}>
+            {/* 部屋の移動で、今の部屋が横へ出入りする動き(RoomArrows)の対象 */}
+            <div id="room-slide">{children}</div>
+          </RoadmapAdBreakProvider>
           {/* 部屋を行き来する矢印(ゲストは棚とStage1だけなので出さない) */}
           {user && !user.isAnonymous && <RoomArrows />}
         </main>
