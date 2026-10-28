@@ -4901,6 +4901,7 @@ export function KuwagataShelf({
           <div className="relative">
             <div
               ref={newShelfRef}
+              data-room-swipe-edge
               onScroll={handleNewShelfScroll}
               className="flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
