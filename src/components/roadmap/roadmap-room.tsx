@@ -127,7 +127,7 @@ const MOBILE_PLACEMENT: Record<string, { left: number; top: number; widthPct: nu
   stage4: { left: 28, top: 69, widthPct: 17 },
 };
 
-const ROOM_BG_MOBILE_URL = "/roadmap/room/room_bg_mobile.png";
+const ROOM_BG_MOBILE_URL = "/roadmap/room/room_bg_mobile.webp";
 
 type RoadmapRoomProps = {
   stageReadiness: {
