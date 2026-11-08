@@ -7,6 +7,7 @@ const GUEST_PAGE_PREFIXES = [
   "/terms",
   "/privacy",
   "/tokushoho",
+  "/words",
   "/roadmap/title",
   "/roadmap/stage1",
   "/roadmap/shelf",
@@ -19,6 +20,7 @@ const GUEST_API_PREFIXES = [
   "/api/roadmap/stage1",
   "/api/roadmap/kuwagata",
   "/api/roadmap/word-lookup",
+  "/api/words",
 ];
 
 function matchesPrefix(pathname: string, prefix: string): boolean {

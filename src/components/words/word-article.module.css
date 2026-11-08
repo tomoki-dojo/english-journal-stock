@@ -1,0 +1,122 @@
+/* 記事本文（Markdown）の見た目。Tailwindのtypographyプラグインは入れていないので、ここで最低限だけ。 */
+.body {
+  font-size: 16px;
+  line-height: 1.9;
+}
+.body :global(h2) {
+  margin: 2.5rem 0 0.9rem;
+  padding-left: 0.75rem;
+  border-left: 6px solid #e5215a;
+  font-size: 1.3rem;
+  font-weight: 900;
+  line-height: 1.4;
+}
+.body :global(h3) {
+  margin: 1.8rem 0 0.6rem;
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+.body :global(p) {
+  margin: 0.9rem 0;
+}
+.body :global(ul:not(.words-plain)),
+.body :global(ol) {
+  margin: 0.9rem 0;
+  padding-left: 1.4rem;
+}
+.body :global(ul:not(.words-plain)) {
+  list-style: disc;
+}
+.body :global(ol) {
+  list-style: decimal;
+}
+.body :global(li) {
+  margin: 0.3rem 0;
+}
+.body :global(strong) {
+  font-weight: 900;
+  background: linear-gradient(transparent 60%, #ffe08a 60%);
+}
+.body :global(a) {
+  color: #e5215a;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.body :global(blockquote) {
+  margin: 1rem 0;
+  padding: 0.6rem 1rem;
+  border-radius: 1rem;
+  background: #fff;
+  border: 2px solid #f2d5b8;
+}
+.body :global(table) {
+  width: 100%;
+  margin: 1rem 0;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  background: #fff;
+}
+.body :global(th),
+.body :global(td) {
+  border: 1px solid #f2d5b8;
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  vertical-align: top;
+}
+.body :global(th) {
+  background: #fff1c9;
+  font-weight: 900;
+}
+.body :global(code) {
+  font-family: inherit;
+  font-weight: 700;
+}
+.answer :global(p) {
+  margin: 0;
+}
+.answer :global(strong) {
+  color: #e5215a;
+  font-weight: 900;
+}
+
+/* 会話の吹き出し（マンガ風：白地＋黒っぽい線＋話す人へのしっぽ）。キャラの線画と同じ色の線にする */
+.bubble {
+  position: relative;
+  background: #fff;
+  border: 2.5px solid #3c2819;
+  border-radius: 1.4rem;
+  padding: 0.6rem 1rem;
+}
+.bubble::before,
+.bubble::after {
+  content: "";
+  position: absolute;
+  bottom: 14px;
+  width: 0;
+  height: 0;
+  border-style: solid;
+}
+/* 左のキャラ（クマ）へ向かうしっぽ */
+.bubbleLeft::before {
+  left: -13px;
+  border-width: 8px 13px 8px 0;
+  border-color: transparent #3c2819 transparent transparent;
+}
+.bubbleLeft::after {
+  left: -9px;
+  border-width: 6px 10px 6px 0;
+  border-color: transparent #fff transparent transparent;
+  margin-bottom: 2px;
+}
+/* 右のキャラ（アーサー）へ向かうしっぽ */
+.bubbleRight::before {
+  right: -13px;
+  border-width: 8px 0 8px 13px;
+  border-color: transparent transparent transparent #3c2819;
+}
+.bubbleRight::after {
+  right: -9px;
+  border-width: 6px 0 6px 10px;
+  border-color: transparent transparent transparent #fff;
+  margin-bottom: 2px;
+}

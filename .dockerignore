@@ -6,3 +6,5 @@ _reference
 npm-debug.log*
 .DS_Store
 *.md
+# 和製英語の記事（/words）はビルド時に読むので、*.md の除外から外す
+!content/**/*.md
