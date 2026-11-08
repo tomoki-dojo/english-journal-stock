@@ -17,7 +17,16 @@
   font-weight: 900;
 }
 .body :global(p) {
-  margin: 0.9rem 0;
+  margin: 1.15rem 0;
+}
+/* パソコンでは段落の間と行間を少し広げる */
+@media (min-width: 640px) {
+  .body {
+    line-height: 2.1;
+  }
+  .body :global(p) {
+    margin: 1.5rem 0;
+  }
 }
 .body :global(ul:not(.words-plain)),
 .body :global(ol) {

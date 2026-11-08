@@ -18,7 +18,12 @@
 // クマ: Let's go to Viking!
 // アーサー: Sure. Let me grab my axe. | ええよ。斧取ってくるけん
 // ```
-// → 会話の吹き出し（「話す人: 英語 | 字幕」。字幕は省略可）
+// → 会話の吹き出し（「話す人: 英語 | 字幕」。字幕は省略可）。背景つきの「会話」のかたまりになる
+//
+// ```balloon
+// アーサー: When you think of Vikings, you usually picture axes, right? | バイキングといえば斧のイメージだよねぇ
+// ```
+// → 本文の途中に置く、ひとことの吹き出し（書き方は talk と同じ。背景なし）
 //
 // ```phrases
 // Let's go to a buffet! | 食べ放題に行こう！
@@ -37,6 +42,7 @@ export type Phrase = { en: string; ja?: string; audio?: string };
 export type WordBlock =
   | { type: "markdown"; source: string }
   | { type: "talk"; lines: TalkLine[] }
+  | { type: "balloon"; lines: TalkLine[] }
   | { type: "phrases"; phrases: Phrase[] };
 
 export type WordMeta = {
@@ -53,6 +59,11 @@ export type WordMeta = {
 };
 
 export type WordArticle = WordMeta & { blocks: WordBlock[] };
+
+// アイキャッチのURL：フロントマターに ogImage があればそれ（ショートの一場面など）、なければ自動で作る /words/og/<slug>
+export function wordEyecatch(a: { slug: string; ogImage?: string }): string {
+  return a.ogImage ?? `/words/og/${a.slug}`;
+}
 
 const SLUG_PATTERN = /^[a-z0-9-]+$/;
 
@@ -103,15 +114,15 @@ function splitSub(line: string): [string, string | undefined] {
 
 function parseBlocks(slug: string, body: string): WordBlock[] {
   const blocks: WordBlock[] = [];
-  const fence = /^```(talk|phrases)[ \t]*\r?\n([\s\S]*?)^```[ \t]*$/gm;
+  const fence = /^```(talk|balloon|phrases)[ \t]*\r?\n([\s\S]*?)^```[ \t]*$/gm;
   let last = 0;
   for (const m of body.matchAll(fence)) {
     const before = body.slice(last, m.index);
     if (before.trim()) blocks.push({ type: "markdown", source: before });
     const lines = m[2].split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-    if (m[1] === "talk") {
+    if (m[1] === "talk" || m[1] === "balloon") {
       blocks.push({
-        type: "talk",
+        type: m[1],
         lines: lines.map((l) => {
           const c = l.search(/[:：]/);
           const speaker = c > 0 ? l.slice(0, c).trim() : "";

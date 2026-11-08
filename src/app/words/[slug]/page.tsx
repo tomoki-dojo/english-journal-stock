@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { marked } from "marked";
-import { getWordArticle, listWordArticles, type WordArticle } from "@/lib/words";
+import { getWordArticle, listWordArticles, wordEyecatch, type WordArticle } from "@/lib/words";
 import { WordsShell } from "@/components/words/words-shell";
-import { WordTalk } from "@/components/words/word-talk";
+import { WordBalloon, WordTalk } from "@/components/words/word-talk";
 import { WordPhrases } from "@/components/words/word-phrases";
 import { WordPracticeCta } from "@/components/words/word-practice-cta";
+import { WordStickyBar } from "@/components/words/word-sticky-bar";
 import { TrackOnMount } from "@/components/analytics/track-on-mount";
 import styles from "@/components/words/word-article.module.css";
 
@@ -14,8 +15,7 @@ import styles from "@/components/words/word-article.module.css";
 export const dynamicParams = false;
 
 const SITE_URL = "https://app.upskillenglish.bear-fruit.online";
-// アイキャッチ：記事のフロントマターに ogImage があればそれ（ショートの一場面など）、なければ自動で作る /words/og/<slug>
-const eyecatch = (a: { slug: string; ogImage?: string }) => a.ogImage ?? `/words/og/${a.slug}`;
+const eyecatch = wordEyecatch;
 
 export function generateStaticParams() {
   return listWordArticles().map((a) => ({ slug: a.slug }));
@@ -128,6 +128,8 @@ export default async function WordArticlePage({ params }: Props) {
           {a.blocks.map((b, i) =>
             b.type === "talk" ? (
               <WordTalk key={i} lines={b.lines} />
+            ) : b.type === "balloon" ? (
+              <WordBalloon key={i} lines={b.lines} />
             ) : b.type === "phrases" ? (
               <WordPhrases key={i} phrases={b.phrases} slug={a.slug} />
             ) : (
@@ -162,6 +164,7 @@ export default async function WordArticlePage({ params }: Props) {
           </p>
         </section>
       )}
+      <WordStickyBar slug={a.slug} />
     </WordsShell>
   );
 }
