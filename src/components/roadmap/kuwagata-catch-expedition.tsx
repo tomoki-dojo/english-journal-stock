@@ -1,7 +1,7 @@
 "use client";
 
 import { TrackOnMount } from "@/components/analytics/track-on-mount";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Sparkles, ArrowRight } from "lucide-react";
@@ -91,6 +91,22 @@ export function KuwagataCatchExpedition({
   const [challengeArea, setChallengeArea] = useState<KuwagataAreaCode | null>(
     null,
   );
+
+  // ?catch=auto で開かれたら（ゲストがStage1のラウンドを終えて来たとき）、ボタンを押さなくても採集を始める。
+  // 再読み込みで二度始まらないよう、URLからは消しておく。
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("catch") !== "auto") return;
+    params.delete("catch");
+    const qs = params.toString();
+    window.history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
+    if (initialPendingCount - Math.min(initialGuaranteedCount, initialPendingCount) <= 0) return;
+    setUseGuaranteed(false);
+    if (initialUnlockedAreas.length === 1) setChallengeArea(initialUnlockedAreas[0]);
+    else setPicking(true);
+    // 開いたときに1回だけ
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (pendingCount <= 0 && !result) {
     return null;

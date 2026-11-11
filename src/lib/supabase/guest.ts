@@ -35,3 +35,14 @@ export async function grantGuestCatchChance(userId: string): Promise<boolean> {
   if (rpcError) throw new Error(`採集チャンスの付与に失敗しました: ${rpcError.message}`);
   return true;
 }
+
+// ゲストが、もう採集で1匹でも捕まえたか（最初のラウンドを短くする判定に使う）
+export async function guestHasCaught(userId: string): Promise<boolean> {
+  const { count, error } = await supabaseAdmin
+    .from("kuwagata_individuals")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("obtained_via", "roll");
+  if (error) throw new Error(`ゲストの採集履歴の確認に失敗しました: ${error.message}`);
+  return (count ?? 0) > 0;
+}

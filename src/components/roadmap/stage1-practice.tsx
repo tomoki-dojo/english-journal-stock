@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { trackEventOnce } from "@/lib/analytics";
 import { useSoundMuted } from "@/components/roadmap/roadmap-sound";
 import Link from "next/link";
 import { Check, ChevronDown, PartyPopper, PenLine, Volume2, X } from "lucide-react";
@@ -9,6 +11,7 @@ import { RoundHeader } from "./round-header";
 import { GrowthBadge } from "./growth-badge";
 import { GrowingKuwagataPanel } from "./growing-kuwagata-panel";
 import { GuestRegisterBanner } from "./guest-register-banner";
+import { GuestTutorialOverlay, hasSeenGuestTutorial, markGuestTutorialSeen, type GuestTutorialStep } from "./guest-tutorial-overlay";
 import { STAGE_COLORS, withAlpha } from "./stage-colors";
 import { TappableText } from "./tappable-text";
 import {
@@ -67,7 +70,36 @@ const RESULT_SPARKLES = Array.from({ length: 10 }).map((_, i) => {
 // アクティブセット（未卒業フレーズの先頭7件）から5件ランダムに出題する「ラウンド」単位で進行する。
 // 1問終わるごとに次のフレーズに切り替わるので、1フレーズを卒業するまで固定、という単調さを避ける。
 // AIによる正誤判定はせず、「言えた/言えなかった」の自己申告で進める。
+// ゲストのチュートリアル（暗転＋ひとこと）は、ここで重ねて出す。練習の画面側からは showTutorial で呼ぶ。
+type ShowTutorial = (step: GuestTutorialStep, onClose?: () => void) => void;
+
 export function Stage1Practice({ guest = false }: { guest?: boolean } = {}) {
+  const [tutorial, setTutorial] = useState<GuestTutorialStep | null>(null);
+  const onCloseRef = useRef<(() => void) | null>(null);
+  const showTutorial = useCallback<ShowTutorial>((step, onClose) => {
+    onCloseRef.current = onClose ?? null;
+    setTutorial(step);
+  }, []);
+  return (
+    <>
+      <Stage1PracticeBody guest={guest} showTutorial={showTutorial} />
+      {tutorial && (
+        <GuestTutorialOverlay
+          step={tutorial}
+          onClose={() => {
+            markGuestTutorialSeen(tutorial);
+            setTutorial(null);
+            const next = onCloseRef.current;
+            onCloseRef.current = null;
+            next?.();
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+function Stage1PracticeBody({ guest, showTutorial }: { guest: boolean; showTutorial: ShowTutorial }) {
   const muted = useSoundMuted();
   const [state, setState] = useState<ViewState>("loading");
   const [questions, setQuestions] = useState<Stage1RoundQuestion[]>([]);
@@ -78,13 +110,18 @@ export function Stage1Practice({ guest = false }: { guest?: boolean } = {}) {
   const [error, setError] = useState<string | null>(null);
   const [reaction, setReaction] = useState<"happy" | "sad" | null>(null);
   const [scene, setScene] = useState<Stage1Scene | null>(null);
-  // ゲスト: 1ラウンド終えたら採集チャンスが1回届く
-  const [guestCatchChance, setGuestCatchChance] = useState(false);
+  // ゲスト: 1ラウンド終えたら採集チャンスが1回届き、そのまま採集（棚で自動開始）に移る。
+  // pending＝確認中、go＝採集へ移動中、none＝チャンスなし（捕まえ済みなど。通常の完了画面を出す）
+  const [guestCatch, setGuestCatch] = useState<"pending" | "go" | "none">("pending");
+  const router = useRouter();
+  // ゲストで、まだ1匹も捕まえていない間のラウンド（3問）か
+  const guestFirstRoundRef = useRef(false);
 
   const currentQuestion = questions[currentIndex];
 
   async function loadRound(sceneArg: Stage1Scene | null = scene) {
     setState("loading");
+    setGuestCatch("pending");
     setCurrentIndex(0);
     setResults([]);
     setError(null);
@@ -105,6 +142,15 @@ export function Stage1Practice({ guest = false }: { guest?: boolean } = {}) {
 
       setQuestions(json.questions);
       setState("round");
+      if (guest) {
+        guestFirstRoundRef.current = Boolean(json.guestFirstRound);
+        // 1: 最初に入ったとき／3: 捕まえたあとに練習に戻ってきたとき
+        if (json.guestFirstRound) {
+          if (!hasSeenGuestTutorial(1)) showTutorial(1);
+        } else if (!hasSeenGuestTutorial(3)) {
+          showTutorial(3);
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "出題データの取得に失敗しました");
       setState("error");
@@ -125,17 +171,33 @@ export function Stage1Practice({ guest = false }: { guest?: boolean } = {}) {
 
   useEffect(() => {
     if (!guest || state !== "round_complete") return;
+    trackEventOnce("guest_round_complete", "guest_round_complete");
     let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
     fetch("/api/roadmap/guest/round-complete", { method: "POST" })
       .then((res) => (res.ok ? res.json() : null))
       .then((json: { catchChance?: boolean } | null) => {
-        if (!cancelled && json?.catchChance) setGuestCatchChance(true);
+        if (cancelled) return;
+        if (json?.catchChance) {
+          setGuestCatch("go");
+          // 2: ひとこと見せてから棚へ。棚では採集（単語チャレンジ）がボタンなしで始まる
+          const goCatch = () => router.push("/roadmap/shelf?catch=auto");
+          if (hasSeenGuestTutorial(2)) timer = setTimeout(goCatch, 300);
+          else showTutorial(2, goCatch);
+        } else {
+          setGuestCatch("none");
+          // 4: 捕まえたあとの5問のセットを初めて終えたとき（3を見たあと）
+          if (!guestFirstRoundRef.current && hasSeenGuestTutorial(3) && !hasSeenGuestTutorial(4)) showTutorial(4);
+        }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) setGuestCatch("none");
+      });
     return () => {
       cancelled = true;
+      if (timer) clearTimeout(timer);
     };
-  }, [guest, state]);
+  }, [guest, state, router, showTutorial]);
 
   async function handlePlayAudio() {
     if (!currentQuestion || !currentQuestion.hasAudio || audioLoading || muted) return;
@@ -175,6 +237,8 @@ export function Stage1Practice({ guest = false }: { guest?: boolean } = {}) {
         throw new Error(json.error ?? "結果の保存に失敗しました");
       }
       const json = await res.json();
+      // ゲストの1問目の回答（どこで離れたかを見るための計測。端末ごとに1回）
+      if (guest && currentIndex === 0) trackEventOnce("guest_first_answer", "guest_first_answer");
 
       setReaction(correct ? "happy" : "sad");
       setTimeout(() => setReaction(null), 1100);
@@ -270,6 +334,19 @@ export function Stage1Practice({ guest = false }: { guest?: boolean } = {}) {
     );
   }
 
+  // ゲストの採集チャンスの確認中・採集へ移る間は、完了画面の代わりにひとことだけ出す
+  if (state === "round_complete" && guest && guestCatch !== "none") {
+    return (
+      <div className="relative overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100/50 px-6 py-14 text-center animate-round-complete-pop">
+        {guestCatch === "go" && (
+          <p className="text-sm font-semibold text-zinc-500">
+            採集の準備中…
+          </p>
+        )}
+      </div>
+    );
+  }
+
   if (state === "round_complete") {
     const correctCount = results.filter((r) => r.correct).length;
     const graduated = results.filter((r) => r.graduated);
@@ -334,36 +411,23 @@ export function Stage1Practice({ guest = false }: { guest?: boolean } = {}) {
         {guest && <div className="mt-4"><GuestRegisterBanner source="round" /></div>}
 
         <div className="mt-6 flex gap-3">
-          {guest && guestCatchChance && (
-            <Link
-              href="/roadmap/shelf"
-              style={{ backgroundColor: STAGE_COLOR }}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[.97]"
-            >
-              採集に行く
-            </Link>
-          )}
           <button
             type="button"
             onClick={() => loadRound()}
-            style={guest && guestCatchChance ? undefined : { backgroundColor: STAGE_COLOR }}
+            style={{ backgroundColor: STAGE_COLOR }}
             className={cn(
               "flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all duration-150 active:scale-[.97]",
-              guest && guestCatchChance
-                ? "border border-zinc-300 bg-white text-zinc-700 hover:border-zinc-400"
-                : "text-white hover:opacity-90",
+              "text-white hover:opacity-90",
             )}
           >
             もう1ラウンド
           </button>
-          {!(guest && guestCatchChance) && (
-            <Link
-              href={guest ? "/roadmap/shelf" : "/roadmap"}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
-            >
-              {guest ? "棚を見る" : "部屋に戻る"}
-            </Link>
-          )}
+          <Link
+            href={guest ? "/roadmap/shelf" : "/roadmap"}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-400"
+          >
+            {guest ? "棚を見る" : "部屋に戻る"}
+          </Link>
         </div>
       </div>
     );

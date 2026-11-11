@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
 import { getStage1Round } from "@/lib/supabase/speaking-roadmap";
-import { parseStage1Scene } from "@/components/roadmap/types";
+import { guestHasCaught } from "@/lib/supabase/guest";
+import { parseStage1Scene, STAGE1_ROUND_SIZE } from "@/components/roadmap/types";
+
+// ゲストがまだ1匹も捕まえていない間の、1ラウンドの問題数（最初の採集までを短くする）
+const GUEST_FIRST_ROUND_SIZE = 3;
 
 // Stage1のラウンド（アクティブセット最大7件から最大5件をランダム抽出したミニクイズ1回分）を返す。
 // 全表現を卒業済みならstatus: "done"を返す。
@@ -20,8 +24,9 @@ export async function GET(request: Request) {
 
   try {
     const scene = parseStage1Scene(new URL(request.url).searchParams.get("scene"));
-    const round = await getStage1Round(user.id, scene);
-    return NextResponse.json(round, { headers: { "Cache-Control": "no-store, must-revalidate" } });
+    const guestFirstRound = user.isAnonymous && !(await guestHasCaught(user.id));
+    const round = await getStage1Round(user.id, scene, guestFirstRound ? GUEST_FIRST_ROUND_SIZE : STAGE1_ROUND_SIZE);
+    return NextResponse.json(round.status === "round" ? { ...round, guestFirstRound } : round, { headers: { "Cache-Control": "no-store, must-revalidate" } });
   } catch (err) {
     const message = err instanceof Error ? err.message : "出題データの取得に失敗しました";
     return NextResponse.json({ error: message }, { status: 500 });

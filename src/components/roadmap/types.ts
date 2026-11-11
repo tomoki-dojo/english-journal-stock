@@ -124,6 +124,8 @@ export type Stage1RoundResponse =
       questions: Stage1RoundQuestion[];
       remainingCount: number;
       totalCount: number;
+      // ゲストで、まだ1匹も捕まえていない間のラウンド（3問。チュートリアルの出し分けに使う）
+      guestFirstRound?: boolean;
     }
   | { status: "done"; totalCount: number };
 

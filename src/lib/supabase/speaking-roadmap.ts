@@ -486,14 +486,15 @@ async function getStage1ActiveSet(userId: string, scene?: Stage1Scene | null): P
 
 // Stage1のラウンド（ミニクイズ1回分）を決める。
 // アクティブセット（最大7件）から最大5件をランダムに選んで返す。全て卒業済みならdoneを返す。
-export async function getStage1Round(userId: string, scene?: Stage1Scene | null): Promise<Stage1RoundResponse> {
+// roundSize: 1ラウンドの問題数（省略時は STAGE1_ROUND_SIZE）。ゲストの最初のうちは短くする。
+export async function getStage1Round(userId: string, scene?: Stage1Scene | null, roundSize: number = STAGE1_ROUND_SIZE): Promise<Stage1RoundResponse> {
   const { activeSet, totalCount, remainingCount } = await getStage1ActiveSet(userId, scene);
 
   if (activeSet.length === 0) {
     return { status: "done", totalCount };
   }
 
-  const sampled = shuffleArray(activeSet).slice(0, Math.min(STAGE1_ROUND_SIZE, activeSet.length));
+  const sampled = shuffleArray(activeSet).slice(0, Math.min(roundSize, activeSet.length));
 
   return {
     status: "round",
