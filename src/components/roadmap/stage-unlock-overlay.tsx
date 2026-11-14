@@ -69,6 +69,7 @@ export function StageUnlockOverlay({
         campaign="stage_unlock"
         label="みんなに自慢する"
         text={`英クワたんでStage${stage}が解放された！ #英クワたん`}
+        card={{ kind: "text", eyebrow: "Stage解放！", title: `Stage${stage}`, subtitle: "英語の練習で次のステージへ", mascot: "arthur" }}
         className="inline-flex w-full max-w-xs items-center justify-center gap-1.5 rounded-full border-2 border-white/70 bg-white/10 py-2 text-sm font-bold text-white transition-transform active:scale-95"
       />
       <button

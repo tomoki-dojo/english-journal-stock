@@ -1,6 +1,7 @@
 "use client";
 
 import { ShareButton } from "@/components/share-button";
+import { areaMapImage } from "@/components/share/share-card";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { KuwagataAreaMap } from "./kuwagata-area-map";
@@ -105,6 +106,14 @@ export function KuwagataAreaUnlockCelebration({
             campaign="area_unlock"
             label="みんなに自慢する"
             text={`英クワたんで新エリア「${newAreas.map((a) => KUWAGATA_AREA_NAMES[a]).join("」「")}」が解放された！ #英クワたん`}
+            card={{
+              kind: "text",
+              eyebrow: "新エリア解放！",
+              title: newAreas.map((a) => KUWAGATA_AREA_NAMES[a]).join("・"),
+              subtitle: "採集に行ける場所が増えた",
+              image: areaMapImage(newAreas[0]),
+              background: areaMapImage(newAreas[0]),
+            }}
             className="inline-flex w-full max-w-xs items-center justify-center gap-1.5 rounded-full border-2 border-white/70 bg-white/10 py-2 text-sm font-bold text-white transition-transform active:scale-95"
           />
         )}

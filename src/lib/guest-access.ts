@@ -3,6 +3,7 @@
 
 const GUEST_PAGE_PREFIXES = [
   "/welcome",
+  "/s",
   "/auth",
   "/terms",
   "/privacy",
@@ -21,6 +22,7 @@ const GUEST_API_PREFIXES = [
   "/api/roadmap/kuwagata",
   "/api/roadmap/word-lookup",
   "/api/words",
+  "/api/share-card",
 ];
 
 function matchesPrefix(pathname: string, prefix: string): boolean {

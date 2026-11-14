@@ -12,6 +12,7 @@ import { KuwagataAreaMap, KUWAGATA_MAP_AREA_CODES } from "./kuwagata-area-map";
 import { KUWAGATA_AREA_NAMES } from "@/lib/kuwagata-area-names";
 import type { KuwagataAreaCode } from "@/lib/supabase/kuwagata";
 import { ShareButton } from "@/components/share-button";
+import { areaMapImage } from "@/components/share/share-card";
 import { useRoadmapAdBreak } from "./roadmap-ad-break";
 import { GetSeOnMount } from "./roadmap-sound";
 import { GuestRegisterBanner } from "./guest-register-banner";
@@ -85,6 +86,8 @@ export function KuwagataCatchExpedition({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CatchResponse | null>(null);
+  // 採集したエリア（シェアカードの背景に、そのエリアのマップを薄く敷く）
+  const [resultArea, setResultArea] = useState<KuwagataAreaCode | null>(null);
   const shareCaptureRef = useRef<HTMLDivElement | null>(null);
   const { notifyBreak } = useRoadmapAdBreak();
   // ミニゲーム中のエリア。ミニゲームが終わったら、その成績つきで採集を実行する。
@@ -133,6 +136,7 @@ export function KuwagataCatchExpedition({
         return;
       }
       setResult(json as CatchResponse);
+      setResultArea(areaCode);
       setPendingCount((n) => Math.max(0, n - 1));
       if (useGuaranteed) setGuaranteedCount((n) => Math.max(0, n - 1));
       setPicking(false);
@@ -328,15 +332,25 @@ export function KuwagataCatchExpedition({
           >
             棚を見る
           </button>
-          {result.rarity !== "コモン" && (
-            <ShareButton
-              campaign="catch_rare"
-              captureRef={shareCaptureRef}
-              label="みんなに自慢する"
-              text={`英クワたんで${result.rarity}の「${result.speciesName}」をゲットした！ #英クワたん`}
-              className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border-2 border-white/70 bg-white/10 py-2 text-sm font-bold text-white transition-transform active:scale-95"
-            />
-          )}
+          <ShareButton
+            campaign={result.rarity === "コモン" ? "catch" : "catch_rare"}
+            label={result.rarity === "コモン" ? "シェアする" : "みんなに自慢する"}
+            text={
+              result.rarity === "コモン"
+                ? `英クワたんで「${result.speciesName}」をゲットした！ #英クワたん`
+                : `英クワたんで${result.rarity}の「${result.speciesName}」をゲットした！ #英クワたん`
+            }
+            card={{
+              kind: "bug",
+              eyebrow: result.rarity === "コモン" ? "ゲット！" : `${result.rarity}をゲット！`,
+              title: result.speciesName,
+              subtitle: "英語の練習で採集したよ",
+              speciesCode: result.speciesCode,
+              tone: result.rarity === "激レア" ? "superRare" : result.rarity === "レア" ? "rare" : "common",
+              background: resultArea ? areaMapImage(resultArea) : undefined,
+            }}
+            className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border-2 border-white/70 bg-white/10 py-2 text-sm font-bold text-white transition-transform active:scale-95"
+          />
           <Link
             href={guest ? "/roadmap/stage1" : "/roadmap"}
             className="flex items-center gap-1 rounded-full px-4 py-1.5 text-xs font-semibold text-white/80 hover:text-white"

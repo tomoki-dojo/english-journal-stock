@@ -301,6 +301,13 @@ export function NotebookQuiz() {
           campaign="notebook_result"
           label="結果をシェア"
           text={`英クワたんの単語ノートで${result.correctCount}/${result.total}問正解！ #英クワたん`}
+          card={{
+            kind: "text",
+            eyebrow: "単語ノート",
+            title: `${result.correctCount}/${result.total}問正解！`,
+            mascot: "arthur",
+          }}
+          prefetch={false}
           className="inline-flex items-center justify-center gap-1.5 rounded-full border-2 border-zinc-300 bg-white py-2.5 text-sm font-bold text-zinc-600 transition-transform active:scale-95"
         />
         <button

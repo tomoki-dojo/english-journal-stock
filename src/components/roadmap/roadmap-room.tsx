@@ -21,6 +21,7 @@ import { RoomProOfferButton } from "./room-pro-offer-button";
 import { ArthurAvatar } from "./arthur";
 import type { Plan } from "@/lib/plan";
 import type { StreakStats } from "@/lib/supabase/speaking-roadmap";
+import { MOBILE_PLACEMENT, ROOM_BG_MOBILE_URL } from "@/lib/room-layout";
 
 const BOARD_COLOR = "#e11d48";
 const NOTEBOOK_COLOR = "#0d9488";
@@ -112,22 +113,7 @@ const ITEM_PLACEMENT: Record<string, ItemPlacement> = {
   notebook: { left: 76, top: 50.5, rotate: 0, widthPct: 20 },
 };
 
-// スマホ(sm未満)用の縦長(3:4)背景に合わせた配置。
-// rotate・labelPosition等は共通のITEM_PLACEMENTを使い、座標と幅だけ上書きする。
-const MOBILE_PLACEMENT: Record<string, { left: number; top: number; widthPct: number }> = {
-  // 左右の矢印(画面の端)に重ならないよう、アイテムの中心は左右18〜82%の内側に置く。
-  board: { left: 30, top: 15.5, widthPct: 49.6 },
-  stage3: { left: 77, top: 19.5, widthPct: 19.6 },
-  stage2: { left: 22, top: 50, widthPct: 14 },
-  // 単語ノートの下端を、机の奥の縁(背景の上から50%)に合わせる。
-  notebook: { left: 73, top: 40.3, widthPct: 26.5 },
-  stage5: { left: 47, top: 51, widthPct: 20 },
-  stage1: { left: 66, top: 77, widthPct: 28.7 },
-  stage0: { left: 26, top: 85, widthPct: 22 },
-  stage4: { left: 28, top: 69, widthPct: 17 },
-};
-
-const ROOM_BG_MOBILE_URL = "/roadmap/room/room_bg_mobile.webp";
+// スマホ(sm未満)用の配置と背景は lib/room-layout.ts（シェアカードの背景と共通）。
 
 type RoadmapRoomProps = {
   stageReadiness: {
