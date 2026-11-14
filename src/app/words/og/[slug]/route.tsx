@@ -58,7 +58,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
         }}
       >
         <div style={{ position: "absolute", left: 0, top: 0, width: 1200, height: 22, background: RED }} />
-        <div style={{ position: "absolute", left: 70, top: 76, fontSize: 34, color: RED, display: "flex" }}>英語で通じない和製英語</div>
+        <div style={{ position: "absolute", left: 70, top: 76, fontSize: 34, color: RED, display: "flex" }}>{a.category}</div>
         <div style={{ position: "absolute", left: 62, top: 128, width: 580, fontSize: wordSize, lineHeight: 1.15, letterSpacing: -3, display: "flex" }}>
           {word}
         </div>
