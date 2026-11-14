@@ -23,13 +23,23 @@ export async function renderShareCard(data: ShareCardData, layout: ShareCardLayo
     const node = host.firstElementChild as HTMLElement | null;
     if (!node) return null;
     const { toBlob } = await import("html-to-image");
-    return await toBlob(node, { pixelRatio: 2, width, height, cacheBust: false });
+    const options = { pixelRatio: 2, width, height, cacheBust: false };
+    // iPhone・MacのSafariは、1回目の書き出しで大きめの画像（アーサーなど）が間に合わず空白になることがある
+    // （html-to-image の既知の問題）。Safariでは1回空で書き出して画像を読ませてから、2回目を使う。
+    if (isSafari()) await toBlob(node, options).catch(() => null);
+    return await toBlob(node, options);
   } catch {
     return null;
   } finally {
     root.unmount();
     host.remove();
   }
+}
+
+function isSafari(): boolean {
+  const ua = navigator.userAgent;
+  // iPhone・iPadのブラウザは中身がすべてSafari（Chrome・LINEのブラウザも）
+  return /iP(hone|ad|od)/.test(ua) || (/Safari/.test(ua) && !/Chrome|Chromium|Android/.test(ua));
 }
 
 // 横長のカードをサーバーに置き、リンクのプレビュー（/s/<id>）用のIDをもらう。失敗・時間切れならnull。
