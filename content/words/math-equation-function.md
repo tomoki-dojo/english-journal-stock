@@ -11,11 +11,13 @@ draft: true
 
 ```talk
 クマ: F, kakko, x!
-アーサー: Kakko? Is that a bug? | カッコ？ 新しい虫？
-クマ: 虫ちゃう、f(x)や！
+アーサー: Kakko? Oh, I know. It's a bird, right? | カッコ？ あぁ知ってる、鳥よね？
+クマ: そらカッコウや！
 ```
 
-f(x) を日本語のまま「エフ、カッコ、エックス」と読むと、虫好きのアーサーには新種の名前に聞こえたようです。英語では **f of x** と読みます。
+英語では **f of x** と読みます。
+
+ちなみに英語では、丸いカッコ（ ）を **parentheses**（イギリス英語では brackets）といいます。ただ、f(x) のカッコは読まずに「of」で表します。
 
 ## 一次関数の式を読む
 
@@ -24,7 +26,9 @@ y equals two x plus one | y = 2x + 1
 y equals negative three x minus four | y = −3x − 4
 ```
 
-2x は「two times x」とは読まずに、**two x** で大丈夫です。マイナスの数は negative、引き算は minus と使い分けます。
+2x は「two times x」とは読まずに、**two x** で大丈夫です。
+
+マイナスの数は negative、引き算は minus と使い分けます。
 
 ## 関数の f(x)
 
@@ -47,13 +51,13 @@ x equals one or x equals two | x = 1, 2
 
 ## グラフの用語
 
-| 日本語 | 英語 |
-|---|---|
-| 傾き | slope |
-| 切片 | y-intercept |
-| 放物線 | parabola |
-| 頂点 | vertex |
-| 軸 | axis of symmetry（対称の軸） |
+| 日本語 | 英語                         |
+| ------ | ---------------------------- |
+| 傾き   | slope                        |
+| 切片   | y-intercept                  |
+| 放物線 | parabola                     |
+| 頂点   | vertex                       |
+| 軸     | axis of symmetry（対称の軸） |
 
 ```phrases
 The slope is two, and the y-intercept is one. | 傾きは2、切片は1です
@@ -66,7 +70,9 @@ The vertex of the parabola is at the point one, two. | 放物線の頂点は点(
 
 ## 声に出して言ってみよう
 
-式を英語で読めると、数学の問題を英語で説明したり、英語の動画で数学を聞いたりするときに、ぐっとラクになります。まずは中学で習う一次関数の式から、口に慣らしておくのがおすすめです。
+式を英語で読めると、数学の問題を英語で説明したり、英語の動画で数学を聞いたりするときに、ぐっとラクになります。
+
+まずは中学で習う一次関数の式から、口に慣らしておくのがおすすめです。
 
 ```phrases
 y equals two x plus one | y = 2x + 1

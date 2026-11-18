@@ -16,9 +16,11 @@ draft: true
 クマ: いや、お金はかかる…
 ```
 
-お通しを「サービス」と言ったら、タダだと思われました笑。英語の service は「接客・業務」のことで、日本語の「サービス（無料）」の意味はないんです。
+お通しを「サービス」と言ったら、タダだと思われました笑。
 
-お通しは、日本に来た人がよく戸惑うものの1つなので、最初に一言説明しておくと安心してもらえます。
+英語の service は「接客・業務」のことで、日本語の「サービス（無料）」の意味はないんです。
+
+お通しは、日本に来た人がよく戸惑うものの 1 つなので、最初に一言説明しておくと安心してもらえます。
 
 ## 案内するとき
 
@@ -36,16 +38,16 @@ This is a small appetizer that comes with the table charge. | こちらは席料
 The table charge is three hundred yen per person. | 席料はお一人様300円です
 ```
 
-英語圏では、席料は「cover charge」と言うことも多いです。
+ちなみに英語圏では、席料は「cover charge」と言うことも多いです。
 
 ## 飲み放題を説明する
 
 ```phrases
 We have an all-you-can-drink plan. | 飲み放題のプランがあります
-It's ninety minutes, and the last order is at eighty minutes. | 時間は90分で、ラストオーダーは80分です
+It's ninety minutes, and last call is at the eighty-minute mark. | 時間は90分で、ラストオーダーは80分です
 ```
 
-「飲み放題」は all-you-can-drink。食べ放題の all-you-can-eat と同じ形です（[「バイキング」の記事](/words/viking)でも書いています）。
+「飲み放題」は all-you-can-drink。食べ放題の all-you-can-eat と同じ形です（[コチラの記事](/words/viking)でも紹介しています）。
 
 ```balloon
 アーサー: In Oita, all-you-can-drink should include shochu. | 大分なら飲み放題に麦焼酎は入れてほしいわ
@@ -62,7 +64,7 @@ Would you like to pay together or separately? | お会計はご一緒ですか�
 
 ## 声に出して言ってみよう
 
-お通しの説明は、毎回同じことを言うので、1回口に覚えさせてしまえばラクです。声に出す回数が増えるほど、とっさのときに出てきやすくなります。
+声に出す回数が増えるほど、とっさのときに出てきやすくなりますよ。
 
 ```phrases
 This is a small appetizer that comes with the table charge. | こちらは席料に含まれる小さなおつまみです

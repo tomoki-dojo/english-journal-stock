@@ -15,9 +15,9 @@ draft: true
 クマ: 常連さんやった…！
 ```
 
-温泉のマナーを英語で説明しようとしたら、相手が地元の人でした笑。
+旅館や温泉で外国人のお客さんに説明するとき、日本人が当たり前だと思っていることほど英語にしにくいんですよね。
 
-旅館や温泉で外国人のお客さんに説明するとき、日本人が当たり前だと思っていることほど英語にしにくいんですよね。この記事では、旅館での流れの順に、そのまま言えるフレーズを並べています。
+この記事では、旅館での流れの順に、そのまま言えるフレーズを並べています。
 
 ## チェックイン
 
@@ -28,7 +28,7 @@ Here is your room key. | お部屋の鍵です
 Here is your yukata. You can wear it anywhere in the ryokan. | 浴衣です。館内ならどこでも着ていただけます
 ```
 
-浴衣（yukata）や旅館（ryokan）は、そのまま英語として通じることが多いです。通じなかったら「a light cotton robe」と言い足せばOKです。
+浴衣（yukata）や旅館（ryokan）は、そのまま英語として通じることが多いです。通じなかったら「a light cotton robe」と言い足せば OK です。
 
 ## 食事の時間
 
@@ -40,13 +40,12 @@ Do you have any food allergies? | 食べ物のアレルギーはありますか�
 
 ## 温泉の入り方
 
-ここが一番の山場です。全部を一度に説明しようとすると長くなるので、1つずつ短い文で伝えます。
+全部を一度に説明しようとすると長くなるので、1 つずつ短い文で伝えるとスッキリします。
 
 ```phrases
 Please wash your body before you get in. | 入る前に体を洗ってください
 Swimsuits are not allowed. | 水着は着られません
 Please keep your towel out of the water. | タオルはお湯につけないでください
-Please tie up long hair. | 長い髪はまとめてください
 The red curtain is for women, and the blue one is for men. | 赤いのれんが女湯、青いのれんが男湯です
 ```
 
@@ -54,11 +53,13 @@ The red curtain is for women, and the blue one is for men. | 赤いのれんが�
 アーサー: The first time, I took my towel into the water. Everyone stared at me. | 最初はタオルごとお湯に入って、みんなにめっちゃ見られたわ
 ```
 
-のれんの色は旅館によって違うので、自分のところの色に合わせて言いかえてください。
+のれんの色は、自分のところの色に合わせて言いかえてください。
 
 ## 声に出して言ってみよう
 
-フロントやお風呂の前でいきなり言おうとしても、なかなか口から出てこないんですよね。よく使う1文だけでも、口が覚えるまで声に出しておくと、いざというときに助けになります。
+フロントやお風呂の前でいきなり言おうとしても、なかなか口から出てこないんですよね。
+
+よく使う 1 文だけでも、口が覚えるまで声に出しておくと、いざというときに助けになります。
 
 ```phrases
 Please wash your body before you get in. | 入る前に体を洗ってください

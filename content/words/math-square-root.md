@@ -12,10 +12,12 @@ draft: true
 ```talk
 クマ: x two!
 アーサー: x two? Is that a new phone? | x two？ 新しいスマホの名前？
-クマ: ちゃう、二乗や！
+クマ: …二乗のつもりだったのに
 ```
 
-日本語の「x の2乗」を、そのまま英語にしようとすると「x two」になりがちです。英語の二乗は **squared**。数字の2は出てきません。
+「x の 2 乗」って英語で言えますか？
+
+英語の二乗は **squared**。数字の 2 は出てきません。
 
 ## 二乗は squared、三乗は cubed
 
@@ -25,17 +27,25 @@ x cubed | x³（xの3乗）
 ten squared is one hundred | 10² = 100
 ```
 
-squared は「正方形（square）にした」、cubed は「立方体（cube）にした」という意味です。1辺がxの正方形の面積がx²、立方体の体積がx³なので、図形のイメージそのままなんですよね。数学の授業でこの話をすると、だいたい「なるほど」と言ってもらえるところです。
+squared は「正方形（square）にした」、cubed は「立方体（cube）にした」という意味です。
 
-## 4乗からは to the fourth
+1 辺が x の正方形の面積が x²、立方体の体積が x³ なので、図形のイメージそのままなんですよね。
 
-正方形と立方体の次に当たる形がないので、4乗からは「何乗」をそのまま言います。
+```balloon
+クマ: 日本語でも「㎠」「m³」を平方センチメートル、立方メートル、といいますよね
+```
+
+## 4 乗からは to the fourth
+
+正方形と立方体の次に当たる形がないので、4 乗からは「何乗」をそのまま言います。
 
 ```phrases
 x to the fourth | x⁴（xの4乗）
 two to the fifth | 2⁵（2の5乗）
 x to the n | xⁿ（xのn乗）
 ```
+
+to the 序数、ですね。言われたら「そうなんだ」ってなるような簡単な単語ですが、組み合わせ的には知っていないと出てこないです。
 
 丁寧に言うと「x to the fourth power」「x to the power of four」です。授業や会話では power を省くことが多いです。
 
@@ -59,11 +69,13 @@ the cube root of eight | ∛8（8の3乗根）
 x plus one, all squared | (x + 1)²
 ```
 
-「x plus one squared」だけだと、x + 1² と区別がつかないので、「all squared」や「the quantity x plus one, squared」でカッコごとだと伝えます。生徒に読ませると、ここで止まることが多いです。
+「x plus one squared」だけだと、x + 1² と区別がつかないので、「all squared」や「the quantity x plus one, squared」でカッコごとだと伝えます。
 
 ## 声に出して言ってみよう
 
-数式は、見れば分かるのに、声に出そうとすると止まってしまうものの代表です。数式を英語で読めるようになると、数学の話を英語でするときにも、ちゃんと口が動くようになります。
+数式は、見れば分かるのに、声に出そうとすると止まってしまうものの代表です。
+
+数式を英語で読めるようになると、数学の話を英語でするときにも、ちゃんと口が動くようになります。
 
 ```phrases
 x squared plus y squared | x² + y²

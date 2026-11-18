@@ -16,7 +16,13 @@ draft: true
 アーサー: Then say "or equal to." | それなら「or equal to」って言わな
 ```
 
-クマが言いたかったのは「x ≧ 3（xは3以上）」でした。でも英語の **more than three** は「3より大きい」で、3は入りません。日本語の「以上」をそのまま英語にすると、ここで事故が起きます。
+「x ≧ 3（x は 3 以上）」ってどう言えばいいかわかりますか？
+
+英語の **more than three** は「3 より大きい」で、3 は入りません。なんとなくで英語にすると間違えちゃいます…。
+
+```balloon
+クマ：数学の問題解くなら「＝」が入る、入らないは大事
+```
 
 ## イコールの読み方
 
@@ -26,7 +32,9 @@ two plus three is five | 2 + 3 = 5（くだけた言い方）
 x is not equal to zero | x ≠ 0
 ```
 
-equals のほかに、「is equal to」「is」でもOKです。
+三単現の「s」をお忘れなく。
+
+equals のほかに、「is equal to」「is」でも OK です。
 
 ## 不等号の読み方
 
@@ -41,22 +49,32 @@ x is less than or equal to three | x ≦ 3（xは3以下）
 
 ## 「以上・以下・未満」の落とし穴
 
-| 日本語 | 3は入る？ | 英語 |
-|---|---|---|
-| 3以上 | 入る | greater than or equal to three／at least three |
-| 3より大きい | 入らない | greater than three／more than three |
-| 3以下 | 入る | less than or equal to three／at most three |
-| 3未満 | 入らない | less than three |
+| 日本語       | 3 は入る？ | 英語                                           |
+| ------------ | ---------- | ---------------------------------------------- |
+| 3 以上       | 入る       | greater than or equal to three／at least three |
+| 3 より大きい | 入らない   | greater than three／more than three            |
+| 3 以下       | 入る       | less than or equal to three／at most three     |
+| 3 未満       | 入らない   | less than three                                |
 
-日本語の「以上・以下」はその数を含むのに、英語の more than・less than は含みません。生徒も大人も、ここはほぼ間違えるところです。会話なら **at least three**（少なくとも3）、**at most three**（多くても3）が短くて便利です。
+日本語の「以上・以下」はその数を含むのに、英語の more than・less than は含みません。ここは要注意です。
+
+会話なら **at least three**（少なくとも 3）、**at most three**（多くても 3）が短くて便利です。
 
 ```balloon
 アーサー: "Over 20" in Japan includes 20? That confused me at the izakaya. | 日本の「20歳以上」って20歳も入るん？ 居酒屋で混乱したわ
 ```
 
+ちなみに over 20 も 20 は入りません。
+
 ## 記号の形もちょっと違う
 
-日本の教科書は「≦・≧」（下が2本線）ですが、英語圏では「≤・≥」（下が1本線）が普通です。意味は同じです。また、日本でよく使う「≒（だいたい等しい）」は、英語圏では「≈」を使い、**is approximately equal to** と読みます。
+日本の教科書は「≦・≧」（下が 2 本線）ですが、英語圏では「≤・≥」（下が 1 本線）が普通です。意味は同じです。
+
+また、日本でよく使う「≒（だいたい等しい）」は、英語圏では「≈」を使い、**is approximately equal to** と読みます。
+
+```balloon
+クマ: AIを使うとだいたい「≤・≥」で書かれます。数学の宿題をAIに解かせている生徒は写すときに注意です笑
+```
 
 ## 声に出して言ってみよう
 
