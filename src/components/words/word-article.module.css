@@ -6,15 +6,15 @@
 .body :global(h2) {
   margin: 2.5rem 0 0.9rem;
   padding-left: 0.75rem;
-  border-left: 6px solid #e5215a;
-  font-size: 1.3rem;
-  font-weight: 900;
+  border-left: 3px solid #d98a9e;
+  font-size: 1.25rem;
+  font-weight: 700;
   line-height: 1.4;
 }
 .body :global(h3) {
   margin: 1.8rem 0 0.6rem;
   font-size: 1.1rem;
-  font-weight: 900;
+  font-weight: 700;
 }
 .body :global(p) {
   margin: 1.15rem 0;
@@ -26,6 +26,10 @@
   }
   .body :global(p) {
     margin: 1.5rem 0;
+  }
+  .body :global(h2) {
+    margin-top: 3rem;
+    font-size: 1.5rem;
   }
 }
 .body :global(ul:not(.words-plain)),
@@ -43,20 +47,20 @@
   margin: 0.3rem 0;
 }
 .body :global(strong) {
-  font-weight: 900;
-  background: linear-gradient(transparent 60%, #ffe08a 60%);
+  font-weight: 700;
+  background: linear-gradient(transparent 70%, #fff0c2 70%);
 }
 .body :global(a) {
-  color: #e5215a;
+  color: #b5476a;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 .body :global(blockquote) {
   margin: 1rem 0;
   padding: 0.6rem 1rem;
-  border-radius: 1rem;
-  background: #fff;
-  border: 2px solid #f2d5b8;
+  border-radius: 0.5rem;
+  background: #faf8f5;
+  border-left: 3px solid #e6ddd3;
 }
 .body :global(table) {
   width: 100%;
@@ -67,14 +71,14 @@
 }
 .body :global(th),
 .body :global(td) {
-  border: 1px solid #f2d5b8;
+  border: 1px solid #ebe4dc;
   padding: 0.45rem 0.6rem;
   text-align: left;
   vertical-align: top;
 }
 .body :global(th) {
-  background: #fff1c9;
-  font-weight: 900;
+  background: #f8f5f1;
+  font-weight: 700;
 }
 .body :global(code) {
   font-family: inherit;
@@ -84,16 +88,16 @@
   margin: 0;
 }
 .answer :global(strong) {
-  color: #e5215a;
-  font-weight: 900;
+  color: #b5476a;
+  font-weight: 700;
 }
 
 /* 会話の吹き出し（マンガ風：白地＋黒っぽい線＋話す人へのしっぽ）。キャラの線画と同じ色の線にする */
 .bubble {
   position: relative;
   background: #fff;
-  border: 2.5px solid #3c2819;
-  border-radius: 1.4rem;
+  border: 1.5px solid #8c7a6b;
+  border-radius: 1.2rem;
   padding: 0.6rem 1rem;
 }
 .bubble::before,
@@ -109,7 +113,7 @@
 .bubbleLeft::before {
   left: -13px;
   border-width: 8px 13px 8px 0;
-  border-color: transparent #3c2819 transparent transparent;
+  border-color: transparent #8c7a6b transparent transparent;
 }
 .bubbleLeft::after {
   left: -9px;
@@ -121,11 +125,21 @@
 .bubbleRight::before {
   right: -13px;
   border-width: 8px 0 8px 13px;
-  border-color: transparent transparent transparent #3c2819;
+  border-color: transparent transparent transparent #8c7a6b;
 }
 .bubbleRight::after {
   right: -9px;
   border-width: 6px 0 6px 10px;
   border-color: transparent transparent transparent #fff;
   margin-bottom: 2px;
+}
+
+/* 吹き出しと音声フレーズの中の文は、本文の段落の余白（.body p）を使わない */
+.body .bubble :global(p),
+.body :global(.words-plain) :global(p) {
+  margin: 0;
+}
+.body .bubble :global(p + p),
+.body :global(.words-plain) :global(p + p) {
+  margin-top: 0.2rem;
 }

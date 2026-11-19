@@ -7,7 +7,8 @@
 // description: 検索結果の説明文（120字くらいまで）
 // word: バイキング            ← 一覧に出す見出し語（和製英語）
 // category: 接客・案内の英語    ← アイキャッチの左上に出す分類（省略すると「英語で通じない和製英語」）
-// answer: 食べ放題は **buffet**  ← 冒頭の答え（Markdown可・1〜2文）
+// answer: 食べ放題は **buffet**  ← 冒頭の枠（Markdown可・1〜2文）
+// answerLabel: 答え            ← 冒頭の枠のラベル（省略すると分類ごとの ANSWER_LABELS）
 // published: 2026-11-08
 // updated: 2026-11-08         ← 省略可
 // related: [tension, drink-bar] ← 下に出す関連記事のslug（省略可）
@@ -58,9 +59,18 @@ export type WordMeta = {
   draft: boolean;
   ogImage?: string;
   category: string;
+  answerLabel: string;
 };
 
 export type WordArticle = WordMeta & { blocks: WordBlock[] };
+
+// 冒頭の枠のラベル（分類ごと）。※分類を増やしたら、ここにその分類のラベルを足すこと（どーじょーさんに文言を確認する）
+const DEFAULT_CATEGORY = "英語で通じない和製英語";
+export const ANSWER_LABELS: Record<string, string> = {
+  英語で通じない和製英語: "答え",
+  "接客・案内の英語": "まずはこの一言",
+  数学を英語で話す: "読み方",
+};
 
 // アイキャッチのURL：フロントマターに ogImage があればそれ（ショートの一場面など）、なければ自動で作る /words/og/<slug>
 export function wordEyecatch(a: { slug: string; ogImage?: string }): string {
@@ -168,7 +178,8 @@ export function readArticle(slug: string): WordArticle | null {
     related: Array.isArray(data.related) ? data.related : [],
     draft: data.draft === true,
     ogImage: str(data.ogImage) || undefined,
-    category: str(data.category) || "英語で通じない和製英語",
+    category: str(data.category) || DEFAULT_CATEGORY,
+    answerLabel: str(data.answerLabel) || ANSWER_LABELS[str(data.category) || DEFAULT_CATEGORY] || "答え",
     blocks: parseBlocks(slug, body),
   };
 }

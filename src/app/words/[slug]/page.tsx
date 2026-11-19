@@ -92,7 +92,7 @@ export default async function WordArticlePage({ params }: Props) {
       <article>
         <nav className="pt-4 text-xs font-bold text-zinc-500">
           <Link href="/words" className="hover:underline">
-            和製英語
+            記事一覧
           </Link>
           <span className="mx-1.5">›</span>
           <span>{a.word}</span>
@@ -100,7 +100,7 @@ export default async function WordArticlePage({ params }: Props) {
         {a.draft && (
           <p className="mt-3 inline-block rounded-full bg-zinc-800 px-3 py-1 text-xs font-bold text-white">下書き（本番には出ません）</p>
         )}
-        <h1 className="mt-3 text-2xl font-black leading-snug tracking-tight sm:text-3xl">{a.title}</h1>
+        <h1 className="mt-3 text-2xl font-bold leading-snug tracking-tight sm:text-3xl">{a.title}</h1>
         {a.published && (
           <p className="mt-2 text-xs font-semibold text-zinc-500">
             {formatDate(a.published)}
@@ -114,12 +114,12 @@ export default async function WordArticlePage({ params }: Props) {
           alt={a.title}
           width={1200}
           height={630}
-          className="mt-4 w-full rounded-2xl border-2 border-[#f2d5b8]"
+          className="mt-4 w-full rounded-xl border border-[#eee8e1]"
         />
 
         {a.answer && (
-          <div className="mt-5 rounded-3xl border-4 border-[#e5215a] bg-white px-5 py-4">
-            <p className="mb-1 text-xs font-black text-[#e5215a]">答え</p>
+          <div className="mt-5 rounded-xl border border-[#eee8e1] border-l-4 border-l-[#d98a9e] bg-[#fdfbf9] px-5 py-4">
+            <p className="mb-1 text-xs font-bold text-zinc-500">{a.answerLabel}</p>
             <div className={`text-lg font-bold leading-relaxed ${styles.answer}`} dangerouslySetInnerHTML={{ __html: md(a.answer) }} />
           </div>
         )}
@@ -143,23 +143,23 @@ export default async function WordArticlePage({ params }: Props) {
 
       {related.length > 0 && (
         <section className="mt-10">
-          <h2 className="mb-3 text-lg font-black">ほかの和製英語</h2>
+          <h2 className="mb-3 text-lg font-bold">ほかの記事</h2>
           <ul className="space-y-2">
             {related.map((m) => (
               <li key={m.slug}>
                 <Link
                   href={`/words/${m.slug}`}
-                  className="block rounded-2xl border-2 border-[#f2d5b8] bg-white px-4 py-3 transition-colors hover:border-[#e5215a]"
+                  className="block rounded-xl border border-[#eee8e1] bg-white px-4 py-3 transition-colors hover:border-[#d9cfc4]"
                 >
-                  <p className="text-xs font-black text-[#e5215a]">{m.word}</p>
+                  <p className="text-xs font-bold text-zinc-500">{m.word}</p>
                   <p className="font-bold leading-snug">{m.title}</p>
                 </Link>
               </li>
             ))}
           </ul>
           <p className="mt-4 text-center">
-            <Link href="/words" className="text-sm font-bold text-[#e5215a] underline underline-offset-4">
-              和製英語の一覧
+            <Link href="/words" className="text-sm font-bold text-zinc-600 underline underline-offset-4">
+              記事の一覧
             </Link>
           </p>
         </section>

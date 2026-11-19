@@ -36,20 +36,20 @@ export function WordStickyBar({ slug }: { slug: string }) {
       <div aria-hidden className="h-20 sm:hidden" />
       {/* スマホ：画面の下の帯 */}
       <div
-        className={`fixed inset-x-0 bottom-0 z-40 border-t-2 border-[#f2d5b8] bg-white/95 px-3 pb-[max(0.6rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-4px_12px_rgba(60,40,25,0.08)] backdrop-blur transition-transform duration-300 sm:hidden ${
+        className={`fixed inset-x-0 bottom-0 z-40 border-t border-[#eee8e1] bg-white/95 px-3 pb-[max(0.6rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-4px_12px_rgba(60,40,25,0.08)] backdrop-blur transition-transform duration-300 sm:hidden ${
           shown ? "translate-y-0" : "translate-y-full"
         }`}
       >
         <div className="mx-auto flex max-w-2xl items-center gap-2.5">
           <ArthurAvatar size={40} />
-          <p className="min-w-0 flex-1 text-[13px] font-black leading-snug text-[#3c2819]">
+          <p className="min-w-0 flex-1 text-[13px] font-bold leading-snug text-[#3c2819]">
             英語を練習するほどクワガタが育つアプリ公開中！
           </p>
           <button
             type="button"
             onClick={() => start("bar")}
             disabled={status === "starting"}
-            className="shrink-0 rounded-full bg-[#e5215a] px-3 py-2.5 text-[13px] font-black text-white shadow-[0_3px_0_#a8153f] active:translate-y-0.5 active:shadow-none disabled:opacity-70"
+            className="shrink-0 rounded-full bg-[#d6416b] px-3 py-2.5 text-[13px] font-bold text-white disabled:opacity-70"
           >
             {status === "starting" ? "準備中..." : "試しに遊んでみる"}
           </button>
@@ -58,13 +58,13 @@ export function WordStickyBar({ slug }: { slug: string }) {
 
       {/* パソコン：右下の小さなカード */}
       <div
-        className={`fixed bottom-6 right-6 z-40 hidden w-72 rounded-3xl border-2 border-[#f2d5b8] bg-white/95 p-4 shadow-[0_8px_24px_rgba(60,40,25,0.15)] backdrop-blur transition-all duration-300 sm:block ${
+        className={`fixed bottom-6 right-6 z-40 hidden w-72 rounded-2xl border border-[#eee8e1] bg-white/95 p-4 shadow-[0_8px_24px_rgba(60,40,25,0.15)] backdrop-blur transition-all duration-300 sm:block ${
           shown ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-6 opacity-0"
         }`}
       >
         <div className="flex items-center gap-3">
           <ArthurAvatar size={48} />
-          <p className="min-w-0 flex-1 text-[13px] font-black leading-snug text-[#3c2819]">
+          <p className="min-w-0 flex-1 text-[13px] font-bold leading-snug text-[#3c2819]">
             英語を練習するほどクワガタが育つアプリ公開中！
             <br />
             <span className="text-[#e5215a]">喋って！育てろ！英クワたん</span>
@@ -74,7 +74,7 @@ export function WordStickyBar({ slug }: { slug: string }) {
           type="button"
           onClick={() => start("bar")}
           disabled={status === "starting"}
-          className="mt-3 block w-full rounded-full bg-[#e5215a] px-4 py-2.5 text-sm font-black text-white shadow-[0_3px_0_#a8153f] transition-transform hover:scale-[1.02] active:translate-y-0.5 active:shadow-none disabled:opacity-70"
+          className="mt-3 block w-full rounded-full bg-[#d6416b] px-4 py-2.5 text-sm font-bold text-white transition-transform hover:bg-[#c23560] disabled:opacity-70"
         >
           {status === "starting" ? "準備中..." : "試しに遊んでみる"}
         </button>
