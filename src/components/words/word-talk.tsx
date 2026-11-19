@@ -9,7 +9,7 @@ function Avatar({ speaker }: { speaker: string }) {
   if (speaker === "クマ") {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src="/mascot/kuma-icon.png" alt="クマ" width={52} height={52} className="h-[52px] w-[52px] rounded-full bg-white ring-2 ring-[#f2d5b8]" />
+      <img src="/mascot/kuma-icon.png" alt="クマ" width={52} height={52} className="h-[52px] w-[52px] rounded-full bg-white ring-1 ring-[#eee8e1]" />
     );
   }
   return <span className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-zinc-200 text-xs font-bold">{speaker.slice(0, 2)}</span>;
@@ -24,8 +24,8 @@ function TalkLineView({ line }: { line: TalkLine }) {
         <span className="mt-0.5 text-[10px] font-bold text-zinc-500">{line.speaker}</span>
       </div>
       <div className={`${styles.bubble} ${right ? styles.bubbleRight : styles.bubbleLeft} mb-4 max-w-[75%]`}>
-        <p className="text-[15px] font-black leading-snug">{line.text}</p>
-        {line.sub && <p className="mt-1 text-xs font-bold text-zinc-500">{line.sub}</p>}
+        <p className="text-[15px] font-bold leading-snug">{line.text}</p>
+        {line.sub && <p className="mt-1 text-xs font-medium text-zinc-500">{line.sub}</p>}
       </div>
     </div>
   );
@@ -33,7 +33,7 @@ function TalkLineView({ line }: { line: TalkLine }) {
 
 export function WordTalk({ lines }: { lines: TalkLine[] }) {
   return (
-    <div className="my-6 space-y-4 rounded-3xl bg-[#fff1c9]/50 px-3 py-5">
+    <div className="my-6 space-y-4 rounded-2xl bg-[#faf8f5] px-3 py-5">
       {lines.map((line, i) => (
         <TalkLineView key={i} line={line} />
       ))}

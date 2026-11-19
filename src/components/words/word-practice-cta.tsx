@@ -43,7 +43,7 @@ export function WordPracticeCta({ slug }: { slug: string }) {
   const { status, start } = useStartPlaying(slug);
 
   return (
-    <section id={WORDS_CTA_ID} className="mt-10 rounded-3xl bg-gradient-to-br from-[#fff1c9] to-[#ffe3ec] px-5 py-6 text-center sm:px-8 sm:py-8">
+    <section id={WORDS_CTA_ID} className="mt-10 rounded-2xl border border-[#eee8e1] bg-[#fdfbf9] px-5 py-6 text-center sm:px-8 sm:py-8">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/words/ad/title.webp"
@@ -52,7 +52,7 @@ export function WordPracticeCta({ slug }: { slug: string }) {
         height={597}
         className="mx-auto w-full max-w-[240px] sm:max-w-[280px]"
       />
-      <div className="mt-3 space-y-1.5 text-base font-black sm:mt-4 sm:space-y-3 sm:text-lg sm:leading-loose">
+      <div className="mt-3 space-y-1.5 text-base font-bold sm:mt-4 sm:space-y-3 sm:text-lg sm:leading-loose">
         <p>英語を練習するほどクワガタが育つアプリ公開中！</p>
         <p>気付いたらずっと英語練習してる！</p>
       </div>
@@ -64,7 +64,7 @@ export function WordPracticeCta({ slug }: { slug: string }) {
           width={600}
           height={405}
           loading="lazy"
-          className="aspect-[4/3] w-full rounded-2xl border-2 border-white object-cover shadow-sm"
+          className="aspect-[4/3] w-full rounded-xl border border-[#eee8e1] object-cover"
         />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -73,14 +73,14 @@ export function WordPracticeCta({ slug }: { slug: string }) {
           width={600}
           height={497}
           loading="lazy"
-          className="aspect-[4/3] w-full rounded-2xl border-2 border-white object-cover object-top shadow-sm"
+          className="aspect-[4/3] w-full rounded-xl border border-[#eee8e1] object-cover object-top"
         />
       </div>
       <button
         type="button"
         onClick={() => start("bottom")}
         disabled={status === "starting"}
-        className="mt-5 block w-full rounded-full border-4 border-[#eaaccb] bg-[#e5215a] px-5 py-3.5 text-center text-base font-black tracking-wide text-white shadow-[0_4px_0_#a8153f] transition-transform hover:scale-[1.02] active:translate-y-0.5 active:shadow-none disabled:opacity-70 sm:mx-auto sm:mt-6 sm:max-w-sm sm:text-lg"
+        className="mt-5 block w-full rounded-full bg-[#d6416b] px-5 py-3.5 text-center text-base font-bold tracking-wide text-white transition-colors hover:bg-[#c23560] disabled:opacity-70 sm:mx-auto sm:mt-6 sm:max-w-sm sm:text-lg"
       >
         {status === "starting" ? "準備中..." : "試しに遊んでみる"}
       </button>
