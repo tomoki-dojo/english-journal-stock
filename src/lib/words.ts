@@ -6,6 +6,7 @@
 // title: 検索結果に出るタイトル
 // description: 検索結果の説明文（120字くらいまで）
 // word: バイキング            ← 一覧に出す見出し語（和製英語）
+// category: 接客・案内の英語    ← アイキャッチの左上に出す分類（省略すると「英語で通じない和製英語」）
 // answer: 食べ放題は **buffet**  ← 冒頭の答え（Markdown可・1〜2文）
 // published: 2026-11-08
 // updated: 2026-11-08         ← 省略可
@@ -56,6 +57,7 @@ export type WordMeta = {
   related: string[];
   draft: boolean;
   ogImage?: string;
+  category: string;
 };
 
 export type WordArticle = WordMeta & { blocks: WordBlock[] };
@@ -166,6 +168,7 @@ export function readArticle(slug: string): WordArticle | null {
     related: Array.isArray(data.related) ? data.related : [],
     draft: data.draft === true,
     ogImage: str(data.ogImage) || undefined,
+    category: str(data.category) || "英語で通じない和製英語",
     blocks: parseBlocks(slug, body),
   };
 }
