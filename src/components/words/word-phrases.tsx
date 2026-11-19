@@ -21,7 +21,7 @@ export function WordPhrases({ phrases, slug }: { phrases: Phrase[]; slug: string
   return (
     <ul className="words-plain my-5 space-y-2">
       {phrases.map((p) => (
-        <li key={p.en} className="flex items-center gap-3 rounded-xl border border-[#eee8e1] bg-white px-4 py-3">
+        <li key={p.en} className="flex items-center gap-3 rounded-xl border border-[#e3d8cc] bg-[#f7f2ec] px-4 py-3">
           <div className="min-w-0 flex-1">
             <p className="text-lg font-bold leading-snug">{p.en}</p>
             {p.ja && <p className="text-sm font-semibold text-zinc-500">{p.ja}</p>}
@@ -31,7 +31,7 @@ export function WordPhrases({ phrases, slug }: { phrases: Phrase[]; slug: string
               type="button"
               onClick={() => play(p.audio!)}
               aria-label={`${p.en} を聞く`}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f6f1ec] text-[#b5476a] transition-transform active:scale-95"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#b5476a] transition-transform active:scale-95"
             >
               <Volume2 className="h-5 w-5" />
             </button>

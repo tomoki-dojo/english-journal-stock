@@ -133,3 +133,13 @@
   border-color: transparent transparent transparent #fff;
   margin-bottom: 2px;
 }
+
+/* 吹き出しと音声フレーズの中の文は、本文の段落の余白（.body p）を使わない */
+.body .bubble :global(p),
+.body :global(.words-plain) :global(p) {
+  margin: 0;
+}
+.body .bubble :global(p + p),
+.body :global(.words-plain) :global(p + p) {
+  margin-top: 0.2rem;
+}
