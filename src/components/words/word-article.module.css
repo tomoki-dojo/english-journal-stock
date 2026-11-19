@@ -27,6 +27,10 @@
   .body :global(p) {
     margin: 1.5rem 0;
   }
+  .body :global(h2) {
+    margin-top: 3rem;
+    font-size: 1.5rem;
+  }
 }
 .body :global(ul:not(.words-plain)),
 .body :global(ol) {

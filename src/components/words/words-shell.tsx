@@ -5,7 +5,7 @@ export function WordsShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-dvh bg-white text-[#3c2819]">
       <header className="border-b border-[#eee8e1] bg-white/95">
-        <div className="mx-auto flex max-w-2xl items-center justify-between px-5 py-3">
+        <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-3">
           <Link href="/welcome" className="text-base font-black tracking-tight">
             英クワたん
           </Link>
@@ -14,7 +14,7 @@ export function WordsShell({ children }: { children: React.ReactNode }) {
           </Link>
         </div>
       </header>
-      <main className="mx-auto max-w-2xl px-5 pb-12">{children}</main>
+      <main className="mx-auto max-w-3xl px-5 pb-12">{children}</main>
       <footer className="border-t border-[#eee8e1] px-5 py-6 text-center text-xs text-zinc-500">
         <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1">
           <Link href="/welcome" className="underline underline-offset-2">
