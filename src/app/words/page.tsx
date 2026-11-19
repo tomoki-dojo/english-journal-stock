@@ -6,11 +6,11 @@ import { WordPracticeCta } from "@/components/words/word-practice-cta";
 import { WordStickyBar } from "@/components/words/word-sticky-bar";
 import { ArthurAvatar } from "@/components/roadmap/arthur";
 
-const TITLE = "毎回英語で事故るクマ｜和製英語・接客・数学の英語";
+const TITLE = "英クワたん 英語コラム｜和製英語・接客・数学の英語";
 const DESCRIPTION = "「バイキング」は英語で通じない？温泉の入り方や「x の 2 乗」は英語で何て言う？和製英語、接客・案内の英語、数学の英語を、クマとアーサーの会話で。";
 
 export const metadata: Metadata = {
-  title: { absolute: `${TITLE}｜英クワたん` },
+  title: { absolute: TITLE },
   description: DESCRIPTION,
   alternates: { canonical: "/words" },
   openGraph: {
@@ -24,17 +24,20 @@ export const metadata: Metadata = {
   },
 };
 
-// 和製英語の記事のトップ（一覧）。看板（アカウントの表示名「毎回英語で事故るクマ」）→ 記事カード（アイキャッチつき）→ アプリへの誘い。
+// 和製英語の記事のトップ（一覧）。看板（英クワたん 英語コラム）→ 記事カード（アイキャッチつき）→ アプリへの誘い。
 export default function WordsIndexPage() {
   const articles = listWordArticles();
   return (
     <WordsShell>
       <section className="mt-6 flex items-center justify-between gap-3 border-b border-[#eee8e1] pb-5">
-        <h1 className="text-2xl font-bold leading-snug tracking-tight sm:text-3xl">
-          毎回英語で
-          <br />
-          事故るクマ
-        </h1>
+        <div>
+          <h1 className="text-2xl font-bold leading-snug tracking-tight sm:text-3xl">
+            英クワたん
+            <br />
+            英語コラム
+          </h1>
+          <p className="mt-2 text-sm text-zinc-500">和製英語・接客・数学の英語を、クマとアーサーの会話で。</p>
+        </div>
         <div className="flex shrink-0 items-end -space-x-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
