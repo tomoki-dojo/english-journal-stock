@@ -119,7 +119,7 @@ export default async function WordArticlePage({ params }: Props) {
 
         {a.answer && (
           <div className="mt-5 rounded-xl border border-[#eee8e1] border-l-4 border-l-[#d98a9e] bg-[#fdfbf9] px-5 py-4">
-            <p className="mb-1 text-xs font-bold text-zinc-500">答え</p>
+            <p className="mb-1 text-xs font-bold text-zinc-500">{a.answerLabel}</p>
             <div className={`text-lg font-bold leading-relaxed ${styles.answer}`} dangerouslySetInnerHTML={{ __html: md(a.answer) }} />
           </div>
         )}
