@@ -43,7 +43,7 @@ export function WordPracticeCta({ slug }: { slug: string }) {
   const { status, start } = useStartPlaying(slug);
 
   return (
-    <section id={WORDS_CTA_ID} className="mt-10 rounded-2xl border border-[#eee8e1] bg-[#fdfbf9] px-5 py-6 text-center sm:px-8 sm:py-8">
+    <section id={WORDS_CTA_ID} className="mt-10 rounded-2xl border-2 border-[#f3bfcd] bg-gradient-to-b from-[#fff4f7] to-[#fff9ef] px-5 shadow-[0_6px_18px_rgba(214,65,107,0.10)] py-6 text-center sm:px-8 sm:py-8">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/words/ad/title.webp"
@@ -64,7 +64,7 @@ export function WordPracticeCta({ slug }: { slug: string }) {
           width={600}
           height={405}
           loading="lazy"
-          className="aspect-[4/3] w-full rounded-xl border border-[#eee8e1] object-cover"
+          className="aspect-[4/3] w-full rounded-xl border border-white object-cover shadow-sm"
         />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -73,7 +73,7 @@ export function WordPracticeCta({ slug }: { slug: string }) {
           width={600}
           height={497}
           loading="lazy"
-          className="aspect-[4/3] w-full rounded-xl border border-[#eee8e1] object-cover object-top"
+          className="aspect-[4/3] w-full rounded-xl border border-white object-cover shadow-sm object-top"
         />
       </div>
       <button
