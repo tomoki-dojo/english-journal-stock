@@ -92,7 +92,7 @@ export default async function WordArticlePage({ params }: Props) {
       <article>
         <nav className="pt-4 text-xs font-bold text-zinc-500">
           <Link href="/words" className="hover:underline">
-            和製英語
+            記事一覧
           </Link>
           <span className="mx-1.5">›</span>
           <span>{a.word}</span>
@@ -143,7 +143,7 @@ export default async function WordArticlePage({ params }: Props) {
 
       {related.length > 0 && (
         <section className="mt-10">
-          <h2 className="mb-3 text-lg font-bold">ほかの和製英語</h2>
+          <h2 className="mb-3 text-lg font-bold">ほかの記事</h2>
           <ul className="space-y-2">
             {related.map((m) => (
               <li key={m.slug}>
@@ -159,7 +159,7 @@ export default async function WordArticlePage({ params }: Props) {
           </ul>
           <p className="mt-4 text-center">
             <Link href="/words" className="text-sm font-bold text-zinc-600 underline underline-offset-4">
-              和製英語の一覧
+              記事の一覧
             </Link>
           </p>
         </section>

@@ -10,7 +10,7 @@ export function WordsShell({ children }: { children: React.ReactNode }) {
             英クワたん
           </Link>
           <Link href="/words" className="text-sm font-bold text-zinc-500">
-            和製英語
+            記事一覧
           </Link>
         </div>
       </header>

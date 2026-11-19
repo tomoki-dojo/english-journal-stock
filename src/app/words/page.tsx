@@ -6,8 +6,8 @@ import { WordPracticeCta } from "@/components/words/word-practice-cta";
 import { WordStickyBar } from "@/components/words/word-sticky-bar";
 import { ArthurAvatar } from "@/components/roadmap/arthur";
 
-const TITLE = "毎回英語で事故るクマ｜英語で通じない和製英語";
-const DESCRIPTION = "バイキング、テンション、ドリンクバー…。日本ではふつうに使うのに、英語だと別の意味になってしまう和製英語と、英語での言い方。";
+const TITLE = "毎回英語で事故るクマ｜和製英語・接客・数学の英語";
+const DESCRIPTION = "「バイキング」は英語で通じない？温泉の入り方や「x の 2 乗」は英語で何て言う？和製英語、接客・案内の英語、数学の英語を、クマとアーサーの会話で。";
 
 export const metadata: Metadata = {
   title: { absolute: `${TITLE}｜英クワたん` },
