@@ -6,7 +6,6 @@ category: 接客・案内の英語
 answer: 「別府は温泉で有名です」は **Beppu is famous for its hot springs.** です。
 published: 2026-11-14
 related: [onsen-ryokan, izakaya]
-draft: true
 ---
 
 ```talk

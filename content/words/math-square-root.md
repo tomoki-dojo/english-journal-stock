@@ -6,7 +6,6 @@ category: 数学を英語で話す
 answer: x² は **x squared**、x³ は **x cubed**、√2 は **the square root of two** と読みます。
 published: 2026-11-14
 related: [math-equal-inequality, math-equation-function]
-draft: true
 ---
 
 ```talk

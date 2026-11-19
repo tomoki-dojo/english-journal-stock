@@ -6,7 +6,6 @@ category: 数学を英語で話す
 answer: = は **equals**、x > 3 は **x is greater than three**、x ≧ 3 は **x is greater than or equal to three** と読みます。
 published: 2026-11-14
 related: [math-square-root, math-equation-function]
-draft: true
 ---
 
 ```talk

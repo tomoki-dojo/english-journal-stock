@@ -6,7 +6,6 @@ category: 接客・案内の英語
 answer: 入り方は **Please wash your body before you get in.**（入る前に体を洗ってください）から。短い文を1つずつ伝えれば大丈夫です。
 published: 2026-11-14
 related: [izakaya, beppu]
-draft: true
 ---
 
 ```talk

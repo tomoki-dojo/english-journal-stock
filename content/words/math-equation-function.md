@@ -6,7 +6,6 @@ category: 数学を英語で話す
 answer: y = 2x + 1 は **y equals two x plus one**、f(x) は **f of x** と読みます。
 published: 2026-11-14
 related: [math-square-root, math-equal-inequality]
-draft: true
 ---
 
 ```talk

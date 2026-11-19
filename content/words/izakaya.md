@@ -6,7 +6,6 @@ category: 接客・案内の英語
 answer: お通しは **This is a small appetizer that comes with the table charge.**（席料に含まれる小さなおつまみです）と伝えます。
 published: 2026-11-14
 related: [onsen-ryokan, beppu]
-draft: true
 ---
 
 ```talk
