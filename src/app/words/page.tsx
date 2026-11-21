@@ -6,8 +6,8 @@ import { WordPracticeCta } from "@/components/words/word-practice-cta";
 import { WordStickyBar } from "@/components/words/word-sticky-bar";
 import { ArthurAvatar } from "@/components/roadmap/arthur";
 
-const TITLE = "英クワたん 英語コラム｜和製英語・接客・数学の英語";
-const DESCRIPTION = "「バイキング」は英語で通じない？温泉の入り方や「x の 2 乗」は英語で何て言う？和製英語、接客・案内の英語、数学の英語を、クマとアーサーの会話で。";
+const TITLE = "英クワたん 英語コラム｜カタカナ英語・場面の英語・数字と数学の英語";
+const DESCRIPTION = "「バイキング」は英語で通じない？温泉の入り方や「x の 2 乗」は英語で何て言う？通じないカタカナ英語、場面で使う英語、数字と数学の英語を、クマとアーサーの会話で。";
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
@@ -36,7 +36,7 @@ export default function WordsIndexPage() {
             <br />
             英語コラム
           </h1>
-          <p className="mt-2 text-sm text-zinc-500">和製英語・接客・数学の英語を、クマとアーサーの会話で。</p>
+          <p className="mt-2 text-sm text-zinc-500">通じないカタカナ英語、場面で使う英語、数字と数学の英語を、クマとアーサーの会話で。</p>
         </div>
         <div className="flex shrink-0 items-end -space-x-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}

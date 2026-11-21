@@ -20,9 +20,9 @@ const INK = "#3c2819";
 // 分類ごとの見た目（背景・差し色・問いかけ）。記事のフロントマターの category で切り替える。
 type Theme = { bg: string; bgImage?: string; bgSize?: string; accent: string; sub: string; hook: string };
 const THEMES: Record<string, Theme> = {
-  英語で通じない和製英語: { bg: "#ffdbe5", accent: "#e5215a", sub: "#9b6b7a", hook: "英語で言うと…？" },
-  "接客・案内の英語": { bg: "#d9f2ea", accent: "#0f8a6a", sub: "#4f7d70", hook: "英語で言える？" },
-  数学を英語で話す: {
+  通じないカタカナ英語: { bg: "#ffdbe5", accent: "#e5215a", sub: "#9b6b7a", hook: "英語で言うと…？" },
+  "場面で使う英語": { bg: "#d9f2ea", accent: "#0f8a6a", sub: "#4f7d70", hook: "英語で言える？" },
+  数字と数学の英語: {
     bg: "#fff8dc",
     bgImage: "linear-gradient(#ead9a0 2px, transparent 2px), linear-gradient(90deg, #ead9a0 2px, transparent 2px)",
     bgSize: "48px 48px",
@@ -31,7 +31,7 @@ const THEMES: Record<string, Theme> = {
     hook: "英語で読める？",
   },
 };
-const themeOf = (category: string): Theme => THEMES[category] ?? THEMES["英語で通じない和製英語"];
+const themeOf = (category: string): Theme => THEMES[category] ?? THEMES["通じないカタカナ英語"];
 
 function bubbleLine(slug: string): string {
   const a = getWordArticle(slug);

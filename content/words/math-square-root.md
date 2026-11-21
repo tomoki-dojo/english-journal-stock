@@ -2,7 +2,7 @@
 title: 二乗・ルート・累乗の英語の読み方｜x²・√2・2³を声に出して読む
 description: x²は「x squared」、√2は「the square root of two」。二乗・三乗・累乗・ルートの英語の読み方を、数学の先生が音声つきでまとめました。間違えやすい読み方も。
 word: 二乗・ルート
-category: 数学を英語で話す
+category: 数字と数学の英語
 answer: x² は **x squared**、x³ は **x cubed**、√2 は **the square root of two** と読みます。
 published: 2026-11-14
 related: [math-equal-inequality, math-equation-function]

@@ -6,7 +6,7 @@
 // title: 検索結果に出るタイトル
 // description: 検索結果の説明文（120字くらいまで）
 // word: バイキング            ← 一覧に出す見出し語（和製英語）
-// category: 接客・案内の英語    ← アイキャッチの左上に出す分類（省略すると「英語で通じない和製英語」）
+// category: 場面で使う英語    ← アイキャッチの左上に出す分類（省略すると「通じないカタカナ英語」）
 // answer: 食べ放題は **buffet**  ← 冒頭の枠（Markdown可・1〜2文）
 // answerLabel: 答え            ← 冒頭の枠のラベル（省略すると分類ごとの ANSWER_LABELS）
 // published: 2026-11-08
@@ -64,12 +64,13 @@ export type WordMeta = {
 
 export type WordArticle = WordMeta & { blocks: WordBlock[] };
 
+// 分類は3つ（11/21）：通じないカタカナ英語／場面で使う英語／数字と数学の英語（シリーズ「数学を英語で話す」はこの中）。
 // 冒頭の枠のラベル（分類ごと）。※分類を増やしたら、ここにその分類のラベルを足すこと（どーじょーさんに文言を確認する）
-const DEFAULT_CATEGORY = "英語で通じない和製英語";
+const DEFAULT_CATEGORY = "通じないカタカナ英語";
 export const ANSWER_LABELS: Record<string, string> = {
-  英語で通じない和製英語: "答え",
-  "接客・案内の英語": "まずはこの一言",
-  数学を英語で話す: "読み方",
+  通じないカタカナ英語: "答え",
+  "場面で使う英語": "まずはこの一言",
+  数字と数学の英語: "読み方",
 };
 
 // アイキャッチのURL：フロントマターに ogImage があればそれ（ショートの一場面など）、なければ自動で作る /words/og/<slug>
