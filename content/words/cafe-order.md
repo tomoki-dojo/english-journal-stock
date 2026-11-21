@@ -3,6 +3,7 @@ title: カフェの注文で使う英語｜スタバで「店内で」「持ち�
 description: カフェの注文は英語で「Can I get a tall latte?」。店内か持ち帰りかの答え方、サイズ、ミルクの変更、名前を聞かれたときなど、スタバなど海外のカフェで使える英語を音声つきでまとめました。
 word: カフェの注文
 category: 場面で使う英語
+side: 行く側
 answer: 注文は **Can I get a tall latte?**、持ち帰りは **To go, please.**、店内なら **For here, please.** です。
 published: 2026-11-21
 related: [restaurant-order, ryogae]

@@ -3,6 +3,7 @@ title: 両替は英語で何て言う？ 空港・銀行でそのまま使える
 description: 両替は英語で exchange。「円をドルに両替したい」は I'd like to exchange yen for dollars. レートや手数料の聞き方、細かいお金にくずしてもらう言い方も、音声つきでまとめました。
 word: 両替
 category: 場面で使う英語
+side: 行く側
 answer: 「円をドルに両替したいです」は **I'd like to exchange yen for dollars.** です。
 published: 2026-11-21
 related: [airport-checkin, hotel-checkin]

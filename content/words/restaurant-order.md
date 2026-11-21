@@ -3,6 +3,7 @@ title: レストランの注文で使う英語｜入店・注文・ステーキ�
 description: レストランの注文は英語で「I'll have 〜.」。「2人です」「おすすめは？」「ミディアムレアで」「お会計お願いします」など、海外のレストランで入店から会計まで使える英語を音声つきでまとめました。
 word: レストランの注文
 category: 場面で使う英語
+side: 行く側
 answer: 注文は **I'll have the steak, please.**（ステーキをお願いします）のように、I'll have 〜 で伝えます。
 published: 2026-11-21
 related: [cafe-order, hotel-checkin]

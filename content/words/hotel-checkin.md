@@ -3,6 +3,7 @@ title: ホテルのチェックインで使う英語｜予約の伝え方・荷�
 description: ホテルのチェックインは英語で「I'd like to check in. I have a reservation under 〜.」。早めのチェックイン、荷物を預ける、朝食の時間を聞くなど、フロントでそのまま使える英語を音声つきでまとめました。
 word: ホテルのチェックイン
 category: 場面で使う英語
+side: 行く側
 answer: チェックインは **I'd like to check in. I have a reservation under Kuma.**（クマの名前で予約しています）と伝えます。
 published: 2026-11-21
 related: [airport-checkin, hotel-front]

@@ -3,6 +3,7 @@ title: 預け荷物は英語で何て言う？ 空港のチェックインで使
 description: 預け荷物は英語で checked baggage、機内持ち込みは carry-on。「この荷物を預けたい」「通路側の席がいい」など、空港のチェックインカウンターで使う英語を音声つきでまとめました。
 word: 預け荷物
 category: 場面で使う英語
+side: 行く側
 answer: 預け荷物は **checked baggage**（checked luggage）、機内持ち込みの荷物は **carry-on** です。
 published: 2026-11-21
 related: [ryogae, hotel-checkin]

@@ -3,6 +3,7 @@ title: タクシーで行き先を伝える英語｜「〜までお願いしま�
 description: タクシーで行き先を伝える英語は「Could you take me to 〜?」。住所を見せるとき、時間を聞く、ここで止めてほしい、おつりはいらないなど、海外でタクシーに乗るときの英語を音声つきでまとめました。
 word: タクシーで行き先を伝える
 category: 場面で使う英語
+side: 行く側
 answer: 行き先は **Could you take me to the airport?**（空港までお願いします）のように伝えます。
 published: 2026-11-21
 related: [taxi, restaurant-order]
