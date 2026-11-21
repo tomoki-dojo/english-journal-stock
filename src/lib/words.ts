@@ -9,6 +9,8 @@
 // category: 場面で使う英語    ← アイキャッチの左上に出す分類（省略すると「通じないカタカナ英語」）
 // answer: 食べ放題は **buffet**  ← 冒頭の枠（Markdown可・1〜2文）
 // answerLabel: 答え            ← 冒頭の枠のラベル（省略すると分類ごとの ANSWER_LABELS）
+// side: 行く側                ← 場面で使う英語だけ。まとめページの分け方（迎える側＝日本で迎える／行く側＝海外で使う。省略すると迎える側）
+// order: 1                    ← まとめページの並び順（数字と数学の英語のシリーズの番号など。省略すると新しい順）
 // published: 2026-11-08
 // updated: 2026-11-08         ← 省略可
 // related: [tension, drink-bar] ← 下に出す関連記事のslug（省略可）
@@ -60,6 +62,8 @@ export type WordMeta = {
   ogImage?: string;
   category: string;
   answerLabel: string;
+  side?: string;
+  order?: number;
 };
 
 export type WordArticle = WordMeta & { blocks: WordBlock[] };
@@ -72,6 +76,61 @@ export const ANSWER_LABELS: Record<string, string> = {
   "場面で使う英語": "まずはこの一言",
   数字と数学の英語: "読み方",
 };
+
+// 分類のまとめページ（/words/category/<slug>）。intro は本人が直す前提の紹介文。
+export type WordCategory = {
+  name: string;
+  slug: string;
+  title: string;
+  description: string;
+  intro: string;
+  quickTitle: string;
+  groups?: { side: string; heading: string }[];
+};
+export const WORD_CATEGORIES: WordCategory[] = [
+  {
+    name: "場面で使う英語",
+    slug: "scene",
+    title: "場面で使う英語｜接客・旅行でそのまま言える英語フレーズ集",
+    description: "お店で外国のお客さんを案内するとき、海外旅行で注文やチェックインをするとき。その場でそのまま言える英語の一言を、場面ごとに音声つきでまとめました。",
+    intro: "お店で外国のお客さんに説明したいとき、海外旅行で注文したいとき。その場でそのまま言える一言を、場面ごとにまとめています。",
+    quickTitle: "まずはこの一言",
+    groups: [
+      { side: "迎える側", heading: "日本で外国の人を迎える" },
+      { side: "行く側", heading: "海外で使う" },
+    ],
+  },
+  {
+    name: "通じないカタカナ英語",
+    slug: "katakana",
+    title: "通じないカタカナ英語｜英語だと別の意味になる和製英語まとめ",
+    description: "バイキング、テンション、コンセント…。日本ではふつうに使うのに、英語だと別の意味になってしまうカタカナ英語と、英語での言い方をまとめました。",
+    intro: "日本ではふつうに使うのに、英語だと別の意味になってしまう言葉があります。英語で何て言えば通じるのかを、クマとアーサーの会話でまとめています。",
+    quickTitle: "答えだけまとめて",
+  },
+  {
+    name: "数字と数学の英語",
+    slug: "numbers",
+    title: "数字と数学の英語｜数式・記号・分数の英語の読み方まとめ",
+    description: "x² は x squared、√2 は the square root of two。数式・記号・分数・小数の英語の読み方を、音声つきでまとめました。",
+    intro: "x² や √2、分数や不等号。見れば分かるのに、英語で読もうとすると止まってしまう数式の読み方を、音声つきでまとめています。",
+    quickTitle: "読み方だけまとめて",
+  },
+];
+
+export function categoryByName(name: string): WordCategory | undefined {
+  return WORD_CATEGORIES.find((c) => c.name === name);
+}
+
+export function categoryBySlug(slug: string): WordCategory | undefined {
+  return WORD_CATEGORIES.find((c) => c.slug === slug);
+}
+
+// まとめページ用：その分類の記事（order があれば番号順、なければ新しい順）
+export function listCategoryArticles(name: string): WordMeta[] {
+  const list = listWordArticles().filter((a) => a.category === name);
+  return list.sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999) || (a.published < b.published ? 1 : a.published > b.published ? -1 : 0));
+}
 
 // アイキャッチのURL：フロントマターに ogImage があればそれ（ショートの一場面など）、なければ自動で作る /words/og/<slug>
 export function wordEyecatch(a: { slug: string; ogImage?: string }): string {
@@ -181,6 +240,8 @@ export function readArticle(slug: string): WordArticle | null {
     ogImage: str(data.ogImage) || undefined,
     category: str(data.category) || DEFAULT_CATEGORY,
     answerLabel: str(data.answerLabel) || ANSWER_LABELS[str(data.category) || DEFAULT_CATEGORY] || "答え",
+    side: str(data.side) || ((str(data.category) || DEFAULT_CATEGORY) === "場面で使う英語" ? "迎える側" : undefined),
+    order: Number.isFinite(Number(data.order)) && str(data.order) !== "" ? Number(data.order) : undefined,
     blocks: parseBlocks(slug, body),
   };
 }

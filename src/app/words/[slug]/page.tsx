@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { marked } from "marked";
-import { getWordArticle, listWordArticles, wordEyecatch, type WordArticle } from "@/lib/words";
+import { categoryByName, getWordArticle, listWordArticles, wordEyecatch, type WordArticle } from "@/lib/words";
 import { WordsShell } from "@/components/words/words-shell";
 import { WordBalloon, WordTalk } from "@/components/words/word-talk";
 import { WordPhrases } from "@/components/words/word-phrases";
@@ -78,6 +78,7 @@ export default async function WordArticlePage({ params }: Props) {
   const a = getWordArticle(slug);
   if (!a) notFound();
 
+  const cat = categoryByName(a.category);
   const all = listWordArticles();
   const bySlug = new Map(all.map((m) => [m.slug, m]));
   const related = [
@@ -95,6 +96,14 @@ export default async function WordArticlePage({ params }: Props) {
             記事一覧
           </Link>
           <span className="mx-1.5">›</span>
+          {cat && (
+            <>
+              <Link href={`/words/category/${cat.slug}`} className="hover:underline">
+                {cat.name}
+              </Link>
+              <span className="mx-1.5">›</span>
+            </>
+          )}
           <span>{a.word}</span>
         </nav>
         {a.draft && (
