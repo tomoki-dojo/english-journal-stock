@@ -2,7 +2,7 @@
 title: 足し算・引き算・かけ算・割り算の英語｜四則演算と九九を声に出して読む
 description: 足し算は plus、引き算は minus、かけ算は times、割り算は divided by。四則演算の英語の読み方と、「あまり」や九九（times tables）の言い方を、音声つきでまとめました。
 word: 四則演算・九九
-category: 数学を英語で話す
+category: 数字と数学の英語
 answer: 2 + 3 は **two plus three**、5 − 2 は **five minus two**、3 × 4 は **three times four**、8 ÷ 2 は **eight divided by two** と読みます。
 published: 2026-11-21
 related: [math-fraction-decimal, math-equal-inequality]

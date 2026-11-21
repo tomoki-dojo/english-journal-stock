@@ -2,7 +2,7 @@
 title: 道案内の英語｜「まっすぐ」「2つ目の信号を右」をそのまま言えるフレーズ
 description: 外国人に道を聞かれたとき、「まっすぐ行って、2つ目の信号を右」は英語で何て言う？ 声をかけるところから、方向・目印・距離の伝え方まで、そのまま言える道案内のフレーズをまとめました。
 word: 道案内
-category: 接客・案内の英語
+category: 場面で使う英語
 answer: 「まっすぐ行って、2つ目の信号を右」は **Go straight and turn right at the second traffic light.** です。
 published: 2026-11-21
 related: [beppu, taxi]

@@ -2,7 +2,7 @@
 title: 微分・積分・シグマの英語の読み方｜f'(x)・∫・Σ・lim を声に出して読む
 description: f'(x) は「f prime of x」、∫ は「the integral of」、Σ は「the sum of」。微分・積分・シグマ・極限の英語の読み方を、音声つきでまとめました。dy/dx の読み方も。
 word: 微分・積分
-category: 数学を英語で話す
+category: 数字と数学の英語
 answer: f'(x) は **f prime of x**、∫f(x)dx は **the integral of f of x dx**、Σ は **the sum** と読みます。
 published: 2026-11-21
 related: [math-square-root, math-equation-function]

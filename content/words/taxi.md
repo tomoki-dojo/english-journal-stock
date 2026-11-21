@@ -2,7 +2,7 @@
 title: タクシーの接客英語｜行き先・自動ドア・支払いの伝え方
 description: タクシーで外国人のお客さんに「どちらまで？」「ドアは自動で開きます」は英語で何て言う？ 行き先の確認から到着・支払いまで、そのまま言えるタクシーの接客フレーズをまとめました。
 word: タクシー
-category: 接客・案内の英語
+category: 場面で使う英語
 answer: 「どちらまで？」は **Where would you like to go?** です。
 published: 2026-11-21
 related: [michi-annai, beppu]

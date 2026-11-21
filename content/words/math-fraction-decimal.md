@@ -2,7 +2,7 @@
 title: 分数・小数の英語の読み方｜1/2・2/3・0.5・3.14 を声に出して読む
 description: 1/2 は「one half」、2/3 は「two thirds」、0.5 は「zero point five」。分数と小数の英語の読み方を、音声つきでまとめました。x/y や帯分数の読み方も。
 word: 分数・小数
-category: 数学を英語で話す
+category: 数字と数学の英語
 answer: 1/2 は **one half**、2/3 は **two thirds**、0.5 は **zero point five** と読みます。
 published: 2026-11-21
 related: [math-square-root, math-arithmetic]

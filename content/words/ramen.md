@@ -2,7 +2,7 @@
 title: ラーメン屋の接客英語｜食券・麺の硬さ・替え玉の伝え方
 description: ラーメン屋で外国人のお客さんに「食券」「麺の硬さ」「替え玉」を英語で伝えるには？ 券売機の案内から注文、替え玉まで、そのまま言える接客フレーズをまとめました。
 word: ラーメン屋
-category: 接客・案内の英語
+category: 場面で使う英語
 answer: 食券は **Please buy a ticket from the machine first.**（先に券売機で食券を買ってください）と伝えます。
 published: 2026-11-21
 related: [izakaya, onsen-ryokan]
