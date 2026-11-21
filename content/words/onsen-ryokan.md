@@ -2,7 +2,7 @@
 title: 温泉旅館の接客英語｜チェックインから温泉の入り方の説明まで
 description: 温泉旅館で外国人のお客さんを迎えるときの英語。チェックイン、浴衣、食事の時間、そして一番説明が難しい「温泉の入り方」まで、そのまま言えるフレーズをまとめました。
 word: 温泉旅館
-category: 接客・案内の英語
+category: 場面で使う英語
 answer: 温泉の入り方は、まず **Please wash your body before you get in.**（入る前に体を洗ってください）。
 published: 2026-11-14
 related: [izakaya, beppu]

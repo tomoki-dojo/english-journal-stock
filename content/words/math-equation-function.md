@@ -2,7 +2,7 @@
 title: 方程式・関数を英語で読む｜y = 2x + 1 や f(x) を声に出して読む
 description: y = 2x + 1 は「y equals two x plus one」、f(x) は「f of x」。方程式・関数・二次関数の式を英語で読む方法と、傾き・切片・頂点などの用語を、数学の先生が音声つきでまとめました。
 word: 方程式・関数
-category: 数学を英語で話す
+category: 数字と数学の英語
 answer: y = 2x + 1 は **y equals two x plus one**、f(x) は **f of x** と読みます。
 published: 2026-11-14
 related: [math-square-root, math-equal-inequality]

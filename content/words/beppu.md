@@ -2,7 +2,7 @@
 title: 別府温泉を英語で紹介｜大分の温泉を説明するフレーズ
 description: 「別府は温泉で有名です」を英語で言うと？ 別府八湯、地獄めぐり、湯布院まで、大分の温泉を英語で紹介するときにそのまま使えるフレーズをまとめました。
 word: 別府温泉
-category: 接客・案内の英語
+category: 場面で使う英語
 answer: 「別府は温泉で有名です」は **Beppu is famous for its hot springs.** です。
 published: 2026-11-14
 related: [onsen-ryokan, izakaya]
