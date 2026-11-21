@@ -3,6 +3,7 @@ title: イコール・不等号の英語の読み方｜=・<・≦を声に出�
 description: 「=」は equals、「<」は is less than、「≦」は is less than or equal to。イコールと不等号の英語の読み方を、数学の先生が音声つきでまとめました。「以上・以下」の落とし穴も。
 word: 不等号
 category: 数字と数学の英語
+order: 2
 answer: = は **equals**、x > 3 は **x is greater than three**、x ≧ 3 は **x is greater than or equal to three** と読みます。
 published: 2026-11-14
 related: [math-square-root, math-equation-function]

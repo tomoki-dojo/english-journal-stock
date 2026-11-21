@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { listWordArticles, wordEyecatch } from "@/lib/words";
+import { WORD_CATEGORIES, listCategoryArticles } from "@/lib/words";
+import { WordCardGrid } from "@/components/words/word-card-grid";
 import { WordsShell } from "@/components/words/words-shell";
 import { WordPracticeCta } from "@/components/words/word-practice-cta";
 import { WordStickyBar } from "@/components/words/word-sticky-bar";
@@ -24,9 +25,8 @@ export const metadata: Metadata = {
   },
 };
 
-// 和製英語の記事のトップ（一覧）。看板（英クワたん 英語コラム）→ 記事カード（アイキャッチつき）→ アプリへの誘い。
+// 和製英語の記事のトップ（一覧）。看板（英クワたん 英語コラム）→ 分類ごとに記事カード4枚（続きは分類のまとめページ）→ アプリへの誘い。
 export default function WordsIndexPage() {
-  const articles = listWordArticles();
   return (
     <WordsShell>
       <section className="mt-6 flex items-center justify-between gap-3 border-b border-[#eee8e1] pb-5">
@@ -51,26 +51,25 @@ export default function WordsIndexPage() {
         </div>
       </section>
 
-      <ul className="mt-6 grid gap-4 sm:grid-cols-2">
-        {articles.map((a) => (
-          <li key={a.slug}>
-            <Link
-              href={`/words/${a.slug}`}
-              className="block overflow-hidden rounded-xl border border-[#eee8e1] bg-white transition-colors hover:border-[#d9cfc4]"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={wordEyecatch(a)} alt="" width={1200} height={630} loading="lazy" className="aspect-[1200/630] w-full object-cover" />
-              <div className="px-4 py-3">
-                <p className="text-xs font-bold text-zinc-500">
-                  {a.word}
-                  {a.draft && <span className="ml-2 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-white">下書き</span>}
-                </p>
-                <p className="mt-0.5 font-bold leading-snug">{a.title}</p>
-              </div>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      {WORD_CATEGORIES.map((c) => {
+        const list = listCategoryArticles(c.name);
+        if (list.length === 0) return null;
+        return (
+          <section key={c.slug} className="mt-8">
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="text-xl font-bold">
+                <Link href={`/words/category/${c.slug}`} className="hover:underline">
+                  {c.name}
+                </Link>
+              </h2>
+              <Link href={`/words/category/${c.slug}`} className="shrink-0 text-sm font-bold text-zinc-500 underline underline-offset-4">
+                まとめを見る
+              </Link>
+            </div>
+            <WordCardGrid articles={list.slice(0, 4)} />
+          </section>
+        );
+      })}
 
       <WordPracticeCta slug="index" />
       <WordStickyBar slug={"index"} />
