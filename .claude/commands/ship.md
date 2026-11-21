@@ -30,7 +30,7 @@ argument-hint: "[ブランチ名（省略すると今のブランチ）]"
    - プッシュしたら、そのコミットの短いハッシュを伝える
 
 5. **デプロイの結果を見る**
-   - `gh` コマンドが使えれば `gh run watch $(gh run list --workflow=deploy.yml --limit 1 --json databaseId -q '.[0].databaseId') --exit-status` で終わるまで待つ。使えなければ、GitHub の公開 API（`curl -s "https://api.github.com/repos/tomoki-dojo/english-journal-stock/actions/runs?per_page=5"` から、プッシュしたコミットの `head_sha` の run を探し、`/actions/runs/<id>` の `status` が `completed` になるまで10秒おきに見る）で `conclusion` が `success` か確かめる
+   - `gh` コマンドが使えれば `gh run watch $(gh run list --workflow=deploy.yml --limit 1 --json databaseId -q '.[0].databaseId') --exit-status` で終わるまで待つ。使えなければ、GitHub の公開 API（`curl -s "https://api.github.com/repos/tomoki-dojo/english-journal-stock/actions/runs?per_page=5"` から、プッシュしたコミットの `head_sha` の run を探し、`/actions/runs/<id>` の `status` が `completed` になるまで30秒おきに見る）で `conclusion` が `success` か確かめる。認証なしの公開 API は1時間に60回までなので、返事に `rate limit exceeded` が出たら API はやめて、`curl -sL https://github.com/tomoki-dojo/english-journal-stock/actions/runs/<id>` の HTML に `completed successfully` が出るかで確かめる
    - 終わったら `curl -sI https://app.upskillenglish.bear-fruit.online/welcome` が 200 か確認する
    - 失敗したら、Actions のログの最後の数十行を見せて原因を説明する（VPS 側は `ssh` で `cd ~/english-journal-stock && docker compose logs --tail 100 app`）
 
