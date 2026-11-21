@@ -1,6 +1,6 @@
 ---
-title: 居酒屋の接客英語｜お通し・飲み放題・ラストオーダーの伝え方
-description: 居酒屋で外国人のお客さんに説明しにくい「お通し」「飲み放題」「ラストオーダー」を英語で伝えるには？ 案内から会計まで、そのまま言える接客フレーズをまとめました。
+title: お通しは英語で何て言う？ 居酒屋の接客英語（飲み放題・ラストオーダーも）
+description: お通しは英語で「a small appetizer that comes with the table charge」と説明します。飲み放題・ラストオーダーの伝え方まで、居酒屋でそのまま言える接客フレーズをまとめました。
 word: 居酒屋
 category: 場面で使う英語
 answer: お通しは **This is a small appetizer that comes with the table charge.**（席料に含まれる小さなおつまみです）と伝えます。
