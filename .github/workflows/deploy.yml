@@ -1,0 +1,49 @@
+# main にプッシュされたら、ConoHa VPS に SSH で入って、プルとコンテナの立て直しをする。
+# 手でやっていた docs/vps-deploy.md の「8. 今後のデプロイ更新方法」と同じ手順。
+# 必要な Secrets（GitHub のリポジトリの Settings → Secrets and variables → Actions）:
+#   VPS_HOST    … VPS の IP（163.44.110.196）
+#   VPS_USER    … SSH のユーザー（root）
+#   VPS_SSH_KEY … GitHub Actions 用に作った秘密鍵（docs/auto-deploy.md）
+#   VPS_PORT    … SSH のポート（22 以外にしている場合だけ）
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# 続けてプッシュしたときは、前のデプロイが終わってから次を動かす（途中で止めない）
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: プルしてコンテナを立て直す
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 25m
+          script: |
+            set -e
+            cd ~/english-journal-stock
+            git pull --ff-only
+            docker compose --env-file .env.production up -d --build
+            docker image prune -f
+            docker compose ps
+
+      - name: 本番が応答するか確認
+        run: |
+          for i in $(seq 1 12); do
+            if curl -fsS -o /dev/null https://app.upskillenglish.bear-fruit.online/welcome; then
+              echo "OK"; exit 0
+            fi
+            echo "まだ応答なし（${i}回目）。10秒待つ"; sleep 10
+          done
+          echo "本番が応答しません。VPS で docker compose logs app を確認してください"; exit 1
