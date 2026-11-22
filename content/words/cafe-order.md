@@ -5,9 +5,8 @@ word: カフェの注文
 category: 場面で使う英語
 side: 行く側
 answer: 注文は **Can I get a tall latte?**、持ち帰りは **To go, please.**、店内なら **For here, please.** です。
-published: 2026-11-21
+published: 2026-11-22
 related: [restaurant-order, ryogae]
-draft: true
 ---
 
 ```talk

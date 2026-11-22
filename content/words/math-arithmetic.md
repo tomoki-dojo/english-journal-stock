@@ -5,9 +5,8 @@ word: 四則演算・九九
 category: 数字と数学の英語
 order: 6
 answer: 2 + 3 は **two plus three**、5 − 2 は **five minus two**、3 × 4 は **three times four**、8 ÷ 2 は **eight divided by two** と読みます。
-published: 2026-11-21
+published: 2026-11-22
 related: [math-fraction-decimal, math-equal-inequality]
-draft: true
 ---
 
 ```talk
@@ -71,7 +70,7 @@ seven divided by two is three with a remainder of one | 7 ÷ 2 = 3 あまり 1
 「あまり」は remainder。「three remainder one」と短く言うこともあります。
 
 ```balloon
-クマ: リマインダーって余りなんだ…スマホのリマインダーにはよく助けられてますけど
+クマ: リメインダーって余りなんだ…スマホのリマインダーと似てて紛らわしい
 ```
 
 ## 計算の言い方
@@ -87,7 +86,7 @@ divide | 割る
 
 ## 声に出して言ってみよう
 
-簡単な計算でも、英語だと意外と「どういうんだろ？」ってなりますよね。
+簡単な計算でも、英語だと意外と「どう言うんだろ？」ってなりますよね。
 
 ```phrases
 three times four equals twelve | 3 × 4 = 12

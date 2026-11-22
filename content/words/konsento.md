@@ -3,9 +3,8 @@ title: 「コンセント」は英語で通じない？ 英語では outlet か 
 description: 「Where is the consent?」は英語だと「同意はどこ？」に聞こえます。コンセントは英語で outlet（アメリカ）か socket（イギリス）。プラグや充電の言い方も。
 word: コンセント
 answer: コンセントは **outlet**（アメリカ）か **socket**（イギリス）。英語の consent は「同意」です。
-published: 2026-11-21
+published: 2026-11-22
 related: [drink-bar, viking]
-draft: true
 ---
 
 ```talk

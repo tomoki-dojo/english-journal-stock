@@ -5,9 +5,8 @@ word: ホテルのチェックイン
 category: 場面で使う英語
 side: 行く側
 answer: チェックインは **I'd like to check in. I have a reservation under Kuma.**（クマの名前で予約しています）と伝えます。
-published: 2026-11-21
+published: 2026-11-22
 related: [airport-checkin, hotel-front]
-draft: true
 ---
 
 ```talk

@@ -3,9 +3,8 @@ title: 「クレーム」は英語で通じない？ 苦情は英語で complain
 description: 「I got a claim.」は英語だと「請求・主張を受けた」に聞こえます。苦情は英語で complaint、「クレームを言う」は complain。仕事で使う言い方も。
 word: クレーム
 answer: 苦情は **complaint**、「クレームを言う」は **complain**。英語の claim は「主張・請求」です。
-published: 2026-11-21
+published: 2026-11-22
 related: [tension, drink-bar]
-draft: true
 ---
 
 ```talk

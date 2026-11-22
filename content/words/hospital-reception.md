@@ -4,9 +4,8 @@ description: 病院の受付で外国人の患者さんに「保険証はあり�
 word: 病院の受付
 category: 場面で使う英語
 answer: 保険証の確認は **Do you have a health insurance card?** です。
-published: 2026-11-21
+published: 2026-11-22
 related: [hotel-front, register]
-draft: true
 ---
 
 ```talk

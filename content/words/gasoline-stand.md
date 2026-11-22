@@ -3,9 +3,8 @@ title: 「ガソリンスタンド」は英語で通じない？ 英語では ga
 description: 「ガソリンスタンド」は和製英語。英語ではアメリカは gas station、イギリスは petrol station です。「満タンで」「レギュラーで」の言い方も。
 word: ガソリンスタンド
 answer: ガソリンスタンドは **gas station**（アメリカ）か **petrol station**（イギリス）です。
-published: 2026-11-21
+published: 2026-11-22
 related: [winker, konsento]
-draft: true
 ---
 
 ```talk

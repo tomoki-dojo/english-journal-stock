@@ -4,9 +4,8 @@ description: 別府の地獄めぐりを英語で案内するには？「地獄�
 word: 地獄めぐり
 category: 場面で使う英語
 answer: 「地獄」は **These are hot springs for viewing, not for bathing.**（見るための温泉で、入る温泉ではありません）と説明します。
-published: 2026-11-21
+published: 2026-11-22
 related: [beppu, onsen-ryokan]
-draft: true
 ---
 
 ```talk
@@ -59,7 +58,7 @@ They keep crocodiles here, using the heat of the hot springs. | ここでは温�
 クマ: オススメはやっぱり映える「海地獄」と「血の池地獄」ですね！
 ```
 
-大まかに「海地獄周辺」と「血の池地獄周辺」に分かれます。２つのエリアは車で１０分くらいです。
+大まかに「海地獄周辺」と「血の池地獄周辺」に分かれます。2 つのエリアは車で 10 分くらいです。
 
 ## 地獄蒸しをすすめる
 
