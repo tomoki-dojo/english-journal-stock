@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   },
 };
 
-// 和製英語の記事のトップ（一覧）。看板（英クワたん 英語コラム）→ 新着記事6本 → 分類のまとめページへのカード → 記事一覧（/words/all）へのリンク → アプリへの誘い。
+// 和製英語の記事のトップ（一覧）。看板（英クワたん 英語コラム）→ 新着記事6本と記事一覧（/words/all）へのリンク → 分類のまとめページへのカード（縦に並べ、アイキャッチの色をマーカー程度に）→ アプリへの誘い。
 export default function WordsIndexPage() {
   const articles = listWordArticles();
   const latest = articles.slice(0, 6);
@@ -58,31 +58,38 @@ export default function WordsIndexPage() {
       <section className="mt-8">
         <h2 className="text-xl font-bold">新着記事</h2>
         <WordCardGrid articles={latest} />
+        <p className="mt-4 text-right">
+          <Link href="/words/all" className="text-sm font-bold text-zinc-600 underline underline-offset-4">
+            記事一覧（すべての記事）›
+          </Link>
+        </p>
       </section>
 
       <section className="mt-10">
         <h2 className="text-xl font-bold">分類から探す</h2>
-        <ul className="mt-4 grid gap-3 sm:grid-cols-3">
+        <ul className="mt-4 space-y-3">
           {WORD_CATEGORIES.map((c) => (
             <li key={c.slug}>
               <Link
                 href={`/words/category/${c.slug}`}
-                className="flex h-full flex-col rounded-xl border border-[#eee8e1] bg-[#fdfbf9] px-4 py-4 transition-colors hover:border-[#d9cfc4]"
+                className="block rounded-xl border border-l-4 border-[#eee8e1] bg-white px-4 py-4 transition-colors hover:bg-[#fdfbf9]"
+                style={{ borderLeftColor: c.color.accent }}
               >
-                <span className="font-bold">{c.name}</span>
-                <span className="mt-1 flex-1 text-sm leading-relaxed text-zinc-600">{c.intro}</span>
-                <span className="mt-3 text-xs font-bold text-zinc-500">{counts[c.name] ?? 0} 本 ›</span>
+                <span
+                  className="font-bold"
+                  style={{ background: `linear-gradient(transparent 55%, ${c.color.marker} 55%)` }}
+                >
+                  {c.name}
+                </span>
+                <span className="mt-1 block text-sm leading-relaxed text-zinc-600">{c.intro}</span>
+                <span className="mt-2 block text-xs font-bold" style={{ color: c.color.accent }}>
+                  {counts[c.name] ?? 0} 本 ›
+                </span>
               </Link>
             </li>
           ))}
         </ul>
       </section>
-
-      <p className="mt-8 text-center">
-        <Link href="/words/all" className="text-sm font-bold text-zinc-600 underline underline-offset-4">
-          記事一覧（すべての記事）
-        </Link>
-      </p>
 
       <WordPracticeCta slug="index" />
       <WordStickyBar slug={"index"} />

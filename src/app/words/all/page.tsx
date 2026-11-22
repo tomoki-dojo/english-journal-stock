@@ -35,8 +35,12 @@ export default function WordsAllPage() {
             <li key={a.slug}>
               <Link href={`/words/${a.slug}`} className="block py-3 transition-colors hover:bg-[#fdfbf9]">
                 <p className="text-xs font-bold text-zinc-500">
-                  {cat?.name ?? a.category}
-                  <span className="mx-1.5">·</span>
+                  <span
+                    className="mr-2 inline-block rounded px-1.5 py-0.5"
+                    style={cat ? { backgroundColor: cat.color.marker, color: cat.color.accent } : undefined}
+                  >
+                    {cat?.name ?? a.category}
+                  </span>
                   {a.word}
                   {a.draft && <span className="ml-2 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-white">下書き</span>}
                 </p>

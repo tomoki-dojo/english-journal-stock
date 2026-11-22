@@ -85,6 +85,8 @@ export type WordCategory = {
   description: string;
   intro: string;
   quickTitle: string;
+  // アイキャッチと同じ色（accent＝文字・線、marker＝マーカーの薄い色）。src/app/words/og/[slug]/route.tsx の THEMES とそろえる
+  color: { accent: string; marker: string };
   groups?: { side: string; heading: string }[];
 };
 export const WORD_CATEGORIES: WordCategory[] = [
@@ -95,6 +97,7 @@ export const WORD_CATEGORIES: WordCategory[] = [
     description: "お店で外国のお客さんを案内するとき、海外旅行で注文やチェックインをするとき。その場でそのまま言える英語の一言を、場面ごとに音声つきでまとめました。",
     intro: "お店で外国のお客さんに説明したいとき、海外旅行で注文したいとき。その場でそのまま言える一言を、場面ごとにまとめています。",
     quickTitle: "まずはこの一言",
+    color: { accent: "#0f8a6a", marker: "#d9f2ea" },
     groups: [
       { side: "迎える側", heading: "日本で外国の人を迎える" },
       { side: "行く側", heading: "海外で使う" },
@@ -107,6 +110,7 @@ export const WORD_CATEGORIES: WordCategory[] = [
     description: "バイキング、テンション、コンセント…。日本ではふつうに使うのに、英語だと別の意味になってしまうカタカナ英語と、英語での言い方をまとめました。",
     intro: "日本ではふつうに使うのに、英語だと別の意味になってしまう言葉があります。英語で何て言えば通じるのかを、クマとアーサーの会話でまとめています。",
     quickTitle: "答えだけまとめて",
+    color: { accent: "#e5215a", marker: "#ffdbe5" },
   },
   {
     name: "数字と数学の英語",
@@ -115,6 +119,7 @@ export const WORD_CATEGORIES: WordCategory[] = [
     description: "x² は x squared、√2 は the square root of two。数式・記号・分数・小数の英語の読み方を、音声つきでまとめました。",
     intro: "x² や √2、分数や不等号。見れば分かるのに、英語で読もうとすると止まってしまう数式の読み方を、音声つきでまとめています。",
     quickTitle: "読み方だけまとめて",
+    color: { accent: "#2f5fc4", marker: "#dde7fa" },
   },
 ];
 
