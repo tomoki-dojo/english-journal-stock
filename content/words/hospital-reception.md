@@ -10,7 +10,7 @@ draft: true
 ---
 
 ```talk
-クマ: …Ah,Please write this paper.
+クマ: …Ah, please write this paper.
 アーサー: Write a paper? Like an essay? | 論文書くん？
 クマ: 論文ちゃう！ 問診票や！
 ```
@@ -46,7 +46,7 @@ Do you have any allergies? | アレルギーはありますか？
 「記入する」は fill out。「fill in」でも大丈夫です。
 
 ```balloon
-クマ: fill outは「【印象】」、fill inは「【印象】」という感じですね
+クマ: fill outは「用紙を最後まで書き上げる」、fill inは「空いているところをうめる」という感じですね
 ```
 
 ## 待ってもらう
@@ -57,7 +57,7 @@ It'll be about twenty minutes. | 20分ほどお待ちいただきます
 ```
 
 ```balloon
-アーサー: Twenty minutes? Then I'll check on my 【stagいる？】 beetles at home. | 20 分？ 家でクワガタの世話してこようかな
+アーサー: Twenty minutes? Then I'll check on my stag beetles at home. | 20 分？ 家でクワガタの世話してこようかな
 ```
 
 ## 処方箋を渡す

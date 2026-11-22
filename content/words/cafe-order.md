@@ -14,7 +14,7 @@ draft: true
 アーサー: For here or to go? | 店内？ お持ち帰り？
 クマ: …Yes!
 アーサー: Yes… which one? | イエス…どっち？
-クマ: 【もう一度お願いします←英語で】（聞き取れなかったぁ…）
+クマ: Sorry, could you say that again? | （聞き取れなかったぁ…）
 ```
 
 「For here or to go?」は、カフェで一番よく聞かれる質問です。
@@ -50,7 +50,9 @@ Can I get that with oat milk? | オーツミルクに変えられますか？
 Can I get an extra shot? | ショットを追加できますか？
 ```
 
-【ショットって何？多分日本ではあまり一般的じゃない】
+ショット（shot）は、エスプレッソ 1 杯分のことです。
+
+「extra shot」で、エスプレッソを 1 杯分足して、コーヒーを濃くしてもらえます。
 
 ## 名前を聞かれたとき
 

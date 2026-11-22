@@ -22,7 +22,7 @@ check には「調べる」のほかに、「（荷物を）預ける」とい�
 なので空港で「Any bags to check?」と聞かれたら、「預ける荷物はありますか？」という意味なんですね。
 
 ```balloon
-アーサー：【英語で】 | よほどのことがないと受付でバックの中身をチェックすることはありません笑
+アーサー: Unless something's really off, nobody at the counter looks inside your bag, lol. | よほどのことがないと受付でバッグの中身をチェックすることはありません笑
 ```
 
 ## 預け荷物は checked baggage
