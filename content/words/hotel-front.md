@@ -12,7 +12,7 @@ draft: true
 ```talk
 クマ: Passport, please!
 アーサー: Am I leaving the country? | もう出国させられるの？
-クマ: 違う、日本ではチェックインの確認でパスポートチェックするんよ…
+クマ: 違う、チェックインの確認でパスポートチェックするんよ…
 ```
 
 日本のホテルでは、海外から来たお客さんのパスポートを確認してコピーを取ることになっています。
@@ -27,18 +27,18 @@ draft: true
 
 ヨーロッパやアジアには、外国からのお客さんのパスポートを確認するように決めている国も多いです。アメリカでは、身分証（外国の人ならパスポート）とクレジットカードを見せる形が一般的です。
 
+```phrases
+May I see your passport, please? | パスポートを拝見してもよろしいですか？
+We need to make a copy for check-in. | チェックインのためにコピーを取らせていただきます
+```
+
+とお願い、確認しましょう。
+
 ## 予約を確認する
 
 ```phrases
 Welcome. May I have your name, please? | いらっしゃいませ。お名前をお願いします
 Do you have a reservation? | ご予約はありますか？
-```
-
-## パスポートを確認する
-
-```phrases
-May I see your passport, please? | パスポートを拝見してもよろしいですか？
-We need to make a copy for check-in. | チェックインのためにコピーを取らせていただきます
 ```
 
 ## 部屋と朝食を案内する
