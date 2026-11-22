@@ -21,6 +21,10 @@ draft: true
 
 ベッドの下は関係ありません笑
 
+```balloon
+クマ: いや、急にunderって言われてもさ…なんのことかさ…わかんないじゃん…
+```
+
 ## 予約を伝える
 
 ```phrases
@@ -31,6 +35,10 @@ I have a reservation under Kuma. | クマの名前で予約しています
 予約の名前を聞かれるときは「Under what name?」や「What's the name on the reservation?」と言われます。
 
 予約確認のメールをスマホで見せられるようにしておくと、話が早いです。
+
+```balloon
+クマ: 最近はスマホがあるからある程度は安心ですが…いざというときに英語が喋れるようにしておきたいですよね
+```
 
 ## 早く着いたとき・荷物を預ける
 
@@ -48,6 +56,8 @@ Is breakfast included? | 朝食は付いていますか？
 What time is breakfast? | 朝食は何時からですか？
 What time is check-out? | チェックアウトは何時ですか？
 ```
+
+【朝食付きって珍しいの？日本では結構あるけど】
 
 ```balloon
 アーサー: Breakfast included? Then I'm eating three plates. | 朝食付き？ じゃあ 3 皿いくわ

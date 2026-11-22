@@ -10,12 +10,14 @@ draft: true
 ---
 
 ```talk
-クマ: Let's go to hell!
+クマ: …Ah, Let's go to hell!
 アーサー: …What did I do wrong? | …俺、何かした？
-クマ: ちゃう！ 地獄めぐりや！ 観光や！
+クマ: やっぱ「Go to hell」はまずかったか…
 ```
 
-「地獄」をそのまま hell と言うと、こうなります笑
+Go to hell はまずいですね笑
+
+大分が誇る別府の観光地「地獄」をそのまま hell と言うと、こうなります笑
 
 別府の地獄は、熱すぎて入れない、見るための温泉です。
 
@@ -35,7 +37,7 @@ The water is too hot to get in. | お湯が熱すぎて入れません
 アーサー: So it's a hell you can visit and come back from. Good. | 行って帰ってこれる地獄ってことね。よかった
 ```
 
-## 7つの地獄
+## 7 つの地獄
 
 別府の地獄めぐりは、海地獄・鬼石坊主地獄・かまど地獄・鬼山地獄・白池地獄・血の池地獄・龍巻地獄の 7 つです。
 
@@ -53,6 +55,12 @@ Tatsumaki Jigoku is a geyser. It erupts every thirty to forty minutes. | 龍巻�
 They keep crocodiles here, using the heat of the hot springs. | ここでは温泉の熱を使ってワニを飼っています
 ```
 
+```balloon
+クマ: オススメはやっぱり映える「海地獄」と「血の池地獄」ですね！
+```
+
+大まかに「海地獄周辺」と「血の池地獄周辺」に分かれます。２つのエリアは車で１０分くらいです。
+
 ## 地獄蒸しをすすめる
 
 ```phrases
@@ -64,7 +72,7 @@ You should try the steamed eggs. | 蒸し卵、食べてみてください
 
 ## 声に出して言ってみよう
 
-「地獄」の説明は、最初の一言でつかめるかどうかが大事です。
+「地獄」の説明は、最初の一言でつかめるかどうかが大事です。いきなり hell って言っちゃうより、説明を添えてあげましょう。
 
 ```phrases
 These are hot springs for viewing, not for bathing. | 見るための温泉で、入る温泉ではありません

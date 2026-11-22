@@ -20,7 +20,13 @@ draft: true
 
 九九のノリで数字だけ並べると、ただの数字の羅列に聞こえてしまいます。
 
+```balloon
+クマ: でも確かに…九九って英語にあるのかな？
+```
+
 ## 四則演算の読み方
+
+とりあえず四則演算の読み方をチェックです。
 
 ```phrases
 two plus three equals five | 2 + 3 = 5
@@ -35,14 +41,6 @@ eight divided by two equals four | 8 ÷ 2 = 4
 
 「=」は equals のほかに「is」でも大丈夫です（[コチラの記事](/words/math-equal-inequality)でも紹介しています）。
 
-## 割り算の「あまり」
-
-```phrases
-seven divided by two is three with a remainder of one | 7 ÷ 2 = 3 あまり 1
-```
-
-「あまり」は remainder。「three remainder one」と短く言うこともあります。
-
 ## 九九は times tables
 
 ```phrases
@@ -54,10 +52,26 @@ three times four is twelve | 3 × 4 = 12（さんしじゅうに）
 
 英語圏の子どもも、九九は覚えます。ただ、日本の「さんしじゅうに」みたいな語呂はないので、「three times four is twelve」をそのまま覚えます。
 
+```balloon
+クマ: 日本語は音に頼らない分（意味は漢字が占めることが多い）、言葉遊びが得意ですよね。英語に九九はないのかぁ…誰か発明すればいいのに
+```
+
 ちなみに、イギリスなどでは 12 × 12 まで覚えることも多いです。
 
 ```balloon
 アーサー: Twelve times twelve? I just use my phone. | 12 × 12？ スマホの電卓でいいやん
+```
+
+## 割り算の「あまり」
+
+```phrases
+seven divided by two is three with a remainder of one | 7 ÷ 2 = 3 あまり 1
+```
+
+「あまり」は remainder。「three remainder one」と短く言うこともあります。
+
+```balloon
+クマ: リマインダーって余りなんだ…スマホのリマインダーにはよく助けられてますけど
 ```
 
 ## 計算の言い方
@@ -73,10 +87,12 @@ divide | 割る
 
 ## 声に出して言ってみよう
 
-簡単な計算ほど、英語だと意外と口が止まります。
+簡単な計算でも、英語だと意外と「どういうんだろ？」ってなりますよね。
 
 ```phrases
 three times four equals twelve | 3 × 4 = 12
 eight divided by two equals four | 8 ÷ 2 = 4
 seven divided by two is three with a remainder of one | 7 ÷ 2 = 3 あまり 1
 ```
+
+誰か、英語の九九を発明してあげてください。
