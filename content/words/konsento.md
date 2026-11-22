@@ -24,7 +24,7 @@ consent は「同意・承諾」という意味で、書類の「同意書（con
 なので「Where is the consent?」は、「同意はどこ？」と聞いているように聞こえます。
 
 ```balloon
-アーサー: 【英語で】 | いきなりコンセントって言われても意味わからんわ
+アーサー: Consent? Out of nowhere? I have no idea what you're talking about. | いきなりコンセントって言われても意味わからんわ
 ```
 
 ## コンセントは英語で何て言う？

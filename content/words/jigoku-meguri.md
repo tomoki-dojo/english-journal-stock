@@ -10,7 +10,7 @@ draft: true
 ---
 
 ```talk
-クマ: …Ah, Let's go to hell!
+クマ: …Ah, let's go to hell!
 アーサー: …What did I do wrong? | …俺、何かした？
 クマ: やっぱ「Go to hell」はまずかったか…
 ```
