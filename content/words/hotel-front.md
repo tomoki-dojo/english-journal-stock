@@ -32,7 +32,7 @@ May I see your passport, please? | パスポートを拝見してもよろしい
 We need to make a copy for check-in. | チェックインのためにコピーを取らせていただきます
 ```
 
-とお願い、確認しましょう。
+とお願いして、確認しましょう。
 
 ## 予約を確認する
 
