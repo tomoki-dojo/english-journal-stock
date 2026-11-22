@@ -10,7 +10,7 @@ draft: true
 ---
 
 ```talk
-クマ: Please write this paper.
+クマ: …Ah,Please write this paper.
 アーサー: Write a paper? Like an essay? | 論文書くん？
 クマ: 論文ちゃう！ 問診票や！
 ```
@@ -18,6 +18,10 @@ draft: true
 問診票は英語で **medical questionnaire**。
 
 「write a paper」は「論文を書く」に聞こえてしまうので、「fill out this form（この用紙に記入する）」と言います。
+
+```balloon
+クマ: 英語…難しい
+```
 
 ## 受付で確認する
 
@@ -41,6 +45,10 @@ Do you have any allergies? | アレルギーはありますか？
 
 「記入する」は fill out。「fill in」でも大丈夫です。
 
+```balloon
+クマ: fill outは「【印象】」、fill inは「【印象】」という感じですね
+```
+
 ## 待ってもらう
 
 ```phrases
@@ -49,10 +57,12 @@ It'll be about twenty minutes. | 20分ほどお待ちいただきます
 ```
 
 ```balloon
-アーサー: Twenty minutes? Then I'll check on my beetles at home. | 20 分？ ほんなら家のクワガタ見てこようかな
+アーサー: Twenty minutes? Then I'll check on my 【stagいる？】 beetles at home. | 20 分？ 家でクワガタの世話してこようかな
 ```
 
 ## 処方箋を渡す
+
+医療関係は専門用語が多くて緊張しますよね。
 
 ```phrases
 Here is your prescription. | こちらが処方箋です
@@ -63,7 +73,7 @@ Please take this to a pharmacy. | 薬局にお持ちください
 
 ## 声に出して言ってみよう
 
-受付では、聞くことと伝えることがほぼ決まっています。
+受付では、聞くことと伝えることがだいたい決まっています。
 
 ```phrases
 Is this your first visit? | 初めての受診ですか？
