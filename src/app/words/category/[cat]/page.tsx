@@ -88,7 +88,7 @@ export default async function WordCategoryPage({ params }: Props) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <nav className="pt-4 text-xs font-bold text-zinc-500">
         <Link href="/words" className="hover:underline">
-          記事一覧
+          英語コラム
         </Link>
         <span className="mx-1.5">›</span>
         <span>{c.name}</span>

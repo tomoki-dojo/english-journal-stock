@@ -9,6 +9,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     { url: `${SITE_URL}/welcome`, changeFrequency: "monthly", priority: 1 },
     { url: `${SITE_URL}/words`, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${SITE_URL}/words/all`, changeFrequency: "weekly", priority: 0.5 },
     ...WORD_CATEGORIES.map((c) => ({ url: `${SITE_URL}/words/category/${c.slug}`, changeFrequency: "weekly" as const, priority: 0.8 })),
     ...words.map((a) => ({
       url: `${SITE_URL}/words/${a.slug}`,

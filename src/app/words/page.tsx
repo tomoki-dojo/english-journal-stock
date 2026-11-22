@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { WORD_CATEGORIES, listCategoryArticles } from "@/lib/words";
+import { WORD_CATEGORIES, listWordArticles } from "@/lib/words";
 import { WordCardGrid } from "@/components/words/word-card-grid";
 import { WordsShell } from "@/components/words/words-shell";
 import { WordPracticeCta } from "@/components/words/word-practice-cta";
@@ -25,8 +25,12 @@ export const metadata: Metadata = {
   },
 };
 
-// 和製英語の記事のトップ（一覧）。看板（英クワたん 英語コラム）→ 分類ごとに記事カード4枚（続きは分類のまとめページ）→ アプリへの誘い。
+// 和製英語の記事のトップ（一覧）。看板（英クワたん 英語コラム）→ 新着記事6本 → 分類のまとめページへのカード → 記事一覧（/words/all）へのリンク → アプリへの誘い。
 export default function WordsIndexPage() {
+  const articles = listWordArticles();
+  const latest = articles.slice(0, 6);
+  const counts: Record<string, number> = {};
+  for (const a of articles) counts[a.category] = (counts[a.category] ?? 0) + 1;
   return (
     <WordsShell>
       <section className="mt-6 flex items-center justify-between gap-3 border-b border-[#eee8e1] pb-5">
@@ -51,25 +55,34 @@ export default function WordsIndexPage() {
         </div>
       </section>
 
-      {WORD_CATEGORIES.map((c) => {
-        const list = listCategoryArticles(c.name);
-        if (list.length === 0) return null;
-        return (
-          <section key={c.slug} className="mt-8">
-            <div className="flex items-baseline justify-between gap-3">
-              <h2 className="text-xl font-bold">
-                <Link href={`/words/category/${c.slug}`} className="hover:underline">
-                  {c.name}
-                </Link>
-              </h2>
-              <Link href={`/words/category/${c.slug}`} className="shrink-0 text-sm font-bold text-zinc-500 underline underline-offset-4">
-                まとめを見る
+      <section className="mt-8">
+        <h2 className="text-xl font-bold">新着記事</h2>
+        <WordCardGrid articles={latest} />
+      </section>
+
+      <section className="mt-10">
+        <h2 className="text-xl font-bold">分類から探す</h2>
+        <ul className="mt-4 grid gap-3 sm:grid-cols-3">
+          {WORD_CATEGORIES.map((c) => (
+            <li key={c.slug}>
+              <Link
+                href={`/words/category/${c.slug}`}
+                className="flex h-full flex-col rounded-xl border border-[#eee8e1] bg-[#fdfbf9] px-4 py-4 transition-colors hover:border-[#d9cfc4]"
+              >
+                <span className="font-bold">{c.name}</span>
+                <span className="mt-1 flex-1 text-sm leading-relaxed text-zinc-600">{c.intro}</span>
+                <span className="mt-3 text-xs font-bold text-zinc-500">{counts[c.name] ?? 0} 本 ›</span>
               </Link>
-            </div>
-            <WordCardGrid articles={list.slice(0, 4)} />
-          </section>
-        );
-      })}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <p className="mt-8 text-center">
+        <Link href="/words/all" className="text-sm font-bold text-zinc-600 underline underline-offset-4">
+          記事一覧（すべての記事）
+        </Link>
+      </p>
 
       <WordPracticeCta slug="index" />
       <WordStickyBar slug={"index"} />

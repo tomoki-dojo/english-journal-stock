@@ -93,7 +93,7 @@ export default async function WordArticlePage({ params }: Props) {
       <article>
         <nav className="pt-4 text-xs font-bold text-zinc-500">
           <Link href="/words" className="hover:underline">
-            記事一覧
+            英語コラム
           </Link>
           <span className="mx-1.5">›</span>
           {cat && (
@@ -167,8 +167,8 @@ export default async function WordArticlePage({ params }: Props) {
             ))}
           </ul>
           <p className="mt-4 text-center">
-            <Link href="/words" className="text-sm font-bold text-zinc-600 underline underline-offset-4">
-              記事の一覧
+            <Link href="/words/all" className="text-sm font-bold text-zinc-600 underline underline-offset-4">
+              記事一覧（すべての記事）
             </Link>
           </p>
         </section>

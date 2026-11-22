@@ -9,9 +9,14 @@ export function WordsShell({ children }: { children: React.ReactNode }) {
           <Link href="/welcome" className="text-base font-black tracking-tight">
             英クワたん
           </Link>
-          <Link href="/words" className="text-sm font-bold text-zinc-500">
-            記事一覧
-          </Link>
+          <nav className="flex items-center gap-4">
+            <Link href="/words" className="text-sm font-bold text-zinc-500">
+              英語コラム
+            </Link>
+            <Link href="/words/all" className="text-sm font-bold text-zinc-500">
+              記事一覧
+            </Link>
+          </nav>
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-5 pb-12">{children}</main>
