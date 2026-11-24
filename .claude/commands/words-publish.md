@@ -27,11 +27,12 @@ argument-hint: "[slug ...（省略すると下書きの一覧から選ぶ）]"
    - 「本人の直しのコミットがまだない」記事が選ばれたら、「まだ直していない下書きのようですが、出しますか？」と一度だけ確認する
 
 3. **記事ごとにチェックする**（直さずに、まず一覧にする）
+   - **読むのは、どーじょーが直したところだけ**（トークン節約）：記事ごとに、Claude の下書きのコミット（メッセージに「Claudeの下書き」）から今までの差分を `git diff -U1 <下書きのコミット> -- content/words/<slug>.md` で見て、足された・変わった行だけをチェックする。下書きのコミットが見つからない記事や、直しが大きく構成ごと変わっている記事だけ全文を読む
    - 誤字脱字・変換ミス・「てにをは」の抜け
    - 英文：つづり・文法・冠詞・三単現の s。英文と日本語訳（`|` の後ろ）の意味がずれていないか
    - ```talk・```balloon の「話す人: 英語 | 字幕」の形が崩れていないか（話す人はクマかアーサー）
    - ```phrases の行の形（`英語 | 日本語`）
-   - frontmatter：title・description・word・category・answer・published があるか。category が `src/lib/words.ts` の WORD_CATEGORIES の名前のどれかか（場面で使う英語で海外で使う記事なら `side: 行く側`、数字と数学の英語のシリーズなら order）
+   - frontmatter とリンクは `scripts/ship-check.sh words <slug…>`（今回出す slug を全部渡す）でまとめて見る：title・description・word・answer・published があるか、本文のリンクと related の行き先が無い／draft のまま、を1記事1行で返す。そのうえで、category が `src/lib/words.ts` の WORD_CATEGORIES の名前のどれかか（場面で使う英語で海外で使う記事なら `side: 行く側`、数字と数学の英語のシリーズなら order）
    - 本文の `/words/<slug>` のリンクと related の slug が実在するか。**リンク先がまだ draft のままで、今回も出さないなら知らせる**（一緒に出すか、リンク先を先に出すかを聞く）
    - 結果を「記事 → 見つけたもの（行・今の文・直す案）」の一覧で見せる。何もなければ「なし」
 
@@ -40,14 +41,13 @@ argument-hint: "[slug ...（省略すると下書きの一覧から選ぶ）]"
    - 選んだ記事から `draft: true` の行を消し、`published` を今日の日付（YYYY-MM-DD）にする
 
 5. **確認してコミット・プッシュする**
-   - `npx tsc --noEmit` と `npm run build`（記事のページが静的に作られるので、Markdown の崩れもここで分かる）
+   - `scripts/ship-check.sh check`（記事のページが静的に作られるので、Markdown の崩れもここで分かる）
    - コミットのメッセージは「〇〇・△△ほか N 本を公開（draft を外す）」
    - コミットしたあと `git ls-tree -r HEAD | wc -l` で、前のコミットからファイルが減っていないか確認する
    - `git push origin main`（プッシュすると GitHub Actions が VPS に自動でデプロイする）
 
 6. **公開を確認する**
-   - デプロイが終わるのを待つ（`gh` があれば `gh run watch`。なければ GitHub の公開 API で Actions の結果を見る）
-   - 公開した記事ごとに `curl -s -o /dev/null -w "%{http_code}" https://app.upskillenglish.bear-fruit.online/words/<slug>` が 200 か、`/sitemap.xml` に入っているか確認する
+   - `scripts/ship-check.sh deploy <短いハッシュ> <公開した slug…>`（デプロイを待ち、`/welcome` と、記事ごとの 200・sitemap 入りを1行ずつ返す）
    - 公開した記事の URL の一覧を出す（Search Console の「URL 検査」で登録をリクエストするときに使う。1日の上限があるので10本前後ずつ）
 
 7. **共有ボードに書く**
