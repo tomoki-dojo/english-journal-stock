@@ -21,7 +21,7 @@ draft: true
 「部屋が壊れた」だと、何が起きたのか分かりません笑
 
 ```balloon
-アーサー: 【英語にして】 | ドリフのオチかと思った
+アーサー: I pictured the whole room falling apart, like the end of a comedy sketch. | ドリフのオチかと思った
 ```
 
 ## 「〜が動きません」

@@ -55,7 +55,34 @@ I passed the test! | テストに合格した！
 
 一夜漬けは「cram（詰め込む）」を使って、「I crammed for the test.」とも言います。
 
-【exam とのちがいと、「塾」の表し方。そもそも海外に塾はあるのか？】
+ちなみに、test と exam の違いはこんな感じです。
+
+| 英語 | どんなテスト |
+|---|---|
+| quiz | 授業中の小テスト |
+| test | ふつうのテスト |
+| exam | 期末試験・入試などの大きい試験 |
+
+期末試験は **final exam**、入試は **entrance exam** です。
+
+```phrases
+I have final exams next week. | 来週は期末試験があります
+I go to cram school after school. | 放課後は塾に通っています
+```
+
+塾は、一夜漬けの cram を使って **cram school** と言います。詰め込んで勉強する学校、ということですね。
+
+```balloon
+クマ: 「cram school」はちょっと「詰め込み」っぽい響きなので、「I take extra classes after school.」と言うこともあります
+```
+
+そもそも、海外に塾はあるのか。
+
+アメリカやイギリスでは、日本のような塾より、家庭教師（**tutor**）やテスト対策の教室（**test prep**）が一般的です。一方で、韓国の「ハグォン」や中国の学習塾のように、日本の塾にかなり近いものがある国もあります。
+
+```balloon
+アーサー: Kumon is famous in the US too. People just call it "Kumon." | 公文はアメリカでも有名なんよ。そのまま「Kumon」で通じる
+```
 
 ```balloon
 アーサー: Cramming works for tomorrow, but not for next week. | 一夜漬けは明日には効くけど、来週にはもう忘れとるんよな

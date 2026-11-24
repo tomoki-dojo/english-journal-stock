@@ -4,9 +4,8 @@ description: ホテルのフロントで外国人のお客さんに「お名前�
 word: ホテルフロント
 category: 場面で使う英語
 answer: チェックインは **May I have your name, please?**（お名前をお願いします）から始めます。
-published: 2026-11-21
+published: 2026-11-22
 related: [hotel-checkin, onsen-ryokan]
-draft: true
 ---
 
 ```talk
