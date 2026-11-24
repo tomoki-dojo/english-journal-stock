@@ -3,9 +3,8 @@ title: 「ウインカー」は英語で通じない？ 英語では turn signal
 description: 「Winker!」は英語だと「ウインクする人」に聞こえます。ウインカーは英語で turn signal（アメリカ）か indicator（イギリス）。車やバイクで使う言い方も。
 word: ウインカー
 answer: ウインカーは **turn signal**（アメリカ）か **indicator**（イギリス）。英語の winker は、ふつうは「ウインクする人」です。
-published: 2026-11-21
+published: 2026-11-25
 related: [gasoline-stand, tension]
-draft: true
 ---
 
 ```talk

@@ -3,9 +3,8 @@ title: 「ベビーカー」は英語で通じない？ 英語では stroller（
 description: 「baby car」は英語だと「赤ちゃんが運転する車」みたいに聞こえます。ベビーカーは英語で stroller。イギリスの pushchair・pram の違いや、お出かけで使う言い方も音声つきでまとめました。
 word: ベビーカー
 answer: ベビーカーは **stroller**（アメリカ）、**pushchair**（イギリス）です。
-published: 2026-11-23
+published: 2026-11-25
 related: [mansion, shu-cream]
-draft: true
 ---
 
 ```talk

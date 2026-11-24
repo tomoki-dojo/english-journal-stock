@@ -3,9 +3,8 @@ title: 「カンニング」は英語で通じない？ テストのカンニン
 description: 英語の cunning は「ずる賢い」という形容詞で、テストの「カンニング」の意味はありません。カンニングは英語で cheat（cheating）。テストや学校で使う言い方を音声つきでまとめました。
 word: カンニング
 answer: 「カンニングする」は **cheat**（cheat on a test）です。英語の cunning は「ずる賢い」という意味です。
-published: 2026-11-23
+published: 2026-11-25
 related: [claim, sign]
-draft: true
 ---
 
 ```talk

@@ -5,9 +5,8 @@ word: チップ
 category: 場面で使う英語
 side: 行く側
 answer: 「チップは含まれていますか？」は **Is the tip included?**、「おつりはいりません」は **Keep the change.** です。
-published: 2026-11-23
+published: 2026-11-25
 related: [restaurant-order, taxi-ride]
-draft: true
 ---
 
 ```talk

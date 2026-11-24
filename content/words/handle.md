@@ -3,9 +3,8 @@ title: 「ハンドル」は英語で通じない？ 車は steering wheel、バ
 description: 車の「ハンドル」は英語で steering wheel。英語の handle はドアなどの「取っ手」です。バイク・自転車のハンドル（handlebars）や、運転のときの言い方も音声つきでまとめました。
 word: ハンドル
 answer: 車のハンドルは **steering wheel**、バイクや自転車のハンドルは **handlebars**。英語の handle は「取っ手」です。
-published: 2026-11-23
+published: 2026-11-25
 related: [winker, gasoline-stand]
-draft: true
 ---
 
 ```talk

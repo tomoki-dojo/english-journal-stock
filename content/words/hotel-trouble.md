@@ -5,9 +5,8 @@ word: ホテルのトラブル
 category: 場面で使う英語
 side: 行く側
 answer: 「お湯が出ません」は **There's no hot water.** です。
-published: 2026-11-23
+published: 2026-11-25
 related: [hotel-checkin, lost-baggage]
-draft: true
 ---
 
 ```talk
