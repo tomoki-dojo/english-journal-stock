@@ -36,10 +36,6 @@ The toilet won't flush. | トイレが流れません
 
 テレビでも Wi-Fi でも、「The 〇〇 isn't working.」で伝わります。
 
-```balloon
-クマ: brokenっていいたくなるけど「物理的にバラバラになった感」があります
-```
-
 ## 「〜をください」
 
 ```phrases
