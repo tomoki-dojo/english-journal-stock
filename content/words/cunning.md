@@ -11,12 +11,16 @@ draft: true
 ```talk
 クマ: My friend did cunning on the test.
 アーサー: Your friend is cunning? Like a fox? | 友達がずる賢いん？ キツネみたいに？
-クマ: いや、テストでズルしたんや…
+クマ: ん？狐？？いや、テストでズルしたんや…
 ```
 
 英語の cunning は、「ずる賢い・抜け目ない」という意味の形容詞です。
 
-ずる賢いのはたしかなんですが、テストのカンニングそのものは表せません笑
+ずる賢いのはたしかなんですが、テストのカンニングそのものは表せません。
+
+```balloon
+クマ: カンニング、ダメ、ゼッタイ
+```
 
 ## カンニングは cheat
 
@@ -50,6 +54,8 @@ I passed the test! | テストに合格した！
 ```
 
 一夜漬けは「cram（詰め込む）」を使って、「I crammed for the test.」とも言います。
+
+【exam とのちがいと、「塾」の表し方。そもそも海外に塾はあるのか？】
 
 ```balloon
 アーサー: Cramming works for tomorrow, but not for next week. | 一夜漬けは明日には効くけど、来週にはもう忘れとるんよな

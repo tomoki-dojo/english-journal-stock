@@ -20,11 +20,11 @@ draft: true
 
 ## ベビーカーは英語で何て言う？
 
-| 英語 | どこで |
-|---|---|
-| stroller | アメリカ |
-| pushchair | イギリス |
-| pram | イギリス（寝かせるタイプ） |
+| 英語      | どこで                     |
+| --------- | -------------------------- |
+| stroller  | アメリカ                   |
+| pushchair | イギリス                   |
+| pram      | イギリス（寝かせるタイプ） |
 
 イギリスでは、座らせるタイプを pushchair、赤ちゃんを寝かせるタイプを pram と呼び分けることが多いです。
 
@@ -40,13 +40,15 @@ Can I bring the stroller inside? | ベビーカーのまま中に入れますか
 Where can I leave my stroller? | ベビーカーはどこに置けますか？
 ```
 
-駅やお店で聞くことが多いのは、エレベーターの場所かなと思います。
+駅やお店で聞くことが多いのは、エレベーターの場所やベビーカーの置き場所かなと思います。
 
 ## 一緒に覚えたい言い方
 
 - チャイルドシート：**car seat**
 - 抱っこひも：**baby carrier**
 - おむつ：**diaper**（イギリスは nappy）
+
+おむつなんかは知らないと出てこない単語（しかも赤ちゃんがいればよく使う）なので、これを機に覚えてしまいましょう。
 
 ```balloon
 アーサー: "Baby carrier" sounds like a delivery company, but it's what you wear. | baby carrier って宅配業者みたいやけど、身につけるやつなんよ
