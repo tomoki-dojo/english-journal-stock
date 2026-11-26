@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
+import { accountLabel } from "@/lib/student-account";
 import Link from "next/link";
-import { Shield } from "lucide-react";
+import { Shield, Users } from "lucide-react";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { PasswordSettingsForm } from "@/components/account/password-settings-form";
@@ -29,7 +30,7 @@ export default async function SettingsPage() {
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
           アカウント設定
         </h1>
-        <p className="mt-2 text-sm text-zinc-500">{user.email}</p>
+        <p className="mt-2 text-sm text-zinc-500">{accountLabel(user.email)}</p>
       </div>
 
       <PlanBillingCard
@@ -51,6 +52,14 @@ export default async function SettingsPage() {
           >
             <Shield className="h-4 w-4" />
             お知らせ管理（管理者）
+          </Link>
+
+          <Link
+            href="/admin/students"
+            className="flex items-center gap-2 text-sm text-zinc-500 hover:text-accent"
+          >
+            <Users className="h-4 w-4" />
+            生徒アカウント（管理者）
           </Link>
         </>
       )}

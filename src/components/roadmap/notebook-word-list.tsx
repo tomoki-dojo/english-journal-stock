@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { SpeakButton } from "@/components/ui/speak-button";
 import { Flag } from "lucide-react";
 import { DIFFICULTY_STYLE, NOTEBOOK_DIFFICULTIES_UI } from "./notebook-levels";
 
@@ -171,6 +172,7 @@ export function NotebookWordList() {
               <div className="min-w-0">
                 <p className="flex flex-wrap items-baseline gap-x-1.5">
                   <span className="text-base font-bold text-zinc-800">{item.word}</span>
+                  <SpeakButton text={item.word} className="-my-1 self-center p-1" iconClassName="h-3.5 w-3.5" />
                   {item.pos && <span className="text-[10px] text-zinc-400">{item.pos}</span>}
                 </p>
                 <p className="text-zinc-600">{item.meaning}</p>

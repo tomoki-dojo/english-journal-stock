@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { accountLabel } from "@/lib/student-account";
 import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
@@ -31,7 +32,7 @@ export default async function RoadmapSettingsPage() {
 
       <div>
         <h1 className="text-xl font-black text-amber-900">設定</h1>
-        <p className="mt-1 text-sm text-zinc-500">{user.email}</p>
+        <p className="mt-1 text-sm text-zinc-500">{accountLabel(user.email)}</p>
       </div>
 
       {isPro && <RoadmapSettingsPlan />}

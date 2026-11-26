@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClientBrowser } from "@/lib/supabase/client";
+import { isStudentEmail } from "@/lib/student-account";
 
 type Mode = "password" | "magic";
 
@@ -75,6 +76,13 @@ export function LoginForm({ reason, next, mode: initialMode }: LoginFormProps) {
     e.preventDefault();
     setMagicStatus("sending");
     setMagicError("");
+
+    // 生徒用ID（架空のメールアドレス）にはメールが届かないので送らない
+    if (isStudentEmail(email)) {
+      setMagicStatus("error");
+      setMagicError("IDでログインする場合は「パスワードでログイン」を使ってください");
+      return;
+    }
 
     const supabase = createClientBrowser();
     const { error } = await supabase.auth.signInWithOtp({
@@ -175,9 +183,14 @@ export function LoginForm({ reason, next, mode: initialMode }: LoginFormProps) {
       {mode === "password" ? (
         <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-3">
           <input
-            type="email"
+            type="text"
+            inputMode="email"
+            autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             required
-            placeholder="メールアドレス"
+            placeholder="メールアドレス または ID"
             value={pwEmail}
             onChange={(e) => setPwEmail(e.target.value)}
             className="border rounded px-3 py-2"

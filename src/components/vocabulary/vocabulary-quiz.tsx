@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Check, ChevronRight, PartyPopper, X } from "lucide-react";
 import type { QuizQuestion } from "./types";
 import { cn } from "@/lib/utils";
+import { SpeakButton } from "@/components/ui/speak-button";
 
 type VocabularyQuizProps = {
   questions: QuizQuestion[];
@@ -105,6 +106,13 @@ export function VocabularyQuiz({
 
       <div className="rounded-xl border border-zinc-200 bg-zinc-100/50 p-8 text-center">
         <p className="text-2xl font-semibold tracking-tight text-zinc-900">{question.prompt}</p>
+        {/* 英語→意味は最初から、意味→英語は答えたあとに発音を聞ける */}
+        {(question.direction === "en-to-ja" || answerState !== "unanswered") && (
+          <p className="mt-3 inline-flex items-center gap-1 text-sm text-zinc-500">
+            {question.direction === "ja-to-en" && question.wordEn}
+            <SpeakButton text={question.wordEn} iconClassName="h-5 w-5" />
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

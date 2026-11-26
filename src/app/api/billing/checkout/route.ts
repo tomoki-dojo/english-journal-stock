@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isStudentEmail } from "@/lib/student-account";
 import { getCurrentUser } from "@/lib/supabase/server-auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import {
@@ -87,7 +88,8 @@ export async function POST(request: Request) {
   if (!customerId) {
     try {
       const customer = await stripe.customers.create({
-        email: user.email ?? undefined,
+        // 生徒用IDの架空メールアドレスはStripeに渡さない（領収書が届かないため）
+        email: isStudentEmail(user.email) ? undefined : user.email ?? undefined,
         metadata: { userId: user.id },
       });
       customerId = customer.id;
@@ -164,7 +166,8 @@ export async function POST(request: Request) {
       const code = (err as { code?: string } | null)?.code;
       if (code !== "resource_missing") throw err;
       const customer = await stripe.customers.create({
-        email: user.email ?? undefined,
+        // 生徒用IDの架空メールアドレスはStripeに渡さない（領収書が届かないため）
+        email: isStudentEmail(user.email) ? undefined : user.email ?? undefined,
         metadata: { userId: user.id },
       });
       await supabaseAdmin
