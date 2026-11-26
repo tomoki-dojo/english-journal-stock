@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { SpeakButton } from "@/components/ui/speak-button";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Flag, X } from "lucide-react";
@@ -203,8 +204,13 @@ export function TappableText({
               }}
             />
             <div className="flex items-start justify-between gap-2">
-              <p className="font-semibold text-zinc-900">
+              <p className="flex flex-wrap items-center font-semibold text-zinc-900">
                 {lookup.status === "done" && lookup.entry ? lookup.entry.word : selected.word}
+                <SpeakButton
+                  text={lookup.status === "done" && lookup.entry ? lookup.entry.word : selected.word}
+                  className="-my-1 p-1"
+                  iconClassName="h-3.5 w-3.5"
+                />
                 {lookup.status === "done" && lookup.entry?.lemma && (
                   <span className="ml-1.5 text-xs font-normal text-zinc-400">
                     {selected.word}

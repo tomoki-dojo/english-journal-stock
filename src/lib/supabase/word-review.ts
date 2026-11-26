@@ -255,6 +255,7 @@ function buildQuestionForVocabulary(
     vocabularyId: vocab.id,
     direction,
     prompt: direction === "en-to-ja" ? vocab.wordEn : vocab.meaningJa,
+    wordEn: vocab.wordEn,
     choices,
     correctIndex,
   };

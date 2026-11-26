@@ -1,6 +1,7 @@
 "use client";
 
 import { LearningListButton } from "./learning-list-button";
+import { SpeakButton } from "@/components/ui/speak-button";
 import { BookmarkButton } from "./bookmark-button";
 import type { Vocabulary, VocabLevel } from "./types";
 import type { Plan } from "@/lib/plan";
@@ -48,8 +49,9 @@ export function VocabularyCard({
         </div>
       </div>
 
-      <p className="mb-1 text-lg font-semibold tracking-tight text-zinc-900">
+      <p className="mb-1 flex items-center gap-1 text-lg font-semibold tracking-tight text-zinc-900">
         {vocabulary.wordEn}
+        <SpeakButton text={vocabulary.wordEn} />
       </p>
       <p className="mb-3 text-sm leading-relaxed text-zinc-600">{vocabulary.meaningJa}</p>
 

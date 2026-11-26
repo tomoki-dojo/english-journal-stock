@@ -74,6 +74,8 @@ export type QuizQuestion = {
   vocabularyId: string;
   direction: QuizDirection;
   prompt: string;
+  // 出題の単語（発音ボタン用）
+  wordEn: string;
   // 選択肢（4つ、順序はシャッフル済み）。correctIndexが正解のインデックス。
   choices: string[];
   correctIndex: number;

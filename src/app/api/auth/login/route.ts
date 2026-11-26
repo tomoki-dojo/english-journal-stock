@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { resolveLoginEmail } from "@/lib/student-account";
 
 // パスワードログイン専用のAPIルート。
 // クライアントから直接 supabase.auth.signInWithPassword() を呼ぶのをやめて、ここを経由させることで
@@ -26,12 +27,13 @@ export async function POST(request: Request) {
   const body = json as { email?: unknown; password?: unknown };
   if (typeof body.email !== "string" || typeof body.password !== "string" || !body.email || !body.password) {
     return NextResponse.json(
-      { error: "メールアドレスとパスワードを入力してください" },
+      { error: "メールアドレス（またはID）とパスワードを入力してください" },
       { status: 400 }
     );
   }
 
-  const email = body.email.trim().toLowerCase();
+  // 「@」がなければ生徒用のID（架空のメールアドレスに変換する）
+  const email = resolveLoginEmail(body.email);
   const password = body.password;
 
   const { data: attempt } = await supabaseAdmin
@@ -92,7 +94,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(
-      { error: "メールアドレスまたはパスワードが正しくありません" },
+      { error: "メールアドレス（ID）またはパスワードが正しくありません" },
       { status: 401 }
     );
   }
