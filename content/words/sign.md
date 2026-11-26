@@ -11,12 +11,16 @@ draft: true
 ```talk
 クマ: Sign, please!
 アーサー: (points at a road sign) That one? | （道路標識を指さして）あれ？
-クマ: 標識ちゃう！ あなたのサインや！
+クマ: 「サインください！」や！標識なんかいらんわぁ
 ```
 
 英語の名詞の sign は、「標識・看板」や「合図・しるし」のことです。
 
 有名人に書いてもらう「サイン」は、英語では **autograph** と言います。
+
+```balloon
+クマ: なるほど…サインだと勘違いされるのか…
+```
 
 ## 有名人のサインは autograph
 
@@ -25,13 +29,15 @@ Can I have your autograph? | サインをもらえますか？
 Could you sign this for me? | これにサインしてもらえますか？
 ```
 
-「サインする」という動詞なら sign で通じます。
+「サインする」という動詞なら sign で通じます。ややこしい！
 
 なので「Could you sign this?」は大丈夫です。名詞の「サイン」だけ、autograph になります。
 
 ```balloon
 クマ: auto（自分で）＋ graph（書いたもの）。本人が書いたもの、という意味です
 ```
+
+ちなみに auto は自動で、という意味ですが、自分自身でというニュアンスもあります。autobiography（自伝）、automobile（「自分自身で動く」自動車）など。
 
 ## 書類のサインは signature
 
@@ -42,14 +48,14 @@ I need your signature here. | ここにサインが必要です
 
 書類やクレジットカードのサインは **signature** です。
 
+```balloon
+アーサー: If I asked for your signature at a concert, I'd sound like a bank. | ライブで「signature をください」って言うたら、銀行員みたいやね
+```
+
 ## sign のほかの意味
 
 - 標識・看板：a road sign、a stop sign
 - 合図・しるし：a good sign（いい兆し）
-
-```balloon
-アーサー: If I asked for your signature at a concert, I'd sound like a bank. | ライブで「signature をください」って言うたら、銀行員みたいやね
-```
 
 ## 声に出して言ってみよう
 

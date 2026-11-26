@@ -14,10 +14,14 @@ draft: true
 アーサー: Where to? | どちらまで？
 クマ: Airport, go!
 アーサー: You want to go fast? | 急ぎなん？
-クマ: 急がんでいい！ 安全運転で！
+クマ: 安全運転でお願いします！
 ```
 
 「Airport, go!」でも行き先は伝わりますが、急かしているように聞こえることもあります。
+
+```balloon
+アーサー: 【英語でお願い】 | 「Airport, go!」は映画とかでよくあるやつ
+```
 
 ちょっと丁寧にするなら「Could you take me to 〜?」です。
 
@@ -59,13 +63,17 @@ Keep the change. | おつりはいりません
 
 「Keep the change.」は、おつりをチップにしてもらう言い方です。
 
+チップに関してはコチラでも紹介しています。
+
+【ブログカードみたいなのを実装したい】
+
 ```balloon
 アーサー: Say "Keep the change" and you look cool. | 「Keep the change」って言うと、ちょっとカッコよく見えるんよね
 ```
 
 ## 声に出して言ってみよう
 
-行き先と「ここで止めて」が言えれば、まず困りません。
+タクシーに乗るなら、行き先と「ここで止めて」が言えれば大丈夫です。
 
 ```phrases
 Could you take me to the airport? | 空港までお願いします
