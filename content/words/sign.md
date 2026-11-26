@@ -3,9 +3,8 @@ title: 「サイン」は英語で通じない？ 有名人のサインは autog
 description: 有名人に「Sign, please!」と言っても通じにくいです。有名人のサインは autograph、書類のサインは signature。「ここにサインしてください」など、サインの言い方を音声つきでまとめました。
 word: サイン
 answer: 有名人のサインは **autograph**、書類のサインは **signature** です。「サインする」という動詞は **sign** で大丈夫です。
-published: 2026-11-23
+published: 2026-11-26
 related: [claim, mansion]
-draft: true
 ---
 
 ```talk

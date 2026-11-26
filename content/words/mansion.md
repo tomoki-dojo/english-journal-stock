@@ -3,9 +3,8 @@ title: 「マンション」は英語で通じない？ 英語では apartment�
 description: 「I live in a mansion.」は英語だと「大豪邸に住んでいます」に聞こえます。マンションは英語で apartment、持ち家なら condo、イギリスでは flat。住まいの言い方を音声つきでまとめました。
 word: マンション
 answer: マンションは **apartment**（イギリスは **flat**）、分譲マンションなら **condo** です。英語の mansion は「大豪邸」です。
-published: 2026-11-23
+published: 2026-11-26
 related: [konsento, baby-car]
-draft: true
 ---
 
 ```talk
