@@ -3,9 +3,8 @@ title: 「シュークリーム」は英語で通じない？ 英語では cream
 description: 「shoe cream」は英語だと「靴クリーム（靴墨）」に聞こえます。シュークリームは英語で cream puff。名前の由来（フランス語の chou）や、お店で頼むときの言い方も音声つきでまとめました。
 word: シュークリーム
 answer: シュークリームは **cream puff** です。「shoe cream」は「靴クリーム」に聞こえます。
-published: 2026-11-23
+published: 2026-11-26
 related: [viking, drink-bar]
-draft: true
 ---
 
 ```talk
@@ -51,7 +50,16 @@ puff は「ふくらんだもの」。ふくらんだ皮にクリームが入っ
 
 ソフトクリームとかそのまんま言ってしまいそうですよね。
 
-【pudding の詳しい説明】
+ただ、英語の pudding は、日本のプリンとは少しちがうものを指すことがあります。
+
+- アメリカ：スプーンで食べる、とろっとしたクリーム状のデザート（chocolate pudding など）。固まっていないことが多いです
+- イギリス：デザート全般を pudding と呼ぶことも。Yorkshire pudding（ローストビーフに添える、甘くないパン）のような料理もあります
+
+カラメルがかかった、日本の固めのプリンに近いのは **flan**（アメリカ）や **crème caramel**（イギリス）です。
+
+```balloon
+アーサー: In the UK, "What's for pudding?" just means "What's for dessert?" | イギリスで「What's for pudding?」は「デザート何？」って意味なんよ
+```
 
 ## 声に出して言ってみよう
 

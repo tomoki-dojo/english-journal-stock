@@ -4,9 +4,8 @@ description: タクシーで外国人のお客さんに「どちらまで？」�
 word: タクシー
 category: 場面で使う英語
 answer: 「どちらまで？」は **Where would you like to go?** です。
-published: 2026-11-21
+published: 2026-11-26
 related: [michi-annai, beppu]
-draft: true
 ---
 
 ```talk
@@ -21,7 +20,7 @@ draft: true
 自分で開けようとしたり、閉めようとしたりするので、乗る前に一言伝えておくと安心です。
 
 ```balloon
-アーサー: 【英語にして】 | 日本のタクシーって自動でドア開いたり閉まったりするんだ…
+アーサー: Wow, taxi doors in Japan open and close on their own… | 日本のタクシーって自動でドア開いたり閉まったりするんだ…
 ```
 
 ## 乗るとき

@@ -5,9 +5,8 @@ word: タクシーで行き先を伝える
 category: 場面で使う英語
 side: 行く側
 answer: 行き先は **Could you take me to the airport?**（空港までお願いします）のように伝えます。
-published: 2026-11-21
+published: 2026-11-26
 related: [taxi, restaurant-order]
-draft: true
 ---
 
 ```talk
@@ -20,7 +19,7 @@ draft: true
 「Airport, go!」でも行き先は伝わりますが、急かしているように聞こえることもあります。
 
 ```balloon
-アーサー: 【英語でお願い】 | 「Airport, go!」は映画とかでよくあるやつ
+アーサー: "Airport, go!" sounds like a line from an action movie. | 「Airport, go!」は映画とかでよくあるやつ
 ```
 
 ちょっと丁寧にするなら「Could you take me to 〜?」です。
@@ -63,9 +62,7 @@ Keep the change. | おつりはいりません
 
 「Keep the change.」は、おつりをチップにしてもらう言い方です。
 
-チップに関してはコチラでも紹介しています。
-
-【ブログカードみたいなのを実装したい】
+チップに関しては[コチラ](/words/tip)でも紹介しています。
 
 ```balloon
 アーサー: Say "Keep the change" and you look cool. | 「Keep the change」って言うと、ちょっとカッコよく見えるんよね
